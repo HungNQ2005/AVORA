@@ -1,0 +1,18 @@
+.avora-layout {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #050a18;
+  color: #e2e8f0;
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+.avora-layout__main {
+  flex: 1;
+  padding: 2.5rem 2rem;
+}
+
+.avora-layout__container {
+  max-width: 1400px;
+  margin: 0 auto;
+}

@@ -1,0 +1,13 @@
+{
+  "name": "avora_project",
+  "version": "1.0.0",
+  "description": "AVORA - OTA Platform Monorepo",
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

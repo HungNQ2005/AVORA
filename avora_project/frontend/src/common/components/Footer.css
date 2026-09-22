@@ -1,0 +1,32 @@
+.avora-footer {
+  background: #0a0f1e;
+  border-top: 1px solid rgba(99, 102, 241, 0.15);
+  padding: 1.25rem 2rem;
+  margin-top: auto;
+}
+
+.avora-footer__inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.avora-footer__copy {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.avora-footer__copy strong {
+  color: #818cf8;
+}
+
+.avora-footer__stack {
+  font-size: 0.75rem;
+  color: #334155;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.05em;
+}

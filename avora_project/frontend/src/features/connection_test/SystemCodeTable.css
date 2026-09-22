@@ -1,0 +1,210 @@
+.sct-wrapper {
+  background: #0d1528;
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.sct-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.875rem 1.25rem;
+  background: rgba(99, 102, 241, 0.08);
+  border-bottom: 1px solid rgba(99, 102, 241, 0.15);
+}
+
+.sct-meta__table {
+  font-family: 'Courier New', monospace;
+  font-size: 0.85rem;
+  color: #a78bfa;
+  font-weight: 600;
+}
+
+.sct-meta__count {
+  font-size: 0.75rem;
+  color: #64748b;
+  background: rgba(100, 116, 139, 0.15);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+.sct-scroll {
+  overflow-x: auto;
+}
+
+.sct-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.sct-table thead tr {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.sct-table th {
+  padding: 0.875rem 1.25rem;
+  text-align: left;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #64748b;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.2);
+  white-space: nowrap;
+}
+
+.sct-table tbody tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.15s ease;
+}
+
+.sct-table tbody tr:hover {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.sct-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.sct-table td {
+  padding: 0.75rem 1.25rem;
+  color: #cbd5e1;
+  vertical-align: middle;
+}
+
+.sct-table__index {
+  color: #334155 !important;
+  font-size: 0.75rem;
+  font-family: 'Courier New', monospace;
+  width: 40px;
+}
+
+.sct-table__sort {
+  color: #94a3b8 !important;
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+}
+
+.sct-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.sct-badge--blue {
+  background: rgba(56, 189, 248, 0.1);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.sct-code {
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  color: #a78bfa;
+  background: rgba(167, 139, 250, 0.08);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.sct-table__name {
+  color: #94a3b8;
+  font-size: 0.8rem;
+}
+
+/* ─── Value Badges ─────────────────────────────────────────── */
+.sct-value-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+  border: 1px solid transparent;
+}
+
+/* Operations */
+.sct-value-badge--violet {
+  background: rgba(167, 139, 250, 0.12);
+  color: #c4b5fd;
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+/* Banks */
+.sct-value-badge--cyan {
+  background: rgba(34, 211, 238, 0.1);
+  color: #67e8f9;
+  border-color: rgba(34, 211, 238, 0.25);
+}
+
+/* Success / Confirmed / Approved / Completed */
+.sct-value-badge--green {
+  background: rgba(34, 197, 94, 0.1);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.25);
+}
+
+/* Failed / Cancelled / Rejected / Expired */
+.sct-value-badge--red {
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+/* Pending / Processing / Held */
+.sct-value-badge--amber {
+  background: rgba(245, 158, 11, 0.1);
+  color: #fcd34d;
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+/* Financial Transactions */
+.sct-value-badge--teal {
+  background: rgba(20, 184, 166, 0.1);
+  color: #5eead4;
+  border-color: rgba(20, 184, 166, 0.25);
+}
+
+/* User Actions */
+.sct-value-badge--indigo {
+  background: rgba(99, 102, 241, 0.1);
+  color: #a5b4fc;
+  border-color: rgba(99, 102, 241, 0.25);
+}
+
+/* Roles */
+.sct-value-badge--orange {
+  background: rgba(249, 115, 22, 0.1);
+  color: #fdba74;
+  border-color: rgba(249, 115, 22, 0.25);
+}
+
+/* Unknown codes */
+.sct-value-badge--default {
+  color: #475569;
+  border-color: transparent;
+}
+
+.sct-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.sct-empty__icon {
+  font-size: 2.5rem;
+}
+
+.sct-empty code {
+  color: #818cf8;
+}
