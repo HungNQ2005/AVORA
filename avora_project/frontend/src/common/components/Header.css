@@ -1,71 +1,316 @@
+/* Reset & Header Root Styles */
 .avora-header {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
-  border-bottom: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 0;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  width: 100%;
+  background-color: #003580;
+  /* Primary Booking/Avora Deep Navy Blue */
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  position: relative;
+  z-index: 1000;
 }
 
-.avora-header__inner {
-  max-width: 1400px;
+/* Shared Container */
+.avora-header__container {
+  max-width: 1360px;
   margin: 0 auto;
-  padding: 0 2rem;
-  height: 64px;
+  padding: 0 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* TOP ROW */
+.avora-header__top-row {
+  padding: 16px 0 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Brand Group (Logo + Badge + Separator + Tagline) */
+.avora-header__brand-group {
+  display: flex;
+  align-items: center;
 }
 
 .avora-header__brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 6px;
   text-decoration: none;
-}
-
-.avora-header__logo-icon {
-  font-size: 1.6rem;
-  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.8));
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
+  color: #ffffff;
 }
 
 .avora-header__logo-text {
-  font-size: 1.75rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  background: linear-gradient(90deg, #818cf8, #a78bfa, #38bdf8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  color: #ffffff;
 }
 
-.avora-header__nav {
+/* Yellow Country Badge ("VIỆT NĂM") */
+.avora-header__country-badge {
+  background-color: #ffc107;
+  color: #000000;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+  padding: 3px 5px;
+  border-radius: 3px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+/* Vertical Separator Divider */
+.avora-header__divider {
+  width: 1px;
+  height: 28px;
+  background-color: rgba(255, 255, 255, 0.25);
+  margin: 0 16px;
+}
+
+/* Tagline Subtitle */
+.avora-header__tagline {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.avora-header__tagline-main {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.95);
+  line-height: 1.2;
+}
+
+.avora-header__tagline-sub {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.75);
+  line-height: 1.2;
+}
+
+/* Right Utilities Group */
+.avora-header__utilities {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 16px;
 }
 
-.avora-header__tag {
-  font-size: 0.75rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: #818cf8;
-  background: rgba(99, 102, 241, 0.1);
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
+/* Reset Button Defaults */
+.avora-header__text-btn,
+.avora-header__lang-btn,
+.avora-header__util-item,
+.avora-header__pill-btn,
+.avora-header__user-profile,
+.avora-header__partner-link {
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  transition: opacity 0.15s ease, background-color 0.15s ease;
 }
 
-.avora-header__version {
-  font-size: 0.75rem;
-  color: #64748b;
-  font-family: 'Courier New', monospace;
+.avora-header__text-btn:hover,
+.avora-header__lang-btn:hover,
+.avora-header__util-item:hover,
+.avora-header__user-profile:hover,
+.avora-header__partner-link:hover {
+  opacity: 0.88;
+}
+
+/* Currency Button */
+.avora-header__text-btn {
+  font-size: 15px;
+  font-weight: 700;
+  padding: 4px 6px;
+}
+
+/* Language Switcher */
+.avora-header__lang-btn {
+  gap: 6px;
+}
+
+.avora-header__lang-code {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* Two Line Text Block */
+.avora-header__two-line {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+/* Generic Utility Item (Support 24/7, Saved) */
+.avora-header__util-item {
+  gap: 8px;
+  position: relative;
+  padding: 4px 6px;
+}
+
+/* Circle Count Badge for Saved items */
+.avora-header__count-badge {
+  background-color: #ffc107;
+  color: #000000;
+  font-size: 12px;
+  font-weight: 800;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+}
+
+/* Translucent Pill Action Buttons */
+.avora-header__pill-btn {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 14px;
+  gap: 10px;
+}
+
+.avora-header__pill-btn:hover {
+  background-color: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* PMS Yellow Badge */
+.avora-header__pms-badge {
+  background-color: #ffc107;
+  color: #000000;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  margin-left: 4px;
+}
+
+/* User Profile */
+.avora-header__user-profile {
+  gap: 8px;
+  padding: 4px 6px;
+  margin-left: 4px;
+}
+
+.avora-header__user-name {
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+/* BOTTOM ROW: Navigation Bar */
+.avora-header__bottom-row {
+  padding: 10px 0 14px 0;
+}
+
+.avora-header__nav-list {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Navigation Link Items */
+.avora-header__nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 14.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 9999px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.avora-header__nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Active Nav Item ("Trang chủ") */
+.avora-header__nav-item--active,
+.avora-header__nav-item.is-active {
+  border-color: rgba(255, 255, 255, 0.7);
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+/* AI Smart Suggestions Nav Item */
+.avora-header__nav-item--ai {
+  border-color: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.avora-header__nav-item--ai:hover {
+  border-color: rgba(255, 255, 255, 0.75);
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+/* "MỚI" Badge */
+.avora-header__new-badge {
+  background-color: #ffc107;
+  color: #000000;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
+/* Partner Right Action ("Đăng chỗ nghỉ của bạn") */
+.avora-header__partner-link {
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+.avora-header__partner-link:hover {
+  text-decoration: underline;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 1200px) {
+  .avora-header__tagline {
+    display: none;
+  }
+
+  .avora-header__divider {
+    display: none;
+  }
+
+  .avora-header__utilities {
+    gap: 10px;
+  }
+}
+
+@media (max-width: 900px) {
+  .avora-header__bottom-row .avora-header__container {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding-bottom: 6px;
+  }
+
+  .avora-header__partner-link {
+    display: none;
+  }
 }
