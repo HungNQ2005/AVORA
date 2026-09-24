@@ -79,6 +79,40 @@ const ChevronRightIcon = () => (
   </svg>
 );
 
+const FilterCheckmarkIcon = () => (
+  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12" />
+  </svg>
+);
+
+const FilterNearMeIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
+const FilterFreeCancelIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    <polyline points="9 12 11 14 15 10" />
+  </svg>
+);
+
+const FilterPayAtPropertyIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="3" />
+    <line x1="2" y1="10" x2="22" y2="10" />
+    <circle cx="7" cy="15" r="1.2" fill="currentColor" />
+  </svg>
+);
+
+const FilterGeniusIcon = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1L12 16.6 5.8 21l2.3-7.1L2 9.4h7.6z" />
+  </svg>
+);
+
 const HomePage = () => {
   // Search Form State
   const [destination, setDestination] = useState('Đà Nẵng, Việt Nam');
@@ -398,43 +432,67 @@ const HomePage = () => {
             </form>
           </div>
 
-          {/* Redesigned Clean Rectangular Filter Containers Outside Search Bar */}
-          <div className="avora-search-filter-boxes">
-            <div
-              className={`avora-filter-box ${filters.nearby ? 'is-active' : ''}`}
+          {/* 100% Rounded Filter Capsule Pills Outside Search Bar */}
+          <div className="avora-search-filter-boxes" role="toolbar" aria-label="Bộ lọc nhanh">
+            <button
+              type="button"
+              className={`avora-filter-box avora-filter-box--nearby ${filters.nearby ? 'is-active' : ''}`}
               onClick={() => handleFilterToggle('nearby')}
+              aria-pressed={filters.nearby}
             >
-              <span className="avora-filter-box__checkbox">{filters.nearby ? '✓' : ''}</span>
-              <span className="avora-filter-box__icon">📍</span>
-              <span>Gần vị trí hiện tại</span>
-            </div>
+              <span className={`avora-filter-box__checkbox ${filters.nearby ? 'is-checked' : ''}`}>
+                {filters.nearby && <FilterCheckmarkIcon />}
+              </span>
+              <span className="avora-filter-box__icon avora-filter-box__icon--nearby">
+                <FilterNearMeIcon />
+              </span>
+              <span className="avora-filter-box__label">Gần vị trí hiện tại</span>
+            </button>
 
-            <div
-              className={`avora-filter-box ${filters.freeCancel ? 'is-active' : ''}`}
+            <button
+              type="button"
+              className={`avora-filter-box avora-filter-box--cancel ${filters.freeCancel ? 'is-active' : ''}`}
               onClick={() => handleFilterToggle('freeCancel')}
+              aria-pressed={filters.freeCancel}
             >
-              <span className="avora-filter-box__checkbox">{filters.freeCancel ? '✓' : ''}</span>
-              <span className="avora-filter-box__icon">☑</span>
-              <span>Miễn phí hủy phòng</span>
-            </div>
+              <span className={`avora-filter-box__checkbox ${filters.freeCancel ? 'is-checked' : ''}`}>
+                {filters.freeCancel && <FilterCheckmarkIcon />}
+              </span>
+              <span className="avora-filter-box__icon avora-filter-box__icon--cancel">
+                <FilterFreeCancelIcon />
+              </span>
+              <span className="avora-filter-box__label">Miễn phí hủy phòng</span>
+            </button>
 
-            <div
-              className={`avora-filter-box ${filters.payAtProperty ? 'is-active' : ''}`}
+            <button
+              type="button"
+              className={`avora-filter-box avora-filter-box--payment ${filters.payAtProperty ? 'is-active' : ''}`}
               onClick={() => handleFilterToggle('payAtProperty')}
+              aria-pressed={filters.payAtProperty}
             >
-              <span className="avora-filter-box__checkbox">{filters.payAtProperty ? '✓' : ''}</span>
-              <span className="avora-filter-box__icon">💳</span>
-              <span>Thanh toán tại chỗ nghỉ</span>
-            </div>
+              <span className={`avora-filter-box__checkbox ${filters.payAtProperty ? 'is-checked' : ''}`}>
+                {filters.payAtProperty && <FilterCheckmarkIcon />}
+              </span>
+              <span className="avora-filter-box__icon avora-filter-box__icon--payment">
+                <FilterPayAtPropertyIcon />
+              </span>
+              <span className="avora-filter-box__label">Thanh toán tại chỗ nghỉ</span>
+            </button>
 
-            <div
-              className={`avora-filter-box ${filters.geniusOffer ? 'is-active' : ''}`}
+            <button
+              type="button"
+              className={`avora-filter-box avora-filter-box--genius ${filters.geniusOffer ? 'is-active' : ''}`}
               onClick={() => handleFilterToggle('geniusOffer')}
+              aria-pressed={filters.geniusOffer}
             >
-              <span className="avora-filter-box__checkbox">{filters.geniusOffer ? '✓' : ''}</span>
-              <span className="avora-filter-box__icon">🎖</span>
-              <span>Ưu đãi Genius</span>
-            </div>
+              <span className={`avora-filter-box__checkbox ${filters.geniusOffer ? 'is-checked' : ''}`}>
+                {filters.geniusOffer && <FilterCheckmarkIcon />}
+              </span>
+              <span className="avora-filter-box__icon avora-filter-box__icon--genius">
+                <FilterGeniusIcon />
+              </span>
+              <span className="avora-filter-box__label">Ưu đãi Genius</span>
+            </button>
           </div>
         </div>
       </section>

@@ -410,12 +410,12 @@
   background-color: #0052cc;
 }
 
-/* SEPARATED CLEAN RECTANGULAR FILTER CONTAINERS OUTSIDE SEARCH BAR */
+/* 100% ROUNDED CAPSULE FILTER PILLS */
 .avora-search-filter-boxes {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-top: 52px;
+  margin-top: 48px;
   margin-bottom: 24px;
   flex-wrap: wrap;
 }
@@ -423,44 +423,167 @@
 .avora-filter-box {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   background-color: #ffffff;
-  border: 1px solid #d1d5db;
-  color: #374151;
-  padding: 8px 16px;
-  border-radius: 8px;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  color: #1e293b;
+  padding: 6px 16px 6px 10px;
+  border-radius: 9999px; /* 100% bo tròn capsule */
   font-size: 13.5px;
   font-weight: 600;
+  font-family: inherit;
   cursor: pointer;
   user-select: none;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 15, 45, 0.14);
+  position: relative;
+  outline: none;
+  line-height: 1.4;
 }
 
 .avora-filter-box:hover {
-  background-color: #f8fafc;
-  color: #111827;
-  border-color: #9ca3af;
+  transform: translateY(-2px);
+  background-color: #ffffff;
+  box-shadow: 0 8px 22px rgba(0, 20, 60, 0.22);
 }
 
-.avora-filter-box.is-active {
-  background-color: #f0f7ff;
-  color: #003580;
-  border-color: #0066ff;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 102, 255, 0.15);
+.avora-filter-box:active {
+  transform: translateY(0);
 }
 
+.avora-filter-box:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+/* Custom Animated Checkbox inside Pill */
 .avora-filter-box__checkbox {
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1.5px solid currentColor;
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  background-color: #ffffff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  font-weight: 800;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.avora-filter-box:hover .avora-filter-box__checkbox:not(.is-checked) {
+  border-color: #94a3b8;
+}
+
+.avora-filter-box__checkbox.is-checked {
+  color: #ffffff;
+  border-color: transparent;
+  transform: scale(1.05);
+}
+
+/* Icon Container with Dedicated Circular Badge */
+.avora-filter-box__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.avora-filter-box:hover .avora-filter-box__icon {
+  transform: scale(1.08);
+}
+
+.avora-filter-box__label {
+  letter-spacing: -0.2px;
+  transition: color 0.2s ease;
+}
+
+/* Individual Pill Color Schemes */
+/* 1. Nearby - Ocean Sky Blue */
+.avora-filter-box--nearby .avora-filter-box__icon {
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+.avora-filter-box--nearby:hover {
+  border-color: #7dd3fc;
+}
+
+.avora-filter-box--nearby.is-active {
+  background-color: #f0f9ff;
+  border-color: #0284c7;
+  color: #0369a1;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.25);
+}
+
+.avora-filter-box--nearby .avora-filter-box__checkbox.is-checked {
+  background-color: #0284c7;
+}
+
+/* 2. Free Cancellation - Emerald Green */
+.avora-filter-box--cancel .avora-filter-box__icon {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.avora-filter-box--cancel:hover {
+  border-color: #6ee7b7;
+}
+
+.avora-filter-box--cancel.is-active {
+  background-color: #f0fdf4;
+  border-color: #059669;
+  color: #065f46;
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.25);
+}
+
+.avora-filter-box--cancel .avora-filter-box__checkbox.is-checked {
+  background-color: #059669;
+}
+
+/* 3. Pay at Property - Indigo/Purple */
+.avora-filter-box--payment .avora-filter-box__icon {
+  background-color: #ede9fe;
+  color: #6366f1;
+}
+
+.avora-filter-box--payment:hover {
+  border-color: #a5b4fc;
+}
+
+.avora-filter-box--payment.is-active {
+  background-color: #f5f3ff;
+  border-color: #6366f1;
+  color: #3730a3;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.25);
+}
+
+.avora-filter-box--payment .avora-filter-box__checkbox.is-checked {
+  background-color: #6366f1;
+}
+
+/* 4. Genius Deals - Amber Gold */
+.avora-filter-box--genius .avora-filter-box__icon {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.avora-filter-box--genius:hover {
+  border-color: #fcd34d;
+}
+
+.avora-filter-box--genius.is-active {
+  background-color: #fffbeb;
+  border-color: #d97706;
+  color: #92400e;
+  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.25);
+}
+
+.avora-filter-box--genius .avora-filter-box__checkbox.is-checked {
+  background-color: #d97706;
 }
 
 /* SECTION STYLES */
