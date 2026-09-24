@@ -5,6 +5,7 @@
   background: #050a18;
   color: #e2e8f0;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  padding-top: 110px; /* Offset for fixed header */
 }
 
 .avora-layout__main {
@@ -16,3 +17,4 @@
   max-width: 1400px;
   margin: 0 auto;
 }
+

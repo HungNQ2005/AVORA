@@ -1,13 +1,14 @@
 /* Reset & Header Root Styles */
 .avora-header {
   width: 100%;
-  background-color: #003580;
-  /* Primary Booking/Avora Deep Navy Blue */
+  background-color: #003580; /* Primary Booking/Avora Deep Navy Blue */
   color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: fixed;
+  top: 0;
+  left: 0;
   z-index: 1000;
 }
 
@@ -107,6 +108,7 @@
 .avora-header__text-btn,
 .avora-header__lang-btn,
 .avora-header__util-item,
+.avora-header__saved-btn,
 .avora-header__pill-btn,
 .avora-header__user-profile,
 .avora-header__partner-link {
@@ -118,12 +120,13 @@
   font-family: inherit;
   display: inline-flex;
   align-items: center;
-  transition: opacity 0.15s ease, background-color 0.15s ease;
+  transition: opacity 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
 }
 
 .avora-header__text-btn:hover,
 .avora-header__lang-btn:hover,
 .avora-header__util-item:hover,
+.avora-header__saved-btn:hover,
 .avora-header__user-profile:hover,
 .avora-header__partner-link:hover {
   opacity: 0.88;
@@ -156,11 +159,34 @@
   line-height: 1.15;
 }
 
-/* Generic Utility Item (Support 24/7, Saved) */
+/* Generic Utility Item (Support 24/7) - No active state */
 .avora-header__util-item {
   gap: 8px;
   position: relative;
-  padding: 4px 6px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+}
+
+.avora-header__util-item--support:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Saved Button State Rules:
+   - Default: no active styling, like Contact button (transparent border & bg).
+   - Active state: matches default state of My Bookings (translucent white border & bg).
+*/
+.avora-header__saved-btn {
+  gap: 8px;
+  padding: 6px 12px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  border-radius: 8px;
+}
+
+.avora-header__saved-btn.is-active {
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 /* Circle Count Badge for Saved items */
@@ -178,7 +204,7 @@
   margin-left: 2px;
 }
 
-/* Translucent Pill Action Buttons */
+/* Translucent Pill Action Buttons ("My Bookings", "PMS") */
 .avora-header__pill-btn {
   border: 1px solid rgba(255, 255, 255, 0.4);
   background-color: rgba(255, 255, 255, 0.08);
@@ -190,6 +216,19 @@
 .avora-header__pill-btn:hover {
   background-color: rgba(255, 255, 255, 0.16);
   border-color: rgba(255, 255, 255, 0.6);
+}
+
+/* My Bookings ACTIVE state: Solid gold/yellow background and border with black text */
+.avora-header__pill-btn.is-active {
+  border: 1px solid #ffc107;
+  background-color: #ffc107;
+  color: #000000;
+  font-weight: 800;
+  box-shadow: 0 0 12px rgba(255, 193, 7, 0.4);
+}
+
+.avora-header__pill-btn.is-active svg {
+  stroke: #000000;
 }
 
 /* PMS Yellow Badge */
@@ -227,7 +266,9 @@
   gap: 8px;
 }
 
-/* Navigation Link Items */
+/* Navigation Link Items (Home & Guest areas)
+   - Border radius: fully rounded (pill shape, more rounded than Support button)
+*/
 .avora-header__nav-item {
   display: inline-flex;
   align-items: center;
@@ -236,8 +277,8 @@
   text-decoration: none;
   font-size: 14.5px;
   font-weight: 700;
-  padding: 8px 16px;
-  border-radius: 9999px;
+  padding: 8px 18px;
+  border-radius: 9999px; /* More rounded border radius */
   border: 1px solid transparent;
   transition: all 0.15s ease;
 }
@@ -246,22 +287,33 @@
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-/* Active Nav Item ("Trang chủ") */
-.avora-header__nav-item--active,
+/* Active Nav Item (Trang chủ / Khách sạn): color-mix(in oklab, var(--color-white) 15%, transparent) */
 .avora-header__nav-item.is-active {
-  border-color: rgba(255, 255, 255, 0.7);
-  background-color: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  background-color: color-mix(in oklab, var(--color-white, #ffffff) 15%, transparent);
+  color: #ffffff;
+  border-radius: 9999px;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
 
-/* AI Smart Suggestions Nav Item */
+/* AI Smart Suggestions Nav Item: Black text color */
 .avora-header__nav-item--ai {
-  border-color: rgba(255, 255, 255, 0.5);
-  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  background-color: #ffffff;
+  color: #000000;
+  font-weight: 800;
 }
 
 .avora-header__nav-item--ai:hover {
-  border-color: rgba(255, 255, 255, 0.75);
-  background-color: rgba(255, 255, 255, 0.16);
+  background-color: #f8f9fa;
+  border-color: #ffffff;
+}
+
+.avora-header__nav-item--ai.is-active {
+  border: 1.5px solid #ffc107;
+  background-color: #ffc107;
+  color: #000000;
+  box-shadow: 0 0 12px rgba(255, 193, 7, 0.4);
 }
 
 /* "MỚI" Badge */
@@ -276,6 +328,7 @@
   line-height: 1.2;
 }
 
+
 /* Partner Right Action ("Đăng chỗ nghỉ của bạn") */
 .avora-header__partner-link {
   gap: 8px;
@@ -287,6 +340,85 @@
 .avora-header__partner-link:hover {
   text-decoration: underline;
 }
+
+/* SUPPORT TOAST NOTIFICATION (Fixed viewport, bottom-right, rubber-ball bounce animation) */
+@keyframes rubberBallBounce {
+  0%, 100% {
+    transform: translateY(0) scale(1, 1);
+  }
+  15% {
+    transform: translateY(0) scale(1.06, 0.92); /* Ground squish */
+  }
+  45% {
+    transform: translateY(-22px) scale(0.96, 1.05); /* Rebound stretch */
+  }
+  60% {
+    transform: translateY(-24px) scale(1, 1); /* Apex peak */
+  }
+  75% {
+    transform: translateY(-12px) scale(0.98, 1.02); /* Descending */
+  }
+  90% {
+    transform: translateY(0) scale(1.04, 0.96); /* Touchdown squish */
+  }
+}
+
+.avora-support-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 420px;
+  background-color: #002255;
+  border: none;
+  color: #ffffff;
+  padding: 14px 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: rubberBallBounce 1.5s ease-in-out infinite;
+}
+
+.avora-support-toast__icon {
+  background-color: rgba(255, 193, 7, 0.18);
+  color: #ffc107;
+  padding: 8px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avora-support-toast__content {
+  flex: 1;
+}
+
+.avora-support-toast__message {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: #ffffff;
+}
+
+.avora-support-toast__close {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.avora-support-toast__close:hover {
+  color: #ffffff;
+}
+
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 1200px) {
@@ -314,3 +446,410 @@
     display: none;
   }
 }
+
+/* ABOUT US POPUP MODAL STYLES */
+@keyframes modalPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92) translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.avora-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  backdrop-filter: blur(4px);
+}
+
+.avora-about-modal {
+  background-color: #ffffff;
+  width: 92%;
+  max-width: 740px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  color: #1f2937;
+}
+
+/* Modal Dark Header */
+.avora-about-modal__header {
+  background-color: #003580;
+  color: #ffffff;
+  padding: 24px 28px 22px 28px;
+  position: relative;
+}
+
+.avora-about-modal__close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+.avora-about-modal__close:hover {
+  opacity: 1;
+}
+
+.avora-about-modal__brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avora-about-modal__logo {
+  font-size: 26px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.3px;
+}
+
+.avora-about-modal__badge {
+  background-color: #ffc107;
+  color: #000000;
+  font-size: 10px;
+  font-weight: 900;
+  padding: 3px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.avora-about-modal__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 14px 0 6px 0;
+  line-height: 1.25;
+}
+
+.avora-about-modal__subtitle {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Modal Body */
+.avora-about-modal__body {
+  padding: 24px 28px 24px 28px;
+}
+
+/* Mission Statement */
+.avora-about-modal__mission {
+  margin-bottom: 20px;
+}
+
+.avora-about-modal__mission-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.avora-about-modal__mission-header h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+}
+
+.avora-about-modal__mission p {
+  font-size: 13.5px;
+  color: #4b5563;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* 3 Cards Grid */
+.avora-about-modal__cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.avora-about-modal__card {
+  background-color: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 12px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.avora-about-modal__card-icon {
+  width: 36px;
+  height: 36px;
+  background-color: rgba(0, 53, 128, 0.08);
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.avora-about-modal__card-icon--green {
+  background-color: rgba(16, 185, 129, 0.12);
+}
+
+.avora-about-modal__card h4 {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px 0;
+}
+
+.avora-about-modal__card p {
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Footer Row */
+.avora-about-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 18px;
+}
+
+.avora-about-modal__address {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.avora-about-modal__close-btn {
+  background-color: #003580;
+  color: #ffffff;
+  border: none;
+  padding: 9px 28px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.avora-about-modal__close-btn:hover {
+  background-color: #002255;
+}
+
+@media (max-width: 680px) {
+  .avora-about-modal__cards {
+    grid-template-columns: 1fr;
+  }
+  .avora-about-modal__footer {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+}
+
+/* CONTACT POPUP MODAL STYLES */
+.avora-contact-modal {
+  background-color: #ffffff;
+  width: 92%;
+  max-width: 560px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35);
+  animation: modalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  color: #1f2937;
+}
+
+.avora-contact-modal__header {
+  background-color: #003580;
+  color: #ffffff;
+  padding: 24px 26px 22px 26px;
+  position: relative;
+}
+
+.avora-contact-modal__close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  background: transparent;
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.85;
+  transition: opacity 0.15s ease;
+}
+
+.avora-contact-modal__close:hover {
+  opacity: 1;
+}
+
+.avora-contact-modal__tagline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ffc107;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.avora-contact-modal__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+}
+
+.avora-contact-modal__subtitle {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.4;
+}
+
+.avora-contact-modal__body {
+  padding: 24px 26px 24px 26px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.avora-contact-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.avora-contact-modal__field label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+.avora-contact-modal__field input[type="text"],
+.avora-contact-modal__field input[type="email"],
+.avora-contact-modal__field input[type="tel"] {
+  background-color: #f5f5f5;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 11px 14px;
+  font-size: 14px;
+  color: #1f2937;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+}
+
+.avora-contact-modal__field textarea {
+  background-color: #f5f5f5;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #1f2937;
+  resize: vertical;
+  min-height: 100px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.avora-contact-modal__field input::placeholder,
+.avora-contact-modal__field textarea::placeholder {
+  color: #9ca3af;
+}
+
+.avora-contact-modal__field input:focus,
+.avora-contact-modal__field textarea:focus {
+  border-color: #003580;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 53, 128, 0.1);
+}
+
+.avora-contact-modal__row {
+  display: flex;
+  gap: 14px;
+  width: 100%;
+}
+
+.avora-contact-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 12px;
+}
+
+.avora-contact-modal__response-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+.avora-contact-modal__submit-btn {
+  background-color: #0066ff;
+  color: #ffffff;
+  border: none;
+  padding: 11px 22px;
+  border-radius: 8px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background-color 0.15s ease, transform 0.1s ease;
+}
+
+.avora-contact-modal__submit-btn:hover {
+  background-color: #0052cc;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 540px) {
+  .avora-contact-modal__row {
+    flex-direction: column;
+    gap: 16px;
+  }
+  .avora-contact-modal__footer {
+    flex-direction: column;
+    gap: 14px;
+    align-items: flex-start;
+  }
+  .avora-contact-modal__submit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
