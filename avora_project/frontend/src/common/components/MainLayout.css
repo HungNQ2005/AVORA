@@ -1,3 +1,7 @@
+:root {
+  --header-height: 140px;
+}
+
 .avora-layout {
   min-height: 100vh;
   display: flex;
@@ -5,7 +9,7 @@
   background-color: #ffffff;
   color: #1f2937;
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
-  padding-top: 108px; /* Offset for fixed header */
+  padding-top: var(--header-height, 140px); /* Offset for fixed header */
 }
 
 .avora-layout__main {

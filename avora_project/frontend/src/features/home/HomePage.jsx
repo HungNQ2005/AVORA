@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './HomePage.css';
 
 /* Custom SVG Icons */
@@ -114,6 +115,8 @@ const FilterGeniusIcon = () => (
 );
 
 const HomePage = () => {
+  const navigate = useNavigate();
+
   // Search Form State
   const [destination, setDestination] = useState('Đà Nẵng, Việt Nam');
   const [checkInDay, setCheckInDay] = useState(12);
@@ -185,7 +188,10 @@ const HomePage = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    triggerToast(`Tìm kiếm: ${destination} (${getFormattedDateRange()})`);
+    const cleanDest = destination.split(',')[0].trim();
+    const checkInDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkInDay).padStart(2, '0')}`;
+    const checkOutDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkOutDay || checkInDay + 2).padStart(2, '0')}`;
+    navigate(`/hotels?destination=${encodeURIComponent(cleanDest)}&checkIn=${checkInDate}&checkOut=${checkOutDate}&adults=${adults}&children=${children}&rooms=${rooms}`);
   };
 
   const getFormattedDateRange = () => {
