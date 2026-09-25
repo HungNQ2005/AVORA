@@ -133,3 +133,4 @@ const Footer = ({ onLinkClick }) => {
 };
 
 export default Footer;
+

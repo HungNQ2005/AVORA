@@ -16,12 +16,13 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #ffffff;
 }
 
 body {
   font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: #050a18;
-  color: #e2e8f0;
+  background-color: #ffffff;
+  color: #1f2937;
   line-height: 1.6;
   min-height: 100vh;
 }
@@ -30,6 +31,7 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background-color: #ffffff;
 }
 
 /* ─── Typography ───────────────────────────────────────────────────────────── */
@@ -39,13 +41,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 a {
-  color: #818cf8;
+  color: #0066ff;
   text-decoration: none;
   transition: color 0.2s ease;
 }
 
 a:hover {
-  color: #a78bfa;
+  color: #0052cc;
 }
 
 code {
@@ -59,20 +61,20 @@ code {
 }
 
 ::-webkit-scrollbar-track {
-  background: #0a0f1e;
+  background: #f1f5f9;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #cbd5e1;
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #94a3b8;
 }
 
 /* ─── Selection ────────────────────────────────────────────────────────────── */
 ::selection {
-  background: rgba(99, 102, 241, 0.3);
-  color: #e2e8f0;
+  background: rgba(0, 102, 255, 0.2);
+  color: #003580;
 }

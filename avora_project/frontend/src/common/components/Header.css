@@ -1,8 +1,7 @@
 /* Reset & Header Root Styles */
 .avora-header {
   width: 100%;
-  background-color: #003580;
-  /* Primary Booking/Avora Deep Navy Blue */
+  background-color: #003580; /* Primary Booking/Avora Deep Navy Blue */
   color: #ffffff;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   user-select: none;
@@ -279,8 +278,7 @@
   font-size: 14.5px;
   font-weight: 700;
   padding: 8px 18px;
-  border-radius: 9999px;
-  /* More rounded border radius */
+  border-radius: 9999px; /* More rounded border radius */
   border: 1px solid transparent;
   transition: all 0.15s ease;
 }
@@ -343,37 +341,28 @@
   text-decoration: underline;
 }
 
-/* SUPPORT TOAST NOTIFICATION (Fixed viewport, bottom-right, rubber-ball bounce animation) */
+/* SUPPORT & NOTIFICATION TOAST (Fixed viewport, bottom-right, bounce animation) */
 @keyframes rubberBallBounce {
-
-  0%,
+  0% {
+    transform: translateY(60px) scale(0.85, 1.15);
+    opacity: 0;
+  }
+  25% {
+    transform: translateY(-20px) scale(1.08, 0.92);
+    opacity: 1;
+  }
+  45% {
+    transform: translateY(0) scale(0.95, 1.05);
+  }
+  65% {
+    transform: translateY(-10px) scale(1.02, 0.98);
+  }
+  85% {
+    transform: translateY(-3px) scale(0.99, 1.01);
+  }
   100% {
     transform: translateY(0) scale(1, 1);
-  }
-
-  15% {
-    transform: translateY(0) scale(1.06, 0.92);
-    /* Ground squish */
-  }
-
-  45% {
-    transform: translateY(-22px) scale(0.96, 1.05);
-    /* Rebound stretch */
-  }
-
-  60% {
-    transform: translateY(-24px) scale(1, 1);
-    /* Apex peak */
-  }
-
-  75% {
-    transform: translateY(-12px) scale(0.98, 1.02);
-    /* Descending */
-  }
-
-  90% {
-    transform: translateY(0) scale(1.04, 0.96);
-    /* Touchdown squish */
+    opacity: 1;
   }
 }
 
@@ -391,8 +380,8 @@
   color: #ffffff;
   padding: 14px 18px;
   border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  animation: rubberBallBounce 1.5s ease-in-out infinite;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  animation: rubberBallBounce 1.1s cubic-bezier(0.28, 0.84, 0.42, 1) forwards;
 }
 
 .avora-support-toast__icon {
@@ -467,7 +456,6 @@
     opacity: 0;
     transform: scale(0.92) translateY(12px);
   }
-
   100% {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -676,7 +664,6 @@
   .avora-about-modal__cards {
     grid-template-columns: 1fr;
   }
-
   .avora-about-modal__footer {
     flex-direction: column;
     gap: 12px;
@@ -857,15 +844,15 @@
     flex-direction: column;
     gap: 16px;
   }
-
   .avora-contact-modal__footer {
     flex-direction: column;
     gap: 14px;
     align-items: flex-start;
   }
-
   .avora-contact-modal__submit-btn {
     width: 100%;
     justify-content: center;
   }
 }
+
+

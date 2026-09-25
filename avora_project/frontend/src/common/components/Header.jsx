@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import './Header.css';
 
 /* Custom SVG Icons matching the reference UI */
@@ -82,7 +82,7 @@ const StorePlusIcon = () => (
 
 const CloseIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 6L6 18M6 6l12 12" />
+    <path d="M18 6L6 18M6 6l12 12"/>
   </svg>
 );
 
@@ -144,8 +144,42 @@ const Header = ({
   activeTab = "home",
   onNavClick
 }) => {
+  const location = useLocation();
+  const headerRef = useRef(null);
   const [internalTab, setInternalTab] = useState(null);
-  const currentTab = internalTab !== null ? internalTab : activeTab;
+  const currentPath = location.pathname;
+  const currentTab = internalTab !== null
+    ? internalTab
+    : (currentPath.startsWith('/hotels') || currentPath === '/search' ? 'hotels' : (currentPath === '/' ? 'home' : activeTab));
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        if (height > 0) {
+          document.documentElement.style.setProperty('--header-height', `${height}px`);
+        }
+      }
+    };
+
+    updateHeaderHeight();
+
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== 'undefined' && headerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        updateHeaderHeight();
+      });
+      resizeObserver.observe(headerRef.current);
+    }
+
+    window.addEventListener('resize', updateHeaderHeight);
+
+    return () => {
+      if (resizeObserver) resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeaderHeight);
+    };
+  }, []);
+
   const [showSupportToast, setShowSupportToast] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -183,12 +217,16 @@ const Header = ({
   };
 
   const handleAction = (tabKey) => (e) => {
-    e.preventDefault();
-    setInternalTab(tabKey);
     if (tabKey === 'about') {
+      e.preventDefault();
+      setInternalTab(tabKey);
       setShowAboutModal(true);
     } else if (tabKey === 'contact') {
+      e.preventDefault();
+      setInternalTab(tabKey);
       setShowContactModal(true);
+    } else {
+      setInternalTab(null);
     }
     if (onNavClick) {
       onNavClick(tabKey);
@@ -204,7 +242,7 @@ const Header = ({
 
   return (
     <>
-      <header className="avora-header">
+      <header ref={headerRef} className="avora-header">
         {/* TOP ROW: Main Header Bar */}
         <div className="avora-header__top-row">
           <div className="avora-header__container">
@@ -309,7 +347,7 @@ const Header = ({
 
               {/* Hotels / Khách sạn */}
               <Link
-                to="/"
+                to="/hotels"
                 className={`avora-header__nav-item ${currentTab === 'hotels' ? 'is-active' : ''}`}
                 onClick={handleAction('hotels')}
               >
@@ -566,6 +604,7 @@ const Header = ({
 };
 
 export default Header;
+
 
 
 

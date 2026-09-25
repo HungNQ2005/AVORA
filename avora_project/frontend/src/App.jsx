@@ -7,6 +7,8 @@ import SignUpPage from './features/auth/pages/SignUpPage';
 import SignInPage from './features/auth/pages/SignInPage';
 import MyAccountPage from './features/account/pages/MyAccountPage';
 import { AuthProvider } from './context/AuthContext';
+import HotelSearchPage from './features/hotels/HotelSearchPage';
+import HotelDetailPage from './features/hotels/HotelDetailPage';
 
 /**
  * Root application component.
@@ -20,7 +22,6 @@ function App() {
           {/* Auth pages — no MainLayout (standalone full-page) */}
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/signin" element={<SignInPage />} />
-
           {/* Protected & main pages — wrapped in MainLayout */}
           <Route
             path="/*"
@@ -30,6 +31,9 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/system_codes" element={<TestConnectionPage />} />
                   <Route path="/myaccount" element={<MyAccountPage />} />
+                  <Route path="/hotels" element={<HotelSearchPage />} />
+                  <Route path="/hotels/:id" element={<HotelDetailPage />} />
+                  <Route path="/search" element={<HotelSearchPage />} />
                 </Routes>
               </MainLayout>
             }
