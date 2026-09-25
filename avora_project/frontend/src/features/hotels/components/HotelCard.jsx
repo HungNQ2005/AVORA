@@ -64,8 +64,8 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  const images = hotel.images && hotel.images.length > 0 ? hotel.images : [hotel.thumbnail];
-  const currentImage = images[selectedImageIdx] || images[0];
+  const images = hotel.images && hotel.images.length > 0 ? hotel.images : (hotel.thumbnail ? [hotel.thumbnail] : []);
+  const currentImage = images[selectedImageIdx] || images[0] || '';
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();

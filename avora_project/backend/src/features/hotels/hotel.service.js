@@ -326,10 +326,8 @@ const searchHotels = async (params = {}) => {
       score_label: scoreLabel,
       lat: hotel.lat,
       lng: hotel.lng,
-      images: images.length > 0 ? images.map((i) => i.image_url) : [
-        'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80',
-      ],
-      thumbnail: images[0]?.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=800&q=80',
+      images: images.map((i) => i.image_url),
+      thumbnail: images.find((i) => i.is_thumbnail)?.image_url || images[0]?.image_url || '',
       facilities: hotelFacilities.map((f) => ({
         id: f.facility_id,
         name: f.facility_name,
@@ -542,6 +540,8 @@ const getHotelById = async (hotelId, options = {}) => {
     ? dbImages.map((img) => img.image_url)
     : [];
 
+  const thumbnail = dbImages?.find((img) => img.is_thumbnail)?.image_url || images[0] || '';
+
   // 5. Query cancellation policy from m_cancellation_policy
   const { data: policy } = await supabase
     .from('m_cancellation_policy')
@@ -680,6 +680,7 @@ const getHotelById = async (hotelId, options = {}) => {
     lng: hotel.lng,
     facilities: facilities,
     images: images,
+    thumbnail: thumbnail,
     cancellation_policy: policy ? {
       free_cancel_before_hours: policy.free_cancel_before_hours,
       penalty_rate: policy.penalty_rate,

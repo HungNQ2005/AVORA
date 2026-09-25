@@ -280,14 +280,16 @@ const HotelDetailPage = () => {
 
   const handlePrevImage = (e) => {
     e.stopPropagation();
-    if (!hotel?.images?.length) return;
-    setLightboxImgIdx((prev) => (prev === 0 ? hotel.images.length - 1 : prev - 1));
+    const totalImgs = hotel?.images?.length || 1;
+    if (totalImgs <= 1) return;
+    setLightboxImgIdx((prev) => (prev === 0 ? totalImgs - 1 : prev - 1));
   };
 
   const handleNextImage = (e) => {
     e.stopPropagation();
-    if (!hotel?.images?.length) return;
-    setLightboxImgIdx((prev) => (prev === hotel.images.length - 1 ? 0 : prev + 1));
+    const totalImgs = hotel?.images?.length || 1;
+    if (totalImgs <= 1) return;
+    setLightboxImgIdx((prev) => (prev === totalImgs - 1 ? 0 : prev + 1));
   };
 
   // Keyboard navigation for lightbox
@@ -351,7 +353,7 @@ const HotelDetailPage = () => {
     reviews = [],
   } = hotel || {};
 
-  const mainImage = images[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
+  const mainImage = images[0] || hotel?.thumbnail || '';
   const sideImage = images[1] || mainImage;
 
   return (
@@ -484,10 +486,6 @@ const HotelDetailPage = () => {
               src={mainImage}
               alt={name}
               loading="eager"
-              onError={(e) => {
-                e.target.onerror = null;
-                e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80';
-              }}
             />
           </div>
 
@@ -498,10 +496,6 @@ const HotelDetailPage = () => {
                 src={sideImage}
                 alt={`${name} preview`}
                 loading="lazy"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80';
-                }}
               />
             </div>
           </div>
@@ -656,7 +650,7 @@ const HotelDetailPage = () => {
 
                     <div className="room-image-wrap">
                       <img
-                        src="https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=800&q=80"
+                        src={room.image || ''}
                         alt={room.name}
                         loading="lazy"
                       />
