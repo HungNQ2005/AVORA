@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { codeNameParser } from '../../utils/codeNameParser';
 import './Header.css';
 
 /* Custom SVG Icons matching the reference UI */
+const LogoutIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
 const HeadsetIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
@@ -133,24 +142,41 @@ const SendIcon = () => (
  * Features a two-row layout with branding, user utilities, and primary navigation tabs.
  *
  * @param {Object} props
- * @param {string} [props.userName="Nguyễn Văn An"] - Current logged-in user display name.
- * @param {number} [props.savedCount=5] - Number of saved favorite items.
+ * @param {number} [props.savedCount=0] - Number of saved favorite items.
  * @param {string} [props.activeTab="home"] - Active navigation item ID.
  * @param {Function} [props.onNavClick] - Navigation click handler for future routing/events.
  */
 const Header = ({
-  userName = "Nguyễn Văn An",
-  savedCount = 5,
+  savedCount = 0,
   activeTab = "home",
   onNavClick
 }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const location = useLocation();
   const headerRef = useRef(null);
+  const userMenuRef = useRef(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [internalTab, setInternalTab] = useState(null);
   const currentPath = location.pathname;
   const currentTab = internalTab !== null
     ? internalTab
     : (currentPath.startsWith('/hotels') || currentPath === '/search' ? 'hotels' : (currentPath === '/' ? 'home' : activeTab));
+
+  // Close user profile dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const displayName = user?.full_name || user?.email || '';
+  const userRoleDisplayName = codeNameParser(user?.role_code_name);
+  const isPartnerOrAdmin = user && ['ADM', 'VEN', 'BMR'].includes(user.role_code_name);
 
   useEffect(() => {
     const updateHeaderHeight = () => {
@@ -191,6 +217,18 @@ const Header = ({
   });
   const toastTimerRef = useRef(null);
 
+  // Sync contact form with logged-in user info
+  useEffect(() => {
+    if (user) {
+      setContactForm((prev) => ({
+        ...prev,
+        name: prev.name || user.full_name || '',
+        email: prev.email || user.email || '',
+        phone: prev.phone || user.phone || '',
+      }));
+    }
+  }, [user]);
+
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) {
@@ -225,6 +263,29 @@ const Header = ({
       e.preventDefault();
       setInternalTab(tabKey);
       setShowContactModal(true);
+    } else if (tabKey === 'favorites') {
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+      setInternalTab(tabKey);
+    } else if (tabKey === 'my-bookings') {
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+      navigate('/myaccount');
+      return;
+    } else if (tabKey === 'pms') {
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+      if (!isPartnerOrAdmin) {
+        alert('Tài khoản của bạn không có quyền truy cập hệ thống Quản lý Khách sạn (PMS).');
+        return;
+      }
+      setInternalTab(tabKey);
     } else {
       setInternalTab(null);
     }
@@ -307,26 +368,98 @@ const Header = ({
                 </span>
               </button>
 
-              {/* Action Button: Hotel Management PMS */}
-              <button
-                type="button"
-                className={`avora-header__pill-btn avora-header__pill-btn--pms ${currentTab === 'pms' ? 'is-active' : ''}`}
-                onClick={handleAction('pms')}
-              >
-                <BuildingIcon />
-                <span className="avora-header__two-line">
-                  <span>Quản lý</span>
-                  <span>Khách sạn</span>
-                </span>
-                <span className="avora-header__pms-badge">PMS</span>
-              </button>
+              {/* Action Button: Hotel Management PMS (only for partner/admin roles or guests) */}
+              {(isPartnerOrAdmin || !user) && (
+                <button
+                  type="button"
+                  className={`avora-header__pill-btn avora-header__pill-btn--pms ${currentTab === 'pms' ? 'is-active' : ''}`}
+                  onClick={handleAction('pms')}
+                >
+                  <BuildingIcon />
+                  <span className="avora-header__two-line">
+                    <span>Quản lý</span>
+                    <span>Khách sạn</span>
+                  </span>
+                  <span className="avora-header__pms-badge">PMS</span>
+                </button>
+              )}
 
-              {/* User Profile */}
-              <button type="button" className="avora-header__user-profile" onClick={handleAction('profile')}>
-                <UserIcon />
-                <span className="avora-header__user-name">{userName}</span>
-                <ChevronDownIcon />
-              </button>
+              {/* Real Authentication State: User Profile Menu if logged in, else Sign In / Sign Up buttons */}
+              {user ? (
+                <div className="avora-header__user-menu-wrapper" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    className={`avora-header__user-profile ${isUserMenuOpen ? 'is-active' : ''}`}
+                    onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                    aria-expanded={isUserMenuOpen}
+                    aria-haspopup="true"
+                  >
+                    <div className="avora-header__user-avatar">
+                      {displayName.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="avora-header__user-name">{displayName}</span>
+                    <ChevronDownIcon />
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div className="avora-header__user-dropdown">
+                      <div className="avora-header__dropdown-user-info">
+                        <div className="avora-header__dropdown-avatar">
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="avora-header__dropdown-details">
+                          <span className="avora-header__dropdown-name">{displayName}</span>
+                          <span className="avora-header__dropdown-email">{user.email}</span>
+                          {userRoleDisplayName && (
+                            <span className="avora-header__dropdown-badge">{userRoleDisplayName}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="avora-header__dropdown-divider" />
+
+                      <Link
+                        to="/myaccount"
+                        className="avora-header__dropdown-item"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <UserIcon />
+                        <span>Tài khoản của tôi</span>
+                      </Link>
+
+                      <div className="avora-header__dropdown-divider" />
+
+                      <button
+                        type="button"
+                        className="avora-header__dropdown-item avora-header__dropdown-item--logout"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          logout();
+                          navigate('/signin');
+                        }}
+                      >
+                        <LogoutIcon />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="avora-header__auth-group">
+                  <Link
+                    to="/signup"
+                    className="avora-header__auth-btn avora-header__auth-btn--signup"
+                  >
+                    Đăng ký
+                  </Link>
+                  <Link
+                    to="/signin"
+                    className="avora-header__auth-btn avora-header__auth-btn--signin"
+                  >
+                    Đăng nhập
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -538,7 +671,7 @@ const Header = ({
                 <input
                   id="avora-contact-name"
                   type="text"
-                  placeholder="Nguyễn Văn An"
+                  placeholder="Nhập họ và tên của bạn"
                   value={contactForm.name}
                   onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                   required

@@ -11,7 +11,7 @@ import './MyAccountPage.css';
  */
 const MyAccountPage = () => {
   const navigate = useNavigate();
-  const { user, setUser, logout } = useAuth();
+  const { user, setUser, logout, loading } = useAuth();
 
   // Profile form state
   const [profile, setProfile] = useState({ full_name: '', phone: '' });
@@ -34,12 +34,12 @@ const MyAccountPage = () => {
     }
   }, [user]);
 
-  // Redirect to signin if not authenticated
+  // Redirect to signin if not authenticated (wait for auth bootstrap to complete)
   useEffect(() => {
-    if (!localStorage.getItem('avora_token')) {
+    if (!loading && (!localStorage.getItem('avora_token') || !user)) {
       navigate('/signin');
     }
-  }, [navigate]);
+  }, [loading, user, navigate]);
 
   /* ── Profile Update ──────────────────────────────────────── */
   const handleProfileChange = (e) => {
@@ -109,6 +109,17 @@ const MyAccountPage = () => {
   // codeNameParser maps code_name -> display label (e.g. 'CUS' -> 'Customer')
   const roleDisplayName = codeNameParser(user?.role_code_name);
 
+  if (loading) {
+    return (
+      <div className="myaccount-page">
+        <div className="myaccount-container" style={{ textAlign: 'center', padding: '120px 0' }}>
+          <div className="btn-spinner" style={{ width: '36px', height: '36px', margin: '0 auto 16px', borderColor: 'rgba(255,255,255,0.2)', borderTopColor: '#5865f2' }} />
+          <p style={{ color: '#9ca3af', fontSize: '15px' }}>Đang tải thông tin tài khoản...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="myaccount-page">
       {/* Background blobs */}
@@ -130,6 +141,18 @@ const MyAccountPage = () => {
                 {user?.account_status}
               </span>
             </div>
+          </div>
+          <div className="myaccount-header-actions">
+            <button
+              type="button"
+              className="btn btn--danger myaccount-logout-btn"
+              onClick={() => {
+                logout();
+                navigate('/signin');
+              }}
+            >
+              Đăng xuất
+            </button>
           </div>
         </div>
 

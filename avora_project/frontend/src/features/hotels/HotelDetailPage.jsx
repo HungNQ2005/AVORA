@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import MapModal from './components/MapModal';
+import { useAuth } from '../../context/AuthContext';
 import './HotelDetailPage.css';
 
 /* ─── CUSTOM SVG ICONS ─────────────────────────────────────────────────────── */
@@ -184,6 +185,7 @@ const formatPrice = (val) => {
  * Fetches real database data via backend endpoint /api/hotels/:id
  */
 const HotelDetailPage = () => {
+  const { user } = useAuth();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -865,6 +867,12 @@ const HotelDetailPage = () => {
             </p>
 
             <div className="booking-modal-summary">
+              {user && (
+                <div className="booking-modal-row">
+                  <span>Khách đặt phòng:</span>
+                  <span><strong>{user.full_name || user.email}</strong></span>
+                </div>
+              )}
               <div className="booking-modal-row">
                 <span>Thời gian lưu trú:</span>
                 <span>12/07 – 14/07 (2 đêm)</span>
