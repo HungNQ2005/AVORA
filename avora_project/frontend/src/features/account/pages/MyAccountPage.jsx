@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { updateProfile, changePassword, deactivateAccount, getProfile } from '../../../services/authService';
+import { updateProfile, changePassword, requestDeactivateOtp } from '../../../services/authService';
 import Dialog from '../../../common/components/Dialog';
+import DeactivateOtpModal from '../components/DeactivateOtpModal';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import { getSavedFavorites, removeFavoriteHotel } from '../../../utils/favoritesStorage';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
@@ -173,9 +174,11 @@ const MyAccountPage = () => {
   const [passLoading, setPassLoading] = useState(false);
   const [passMsg, setPassMsg] = useState({ type: '', text: '' });
 
-  // Dialog states
+  // Deactivate dialog & OTP modal state
   const [deactivateDialog, setDeactivateDialog] = useState(false);
   const [deactivateLoading, setDeactivateLoading] = useState(false);
+  const [deactivateError, setDeactivateError] = useState('');
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [logoutDialog, setLogoutDialog] = useState(false);
 
   // Saved accommodations list (backed strictly by real database or user state)
@@ -334,17 +337,27 @@ const MyAccountPage = () => {
     }
   };
 
-  /* ── Account Deactivation ────────────────────────────────────────── */
-  const handleDeactivateConfirm = async () => {
+  /* ── Account Deactivation Flow ──────────────────────────── */
+  // Step 1: User confirms intent -> request OTP from backend -> open OTP modal
+  const handleDeactivateRequestOtp = async () => {
     setDeactivateLoading(true);
+    setDeactivateError('');
     try {
-      await deactivateAccount();
-      logout();
-      navigate('/signin');
-    } catch {
+      await requestDeactivateOtp();
       setDeactivateDialog(false);
+      setOtpModalOpen(true);
+    } catch (err) {
+      setDeactivateError(err.response?.data?.message || 'Failed to send verification code. Please try again.');
+    } finally {
       setDeactivateLoading(false);
     }
+  };
+
+  // Step 2: Successfully verified OTP in modal -> logout and redirect to signin
+  const handleDeactivateSuccess = () => {
+    setOtpModalOpen(false);
+    logout();
+    navigate('/signin');
   };
 
   /* ── Remove Saved Accommodation ─────────────────────────────────── */
@@ -368,7 +381,9 @@ const MyAccountPage = () => {
     .join('')
     .toUpperCase() || 'U';
 
-  // Role display name
+  /* ── Role label helper ───────────────────────────────────── */
+  // role_code_name is resolved by backend from m_system_code (e.g. 'CUS', 'ADM')
+  // codeNameParser maps code_name -> display label (e.g. 'CUS' -> 'Customer')
   const roleDisplayName = codeNameParser(user?.role_code_name);
 
   // Phone formatted
@@ -1078,15 +1093,21 @@ const MyAccountPage = () => {
         </div>
       </div>
 
-      {/* Confirmation Dialog for Deactivation */}
+      {/* Step 1: Deactivate Confirmation Dialog */}
       <Dialog
         isOpen={deactivateDialog}
-        onClose={() => setDeactivateDialog(false)}
-        onConfirm={handleDeactivateConfirm}
+        onClose={() => {
+          setDeactivateDialog(false);
+          setDeactivateError('');
+        }}
+        onConfirm={handleDeactivateRequestOtp}
         title="Vô hiệu hóa tài khoản?"
-        message="Hành động này sẽ đăng xuất bạn ngay lập tức và tạm khóa tài khoản. Bạn sẽ cần liên hệ Quản trị viên để mở khóa lại. Bạn có chắc chắn muốn tiếp tục?"
+        message={
+          deactivateError ||
+          "Vô hiệu hóa tài khoản sẽ tạm dừng quyền truy cập và đăng xuất khỏi hệ thống. Một mã xác thực 6 chữ số sẽ được gửi tới email của bạn để xác minh danh tính. Bạn có muốn tiếp tục?"
+        }
         variant="confirm"
-        confirmLabel={deactivateLoading ? 'Đang xử lý...' : 'Xác nhận vô hiệu hóa'}
+        confirmLabel={deactivateLoading ? 'Đang gửi mã...' : 'Tiếp tục'}
         cancelLabel="Hủy"
       />
 
@@ -1105,6 +1126,16 @@ const MyAccountPage = () => {
         confirmLabel="Đăng xuất"
         cancelLabel="Ở lại"
       />
+
+      {/* Step 2: 6-Digit OTP Verification Modal */}
+      {otpModalOpen && (
+        <DeactivateOtpModal
+          isOpen={otpModalOpen}
+          userEmail={user?.email}
+          onClose={() => setOtpModalOpen(false)}
+          onSuccess={handleDeactivateSuccess}
+        />
+      )}
     </div>
   );
 };

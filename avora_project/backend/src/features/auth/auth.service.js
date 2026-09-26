@@ -1,6 +1,7 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const otpService = require('../otp/otp.service');
 const { hashPassword, comparePassword } = require('../../utils/passwordHelper');
 const { signJwt, generateSecureToken } = require('../../utils/tokenHelper');
 
@@ -283,10 +284,54 @@ const changePassword = async (userId, currentPassword, newPassword) => {
 };
 
 /**
- * Deactivate (soft-disable) the user's own account.
+ * Request a 6-digit OTP for account deactivation.
+ * Delegates OTP creation, storage, and dispatch to the dedicated OTP service.
  * @param {string} userId
+ * @returns {Promise<{ identifier: string, email: string, purpose: string, expiresInMinutes: number }>}
  */
-const deactivateAccount = async (userId) => {
+const requestDeactivateOtp = async (userId) => {
+  const { data: user, error } = await supabase
+    .from('m_user')
+    .select('user_id, email, full_name, account_status')
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle();
+
+  if (error || !user) {
+    const err = new Error('User account not found.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (user.account_status !== STATUS.ACTIVE) {
+    const err = new Error('Only active accounts can be deactivated.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return otpService.sendOtp({
+    identifier: userId,
+    email: user.email,
+    purpose: 'DEACTIVATE_ACCOUNT',
+    expiryMinutes: 5,
+  });
+};
+
+/**
+ * Deactivate (soft-disable) the user's own account.
+ * Verifies OTP via the dedicated OTP service before updating DB.
+ * @param {string} userId
+ * @param {string} otp - 6-digit verification code
+ */
+const deactivateAccount = async (userId, otp) => {
+  // Delegate verification to otp.service
+  await otpService.verifyOtp({
+    identifier: userId,
+    otp,
+    purpose: 'DEACTIVATE_ACCOUNT',
+  });
+
+  // Soft-deactivate by flagging account_status to DEACTIVATED
   const { error } = await supabase
     .from('m_user')
     .update({ account_status: STATUS.DEACTIVATED, updated_at: new Date().toISOString() })
@@ -310,5 +355,6 @@ module.exports = {
   getUserProfile,
   updateUserProfile,
   changePassword,
+  requestDeactivateOtp,
   deactivateAccount,
 };
