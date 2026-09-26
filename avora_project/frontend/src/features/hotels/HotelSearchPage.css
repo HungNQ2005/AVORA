@@ -141,9 +141,14 @@
   color: #9ca3af;
 }
 
+.hotel-breadcrumb__destination {
+  color: #111827;
+  font-weight: 700;
+}
+
 .hotel-breadcrumb__current {
-  color: #1a1a1a;
-  font-weight: 500;
+  color: #6b7280;
+  font-weight: 400;
 }
 
 /* ─── 2-COLUMN LAYOUT ─────────────────────────────────────────────────────── */

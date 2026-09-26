@@ -340,7 +340,15 @@ const HotelSearchPage = () => {
         <nav className="hotel-breadcrumb" aria-label="Breadcrumb">
           <Link to="/" className="hotel-breadcrumb__link">Trang chủ</Link>
           <span className="hotel-breadcrumb__sep">/</span>
-          <span className="hotel-breadcrumb__link">Việt Nam</span>
+          <Link to="/hotels" className="hotel-breadcrumb__link">Việt Nam</Link>
+          {destination && destination.trim().toLowerCase() !== 'việt nam' && destination.trim().toLowerCase() !== 'viet nam' && (
+            <>
+              <span className="hotel-breadcrumb__sep">/</span>
+              <span className="hotel-breadcrumb__destination">
+                {destination.split(',')[0].trim()}
+              </span>
+            </>
+          )}
           <span className="hotel-breadcrumb__sep">/</span>
           <span className="hotel-breadcrumb__current">Kết quả tìm kiếm</span>
         </nav>
@@ -372,7 +380,7 @@ const HotelSearchPage = () => {
             <div className="hotel-results-header">
               <div className="hotel-results-header__left">
                 <h1 className="hotel-results-title">
-                  {destination ? `${destination}: ` : ': '}
+                  {destination ? `${destination}: ` : 'Việt Nam: '}
                   <span className="hotel-results-count">{hotels.length} chỗ nghỉ tìm thấy</span>
                 </h1>
                 <p className="hotel-results-subtitle">

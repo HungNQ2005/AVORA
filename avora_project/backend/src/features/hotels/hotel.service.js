@@ -48,7 +48,8 @@ const searchHotels = async (params = {}) => {
 
   // 1. Fetch cities for location matching
   let cityIds = [];
-  if (destination && destination.trim()) {
+  const isAllVietnam = destination && (destination.trim().toLowerCase() === 'việt nam' || destination.trim().toLowerCase() === 'viet nam');
+  if (destination && destination.trim() && !isAllVietnam) {
     const term = destination.trim().toLowerCase();
     const { data: cities } = await supabase
       .from('m_city')
@@ -82,8 +83,8 @@ const searchHotels = async (params = {}) => {
     `)
     .or('is_deleted.is.null,is_deleted.eq.false');
 
-  // Filter by destination if provided
-  if (destination && destination.trim()) {
+  // Filter by destination if provided (skip filter if searching all of Vietnam)
+  if (destination && destination.trim() && !isAllVietnam) {
     const term = destination.trim();
     if (cityIds.length > 0) {
       query = query.or(`city_id.in.(${cityIds.join(',')}),name.ilike.%${term}%,address.ilike.%${term}%`);

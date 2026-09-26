@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import './HomePage.css';
@@ -234,6 +234,67 @@ const HomePage = () => {
       setCheckOutDay(null);
       triggerToast(`Đã chọn ngày nhận phòng: Ngày ${day} tháng ${selectedMonth}`);
     }
+  };
+
+  const region = destination ? destination.split(',')[0].trim() : 'Đà Nẵng';
+
+  // Check if there are promotional hotels for this region in the DB
+  const regionalPromoHotels = useMemo(() => {
+    if (!hotels || hotels.length === 0) return [];
+    return hotels.filter((h) => {
+      const matchCity = region
+        ? (h.city_name?.toLowerCase().includes(region.toLowerCase()) ||
+           h.address?.toLowerCase().includes(region.toLowerCase()))
+        : true;
+      const hasOffer = Boolean(
+        h.tag?.toLowerCase().includes('ưu đãi') ||
+        h.is_genius ||
+        (h.original_price && h.original_price > h.price)
+      );
+      return matchCity && hasOffer;
+    });
+  }, [hotels, region]);
+
+  const hasRegionalPromo = !loadingHotels && regionalPromoHotels.length > 0;
+
+  const handlePromoClick = () => {
+    const cleanDest = destination ? destination.split(',')[0].trim() : 'Đà Nẵng';
+    const checkInDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkInDay).padStart(2, '0')}`;
+    const checkOutDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkOutDay || checkInDay + 2).padStart(2, '0')}`;
+
+    if (!hasRegionalPromo) {
+      triggerToast(`Hiện chưa có ưu đãi tại ${cleanDest}`);
+    }
+
+    const queryParams = new URLSearchParams();
+    queryParams.set('destination', cleanDest);
+    queryParams.set('checkIn', checkInDate);
+    queryParams.set('checkOut', checkOutDate);
+    queryParams.set('adults', adults);
+    queryParams.set('children', children);
+    queryParams.set('rooms', rooms);
+
+    navigate(`/hotels?${queryParams.toString()}`);
+  };
+
+  const handleDestinationClick = (destName) => {
+    const checkInDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkInDay).padStart(2, '0')}`;
+    const checkOutDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkOutDay || checkInDay + 2).padStart(2, '0')}`;
+
+    const queryParams = new URLSearchParams();
+    if (destName) queryParams.set('destination', destName);
+    queryParams.set('checkIn', checkInDate);
+    queryParams.set('checkOut', checkOutDate);
+    queryParams.set('adults', adults);
+    queryParams.set('children', children);
+    queryParams.set('rooms', rooms);
+
+    navigate(`/hotels?${queryParams.toString()}`);
+  };
+
+  const handleViewAllDestinations = (e) => {
+    e.preventDefault();
+    handleDestinationClick('Việt Nam');
   };
 
   return (
@@ -532,14 +593,20 @@ const HomePage = () => {
             <div className="avora-promo-banner__content">
               <div className="avora-promo-banner__badge">
                 <span className="avora-promo-banner__badge-yellow">ƯU ĐÃI MÙA HÈ 2024</span>
-                <span className="avora-promo-banner__badge-sub">Tiết kiệm tối thiểu 15%</span>
+                <span className="avora-promo-banner__badge-sub">
+                  {!loadingHotels && !hasRegionalPromo ? 'Hiện chưa có ưu đãi' : 'Tiết kiệm tối thiểu 15%'}
+                </span>
               </div>
               <h2 className="avora-promo-banner__title">Du ngoạn ngắm cảnh Việt Nam</h2>
               <p className="avora-promo-banner__text">
                 Tận hưởng kỳ nghỉ trong mơ từ vịnh biển Nha Trang trong xanh đến sương mờ xứ Đà Lạt ngàn hoa.
               </p>
             </div>
-            <button type="button" className="avora-promo-banner__btn">
+            <button
+              type="button"
+              className="avora-promo-banner__btn"
+              onClick={handlePromoClick}
+            >
               Khám phá ưu đãi ngay
             </button>
           </div>
@@ -556,7 +623,11 @@ const HomePage = () => {
                 Các lựa chọn phổ biến nhất của du khách trong nước và quốc tế
               </p>
             </div>
-            <a href="#" className="avora-section__link">
+            <a
+              href="/hotels"
+              className="avora-section__link"
+              onClick={handleViewAllDestinations}
+            >
               <span>Xem tất cả</span>
               <span>›</span>
             </a>
@@ -565,7 +636,10 @@ const HomePage = () => {
           {/* Grid Layout: Top 2 Featured + Bottom 3 Cards */}
           <div className="avora-destinations-grid">
             {/* Top Featured 1: Đà Nẵng */}
-            <div className="avora-dest-card avora-dest-card--large">
+            <div
+              className="avora-dest-card avora-dest-card--large"
+              onClick={() => handleDestinationClick('Đà Nẵng')}
+            >
               <img
                 src="https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?auto=format&fit=crop&w=1000&q=80"
                 alt="Đà Nẵng"
@@ -579,7 +653,10 @@ const HomePage = () => {
             </div>
 
             {/* Top Featured 2: Phú Quốc */}
-            <div className="avora-dest-card avora-dest-card--large">
+            <div
+              className="avora-dest-card avora-dest-card--large"
+              onClick={() => handleDestinationClick('Phú Quốc')}
+            >
               <img
                 src="https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&w=1000&q=80"
                 alt="Phú Quốc"
@@ -593,7 +670,10 @@ const HomePage = () => {
             </div>
 
             {/* Bottom 1: Đà Lạt */}
-            <div className="avora-dest-card avora-dest-card--small">
+            <div
+              className="avora-dest-card avora-dest-card--small"
+              onClick={() => handleDestinationClick('Đà Lạt')}
+            >
               <img
                 src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=800&q=80"
                 alt="Đà Lạt"
@@ -605,7 +685,10 @@ const HomePage = () => {
             </div>
 
             {/* Bottom 2: Nha Trang */}
-            <div className="avora-dest-card avora-dest-card--small">
+            <div
+              className="avora-dest-card avora-dest-card--small"
+              onClick={() => handleDestinationClick('Nha Trang')}
+            >
               <img
                 src="https://images.unsplash.com/photo-1506929562872-bb421503ef21?auto=format&fit=crop&w=800&q=80"
                 alt="Nha Trang"
@@ -617,7 +700,10 @@ const HomePage = () => {
             </div>
 
             {/* Bottom 3: Vịnh Hạ Long */}
-            <div className="avora-dest-card avora-dest-card--small">
+            <div
+              className="avora-dest-card avora-dest-card--small"
+              onClick={() => handleDestinationClick('Hạ Long')}
+            >
               <img
                 src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=800&q=80"
                 alt="Vịnh Hạ Long"
@@ -787,13 +873,25 @@ const HomePage = () => {
               </p>
 
               <div className="avora-map-card__filters">
-                <button type="button" className="avora-map-filter-btn">
+                <button
+                  type="button"
+                  className="avora-map-filter-btn"
+                  onClick={() => handleDestinationClick('Đà Nẵng')}
+                >
                   Đà Nẵng (1.840+)
                 </button>
-                <button type="button" className="avora-map-filter-btn">
+                <button
+                  type="button"
+                  className="avora-map-filter-btn"
+                  onClick={() => handleDestinationClick('Hà Nội')}
+                >
                   Hà Nội (2.400+)
                 </button>
-                <button type="button" className="avora-map-filter-btn">
+                <button
+                  type="button"
+                  className="avora-map-filter-btn"
+                  onClick={() => handleDestinationClick('Phú Quốc')}
+                >
                   Phú Quốc (950+)
                 </button>
               </div>
@@ -805,7 +903,11 @@ const HomePage = () => {
                 src="https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?auto=format&fit=crop&w=800&q=80"
                 alt="Bản đồ địa phương"
               />
-              <button type="button" className="avora-map-card__open-btn">
+              <button
+                type="button"
+                className="avora-map-card__open-btn"
+                onClick={() => handleDestinationClick('Việt Nam')}
+              >
                 <MapCompassIcon />
                 <span>Mở xem trên bản đồ</span>
               </button>
