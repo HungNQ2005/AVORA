@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import './HomePage.css';
 
 /* Custom SVG Icons */
@@ -142,12 +143,32 @@ const HomePage = () => {
   });
 
   // Favorites state tracking
-  const [favorites, setFavorites] = useState({
-    1: true,
-    2: false,
-    3: false,
-    4: true
-  });
+  const [favorites, setFavorites] = useState({});
+
+  // Database Hotels State (dynamically fetched from Supabase)
+  const [hotels, setHotels] = useState([]);
+  const [loadingHotels, setLoadingHotels] = useState(true);
+  const [carouselIdx, setCarouselIdx] = useState(0);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHotelsFromDb = async () => {
+      try {
+        setLoadingHotels(true);
+        const res = await fetch(API_ENDPOINTS.HOTELS);
+        const json = await res.json();
+        if (isMounted && json?.data?.hotels) {
+          setHotels(json.data.hotels);
+        }
+      } catch (err) {
+        console.error('Lỗi khi tải danh sách khách sạn từ database:', err);
+      } finally {
+        if (isMounted) setLoadingHotels(false);
+      }
+    };
+    fetchHotelsFromDb();
+    return () => { isMounted = false; };
+  }, []);
 
   // Notification Toast State (Single active toast at a time, bottom-right fixed viewport)
   const [toastText, setToastText] = useState('');
@@ -619,200 +640,132 @@ const HomePage = () => {
               <h2 className="avora-section__title">Chỗ nghỉ được khách yêu thích nhất</h2>
             </div>
             <div className="avora-section__controls">
-              <button type="button" className="avora-circle-btn" aria-label="Trước">
+              <button
+                type="button"
+                className={`avora-circle-btn ${carouselIdx > 0 ? 'avora-circle-btn--active' : ''}`}
+                onClick={() => setCarouselIdx((prev) => Math.max(0, prev - 4))}
+                disabled={carouselIdx === 0}
+                aria-label="Trước"
+              >
                 <ChevronLeftIcon />
               </button>
-              <button type="button" className="avora-circle-btn avora-circle-btn--active" aria-label="Sau">
+              <button
+                type="button"
+                className={`avora-circle-btn ${carouselIdx + 4 < hotels.length ? 'avora-circle-btn--active' : ''}`}
+                onClick={() => setCarouselIdx((prev) => Math.min(hotels.length - 4, prev + 4))}
+                disabled={carouselIdx + 4 >= hotels.length}
+                aria-label="Sau"
+              >
                 <ChevronRightIcon />
               </button>
             </div>
           </div>
 
-          {/* Hotel Grid: 4 Cards */}
+          {/* Hotel Grid: Dynamically fetched from Database */}
           <div className="avora-hotels-grid">
-            {/* Hotel Card 1 */}
-            <div className="avora-hotel-card">
-              <div className="avora-hotel-card__image-wrap">
-                <img
-                  src="https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80"
-                  alt="Melia Danang Beach Hotel"
-                />
-                <button
-                  type="button"
-                  className="avora-hotel-card__fav-btn"
-                  onClick={() => toggleFavorite(1)}
-                  aria-label="Yêu thích"
-                >
-                  <HeartIcon filled={favorites[1]} />
-                </button>
-                <span className="avora-hotel-card__badge">Ưu đãi Genius</span>
-              </div>
-              <div className="avora-hotel-card__body">
-                <div className="avora-hotel-card__stars">★★★★★</div>
-                <h3 className="avora-hotel-card__title">Melia Danang Beach Hotel</h3>
-                <p className="avora-hotel-card__location">
-                  <PinIcon /> <span>Bãi biển Non Nước, Đà Nẵng</span>
-                </p>
-
-                <div className="avora-hotel-card__rating">
-                  <span className="avora-hotel-card__score">9.2</span>
-                  <div className="avora-hotel-card__rating-text">
-                    <strong>Tuyệt hảo</strong>
-                    <span>1480 đánh giá</span>
+            {loadingHotels ? (
+              Array.from({ length: 4 }).map((_, idx) => (
+                <div key={`hotel-skeleton-${idx}`} className="avora-hotel-card avora-hotel-card--skeleton">
+                  <div className="avora-hotel-card__image-wrap avora-skeleton-pulse" />
+                  <div className="avora-hotel-card__body">
+                    <div className="avora-skeleton-line avora-skeleton-line--short avora-skeleton-pulse" />
+                    <div className="avora-skeleton-line avora-skeleton-line--title avora-skeleton-pulse" />
+                    <div className="avora-skeleton-line avora-skeleton-line--desc avora-skeleton-pulse" />
+                    <div className="avora-skeleton-line avora-skeleton-line--price avora-skeleton-pulse" />
+                    <div className="avora-skeleton-btn avora-skeleton-pulse" />
                   </div>
                 </div>
-
-                <div className="avora-hotel-card__price-box">
-                  <span className="avora-hotel-card__old-price">2.850.000 VND</span>
-                  <div className="avora-hotel-card__current-price">
-                    2.140.000 <span className="avora-hotel-card__curr">VND</span>
-                  </div>
-                  <span className="avora-hotel-card__tax-note">đã bao gồm thuế và phí</span>
-                </div>
-
-                <button type="button" className="avora-hotel-card__btn">
-                  Xem phòng trống
-                </button>
+              ))
+            ) : hotels.length === 0 ? (
+              <div className="avora-hotels-empty">
+                <p>Không có chỗ nghỉ nào trong cơ sở dữ liệu.</p>
               </div>
-            </div>
+            ) : (
+              hotels.slice(carouselIdx, carouselIdx + 4).map((hotel) => {
+                const isFav = !!favorites[hotel.hotel_id];
+                const starQuality = Math.min(5, Math.max(1, hotel.star_quality || 5));
+                const starsStr = '★'.repeat(starQuality) + '☆'.repeat(5 - starQuality);
+                const hotelImage = hotel.thumbnail || hotel.images?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
+                const formattedPrice = hotel.price ? new Intl.NumberFormat('vi-VN').format(hotel.price) : '1.500.000';
+                const formattedOriginalPrice = hotel.original_price ? `${new Intl.NumberFormat('vi-VN').format(hotel.original_price)} VND` : null;
 
-            {/* Hotel Card 2 */}
-            <div className="avora-hotel-card">
-              <div className="avora-hotel-card__image-wrap">
-                <img
-                  src="https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=600&q=80"
-                  alt="InterContinental Phu Quoc"
-                />
-                <button
-                  type="button"
-                  className="avora-hotel-card__fav-btn"
-                  onClick={() => toggleFavorite(2)}
-                  aria-label="Yêu thích"
-                >
-                  <HeartIcon filled={favorites[2]} />
-                </button>
-                <span className="avora-hotel-card__badge">Xem nhiều nhất</span>
-              </div>
-              <div className="avora-hotel-card__body">
-                <div className="avora-hotel-card__stars">★★★★★</div>
-                <h3 className="avora-hotel-card__title">InterContinental Phu Quoc...</h3>
-                <p className="avora-hotel-card__location">
-                  <PinIcon /> <span>Bãi Trường, Dương Tơ, Phú Quốc</span>
-                </p>
+                return (
+                  <div
+                    key={hotel.hotel_id}
+                    className="avora-hotel-card"
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/hotels/${hotel.hotel_id}`)}
+                  >
+                    <div className="avora-hotel-card__image-wrap">
+                      <img
+                        src={hotelImage}
+                        alt={hotel.name}
+                        loading="lazy"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="avora-hotel-card__fav-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleFavorite(hotel.hotel_id);
+                        }}
+                        aria-label="Yêu thích"
+                      >
+                        <HeartIcon filled={isFav} />
+                      </button>
+                      <span className="avora-hotel-card__badge">
+                        {hotel.is_genius ? 'Ưu đãi Genius' : (hotel.tag || 'Ưu đãi đặc biệt')}
+                      </span>
+                    </div>
 
-                <div className="avora-hotel-card__rating">
-                  <span className="avora-hotel-card__score">9.6</span>
-                  <div className="avora-hotel-card__rating-text">
-                    <strong>Xuất sắc</strong>
-                    <span>3490 đánh giá</span>
+                    <div className="avora-hotel-card__body">
+                      <div className="avora-hotel-card__stars">{starsStr}</div>
+                      <h3 className="avora-hotel-card__title" title={hotel.name}>
+                        {hotel.name}
+                      </h3>
+                      <p className="avora-hotel-card__location" title={hotel.address ? `${hotel.address}, ${hotel.city_name}` : hotel.city_name}>
+                        <PinIcon /> <span>{hotel.address ? `${hotel.address}, ${hotel.city_name}` : hotel.city_name}</span>
+                      </p>
+
+                      <div className="avora-hotel-card__rating">
+                        <span className="avora-hotel-card__score">
+                          {Number(hotel.star_rating || 9.2).toFixed(1)}
+                        </span>
+                        <div className="avora-hotel-card__rating-text">
+                          <strong>{hotel.score_label || 'Tuyệt hảo'}</strong>
+                          <span>{hotel.reviews_count ? `${hotel.reviews_count} đánh giá` : '1.200 đánh giá'}</span>
+                        </div>
+                      </div>
+
+                      <div className="avora-hotel-card__price-box">
+                        {formattedOriginalPrice && (
+                          <span className="avora-hotel-card__old-price">{formattedOriginalPrice}</span>
+                        )}
+                        <div className="avora-hotel-card__current-price">
+                          {formattedPrice} <span className="avora-hotel-card__curr">VND</span>
+                        </div>
+                        <span className="avora-hotel-card__tax-note">đã bao gồm thuế và phí</span>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="avora-hotel-card__btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/hotels/${hotel.hotel_id}`);
+                        }}
+                      >
+                        Xem phòng trống
+                      </button>
+                    </div>
                   </div>
-                </div>
-
-                <div className="avora-hotel-card__price-box">
-                  <span className="avora-hotel-card__old-price">4.200.000 VND</span>
-                  <div className="avora-hotel-card__current-price">
-                    3.480.000 <span className="avora-hotel-card__curr">VND</span>
-                  </div>
-                  <span className="avora-hotel-card__tax-note">đã bao gồm thuế và phí</span>
-                </div>
-
-                <button type="button" className="avora-hotel-card__btn">
-                  Xem phòng trống
-                </button>
-              </div>
-            </div>
-
-            {/* Hotel Card 3 */}
-            <div className="avora-hotel-card">
-              <div className="avora-hotel-card__image-wrap">
-                <img
-                  src="https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=600&q=80"
-                  alt="Hôtel Colline Đà Lạt"
-                />
-                <button
-                  type="button"
-                  className="avora-hotel-card__fav-btn"
-                  onClick={() => toggleFavorite(3)}
-                  aria-label="Yêu thích"
-                >
-                  <HeartIcon filled={favorites[3]} />
-                </button>
-                <span className="avora-hotel-card__badge">Gần Chợ Đêm</span>
-              </div>
-              <div className="avora-hotel-card__body">
-                <div className="avora-hotel-card__stars">★★★★☆</div>
-                <h3 className="avora-hotel-card__title">Hôtel Colline Đà Lạt</h3>
-                <p className="avora-hotel-card__location">
-                  <PinIcon /> <span>Số 10 Phan Bội Châu, Đà Lạt</span>
-                </p>
-
-                <div className="avora-hotel-card__rating">
-                  <span className="avora-hotel-card__score">9.1</span>
-                  <div className="avora-hotel-card__rating-text">
-                    <strong>Tuyệt vời</strong>
-                    <span>4200 đánh giá</span>
-                  </div>
-                </div>
-
-                <div className="avora-hotel-card__price-box">
-                  <span className="avora-hotel-card__old-price">1.800.000 VND</span>
-                  <div className="avora-hotel-card__current-price">
-                    1.350.000 <span className="avora-hotel-card__curr">VND</span>
-                  </div>
-                  <span className="avora-hotel-card__tax-note">đã bao gồm thuế và phí</span>
-                </div>
-
-                <button type="button" className="avora-hotel-card__btn">
-                  Xem phòng trống
-                </button>
-              </div>
-            </div>
-
-            {/* Hotel Card 4 */}
-            <div className="avora-hotel-card">
-              <div className="avora-hotel-card__image-wrap">
-                <img
-                  src="https://images.unsplash.com/photo-1618773928121-c32242e63f39?auto=format&fit=crop&w=600&q=80"
-                  alt="Apricot Hotel Hà Nội"
-                />
-                <button
-                  type="button"
-                  className="avora-hotel-card__fav-btn"
-                  onClick={() => toggleFavorite(4)}
-                  aria-label="Yêu thích"
-                >
-                  <HeartIcon filled={favorites[4]} />
-                </button>
-                <span className="avora-hotel-card__badge">Nhìn ra Hồ Gươm</span>
-              </div>
-              <div className="avora-hotel-card__body">
-                <div className="avora-hotel-card__stars">★★★★★</div>
-                <h3 className="avora-hotel-card__title">Apricot Hotel Hà Nội</h3>
-                <p className="avora-hotel-card__location">
-                  <PinIcon /> <span>Hàng Trống, Quận Hoàn Kiếm, Hà Nội</span>
-                </p>
-
-                <div className="avora-hotel-card__rating">
-                  <span className="avora-hotel-card__score">9.1</span>
-                  <div className="avora-hotel-card__rating-text">
-                    <strong>Tuyệt hảo</strong>
-                    <span>1850 đánh giá</span>
-                  </div>
-                </div>
-
-                <div className="avora-hotel-card__price-box">
-                  <span className="avora-hotel-card__old-price">3.700.000 VND</span>
-                  <div className="avora-hotel-card__current-price">
-                    2.680.000 <span className="avora-hotel-card__curr">VND</span>
-                  </div>
-                  <span className="avora-hotel-card__tax-note">đã bao gồm thuế và phí</span>
-                </div>
-
-                <button type="button" className="avora-hotel-card__btn">
-                  Xem phòng trống
-                </button>
-              </div>
-            </div>
+                );
+              })
+            )}
           </div>
         </div>
       </section>

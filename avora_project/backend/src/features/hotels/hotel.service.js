@@ -244,11 +244,15 @@ const searchHotels = async (params = {}) => {
   const reviewsStatsByHotel = {};
   // For each hotel, calculate or fall back to m_hotel.star_rating
   rawHotels.forEach((h) => {
-    // If hotel has a star_rating in DB (e.g. 9.4), format it to 1 decimal place
-    const baseScore = Number(h.star_rating) || 8.5;
+    let baseScore = Number(h.star_rating) || 8.8;
+    if (baseScore <= 5) {
+      baseScore = Number((baseScore * 1.8 + 0.4).toFixed(1));
+    }
+    const idHash = (String(h.hotel_id) || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const count = 450 + (idHash * 37) % 3600;
     reviewsStatsByHotel[h.hotel_id] = {
       score: Number(baseScore.toFixed(1)),
-      count: 120 + ((h.hotel_id * 317) % 2500), // Deterministic review count
+      count: count,
     };
   });
 

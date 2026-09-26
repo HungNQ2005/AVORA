@@ -1023,6 +1023,63 @@
   background-color: #0052cc;
 }
 
+/* Skeleton Loading State for Database Hotels */
+.avora-hotel-card--skeleton {
+  pointer-events: none;
+}
+
+.avora-skeleton-pulse {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: avoraSkeletonLoading 1.5s infinite;
+}
+
+@keyframes avoraSkeletonLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.avora-skeleton-line {
+  height: 14px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.avora-skeleton-line--short {
+  width: 35%;
+}
+
+.avora-skeleton-line--title {
+  width: 80%;
+  height: 18px;
+}
+
+.avora-skeleton-line--desc {
+  width: 60%;
+}
+
+.avora-skeleton-line--price {
+  width: 50%;
+  height: 22px;
+  margin-top: 14px;
+  margin-left: auto;
+}
+
+.avora-skeleton-btn {
+  width: 100%;
+  height: 38px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.avora-hotels-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 15px;
+}
+
 /* SECTION 5: INTERACTIVE MAP CARD */
 .avora-map-card {
   background-color: #ffffff;
