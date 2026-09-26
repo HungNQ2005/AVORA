@@ -167,12 +167,32 @@ const handleChangePassword = async (req, res, next) => {
 };
 
 /**
- * DELETE /api/account/deactivate
- * Deactivate the authenticated user's own account.
+ * POST /api/account/deactivate/request-otp
+ * Generate and send a 6-digit verification code to the user's email for deactivation.
+ */
+const handleRequestDeactivateOtp = async (req, res, next) => {
+  try {
+    const result = await authService.requestDeactivateOtp(req.user.user_id);
+    return sendSuccess(res, 200, 'Verification code sent to your email.', result);
+  } catch (err) {
+    if (err.statusCode) {
+      return sendError(res, err.statusCode, err.message);
+    }
+    next(err);
+  }
+};
+
+/**
+ * DELETE /api/account/deactivate (or POST /api/account/deactivate)
+ * Deactivate the authenticated user's own account using OTP.
  */
 const handleDeactivateAccount = async (req, res, next) => {
   try {
-    await authService.deactivateAccount(req.user.user_id);
+    const otp = req.body?.otp || req.query?.otp;
+    if (!otp) {
+      return sendError(res, 400, 'Verification code (OTP) is required.');
+    }
+    await authService.deactivateAccount(req.user.user_id, otp);
     return sendSuccess(res, 200, 'Account deactivated successfully.');
   } catch (err) {
     if (err.statusCode) {
@@ -189,5 +209,6 @@ module.exports = {
   handleGetProfile,
   handleUpdateProfile,
   handleChangePassword,
+  handleRequestDeactivateOtp,
   handleDeactivateAccount,
 };
