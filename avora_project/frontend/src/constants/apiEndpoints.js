@@ -7,4 +7,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000
 export const API_ENDPOINTS = {
   SYSTEM_CODES: `${API_BASE_URL}/api/system-codes`,
   HEALTH: `${API_BASE_URL}/api/health`,
+  ROOM_TYPES: `${API_BASE_URL}/api/room-types`,
+  HOTELS: `${API_BASE_URL}/api/hotels`,
+  FACILITIES: `${API_BASE_URL}/api/facilities`,
 };

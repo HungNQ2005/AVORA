@@ -1,22 +1,48 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainLayout from './common/components/MainLayout';
+import AdminLayout from './common/components/AdminLayout';
 import HomePage from './features/home/HomePage';
 import TestConnectionPage from './features/connection_test/TestConnectionPage';
+import RoomTypeManagementPage from './features/room_types/RoomTypeManagementPage';
+import RoomTypeDetailPage from './features/room_types/RoomTypeDetailPage';
 
 /**
  * Root application component.
- * Configures routing and wraps everything in MainLayout.
+ * Configures routing for public/test views and the admin management portal.
  */
 function App() {
   return (
     <BrowserRouter>
-      <MainLayout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/system_codes" element={<TestConnectionPage />} />
-        </Routes>
-      </MainLayout>
+      <Routes>
+        {/* Public & Test pages with MainLayout */}
+        <Route
+          path="/"
+          element={
+            <MainLayout>
+              <HomePage />
+            </MainLayout>
+          }
+        />
+        <Route
+          path="/system_codes"
+          element={
+            <MainLayout>
+              <TestConnectionPage />
+            </MainLayout>
+          }
+        />
+
+        {/* Admin Portal with dedicated AdminLayout */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<Navigate to="/admin/room-types" replace />} />
+          <Route path="room-types" element={<RoomTypeManagementPage />} />
+          <Route path="room-types/:id" element={<RoomTypeDetailPage />} />
+        </Route>
+
+        {/* Friendly redirect aliases */}
+        <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
+      </Routes>
     </BrowserRouter>
   );
 }

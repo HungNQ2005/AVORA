@@ -1,0 +1,239 @@
+.rt-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.rt-filter-bar__search {
+  position: relative;
+  width: 320px;
+  max-width: 100%;
+}
+
+.rt-filter-bar__search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #94a3b8;
+}
+
+.rt-filter-bar__search-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 32px 0 36px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  color: #1e293b;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.rt-filter-bar__search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.rt-filter-bar__clear-btn {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.rt-filter-bar__pills {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.rt-filter-bar__pills-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  margin-right: 0.25rem;
+}
+
+.rt-pill {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.rt-pill:hover {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+
+.rt-pill--active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.rt-pill--active:hover {
+  background: #1e293b;
+  color: #ffffff;
+}
+
+.rt-filter-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* Custom Sort Dropdown */
+.rt-sort-dropdown {
+  position: relative;
+}
+
+.rt-sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+  color: #334155;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.rt-sort-btn:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.rt-sort-btn--open {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background: #ffffff;
+}
+
+.rt-sort-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.rt-sort-btn__text {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.rt-sort-btn__prefix {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.rt-sort-chevron {
+  color: #94a3b8;
+  transition: transform 0.2s ease;
+  margin-left: 0.2rem;
+}
+
+.rt-sort-chevron--up {
+  transform: rotate(180deg);
+}
+
+.rt-sort-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 220px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  padding: 0.35rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  animation: rtDropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes rtDropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rt-sort-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+  color: #334155;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.rt-sort-menu__item:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.rt-sort-menu__item--active {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.rt-sort-menu__item--active:hover {
+  background: #dbeafe;
+}
+
+.rt-export-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.rt-export-btn:hover {
+  background: #f8fafc;
+  color: #1e293b;
+}
