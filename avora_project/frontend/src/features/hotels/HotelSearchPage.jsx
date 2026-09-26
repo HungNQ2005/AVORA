@@ -229,6 +229,7 @@ const HotelSearchPage = () => {
 
   // Synchronize state with URL and trigger fetch
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     fetchHotels();
   }, [fetchHotels]);
 

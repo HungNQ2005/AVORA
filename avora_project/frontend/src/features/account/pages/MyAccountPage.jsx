@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { updateProfile, changePassword, deactivateAccount, getProfile } from '../../../services/authService';
 import Dialog from '../../../common/components/Dialog';
 import { codeNameParser } from '../../../utils/codeNameParser';
+import { getSavedFavorites, removeFavoriteHotel } from '../../../utils/favoritesStorage';
+import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
 import './MyAccountPage.css';
 
 /**
@@ -132,10 +134,31 @@ const CheckCircleIcon = () => (
  */
 const MyAccountPage = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, setUser, logout, loading } = useAuth();
 
+  const tabParam = searchParams.get('tab');
   // Active navigation tab: 'info' | 'favorites' | 'security'
-  const [activeTab, setActiveTab] = useState('info');
+  const [activeTab, setActiveTab] = useState(() => {
+    if (tabParam && ['info', 'favorites', 'security'].includes(tabParam)) {
+      return tabParam;
+    }
+    return 'info';
+  });
+
+  // Sync activeTab when query param changes
+  useEffect(() => {
+    const currentTab = searchParams.get('tab');
+    if (currentTab && ['info', 'favorites', 'security'].includes(currentTab)) {
+      setActiveTab(currentTab);
+    }
+  }, [searchParams]);
+
+  // Tab switcher helper
+  const switchTab = (tabKey) => {
+    setActiveTab(tabKey);
+    setSearchParams({ tab: tabKey });
+  };
 
   // Edit mode state for profile info
   const [isEditing, setIsEditing] = useState(false);
@@ -161,18 +184,66 @@ const MyAccountPage = () => {
     if (Array.isArray(user?.saved_hotels) && user.saved_hotels.length > 0) {
       return user.saved_hotels;
     }
-    // Check if user has stored favorites locally as fallback cache
-    try {
-      const stored = localStorage.getItem('avora_user_favorites');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {
-      // ignore
-    }
-    return [];
+    return getSavedFavorites();
   });
+
+  // Reactive listener for saved accommodations updates across storage and custom events
+  useEffect(() => {
+    const handleFavoritesUpdate = () => {
+      const stored = getSavedFavorites();
+      setSavedAccommodations(stored);
+    };
+
+    window.addEventListener('storage', handleFavoritesUpdate);
+    window.addEventListener('avora_favorites_updated', handleFavoritesUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleFavoritesUpdate);
+      window.removeEventListener('avora_favorites_updated', handleFavoritesUpdate);
+    };
+  }, []);
+
+  // Fetch real database records for saved hotels so all information (stars, score, price, thumbnail, address) is 100% authentic
+  useEffect(() => {
+    let isMounted = true;
+    if (savedAccommodations.length === 0) return;
+
+    // Check if any saved item lacks complete database fields
+    const needsEnrichment = savedAccommodations.some(
+      (item) => typeof item !== 'object' || !item.name || !item.price || !item.city_name || !item.thumbnail
+    );
+
+    if (needsEnrichment) {
+      fetch(`${API_ENDPOINTS.HOTELS}?destination=Vi%E1%BB%87t%20Nam`)
+        .then((res) => res.json())
+        .then((json) => {
+          if (!isMounted) return;
+          const hotelsFromDb = json?.data?.hotels || [];
+          if (hotelsFromDb.length > 0) {
+            const hotelMap = new Map();
+            hotelsFromDb.forEach((h) => hotelMap.set(String(h.hotel_id), h));
+
+            setSavedAccommodations((currentList) => {
+              return currentList.map((item) => {
+                const id = typeof item === 'object' && item !== null ? (item.hotel_id || item.id) : item;
+                const dbHotel = hotelMap.get(String(id));
+                if (dbHotel) {
+                  return { ...dbHotel, ...(typeof item === 'object' ? item : {}), ...dbHotel };
+                }
+                return item;
+              });
+            });
+          }
+        })
+        .catch((err) => {
+          console.error('Error fetching database hotels for saved list:', err);
+        });
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [savedAccommodations.length]);
 
   // Sync profile form when user changes
   useEffect(() => {
@@ -279,13 +350,9 @@ const MyAccountPage = () => {
   /* ── Remove Saved Accommodation ─────────────────────────────────── */
   const handleRemoveSaved = (hotelId, e) => {
     e.stopPropagation();
-    const updated = savedAccommodations.filter((item) => (item.hotel_id || item.id) !== hotelId);
+    const updated = removeFavoriteHotel(hotelId);
     setSavedAccommodations(updated);
-    try {
-      localStorage.setItem('avora_user_favorites', JSON.stringify(updated));
-    } catch {
-      // ignore
-    }
+    setProfileMsg({ type: 'success', text: 'Đã xóa chỗ nghỉ khỏi danh sách lưu.' });
   };
 
   /* ── Helpers for Source of Truth Formatting ──────────────────────── */
@@ -351,9 +418,11 @@ const MyAccountPage = () => {
           <nav className="profile-breadcrumbs" aria-label="Breadcrumb">
             <Link to="/" className="breadcrumb-link">Trang chủ</Link>
             <span className="breadcrumb-separator">&gt;</span>
-            <span className="breadcrumb-link" onClick={() => setActiveTab('info')}>Tài khoản của tôi</span>
+            <span className="breadcrumb-link" onClick={() => switchTab('info')}>Tài khoản của tôi</span>
             <span className="breadcrumb-separator">&gt;</span>
-            <span className="breadcrumb-current">Quản lý hồ sơ</span>
+            <span className="breadcrumb-current">
+              {activeTab === 'favorites' ? 'Chỗ nghỉ đã lưu' : activeTab === 'security' ? 'Bảo mật tài khoản' : 'Quản lý hồ sơ'}
+            </span>
           </nav>
 
           <div className="profile-topbar__status">
@@ -424,7 +493,7 @@ const MyAccountPage = () => {
             <button
               type="button"
               className="hero-action-btn hero-action-btn--outline"
-              onClick={() => setActiveTab('favorites')}
+              onClick={() => switchTab('favorites')}
             >
               <HeartIcon />
               <span>Chỗ nghỉ đã lưu ({savedAccommodations.length})</span>
@@ -453,7 +522,7 @@ const MyAccountPage = () => {
             <div className="stat-card__value">{rewardPointsDisplay}</div>
           </div>
 
-          <div className="stat-card stat-card--pink" onClick={() => setActiveTab('favorites')}>
+          <div className="stat-card stat-card--pink" onClick={() => switchTab('favorites')}>
             <div className="stat-card__label-row">
               <span className="stat-card__label">Chỗ nghỉ đã lưu</span>
               <span className="stat-card__icon"><HeartIcon filled={savedAccommodations.length > 0} /></span>
@@ -477,7 +546,7 @@ const MyAccountPage = () => {
               <button
                 type="button"
                 className={`profile-nav-item ${activeTab === 'info' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('info')}
+                onClick={() => switchTab('info')}
               >
                 <div className="profile-nav-item__left">
                   <UserIcon />
@@ -489,7 +558,7 @@ const MyAccountPage = () => {
               <button
                 type="button"
                 className={`profile-nav-item ${activeTab === 'favorites' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('favorites')}
+                onClick={() => switchTab('favorites')}
               >
                 <div className="profile-nav-item__left">
                   <HeartIcon />
@@ -501,7 +570,7 @@ const MyAccountPage = () => {
               <button
                 type="button"
                 className={`profile-nav-item ${activeTab === 'security' ? 'is-active' : ''}`}
-                onClick={() => setActiveTab('security')}
+                onClick={() => switchTab('security')}
               >
                 <div className="profile-nav-item__left">
                   <SecurityShieldIcon />
@@ -761,25 +830,43 @@ const MyAccountPage = () => {
                   <div className="saved-accommodations-list">
                     {savedAccommodations.map((hotel, idx) => {
                       const hotelId = hotel.hotel_id || hotel.id || idx;
-                      const hotelName = hotel.hotel_name || hotel.name || 'Khách sạn Avora';
-                      const city = hotel.city_name || hotel.city || 'Đà Nẵng';
-                      const address = hotel.address || 'Địa chỉ khách sạn';
-                      const score = hotel.review_score || hotel.rating || '9.4';
-                      const reviewCount = hotel.review_count || '1.842';
-                      const price = hotel.min_price || hotel.price || 2350000;
-                      const img = hotel.thumbnail || hotel.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
+                      const hotelName = hotel.name || hotel.hotel_name || 'Khách sạn Avora';
+                      const city = hotel.city_name || hotel.city || 'Việt Nam';
+                      const address = hotel.address || 'Địa chỉ đang cập nhật';
+                      const starCount = Math.max(1, Math.min(5, Number(hotel.star_quality || hotel.star_rating || 4)));
+                      const scoreNum = Number(hotel.star_rating || hotel.review_score || hotel.rating || 9.0);
+                      const scoreFormatted = Number(scoreNum).toFixed(1);
+                      const scoreLabel = hotel.score_label || (scoreNum >= 9.0 ? 'Tuyệt hảo' : scoreNum >= 8.5 ? 'Tuyệt vời' : scoreNum >= 8.0 ? 'Rất tốt' : 'Tốt');
+                      const reviewCount = hotel.reviews_count || hotel.review_count || '1.842';
+                      const price = Number(hotel.price || hotel.min_price || 0);
+                      const img = hotel.thumbnail || hotel.images?.[0] || hotel.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
 
                       return (
-                        <article key={hotelId} className="saved-hotel-card">
+                        <article
+                          key={hotelId}
+                          className="saved-hotel-card"
+                          onClick={() => navigate(`/hotels/${hotelId}`)}
+                          style={{ cursor: 'pointer' }}
+                        >
                           <div className="saved-hotel-card__image-box">
-                            <img src={img} alt={hotelName} loading="lazy" />
+                            <img
+                              src={img}
+                              alt={hotelName}
+                              loading="lazy"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
+                              }}
+                            />
                             <span className="saved-hotel-card__city-badge">{city}</span>
                           </div>
 
                           <div className="saved-hotel-card__content">
                             <div className="saved-hotel-card__top">
-                              <div className="saved-hotel-card__stars">
-                                <StarIcon /><StarIcon /><StarIcon /><StarIcon /><StarIcon />
+                              <div className="saved-hotel-card__stars" title={`${starCount} sao`}>
+                                {Array.from({ length: starCount }).map((_, sIdx) => (
+                                  <StarIcon key={sIdx} />
+                                ))}
                               </div>
                               <button
                                 type="button"
@@ -800,9 +887,9 @@ const MyAccountPage = () => {
                             </div>
 
                             <div className="saved-hotel-card__rating">
-                              <span className="rating-badge">{score}</span>
+                              <span className="rating-badge">{scoreFormatted}</span>
                               <span className="rating-text">
-                                {score >= 9 ? 'Tuyệt hảo' : 'Tuyệt vời'} • {reviewCount} đánh giá
+                                {scoreLabel} • {reviewCount} đánh giá
                               </span>
                             </div>
 
@@ -810,14 +897,17 @@ const MyAccountPage = () => {
                               <div className="saved-hotel-card__price-box">
                                 <span className="price-label">Giá mỗi đêm từ</span>
                                 <div className="price-amount">
-                                  {Number(price).toLocaleString('vi-VN')} đ
+                                  {price > 0 ? `${price.toLocaleString('vi-VN')} đ` : 'Liên hệ'}
                                 </div>
                               </div>
 
                               <button
                                 type="button"
                                 className="btn-view-hotel"
-                                onClick={() => navigate(`/hotels/${hotelId}`)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/hotels/${hotelId}`);
+                                }}
                               >
                                 <span>Xem chỗ nghỉ</span>
                                 <ChevronRightIcon />

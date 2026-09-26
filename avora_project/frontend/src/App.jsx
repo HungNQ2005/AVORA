@@ -1,5 +1,5 @@
-import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import MainLayout from './common/components/MainLayout';
 import HomePage from './features/home/HomePage';
 import TestConnectionPage from './features/connection_test/TestConnectionPage';
@@ -9,6 +9,20 @@ import MyAccountPage from './features/account/pages/MyAccountPage';
 import { AuthProvider } from './context/AuthContext';
 import HotelSearchPage from './features/hotels/HotelSearchPage';
 import HotelDetailPage from './features/hotels/HotelDetailPage';
+import FavoritesPage from './features/account/pages/FavoritesPage';
+
+/**
+ * Automatically scrolls the window to the top whenever navigation occurs.
+ */
+function ScrollToTop() {
+  const { pathname, search } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [pathname, search]);
+
+  return null;
+}
 
 /**
  * Root application component.
@@ -18,6 +32,7 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <MainLayout>
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -25,6 +40,8 @@ function App() {
             <Route path="/signup" element={<SignUpPage />} />
             <Route path="/system_codes" element={<TestConnectionPage />} />
             <Route path="/myaccount" element={<MyAccountPage />} />
+            <Route path="/favorites" element={<FavoritesPage />} />
+            <Route path="/saved" element={<FavoritesPage />} />
             <Route path="/hotels" element={<HotelSearchPage />} />
             <Route path="/hotels/:id" element={<HotelDetailPage />} />
             <Route path="/search" element={<HotelSearchPage />} />

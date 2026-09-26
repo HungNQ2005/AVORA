@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
+import { getSavedFavorites, toggleFavoriteHotel } from '../../utils/favoritesStorage';
 import './HomePage.css';
 
 /* Custom SVG Icons */
@@ -142,8 +143,35 @@ const HomePage = () => {
     geniusOffer: false
   });
 
-  // Favorites state tracking
-  const [favorites, setFavorites] = useState({});
+  // Favorites state tracking initialized from persistent storage
+  const [favorites, setFavorites] = useState(() => {
+    const list = getSavedFavorites();
+    const map = {};
+    list.forEach(item => {
+      const id = typeof item === 'object' && item !== null ? (item.hotel_id || item.id) : item;
+      if (id) map[id] = true;
+    });
+    return map;
+  });
+
+  // Sync favorites when storage updates
+  useEffect(() => {
+    const syncFavs = () => {
+      const list = getSavedFavorites();
+      const map = {};
+      list.forEach(item => {
+        const id = typeof item === 'object' && item !== null ? (item.hotel_id || item.id) : item;
+        if (id) map[id] = true;
+      });
+      setFavorites(map);
+    };
+    window.addEventListener('storage', syncFavs);
+    window.addEventListener('avora_favorites_updated', syncFavs);
+    return () => {
+      window.removeEventListener('storage', syncFavs);
+      window.removeEventListener('avora_favorites_updated', syncFavs);
+    };
+  }, []);
 
   // Database Hotels State (dynamically fetched from Supabase)
   const [hotels, setHotels] = useState([]);
@@ -190,7 +218,8 @@ const HomePage = () => {
   };
 
   const toggleFavorite = (id) => {
-    const nextState = !favorites[id];
+    const hotelObj = hotels.find((h) => String(h.hotel_id) === String(id)) || { hotel_id: id };
+    const nextState = toggleFavoriteHotel(hotelObj);
     setFavorites(prev => ({ ...prev, [id]: nextState }));
     triggerToast(nextState ? 'Đã thêm chỗ nghỉ vào danh sách yêu thích' : 'Đã xóa chỗ nghỉ khỏi danh sách yêu thích');
   };
@@ -258,6 +287,7 @@ const HomePage = () => {
   const hasRegionalPromo = !loadingHotels && regionalPromoHotels.length > 0;
 
   const handlePromoClick = () => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     const cleanDest = destination ? destination.split(',')[0].trim() : 'Đà Nẵng';
     const checkInDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkInDay).padStart(2, '0')}`;
     const checkOutDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkOutDay || checkInDay + 2).padStart(2, '0')}`;
@@ -278,6 +308,7 @@ const HomePage = () => {
   };
 
   const handleDestinationClick = (destName) => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     const checkInDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkInDay).padStart(2, '0')}`;
     const checkOutDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkOutDay || checkInDay + 2).padStart(2, '0')}`;
 

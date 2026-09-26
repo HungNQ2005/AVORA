@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import MapModal from './components/MapModal';
 import { useAuth } from '../../context/AuthContext';
+import { isHotelSaved, toggleFavoriteHotel } from '../../utils/favoritesStorage';
 import './HotelDetailPage.css';
 
 /* ─── CUSTOM SVG ICONS ─────────────────────────────────────────────────────── */
@@ -200,8 +201,15 @@ const HotelDetailPage = () => {
   const [hotel, setHotel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [isFavorited, setIsFavorited] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(() => isHotelSaved(id));
   const [toastMsg, setToastMsg] = useState(null);
+
+  // Sync isFavorited when hotel data or ID loads
+  useEffect(() => {
+    if (hotel?.hotel_id || id) {
+      setIsFavorited(isHotelSaved(hotel?.hotel_id || id));
+    }
+  }, [hotel, id]);
 
   // Modals state
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -271,8 +279,10 @@ const HotelDetailPage = () => {
   };
 
   const handleFavoriteClick = () => {
-    setIsFavorited(!isFavorited);
-    setToastMsg(!isFavorited ? 'Đã lưu khách sạn vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích');
+    const targetObj = hotel || { hotel_id: id };
+    const nowSaved = toggleFavoriteHotel(targetObj);
+    setIsFavorited(nowSaved);
+    setToastMsg(nowSaved ? 'Đã lưu khách sạn vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích');
   };
 
   const handleOpenLightbox = (index = 0) => {

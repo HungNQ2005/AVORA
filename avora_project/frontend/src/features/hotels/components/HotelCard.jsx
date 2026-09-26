@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { isHotelSaved, toggleFavoriteHotel } from '../../../utils/favoritesStorage';
 
 /* SVG Icons matching reference design */
 const StarIcon = () => (
@@ -62,14 +63,19 @@ const formatPrice = (val) => {
  */
 const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(() => isHotelSaved(hotel?.hotel_id || hotel?.id));
+
+  useEffect(() => {
+    setIsFavorite(isHotelSaved(hotel?.hotel_id || hotel?.id));
+  }, [hotel]);
 
   const images = hotel.images && hotel.images.length > 0 ? hotel.images : (hotel.thumbnail ? [hotel.thumbnail] : []);
   const currentImage = images[selectedImageIdx] || images[0] || '';
 
   const handleFavoriteClick = (e) => {
     e.stopPropagation();
-    setIsFavorite(!isFavorite);
+    const nowSaved = toggleFavoriteHotel(hotel);
+    setIsFavorite(nowSaved);
   };
 
   const handleCardClick = () => {
