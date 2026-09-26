@@ -185,7 +185,7 @@ const signInUser = async (email, password) => {
 const getUserProfile = async (userId) => {
   const { data: user, error } = await supabase
     .from('m_user')
-    .select('user_id, email, full_name, phone, role_cd, account_status, avatar_url, is_email_verified, created_at')
+    .select('*')
     .eq('user_id', userId)
     .eq('is_deleted', false)
     .single();
@@ -195,6 +195,8 @@ const getUserProfile = async (userId) => {
     err.statusCode = 404;
     throw err;
   }
+
+  delete user.password_hash;
 
   // Resolve role_cd (code_cd) -> code_name from m_system_code lookup table
   let role_code_name = user.role_cd; // fallback to raw value
