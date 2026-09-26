@@ -132,8 +132,10 @@ const SignUpPage = () => {
     setLoading(true);
     try {
       const res = await signUp(form.email, form.password, form.full_name);
-      setSuccess(res.message || 'Tạo tài khoản thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.');
-      setTimeout(() => navigate('/signin'), 3000);
+      setSuccess(res.message || 'Tạo tài khoản thành công! Đang chuyển hướng sang trang đăng nhập...');
+      setTimeout(() => {
+        navigate('/signin', { state: { email: form.email, justSignedUp: true } });
+      }, 1500);
     } catch (err) {
       const msg = err.response?.data?.message || 'Đăng ký tài khoản không thành công. Vui lòng thử lại.';
       setError(msg);

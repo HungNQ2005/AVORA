@@ -306,6 +306,33 @@
   border-radius: 0;
 }
 
+.avora-datepicker__day.is-today:not(.is-start):not(.is-end) {
+  font-weight: 800;
+  color: #003580;
+  box-shadow: inset 0 0 0 1.5px #003580;
+}
+
+.avora-datepicker__day.is-disabled {
+  color: #c7cdd8 !important;
+  background-color: transparent !important;
+  cursor: not-allowed !important;
+  opacity: 0.4;
+  pointer-events: none;
+  text-decoration: line-through;
+}
+
+.avora-datepicker__day.is-empty {
+  cursor: default !important;
+  pointer-events: none;
+  background: transparent !important;
+}
+
+.avora-datepicker__nav-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
 /* GUEST & ROOM POPOVER (MATCHING REFERENCE IMAGE) */
 .avora-guest-popover {
   position: absolute;

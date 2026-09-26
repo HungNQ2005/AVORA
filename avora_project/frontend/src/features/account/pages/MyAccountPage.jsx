@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { updateProfile, changePassword, requestDeactivateOtp } from '../../../services/authService';
+import { getProfile, updateProfile, changePassword, requestDeactivateOtp } from '../../../services/authService';
 import Dialog from '../../../common/components/Dialog';
 import DeactivateOtpModal from '../components/DeactivateOtpModal';
 import { codeNameParser } from '../../../utils/codeNameParser';

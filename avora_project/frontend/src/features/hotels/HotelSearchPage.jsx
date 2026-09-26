@@ -77,8 +77,22 @@ const HotelSearchPage = () => {
 
   // Primary Search Fields
   const [destination, setDestination] = useState(searchParams.get('destination') || '');
-  const [checkIn, setCheckIn] = useState(searchParams.get('checkIn') || '2024-07-12');
-  const [checkOut, setCheckOut] = useState(searchParams.get('checkOut') || '2024-07-14');
+  const [checkIn, setCheckIn] = useState(() => {
+    const param = searchParams.get('checkIn');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (param && new Date(param) >= today) return param;
+    return today.toISOString().split('T')[0];
+  });
+  const [checkOut, setCheckOut] = useState(() => {
+    const param = searchParams.get('checkOut');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (param && new Date(param) > today) return param;
+    const d = new Date(today);
+    d.setDate(d.getDate() + 2);
+    return d.toISOString().split('T')[0];
+  });
   const [adults, setAdults] = useState(Number(searchParams.get('adults')) || 2);
   const [children, setChildren] = useState(Number(searchParams.get('children')) || 0);
   const [rooms, setRooms] = useState(Number(searchParams.get('rooms')) || 1);

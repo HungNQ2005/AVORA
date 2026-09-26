@@ -121,10 +121,25 @@ const HomePage = () => {
 
   // Search Form State
   const [destination, setDestination] = useState('Đà Nẵng, Việt Nam');
-  const [checkInDay, setCheckInDay] = useState(12);
-  const [checkOutDay, setCheckOutDay] = useState(14);
-  const [selectedMonth, setSelectedMonth] = useState(7);
-  const [selectedYear, setSelectedYear] = useState(2024);
+  // Current date baseline (normalized to midnight)
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
+  // Default check-in: today, default check-out: today + 2 days
+  const defaultCheckIn = useMemo(() => new Date(today), [today]);
+  const defaultCheckOut = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 2);
+    return d;
+  }, [today]);
+
+  const [checkInDate, setCheckInDate] = useState(defaultCheckIn);
+  const [checkOutDate, setCheckOutDate] = useState(defaultCheckOut);
+  const [selectedMonth, setSelectedMonth] = useState(() => defaultCheckIn.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => defaultCheckIn.getFullYear());
 
   // Guest & Room State (Default: 3 adults, 0 children, 2 rooms as in reference image)
   const [adults, setAdults] = useState(3);
@@ -236,33 +251,122 @@ const HomePage = () => {
     triggerToast(`Đã ${nextState ? 'kích hoạt' : 'bỏ chọn'} bộ lọc "${filterNames[key]}"`);
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    const cleanDest = destination.split(',')[0].trim();
-    const checkInDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkInDay).padStart(2, '0')}`;
-    const checkOutDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkOutDay || checkInDay + 2).padStart(2, '0')}`;
-    navigate(`/hotels?destination=${encodeURIComponent(cleanDest)}&checkIn=${checkInDate}&checkOut=${checkOutDate}&adults=${adults}&children=${children}&rooms=${rooms}`);
+  const getWeekdayVN = (d) => {
+    const day = d.getDay();
+    return day === 0 ? 'CN' : `T${day + 1}`;
+  };
+
+  const formatShortDateVN = (d) => {
+    const wd = getWeekdayVN(d);
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    return `${wd}, ${day} Th${month}`;
+  };
+
+  const formatDateISO = (d) => {
+    if (!d) return '';
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   };
 
   const getFormattedDateRange = () => {
-    const nights = Math.max(1, checkOutDay - checkInDay);
-    return `T6, ${checkInDay < 10 ? '0' + checkInDay : checkInDay} Th${selectedMonth < 10 ? '0' + selectedMonth : selectedMonth} – CN, ${checkOutDay < 10 ? '0' + checkOutDay : checkOutDay} Th${selectedMonth < 10 ? '0' + selectedMonth : selectedMonth} (${nights} đêm)`;
+    if (!checkInDate) return 'Chọn ngày nhận & trả phòng';
+    if (!checkOutDate) {
+      return `${formatShortDateVN(checkInDate)} – Chọn ngày trả`;
+    }
+    const nights = Math.max(1, Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
+    return `${formatShortDateVN(checkInDate)} – ${formatShortDateVN(checkOutDate)} (${nights} đêm)`;
   };
 
-  const handleDateSelect = (day) => {
-    if (!checkInDay || (checkInDay && checkOutDay)) {
-      setCheckInDay(day);
-      setCheckOutDay(null);
-      triggerToast(`Đã chọn ngày nhận phòng: Ngày ${day} tháng ${selectedMonth}`);
-    } else if (day > checkInDay) {
-      setCheckOutDay(day);
-      setShowDatePicker(false);
-      triggerToast(`Đã chọn thời gian lưu trú từ ${checkInDay} đến ${day} tháng ${selectedMonth}`);
+  const canGoPrevMonth = useMemo(() => {
+    const curMonth = today.getMonth() + 1;
+    const curYear = today.getFullYear();
+    if (selectedYear > curYear) return true;
+    if (selectedYear === curYear && selectedMonth > curMonth) return true;
+    return false;
+  }, [selectedMonth, selectedYear, today]);
+
+  const handlePrevMonth = () => {
+    if (!canGoPrevMonth) return;
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear((prev) => prev - 1);
     } else {
-      setCheckInDay(day);
-      setCheckOutDay(null);
-      triggerToast(`Đã chọn ngày nhận phòng: Ngày ${day} tháng ${selectedMonth}`);
+      setSelectedMonth((prev) => prev - 1);
     }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear((prev) => prev + 1);
+    } else {
+      setSelectedMonth((prev) => prev + 1);
+    }
+  };
+
+  const handleDateSelect = (dateObj) => {
+    if (dateObj < today) return; // Disallow any past date
+
+    if (!checkInDate || (checkInDate && checkOutDate)) {
+      setCheckInDate(dateObj);
+      setCheckOutDate(null);
+      triggerToast(`Đã chọn ngày nhận phòng: Ngày ${dateObj.getDate()} tháng ${dateObj.getMonth() + 1}`);
+    } else if (dateObj.getTime() > checkInDate.getTime()) {
+      setCheckOutDate(dateObj);
+      setShowDatePicker(false);
+      const nights = Math.round((dateObj.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+      triggerToast(`Đã chọn thời gian lưu trú từ ${formatShortDateVN(checkInDate)} đến ${formatShortDateVN(dateObj)} (${nights} đêm)`);
+    } else {
+      setCheckInDate(dateObj);
+      setCheckOutDate(null);
+      triggerToast(`Đã chọn ngày nhận phòng: Ngày ${dateObj.getDate()} tháng ${dateObj.getMonth() + 1}`);
+    }
+  };
+
+  // Calendar days grid calculation for selectedMonth and selectedYear
+  const calendarDays = useMemo(() => {
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    // Monday is col 0, Sunday is col 6
+    const firstDay = new Date(selectedYear, selectedMonth - 1, 1).getDay();
+    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+    const days = [];
+    for (let i = 0; i < startOffset; i++) {
+      days.push({ key: `empty-${i}`, isEmpty: true });
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateObj = new Date(selectedYear, selectedMonth - 1, day);
+      dateObj.setHours(0, 0, 0, 0);
+
+      const isPast = dateObj < today;
+      const isToday = dateObj.getTime() === today.getTime();
+      const isCheckIn = checkInDate && dateObj.getTime() === checkInDate.getTime();
+      const isCheckOut = checkOutDate && dateObj.getTime() === checkOutDate.getTime();
+      const isInRange = checkInDate && checkOutDate && dateObj > checkInDate && dateObj < checkOutDate;
+
+      days.push({
+        key: `day-${selectedYear}-${selectedMonth}-${day}`,
+        day,
+        dateObj,
+        isPast,
+        isToday,
+        isCheckIn,
+        isCheckOut,
+        isInRange,
+      });
+    }
+    return days;
+  }, [selectedMonth, selectedYear, today, checkInDate, checkOutDate]);
+
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+    const cleanDest = destination.split(',')[0].trim();
+    const checkInStr = formatDateISO(checkInDate);
+    const checkOutStr = formatDateISO(checkOutDate || (checkInDate ? new Date(checkInDate.getTime() + 2 * 86400000) : today));
+    navigate(`/hotels?destination=${encodeURIComponent(cleanDest)}&checkIn=${checkInStr}&checkOut=${checkOutStr}&adults=${adults}&children=${children}&rooms=${rooms}`);
   };
 
   const region = destination ? destination.split(',')[0].trim() : 'Đà Nẵng';
@@ -289,8 +393,8 @@ const HomePage = () => {
   const handlePromoClick = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
     const cleanDest = destination ? destination.split(',')[0].trim() : 'Đà Nẵng';
-    const checkInDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkInDay).padStart(2, '0')}`;
-    const checkOutDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkOutDay || checkInDay + 2).padStart(2, '0')}`;
+    const checkInStr = formatDateISO(checkInDate);
+    const checkOutStr = formatDateISO(checkOutDate || (checkInDate ? new Date(checkInDate.getTime() + 2 * 86400000) : today));
 
     if (!hasRegionalPromo) {
       triggerToast(`Hiện chưa có ưu đãi tại ${cleanDest}`);
@@ -298,8 +402,8 @@ const HomePage = () => {
 
     const queryParams = new URLSearchParams();
     queryParams.set('destination', cleanDest);
-    queryParams.set('checkIn', checkInDate);
-    queryParams.set('checkOut', checkOutDate);
+    queryParams.set('checkIn', checkInStr);
+    queryParams.set('checkOut', checkOutStr);
     queryParams.set('adults', adults);
     queryParams.set('children', children);
     queryParams.set('rooms', rooms);
@@ -309,13 +413,13 @@ const HomePage = () => {
 
   const handleDestinationClick = (destName) => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    const checkInDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkInDay).padStart(2, '0')}`;
-    const checkOutDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(checkOutDay || checkInDay + 2).padStart(2, '0')}`;
+    const checkInStr = formatDateISO(checkInDate);
+    const checkOutStr = formatDateISO(checkOutDate || (checkInDate ? new Date(checkInDate.getTime() + 2 * 86400000) : today));
 
     const queryParams = new URLSearchParams();
     if (destName) queryParams.set('destination', destName);
-    queryParams.set('checkIn', checkInDate);
-    queryParams.set('checkOut', checkOutDate);
+    queryParams.set('checkIn', checkInStr);
+    queryParams.set('checkOut', checkOutStr);
     queryParams.set('adults', adults);
     queryParams.set('children', children);
     queryParams.set('rooms', rooms);
@@ -384,7 +488,7 @@ const HomePage = () => {
                 <div className="avora-search-field__content">
                   <label>Ngày nhận phòng – Ngày trả phòng</label>
                   <div className="avora-search-field__value-text">
-                    {checkInDay && checkOutDay ? getFormattedDateRange() : 'Chọn ngày nhận & trả phòng'}
+                    {getFormattedDateRange()}
                   </div>
                 </div>
 
@@ -394,16 +498,21 @@ const HomePage = () => {
                     <div className="avora-datepicker-popover__header">
                       <button
                         type="button"
-                        onClick={() => setSelectedMonth(prev => prev > 1 ? prev - 1 : 12)}
+                        onClick={handlePrevMonth}
+                        disabled={!canGoPrevMonth}
                         className="avora-datepicker__nav-btn"
+                        title={!canGoPrevMonth ? 'Không thể quay lại tháng trong quá khứ' : 'Tháng trước'}
+                        aria-label="Tháng trước"
                       >
                         ‹
                       </button>
                       <span className="avora-datepicker__title">Tháng {selectedMonth}, {selectedYear}</span>
                       <button
                         type="button"
-                        onClick={() => setSelectedMonth(prev => prev < 12 ? prev + 1 : 1)}
+                        onClick={handleNextMonth}
                         className="avora-datepicker__nav-btn"
+                        title="Tháng tiếp theo"
+                        aria-label="Tháng tiếp theo"
                       >
                         ›
                       </button>
@@ -414,20 +523,30 @@ const HomePage = () => {
                     </div>
 
                     <div className="avora-datepicker-popover__days">
-                      {[...Array(31)].map((_, idx) => {
-                        const day = idx + 1;
-                        const isCheckIn = day === checkInDay;
-                        const isCheckOut = day === checkOutDay;
-                        const isInRange = checkInDay && checkOutDay && day > checkInDay && day < checkOutDay;
+                      {calendarDays.map((item) => {
+                        if (item.isEmpty) {
+                          return <div key={item.key} className="avora-datepicker__day is-empty" />;
+                        }
+
+                        const dayClasses = [
+                          'avora-datepicker__day',
+                          item.isCheckIn ? 'is-start' : '',
+                          item.isCheckOut ? 'is-end' : '',
+                          item.isInRange ? 'is-in-range' : '',
+                          item.isToday ? 'is-today' : '',
+                          item.isPast ? 'is-disabled' : '',
+                        ].filter(Boolean).join(' ');
 
                         return (
                           <button
-                            key={day}
+                            key={item.key}
                             type="button"
-                            className={`avora-datepicker__day ${isCheckIn ? 'is-start' : ''} ${isCheckOut ? 'is-end' : ''} ${isInRange ? 'is-in-range' : ''}`}
-                            onClick={() => handleDateSelect(day)}
+                            disabled={item.isPast}
+                            className={dayClasses}
+                            onClick={() => handleDateSelect(item.dateObj)}
+                            title={item.isPast ? 'Không thể chọn ngày trong quá khứ' : undefined}
                           >
-                            {day}
+                            {item.day}
                           </button>
                         );
                       })}

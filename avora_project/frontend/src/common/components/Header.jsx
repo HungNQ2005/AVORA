@@ -432,7 +432,7 @@ const Header = ({
                     aria-haspopup="true"
                   >
                     <div className="avora-header__user-avatar">
-                      {displayName.charAt(0).toUpperCase()}
+                      {(displayName.charAt(0) || 'U').toUpperCase()}
                     </div>
                     <span className="avora-header__user-name">{displayName}</span>
                     <ChevronDownIcon />
@@ -442,7 +442,7 @@ const Header = ({
                     <div className="avora-header__user-dropdown">
                       <div className="avora-header__dropdown-user-info">
                         <div className="avora-header__dropdown-avatar">
-                          {displayName.charAt(0).toUpperCase()}
+                          {(displayName.charAt(0) || 'U').toUpperCase()}
                         </div>
                         <div className="avora-header__dropdown-details">
                           <span className="avora-header__dropdown-name">{displayName}</span>

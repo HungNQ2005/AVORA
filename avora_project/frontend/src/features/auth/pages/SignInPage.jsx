@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { signIn } from '../../../services/authService';
+import { sendOtp } from '../../../services/otpService';
 import { useAuth } from '../../../context/AuthContext';
 import Dialog from '../../../common/components/Dialog';
 import './AuthPages.css';
@@ -58,7 +59,11 @@ const AlertCircleIcon = () => (
 const SignInPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { user, login } = useAuth();
+
+  const activatedParam = searchParams.get('activated');
+  const emailParam = searchParams.get('email');
 
   // If already logged in, redirect through the screen flow
   useEffect(() => {
@@ -68,11 +73,22 @@ const SignInPage = () => {
     }
   }, [user, navigate, location]);
 
-  const [form, setForm] = useState({ email: '', password: '' });
-  const [rememberMe, setRememberMe] = useState(true);
+  const initialEmail = emailParam || location.state?.email || localStorage.getItem('avora_remembered_email') || '';
+  const [form, setForm] = useState({ email: initialEmail, password: '' });
+  const [rememberMe, setRememberMe] = useState(() => !!localStorage.getItem('avora_remembered_email'));
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successNotice, setSuccessNotice] = useState(() => {
+    if (activatedParam === 'true') {
+      return '🎉 Kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay bây giờ.';
+    }
+    if (location.state?.justSignedUp) {
+      return 'Tài khoản của bạn đã được tạo thành công! Vui lòng kiểm tra email kích hoạt (hoặc console Terminal backend) trước khi đăng nhập.';
+    }
+    return '';
+  });
 
   // Dialog state for verification & deactivation gates
   const [dialog, setDialog] = useState({ isOpen: false, title: '', message: '', variant: 'info' });
@@ -97,6 +113,11 @@ const SignInPage = () => {
 
     try {
       const res = await signIn(form.email, form.password);
+      if (rememberMe) {
+        localStorage.setItem('avora_remembered_email', form.email.trim());
+      } else {
+        localStorage.removeItem('avora_remembered_email');
+      }
       login(res.data.token, res.data.user);
       const destination = location.state?.from?.pathname || '/myaccount';
       navigate(destination);
@@ -107,14 +128,14 @@ const SignInPage = () => {
         setDialog({
           isOpen: true,
           title: 'Xác thực tài khoản',
-          message: 'Tài khoản của bạn đã được tạo nhưng chưa hoàn tất xác thực email. Vui lòng kiểm tra hộp thư để kích hoạt trước khi đăng nhập.',
+          message: 'Tài khoản của bạn đã được đăng ký nhưng chưa kích hoạt email. Vui lòng kiểm tra hộp thư email để nhấn liên kết kích hoạt trước khi đăng nhập (Trong môi trường chạy thử nghiệm, liên kết kích hoạt được in trực tiếp ở Terminal Backend).',
           variant: 'warning',
         });
       } else if (msg === 'ACCOUNT_DEACTIVATED') {
         setDialog({
           isOpen: true,
           title: 'Tài khoản đã bị khóa',
-          message: 'Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ Quản trị viên để được hỗ trợ.',
+          message: 'Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ Quản trị viên để được hỗ trợ mở lại.',
           variant: 'warning',
         });
       } else {
@@ -135,13 +156,31 @@ const SignInPage = () => {
     });
   };
 
-  const handleMagicLink = () => {
-    setDialog({
-      isOpen: true,
-      title: 'Đăng nhập qua Email',
-      message: 'Tính năng đăng nhập tức thì bằng liên kết gửi qua Email đang được tích hợp và sẽ khả dụng trong thời gian tới.',
-      variant: 'info',
-    });
+  const handleMagicLink = async () => {
+    if (!form.email.trim()) {
+      setError('Vui lòng nhập địa chỉ email của bạn ở ô bên trên để nhận mã OTP.');
+      return;
+    }
+    setOtpLoading(true);
+    setError('');
+    try {
+      await sendOtp({ email: form.email.trim(), purpose: 'LOGIN' });
+      setDialog({
+        isOpen: true,
+        title: 'Mã xác thực OTP đã được gửi',
+        message: `Mã OTP xác thực 6 chữ số đã được gửi tới email ${form.email.trim()}. (Trong môi trường thử nghiệm, mã OTP được in trực tiếp tại Terminal Backend).`,
+        variant: 'info',
+      });
+    } catch (err) {
+      setDialog({
+        isOpen: true,
+        title: 'Gửi mã xác thực',
+        message: err.response?.data?.message || 'Không thể gửi mã xác thực OTP. Vui lòng thử lại.',
+        variant: 'warning',
+      });
+    } finally {
+      setOtpLoading(false);
+    }
   };
 
   return (
@@ -246,6 +285,14 @@ const SignInPage = () => {
             </span>
           </div>
 
+          {/* Success Notice Display (Activation or Signup redirect) */}
+          {successNotice && (
+            <div className="auth-success-alert" role="status">
+              <CheckIcon />
+              <span>{successNotice}</span>
+            </div>
+          )}
+
           {/* Error Alert Display */}
           {error && (
             <div className="auth-error-alert" role="alert">
@@ -265,14 +312,15 @@ const SignInPage = () => {
             {loading ? <span className="auth-spinner" /> : 'Đăng nhập ngay'}
           </button>
 
-          {/* Secondary Action: Login with Email magic link */}
+          {/* Secondary Action: Login with Email magic link / OTP */}
           <button
             type="button"
             className="auth-btn-secondary"
             onClick={handleMagicLink}
+            disabled={otpLoading}
           >
             <MailIcon />
-            <span>Đăng nhập bằng liên kết gửi qua Email</span>
+            <span>{otpLoading ? 'Đang gửi mã...' : 'Nhận mã OTP đăng nhập qua Email'}</span>
           </button>
         </form>
 

@@ -191,11 +191,34 @@ const HotelDetailPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  // Query parameters
-  const checkIn = searchParams.get('checkIn') || '2024-07-12';
-  const checkOut = searchParams.get('checkOut') || '2024-07-14';
+  // Query parameters with dynamic today/future fallbacks
+  const todayISO = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d.toISOString().split('T')[0];
+  }, []);
+  const defaultCheckOutISO = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() + 2);
+    return d.toISOString().split('T')[0];
+  }, []);
+
+  const rawCheckIn = searchParams.get('checkIn');
+  const rawCheckOut = searchParams.get('checkOut');
+  const checkIn = (rawCheckIn && rawCheckIn >= todayISO) ? rawCheckIn : todayISO;
+  const checkOut = (rawCheckOut && rawCheckOut > checkIn) ? rawCheckOut : defaultCheckOutISO;
   const adults = Number(searchParams.get('adults')) || 2;
-  const nights = 2; // e.g. 12/07 - 14/07 is 2 nights
+  const nights = useMemo(() => {
+    try {
+      const d1 = new Date(checkIn);
+      const d2 = new Date(checkOut);
+      const diff = Math.round((d2 - d1) / (1000 * 60 * 60 * 24));
+      return diff > 0 ? diff : 2;
+    } catch {
+      return 2;
+    }
+  }, [checkIn, checkOut]);
 
   // Component state
   const [hotel, setHotel] = useState(null);
