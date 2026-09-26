@@ -413,7 +413,103 @@
   color: #b91c1c;
 }
 
-/* Unauthenticated Auth Buttons Group */
+/* Unauthenticated Account Menu Wrapper & Dropdown matching Reference Image 1 */
+.avora-header__account-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.avora-header__account-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.avora-header__chevron-icon {
+  display: inline-flex;
+  align-items: center;
+  transition: transform 0.2s ease;
+}
+
+.avora-header__chevron-icon.is-open {
+  transform: rotate(180deg);
+}
+
+.avora-header__account-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 290px;
+  background-color: #ffffff;
+  color: #111827;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+  border: 1px solid #e5e7eb;
+  padding: 18px 18px 12px 18px;
+  z-index: 10000;
+  animation: headerDropdownFade 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.avora-header__account-dropdown-top {
+  margin-bottom: 12px;
+}
+
+.avora-header__account-dropdown-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.avora-header__account-dropdown-subtitle {
+  font-size: 12.5px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+.avora-header__account-dropdown-divider {
+  height: 1px;
+  background-color: #f3f4f6;
+  margin: 10px 0 6px 0;
+}
+
+.avora-header__account-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: all 0.15s ease;
+}
+
+.avora-header__account-dropdown-item:hover {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.avora-header__account-dropdown-item--login {
+  color: #003580;
+  font-weight: 700;
+}
+
+.avora-header__account-dropdown-item--login svg {
+  stroke: #003580;
+}
+
+.avora-header__account-dropdown-item--login:hover {
+  background-color: #f0f4f9;
+  color: #00224f;
+}
+
+/* Fallback Auth Buttons Group */
 .avora-header__auth-group {
   display: flex;
   align-items: center;

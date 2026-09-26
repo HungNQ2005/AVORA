@@ -136,6 +136,22 @@ const SendIcon = () => (
   </svg>
 );
 
+const LoginArrowIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+    <polyline points="10 17 15 12 10 7" />
+    <line x1="15" y1="12" x2="3" y2="12" />
+  </svg>
+);
+
+const UserPlusIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <line x1="20" y1="8" x2="20" y2="14" />
+    <line x1="23" y1="11" x2="17" y2="11" />
+  </svg>
+);
 
 /**
  * Reusable Header component matching the visual reference image.
@@ -156,18 +172,23 @@ const Header = ({
   const location = useLocation();
   const headerRef = useRef(null);
   const userMenuRef = useRef(null);
+  const accountDropdownRef = useRef(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [internalTab, setInternalTab] = useState(null);
   const currentPath = location.pathname;
   const currentTab = internalTab !== null
     ? internalTab
     : (currentPath.startsWith('/hotels') || currentPath === '/search' ? 'hotels' : (currentPath === '/' ? 'home' : activeTab));
 
-  // Close user profile dropdown on click outside
+  // Close user profile & account dropdown on click outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
         setIsUserMenuOpen(false);
+      }
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target)) {
+        setIsAccountDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -445,19 +466,56 @@ const Header = ({
                   )}
                 </div>
               ) : (
-                <div className="avora-header__auth-group">
-                  <Link
-                    to="/signup"
-                    className="avora-header__auth-btn avora-header__auth-btn--signup"
+                <div className="avora-header__account-wrapper" ref={accountDropdownRef}>
+                  <button
+                    type="button"
+                    className={`avora-header__pill-btn avora-header__account-btn ${isAccountDropdownOpen || currentPath === '/signin' || currentPath === '/signup' ? 'is-active' : ''}`}
+                    onClick={() => setIsAccountDropdownOpen((prev) => !prev)}
+                    aria-expanded={isAccountDropdownOpen}
+                    aria-haspopup="true"
                   >
-                    Đăng ký
-                  </Link>
-                  <Link
-                    to="/signin"
-                    className="avora-header__auth-btn avora-header__auth-btn--signin"
-                  >
-                    Đăng nhập
-                  </Link>
+                    <UserIcon />
+                    <span className="avora-header__two-line">
+                      <span>Tài</span>
+                      <span>khoản</span>
+                    </span>
+                    <span className={`avora-header__chevron-icon ${isAccountDropdownOpen ? 'is-open' : ''}`}>
+                      <ChevronDownIcon />
+                    </span>
+                  </button>
+
+                  {isAccountDropdownOpen && (
+                    <div className="avora-header__account-dropdown">
+                      <div className="avora-header__account-dropdown-top">
+                        <div className="avora-header__account-dropdown-title">
+                          Chào mừng bạn đến Avora
+                        </div>
+                        <div className="avora-header__account-dropdown-subtitle">
+                          Đăng nhập để nhận ưu đãi thành viên Genius 15%
+                        </div>
+                      </div>
+
+                      <div className="avora-header__account-dropdown-divider" />
+
+                      <Link
+                        to="/signin"
+                        className="avora-header__account-dropdown-item avora-header__account-dropdown-item--login"
+                        onClick={() => setIsAccountDropdownOpen(false)}
+                      >
+                        <LoginArrowIcon />
+                        <span>Đăng nhập</span>
+                      </Link>
+
+                      <Link
+                        to="/signup"
+                        className="avora-header__account-dropdown-item"
+                        onClick={() => setIsAccountDropdownOpen(false)}
+                      >
+                        <UserPlusIcon />
+                        <span>Đăng ký tài khoản</span>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

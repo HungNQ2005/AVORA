@@ -18,27 +18,18 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Routes>
-          {/* Auth pages — no MainLayout (standalone full-page) */}
-          <Route path="/signup" element={<SignUpPage />} />
-          <Route path="/signin" element={<SignInPage />} />
-          {/* Protected & main pages — wrapped in MainLayout */}
-          <Route
-            path="/*"
-            element={
-              <MainLayout>
-                <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/system_codes" element={<TestConnectionPage />} />
-                  <Route path="/myaccount" element={<MyAccountPage />} />
-                  <Route path="/hotels" element={<HotelSearchPage />} />
-                  <Route path="/hotels/:id" element={<HotelDetailPage />} />
-                  <Route path="/search" element={<HotelSearchPage />} />
-                </Routes>
-              </MainLayout>
-            }
-          />
-        </Routes>
+        <MainLayout>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/signin" element={<SignInPage />} />
+            <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/system_codes" element={<TestConnectionPage />} />
+            <Route path="/myaccount" element={<MyAccountPage />} />
+            <Route path="/hotels" element={<HotelSearchPage />} />
+            <Route path="/hotels/:id" element={<HotelDetailPage />} />
+            <Route path="/search" element={<HotelSearchPage />} />
+          </Routes>
+        </MainLayout>
       </BrowserRouter>
     </AuthProvider>
   );
