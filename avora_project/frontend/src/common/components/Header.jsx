@@ -1,8 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { codeNameParser } from '../../utils/codeNameParser';
+import { getSavedFavorites } from '../../utils/favoritesStorage';
 import './Header.css';
 
 /* Custom SVG Icons matching the reference UI */
+const LogoutIcon = () => (
+  <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+    <polyline points="16 17 21 12 16 7" />
+    <line x1="21" y1="12" x2="9" y2="12" />
+  </svg>
+);
 const HeadsetIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
@@ -82,7 +92,7 @@ const StorePlusIcon = () => (
 
 const CloseIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 6L6 18M6 6l12 12" />
+    <path d="M18 6L6 18M6 6l12 12"/>
   </svg>
 );
 
@@ -127,25 +137,115 @@ const SendIcon = () => (
   </svg>
 );
 
+const LoginArrowIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+    <polyline points="10 17 15 12 10 7" />
+    <line x1="15" y1="12" x2="3" y2="12" />
+  </svg>
+);
+
+const UserPlusIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+    <circle cx="8.5" cy="7" r="4" />
+    <line x1="20" y1="8" x2="20" y2="14" />
+    <line x1="23" y1="11" x2="17" y2="11" />
+  </svg>
+);
 
 /**
  * Reusable Header component matching the visual reference image.
  * Features a two-row layout with branding, user utilities, and primary navigation tabs.
  *
  * @param {Object} props
- * @param {string} [props.userName="Nguyễn Văn An"] - Current logged-in user display name.
- * @param {number} [props.savedCount=5] - Number of saved favorite items.
+ * @param {number} [props.savedCount=0] - Number of saved favorite items.
  * @param {string} [props.activeTab="home"] - Active navigation item ID.
  * @param {Function} [props.onNavClick] - Navigation click handler for future routing/events.
  */
 const Header = ({
-  userName = "Nguyễn Văn An",
-  savedCount = 5,
+  savedCount = 0,
   activeTab = "home",
   onNavClick
 }) => {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const headerRef = useRef(null);
+  const userMenuRef = useRef(null);
+  const accountDropdownRef = useRef(null);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [internalTab, setInternalTab] = useState(null);
-  const currentTab = internalTab !== null ? internalTab : activeTab;
+  const currentPath = location.pathname;
+  const currentTab = internalTab !== null
+    ? internalTab
+    : (currentPath.startsWith('/hotels') || currentPath === '/search' ? 'hotels' : (currentPath === '/favorites' || currentPath === '/saved' ? 'favorites' : (currentPath === '/' ? 'home' : activeTab)));
+
+  const [internalSavedCount, setInternalSavedCount] = useState(() => {
+    const list = getSavedFavorites();
+    return list.length || savedCount || 0;
+  });
+
+  useEffect(() => {
+    const syncCount = () => {
+      const list = getSavedFavorites();
+      setInternalSavedCount(list.length);
+    };
+    window.addEventListener('storage', syncCount);
+    window.addEventListener('avora_favorites_updated', syncCount);
+    return () => {
+      window.removeEventListener('storage', syncCount);
+      window.removeEventListener('avora_favorites_updated', syncCount);
+    };
+  }, []);
+
+  // Close user profile & account dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setIsUserMenuOpen(false);
+      }
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target)) {
+        setIsAccountDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const displayName = user?.full_name || user?.email || '';
+  const userRoleDisplayName = codeNameParser(user?.role_code_name);
+  const isPartnerOrAdmin = user && ['ADM', 'VEN', 'BMR'].includes(user.role_code_name);
+
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        const height = headerRef.current.offsetHeight;
+        if (height > 0) {
+          document.documentElement.style.setProperty('--header-height', `${height}px`);
+        }
+      }
+    };
+
+    updateHeaderHeight();
+
+    let resizeObserver = null;
+    if (typeof ResizeObserver !== 'undefined' && headerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        updateHeaderHeight();
+      });
+      resizeObserver.observe(headerRef.current);
+    }
+
+    window.addEventListener('resize', updateHeaderHeight);
+
+    return () => {
+      if (resizeObserver) resizeObserver.disconnect();
+      window.removeEventListener('resize', updateHeaderHeight);
+    };
+  }, []);
+
   const [showSupportToast, setShowSupportToast] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
@@ -156,6 +256,18 @@ const Header = ({
     message: ''
   });
   const toastTimerRef = useRef(null);
+
+  // Sync contact form with logged-in user info
+  useEffect(() => {
+    if (user) {
+      setContactForm((prev) => ({
+        ...prev,
+        name: prev.name || user.full_name || '',
+        email: prev.email || user.email || '',
+        phone: prev.phone || user.phone || '',
+      }));
+    }
+  }, [user]);
 
   useEffect(() => {
     return () => {
@@ -183,12 +295,36 @@ const Header = ({
   };
 
   const handleAction = (tabKey) => (e) => {
-    e.preventDefault();
-    setInternalTab(tabKey);
     if (tabKey === 'about') {
+      e.preventDefault();
+      setInternalTab(tabKey);
       setShowAboutModal(true);
     } else if (tabKey === 'contact') {
+      e.preventDefault();
+      setInternalTab(tabKey);
       setShowContactModal(true);
+    } else if (tabKey === 'favorites') {
+      navigate('/favorites');
+      return;
+    } else if (tabKey === 'my-bookings') {
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+      navigate('/myaccount');
+      return;
+    } else if (tabKey === 'pms') {
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+      if (!isPartnerOrAdmin) {
+        alert('Tài khoản của bạn không có quyền truy cập hệ thống Quản lý Khách sạn (PMS).');
+        return;
+      }
+      setInternalTab(tabKey);
+    } else {
+      setInternalTab(null);
     }
     if (onNavClick) {
       onNavClick(tabKey);
@@ -204,7 +340,7 @@ const Header = ({
 
   return (
     <>
-      <header className="avora-header">
+      <header ref={headerRef} className="avora-header">
         {/* TOP ROW: Main Header Bar */}
         <div className="avora-header__top-row">
           <div className="avora-header__container">
@@ -245,7 +381,7 @@ const Header = ({
               {/* Favorites / Saved (Default: like Contact button, Active: default state of My Bookings) */}
               <button
                 type="button"
-                className={`avora-header__saved-btn ${currentTab === 'favorites' ? 'is-active' : ''}`}
+                className={`avora-header__saved-btn ${(currentTab === 'favorites' || currentPath === '/favorites' || currentPath === '/saved' || (location.pathname === '/myaccount' && location.search.includes('tab=favorites'))) ? 'is-active' : ''}`}
                 onClick={handleAction('favorites')}
               >
                 <HeartIcon />
@@ -253,7 +389,7 @@ const Header = ({
                   <span>Đã</span>
                   <span>Lưu</span>
                 </span>
-                <span className="avora-header__count-badge">{savedCount}</span>
+                <span className="avora-header__count-badge">{internalSavedCount}</span>
               </button>
 
               {/* Action Button: My Bookings (Active: Gold/Bronze border & background) */}
@@ -269,26 +405,135 @@ const Header = ({
                 </span>
               </button>
 
-              {/* Action Button: Hotel Management PMS */}
-              <button
-                type="button"
-                className={`avora-header__pill-btn avora-header__pill-btn--pms ${currentTab === 'pms' ? 'is-active' : ''}`}
-                onClick={handleAction('pms')}
-              >
-                <BuildingIcon />
-                <span className="avora-header__two-line">
-                  <span>Quản lý</span>
-                  <span>Khách sạn</span>
-                </span>
-                <span className="avora-header__pms-badge">PMS</span>
-              </button>
+              {/* Action Button: Hotel Management PMS (only for partner/admin roles or guests) */}
+              {(isPartnerOrAdmin || !user) && (
+                <button
+                  type="button"
+                  className={`avora-header__pill-btn avora-header__pill-btn--pms ${currentTab === 'pms' ? 'is-active' : ''}`}
+                  onClick={handleAction('pms')}
+                >
+                  <BuildingIcon />
+                  <span className="avora-header__two-line">
+                    <span>Quản lý</span>
+                    <span>Khách sạn</span>
+                  </span>
+                  <span className="avora-header__pms-badge">PMS</span>
+                </button>
+              )}
 
-              {/* User Profile */}
-              <button type="button" className="avora-header__user-profile" onClick={handleAction('profile')}>
-                <UserIcon />
-                <span className="avora-header__user-name">{userName}</span>
-                <ChevronDownIcon />
-              </button>
+              {/* Real Authentication State: User Profile Menu if logged in, else Sign In / Sign Up buttons */}
+              {user ? (
+                <div className="avora-header__user-menu-wrapper" ref={userMenuRef}>
+                  <button
+                    type="button"
+                    className={`avora-header__user-profile ${isUserMenuOpen ? 'is-active' : ''}`}
+                    onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                    aria-expanded={isUserMenuOpen}
+                    aria-haspopup="true"
+                  >
+                    <div className="avora-header__user-avatar">
+                      {(displayName.charAt(0) || 'U').toUpperCase()}
+                    </div>
+                    <span className="avora-header__user-name">{displayName}</span>
+                    <ChevronDownIcon />
+                  </button>
+
+                  {isUserMenuOpen && (
+                    <div className="avora-header__user-dropdown">
+                      <div className="avora-header__dropdown-user-info">
+                        <div className="avora-header__dropdown-avatar">
+                          {(displayName.charAt(0) || 'U').toUpperCase()}
+                        </div>
+                        <div className="avora-header__dropdown-details">
+                          <span className="avora-header__dropdown-name">{displayName}</span>
+                          <span className="avora-header__dropdown-email">{user.email}</span>
+                          {userRoleDisplayName && (
+                            <span className="avora-header__dropdown-badge">{userRoleDisplayName}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="avora-header__dropdown-divider" />
+
+                      <Link
+                        to="/myaccount"
+                        className="avora-header__dropdown-item"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <UserIcon />
+                        <span>Tài khoản của tôi</span>
+                      </Link>
+
+                      <div className="avora-header__dropdown-divider" />
+
+                      <button
+                        type="button"
+                        className="avora-header__dropdown-item avora-header__dropdown-item--logout"
+                        onClick={() => {
+                          setIsUserMenuOpen(false);
+                          logout();
+                          navigate('/signin');
+                        }}
+                      >
+                        <LogoutIcon />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="avora-header__account-wrapper" ref={accountDropdownRef}>
+                  <button
+                    type="button"
+                    className={`avora-header__pill-btn avora-header__account-btn ${isAccountDropdownOpen || currentPath === '/signin' || currentPath === '/signup' ? 'is-active' : ''}`}
+                    onClick={() => setIsAccountDropdownOpen((prev) => !prev)}
+                    aria-expanded={isAccountDropdownOpen}
+                    aria-haspopup="true"
+                  >
+                    <UserIcon />
+                    <span className="avora-header__two-line">
+                      <span>Tài</span>
+                      <span>khoản</span>
+                    </span>
+                    <span className={`avora-header__chevron-icon ${isAccountDropdownOpen ? 'is-open' : ''}`}>
+                      <ChevronDownIcon />
+                    </span>
+                  </button>
+
+                  {isAccountDropdownOpen && (
+                    <div className="avora-header__account-dropdown">
+                      <div className="avora-header__account-dropdown-top">
+                        <div className="avora-header__account-dropdown-title">
+                          Chào mừng bạn đến Avora
+                        </div>
+                        <div className="avora-header__account-dropdown-subtitle">
+                          Đăng nhập để nhận ưu đãi thành viên Genius 15%
+                        </div>
+                      </div>
+
+                      <div className="avora-header__account-dropdown-divider" />
+
+                      <Link
+                        to="/signin"
+                        className="avora-header__account-dropdown-item avora-header__account-dropdown-item--login"
+                        onClick={() => setIsAccountDropdownOpen(false)}
+                      >
+                        <LoginArrowIcon />
+                        <span>Đăng nhập</span>
+                      </Link>
+
+                      <Link
+                        to="/signup"
+                        className="avora-header__account-dropdown-item"
+                        onClick={() => setIsAccountDropdownOpen(false)}
+                      >
+                        <UserPlusIcon />
+                        <span>Đăng ký tài khoản</span>
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -309,7 +554,7 @@ const Header = ({
 
               {/* Hotels / Khách sạn */}
               <Link
-                to="/"
+                to="/hotels"
                 className={`avora-header__nav-item ${currentTab === 'hotels' ? 'is-active' : ''}`}
                 onClick={handleAction('hotels')}
               >
@@ -500,7 +745,7 @@ const Header = ({
                 <input
                   id="avora-contact-name"
                   type="text"
-                  placeholder="Nguyễn Văn An"
+                  placeholder="Nhập họ và tên của bạn"
                   value={contactForm.name}
                   onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                   required
@@ -566,6 +811,7 @@ const Header = ({
 };
 
 export default Header;
+
 
 
 

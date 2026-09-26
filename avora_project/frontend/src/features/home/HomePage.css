@@ -1,0 +1,1295 @@
+/* HomePage Main Container */
+.avora-homepage {
+  background-color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #1f2937;
+  padding-bottom: 60px;
+}
+
+.avora-homepage__container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* SECTION 1: HERO BANNER & SEARCH */
+.avora-hero {
+  background-color: #003580;
+  /* Deep Booking/Avora Blue */
+  color: #ffffff;
+  padding-top: 24px;
+  padding-bottom: 36px;
+  margin-top: calc(-1 * var(--header-height, 140px));
+  /* Seamless integration under fixed header */
+  position: relative;
+}
+
+.avora-hero .avora-homepage__container {
+  padding-top: var(--header-height, 140px);
+}
+
+.avora-hero__guarantee-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(0, 0, 0, 0.6);
+  color: #002255;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  margin-top: 14px;
+  margin-bottom: 18px;
+  backdrop-filter: blur(4px);
+}
+
+.avora-hero__badge-icon {
+  color: #ffc107;
+  font-size: 14px;
+}
+
+.avora-hero__badge-text {
+  color: #fbbe08;
+  font-weight: 900;
+  opacity: 1;
+}
+
+.avora-hero__title {
+  font-size: 36px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+  margin: 0 0 8px 0;
+  line-height: 1.2;
+}
+
+.avora-hero__subtitle {
+  font-size: 15.5px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0 0 28px 0;
+  line-height: 1.5;
+  max-width: 680px;
+}
+
+.avora-hero__br {
+  display: inline;
+}
+
+/* SEARCH WIDGET CARD STRADDLING BLUE AND WHITE BOUNDARY */
+.avora-search-box {
+  background-color: #ffffff;
+  border: 3px solid #ffc107;
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.22);
+  position: relative;
+  z-index: 10;
+  margin-bottom: -36px;
+  /* Half blue (top hero), half white (bottom section) */
+}
+
+.avora-search-form {
+  display: grid;
+  grid-template-columns: 1.4fr 1.3fr 1.3fr 64px;
+  gap: 2px;
+  background-color: #e5e7eb;
+  border-radius: 8px;
+  overflow: visible;
+}
+
+.avora-search-field {
+  background-color: #ffffff;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  height: 62px;
+  box-sizing: border-box;
+}
+
+.avora-search-field--clickable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
+}
+
+.avora-search-field--clickable:hover,
+.avora-search-field--clickable.is-active {
+  background-color: #f8fafc;
+}
+
+.avora-search-field__icon {
+  color: #003580;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avora-search-field__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+}
+
+.avora-search-field__content label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  line-height: 1.2;
+}
+
+.avora-search-field__content input {
+  border: none;
+  outline: none;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #111827;
+  width: 100%;
+  font-family: inherit;
+  background: transparent;
+  padding: 2px 0 0 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.avora-search-field__value-text {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-top: 2px;
+}
+
+.avora-search-field__clear {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.avora-search-field__clear:hover {
+  color: #374151;
+  background-color: #f3f4f6;
+}
+
+.avora-search-btn {
+  background-color: #0066ff;
+  color: #ffffff;
+  border: none;
+  height: 100%;
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.avora-search-btn:hover {
+  background-color: #0052cc;
+}
+
+/* DATE PICKER POPOVER */
+.avora-datepicker-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 320px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  z-index: 100;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+  cursor: default;
+}
+
+.avora-datepicker-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.avora-datepicker__title {
+  font-size: 15.5px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.avora-datepicker__nav-btn {
+  background: #f3f4f6;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: bold;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+
+.avora-datepicker__nav-btn:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.avora-datepicker-popover__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.avora-datepicker-popover__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.avora-datepicker__day {
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.avora-datepicker__day:hover {
+  background-color: #f3f4f6;
+  color: #0066ff;
+}
+
+.avora-datepicker__day.is-start,
+.avora-datepicker__day.is-end {
+  background-color: #0066ff !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  border-radius: 8px;
+}
+
+.avora-datepicker__day.is-in-range {
+  background-color: #e6f0ff !important;
+  color: #0052cc !important;
+  border-radius: 0;
+}
+
+.avora-datepicker__day.is-today:not(.is-start):not(.is-end) {
+  font-weight: 800;
+  color: #003580;
+  box-shadow: inset 0 0 0 1.5px #003580;
+}
+
+.avora-datepicker__day.is-disabled {
+  color: #c7cdd8 !important;
+  background-color: transparent !important;
+  cursor: not-allowed !important;
+  opacity: 0.4;
+  pointer-events: none;
+  text-decoration: line-through;
+}
+
+.avora-datepicker__day.is-empty {
+  cursor: default !important;
+  pointer-events: none;
+  background: transparent !important;
+}
+
+.avora-datepicker__nav-btn:disabled {
+  opacity: 0.28;
+  cursor: not-allowed !important;
+  pointer-events: none;
+}
+
+/* GUEST & ROOM POPOVER (MATCHING REFERENCE IMAGE) */
+.avora-guest-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  z-index: 100;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+  cursor: default;
+}
+
+.avora-guest-popover__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.avora-guest-popover__row:last-of-type {
+  border-bottom: none;
+  padding-bottom: 18px;
+}
+
+.avora-guest-popover__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.avora-guest-popover__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.avora-guest-popover__sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.avora-guest-popover__counter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avora-guest-popover__counter button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background-color: #f3f4f6;
+  color: #1f2937;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.avora-guest-popover__counter button:hover:not(:disabled) {
+  background-color: #e5e7eb;
+  color: #003580;
+}
+
+.avora-guest-popover__counter button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.avora-guest-popover__count {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  min-width: 18px;
+  text-align: center;
+}
+
+.avora-guest-popover__submit-btn {
+  width: 100%;
+  background-color: #0066ff;
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+  box-shadow: 0 4px 12px rgba(0, 102, 255, 0.25);
+}
+
+.avora-guest-popover__submit-btn:hover {
+  background-color: #0052cc;
+}
+
+/* 100% ROUNDED CAPSULE FILTER PILLS */
+.avora-search-filter-boxes {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 48px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.avora-filter-box {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  background-color: #ffffff;
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
+  color: #1e293b;
+  padding: 6px 16px 6px 10px;
+  border-radius: 9999px; /* 100% bo tròn capsule */
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 15, 45, 0.14);
+  position: relative;
+  outline: none;
+  line-height: 1.4;
+}
+
+.avora-filter-box:hover {
+  transform: translateY(-2px);
+  background-color: #ffffff;
+  box-shadow: 0 8px 22px rgba(0, 20, 60, 0.22);
+}
+
+.avora-filter-box:active {
+  transform: translateY(0);
+}
+
+.avora-filter-box:focus-visible {
+  outline: 2px solid #38bdf8;
+  outline-offset: 2px;
+}
+
+/* Custom Animated Checkbox inside Pill */
+.avora-filter-box__checkbox {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  border: 1.5px solid #cbd5e1;
+  background-color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.avora-filter-box:hover .avora-filter-box__checkbox:not(.is-checked) {
+  border-color: #94a3b8;
+}
+
+.avora-filter-box__checkbox.is-checked {
+  color: #ffffff;
+  border-color: transparent;
+  transform: scale(1.05);
+}
+
+/* Icon Container with Dedicated Circular Badge */
+.avora-filter-box__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  transition: transform 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+}
+
+.avora-filter-box:hover .avora-filter-box__icon {
+  transform: scale(1.08);
+}
+
+.avora-filter-box__label {
+  letter-spacing: -0.2px;
+  transition: color 0.2s ease;
+}
+
+/* Individual Pill Color Schemes */
+/* 1. Nearby - Ocean Sky Blue */
+.avora-filter-box--nearby .avora-filter-box__icon {
+  background-color: #e0f2fe;
+  color: #0284c7;
+}
+
+.avora-filter-box--nearby:hover {
+  border-color: #7dd3fc;
+}
+
+.avora-filter-box--nearby.is-active {
+  background-color: #f0f9ff;
+  border-color: #0284c7;
+  color: #0369a1;
+  box-shadow: 0 6px 18px rgba(2, 132, 199, 0.25);
+}
+
+.avora-filter-box--nearby .avora-filter-box__checkbox.is-checked {
+  background-color: #0284c7;
+}
+
+/* 2. Free Cancellation - Emerald Green */
+.avora-filter-box--cancel .avora-filter-box__icon {
+  background-color: #d1fae5;
+  color: #059669;
+}
+
+.avora-filter-box--cancel:hover {
+  border-color: #6ee7b7;
+}
+
+.avora-filter-box--cancel.is-active {
+  background-color: #f0fdf4;
+  border-color: #059669;
+  color: #065f46;
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.25);
+}
+
+.avora-filter-box--cancel .avora-filter-box__checkbox.is-checked {
+  background-color: #059669;
+}
+
+/* 3. Pay at Property - Indigo/Purple */
+.avora-filter-box--payment .avora-filter-box__icon {
+  background-color: #ede9fe;
+  color: #6366f1;
+}
+
+.avora-filter-box--payment:hover {
+  border-color: #a5b4fc;
+}
+
+.avora-filter-box--payment.is-active {
+  background-color: #f5f3ff;
+  border-color: #6366f1;
+  color: #3730a3;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.25);
+}
+
+.avora-filter-box--payment .avora-filter-box__checkbox.is-checked {
+  background-color: #6366f1;
+}
+
+/* 4. Genius Deals - Amber Gold */
+.avora-filter-box--genius .avora-filter-box__icon {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.avora-filter-box--genius:hover {
+  border-color: #fcd34d;
+}
+
+.avora-filter-box--genius.is-active {
+  background-color: #fffbeb;
+  border-color: #d97706;
+  color: #92400e;
+  box-shadow: 0 6px 18px rgba(217, 119, 6, 0.25);
+}
+
+.avora-filter-box--genius .avora-filter-box__checkbox.is-checked {
+  background-color: #d97706;
+}
+
+/* SECTION STYLES */
+.avora-section {
+  padding: 32px 0 0 0;
+}
+
+.avora-section--last {
+  padding-bottom: 20px;
+}
+
+.avora-section__header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.avora-section__top-tag {
+  font-size: 11px;
+  font-weight: 900;
+  color: #10b981;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.avora-section__title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.avora-section__subtitle {
+  font-size: 14px;
+  color: #6b7280;
+  margin: 4px 0 0 0;
+}
+
+.avora-section__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #0066ff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.avora-section__link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.avora-section__controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.avora-circle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.avora-circle-btn:hover {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+
+.avora-circle-btn--active {
+  background-color: #0066ff;
+  color: #ffffff;
+  border-color: #0066ff;
+}
+
+.avora-circle-btn--active:hover {
+  background-color: #0052cc;
+}
+
+/* SECTION 2: SUMMER PROMOTION BANNER */
+.avora-promo-banner {
+  background: linear-gradient(135deg, #002255 0%, #003580 60%, #0052cc 100%);
+  color: #ffffff;
+  border-radius: 12px;
+  padding: 28px 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 8px 24px rgba(0, 53, 128, 0.15);
+}
+
+.avora-promo-banner__badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.avora-promo-banner__badge-yellow {
+  background-color: #ffc107;
+  color: #000000;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.4px;
+}
+
+.avora-promo-banner__badge-sub {
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.avora-promo-banner__title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 6px 0;
+  line-height: 1.25;
+}
+
+.avora-promo-banner__text {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.85);
+  margin: 0;
+  max-width: 680px;
+  line-height: 1.45;
+}
+
+.avora-promo-banner__btn {
+  background-color: #ffffff;
+  color: #003580;
+  border: none;
+  font-size: 14.5px;
+  font-weight: 800;
+  padding: 12px 24px;
+  border-radius: 9999px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.avora-promo-banner__btn:hover {
+  background-color: #f8fafc;
+  transform: translateY(-1px);
+}
+
+/* SECTION 3: TRENDING DESTINATIONS GRID */
+.avora-destinations-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 16px;
+}
+
+.avora-dest-card {
+  position: relative;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.avora-dest-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
+}
+
+.avora-dest-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.avora-dest-card:hover img {
+  transform: scale(1.04);
+}
+
+.avora-dest-card--large {
+  grid-column: span 3;
+  height: 260px;
+}
+
+.avora-dest-card--small {
+  grid-column: span 2;
+  height: 200px;
+}
+
+.avora-dest-card__overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.2) 60%, rgba(0, 0, 0, 0.05) 100%);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  color: #ffffff;
+}
+
+.avora-dest-card__tag {
+  background-color: rgba(255, 193, 7, 0.95);
+  color: #000000;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  width: fit-content;
+  margin-bottom: 8px;
+}
+
+.avora-dest-card__title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #ffffff;
+  margin: 0 0 2px 0;
+  line-height: 1.2;
+}
+
+.avora-dest-card__sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0;
+}
+
+.avora-dest-card__price {
+  position: absolute;
+  bottom: 18px;
+  right: 18px;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 5px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* SECTION 4: FAVORITE ACCOMMODATIONS GRID */
+.avora-hotels-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.avora-hotel-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.avora-hotel-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.1);
+}
+
+.avora-hotel-card__image-wrap {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+.avora-hotel-card__image-wrap img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avora-hotel-card__fav-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border: none;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.avora-hotel-card__fav-btn:hover {
+  background-color: rgba(0, 0, 0, 0.65);
+}
+
+.avora-hotel-card__badge {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  background-color: #003580;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.avora-hotel-card__body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.avora-hotel-card__stars {
+  color: #ffc107;
+  font-size: 14px;
+  letter-spacing: 2px;
+  margin-bottom: 6px;
+}
+
+.avora-hotel-card__title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px 0;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avora-hotel-card__location {
+  font-size: 12.5px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 0 14px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.avora-hotel-card__rating {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.avora-hotel-card__score {
+  background-color: #003580;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.avora-hotel-card__rating-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.avora-hotel-card__rating-text strong {
+  font-size: 13.5px;
+  color: #111827;
+}
+
+.avora-hotel-card__rating-text span {
+  font-size: 11.5px;
+  color: #6b7280;
+}
+
+.avora-hotel-card__price-box {
+  margin-top: auto;
+  text-align: right;
+  margin-bottom: 14px;
+}
+
+.avora-hotel-card__old-price {
+  font-size: 12px;
+  color: #9ca3af;
+  text-decoration: line-through;
+  display: block;
+}
+
+.avora-hotel-card__current-price {
+  font-size: 19px;
+  font-weight: 900;
+  color: #003580;
+  line-height: 1.2;
+}
+
+.avora-hotel-card__curr {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.avora-hotel-card__tax-note {
+  font-size: 11px;
+  color: #6b7280;
+  display: block;
+}
+
+.avora-hotel-card__btn {
+  width: 100%;
+  background-color: #0066ff;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  padding: 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.avora-hotel-card__btn:hover {
+  background-color: #0052cc;
+}
+
+/* Skeleton Loading State for Database Hotels */
+.avora-hotel-card--skeleton {
+  pointer-events: none;
+}
+
+.avora-skeleton-pulse {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: avoraSkeletonLoading 1.5s infinite;
+}
+
+@keyframes avoraSkeletonLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.avora-skeleton-line {
+  height: 14px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.avora-skeleton-line--short {
+  width: 35%;
+}
+
+.avora-skeleton-line--title {
+  width: 80%;
+  height: 18px;
+}
+
+.avora-skeleton-line--desc {
+  width: 60%;
+}
+
+.avora-skeleton-line--price {
+  width: 50%;
+  height: 22px;
+  margin-top: 14px;
+  margin-left: auto;
+}
+
+.avora-skeleton-btn {
+  width: 100%;
+  height: 38px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.avora-hotels-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 40px;
+  color: #6b7280;
+  font-size: 15px;
+}
+
+/* SECTION 5: INTERACTIVE MAP CARD */
+.avora-map-card {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  padding: 28px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 28px;
+  align-items: center;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.avora-map-card__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0066ff;
+  font-size: 13.5px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.avora-map-card__title {
+  font-size: 26px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 10px 0;
+  line-height: 1.25;
+}
+
+.avora-map-card__desc {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.55;
+  margin: 0 0 20px 0;
+}
+
+.avora-map-card__filters {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.avora-map-filter-btn {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  font-size: 13.5px;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.avora-map-filter-btn:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.avora-map-card__preview {
+  position: relative;
+  height: 220px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.avora-map-card__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avora-map-card__open-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #ffffff;
+  color: #003580;
+  border: none;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 12px 20px;
+  border-radius: 9999px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.avora-map-card__open-btn:hover {
+  background-color: #f8fafc;
+  transform: translate(-50%, -52%);
+}
+
+/* SECTION 6: KEY FEATURES GRID */
+.avora-features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.avora-feature-box {
+  background-color: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px;
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+.avora-feature-box__icon {
+  width: 48px;
+  height: 48px;
+  background-color: rgba(0, 53, 128, 0.08);
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.avora-feature-box__content h3 {
+  font-size: 16px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 6px 0;
+}
+
+.avora-feature-box__content p {
+  font-size: 13.5px;
+  color: #6b7280;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* RESPONSIVE BREAKPOINTS */
+@media (max-width: 1100px) {
+  .avora-search-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .avora-search-btn {
+    grid-column: span 2;
+    height: 48px;
+    border-radius: 6px;
+  }
+
+  .avora-hotels-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .avora-map-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .avora-destinations-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .avora-dest-card--large,
+  .avora-dest-card--small {
+    grid-column: span 1;
+    height: 200px;
+  }
+
+  .avora-features-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .avora-promo-banner {
+    flex-direction: column;
+    gap: 16px;
+    align-items: flex-start;
+  }
+}
