@@ -6,6 +6,7 @@ import HomePage from './features/home/HomePage';
 import TestConnectionPage from './features/connection_test/TestConnectionPage';
 import RoomTypeManagementPage from './features/room_types/RoomTypeManagementPage';
 import RoomTypeDetailPage from './features/room_types/RoomTypeDetailPage';
+import AmenityManagementPage from './features/amenities/AmenityManagementPage';
 
 /**
  * Root application component.
@@ -38,10 +39,14 @@ function App() {
           <Route index element={<Navigate to="/admin/room-types" replace />} />
           <Route path="room-types" element={<RoomTypeManagementPage />} />
           <Route path="room-types/:id" element={<RoomTypeDetailPage />} />
+          <Route path="amenities" element={<AmenityManagementPage />} />
+          <Route path="facilities" element={<AmenityManagementPage />} />
         </Route>
 
         {/* Friendly redirect aliases */}
         <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
+        <Route path="/amenities" element={<Navigate to="/admin/amenities" replace />} />
+        <Route path="/facilities" element={<Navigate to="/admin/facilities" replace />} />
       </Routes>
     </BrowserRouter>
   );
