@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { updateProfile, changePassword, deactivateAccount, getProfile } from '../../../services/authService';
+import { updateProfile, changePassword, requestDeactivateOtp } from '../../../services/authService';
 import Dialog from '../../../common/components/Dialog';
+import DeactivateOtpModal from '../components/DeactivateOtpModal';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import './MyAccountPage.css';
 
@@ -23,9 +24,11 @@ const MyAccountPage = () => {
   const [passLoading, setPassLoading] = useState(false);
   const [passMsg, setPassMsg] = useState({ type: '', text: '' });
 
-  // Deactivate dialog state
+  // Deactivate dialog & OTP modal state
   const [deactivateDialog, setDeactivateDialog] = useState(false);
   const [deactivateLoading, setDeactivateLoading] = useState(false);
+  const [deactivateError, setDeactivateError] = useState('');
+  const [otpModalOpen, setOtpModalOpen] = useState(false);
 
   // Load current user data into form
   useEffect(() => {
@@ -91,17 +94,27 @@ const MyAccountPage = () => {
     }
   };
 
-  /* ── Account Deactivation ────────────────────────────────── */
-  const handleDeactivateConfirm = async () => {
+  /* ── Account Deactivation Flow ──────────────────────────── */
+  // Step 1: User confirms intent -> request OTP from backend -> open OTP modal
+  const handleDeactivateRequestOtp = async () => {
     setDeactivateLoading(true);
+    setDeactivateError('');
     try {
-      await deactivateAccount();
-      logout();
-      navigate('/signin');
-    } catch {
+      await requestDeactivateOtp();
       setDeactivateDialog(false);
+      setOtpModalOpen(true);
+    } catch (err) {
+      setDeactivateError(err.response?.data?.message || 'Failed to send verification code. Please try again.');
+    } finally {
       setDeactivateLoading(false);
     }
+  };
+
+  // Step 2: Successfully verified OTP in modal -> logout and redirect to signin
+  const handleDeactivateSuccess = () => {
+    setOtpModalOpen(false);
+    logout();
+    navigate('/signin');
   };
 
   /* ── Role label helper ───────────────────────────────────── */
@@ -295,17 +308,33 @@ const MyAccountPage = () => {
         </section>
       </div>
 
-      {/* Deactivate Confirmation Dialog */}
+      {/* Step 1: Deactivate Confirmation Dialog */}
       <Dialog
         isOpen={deactivateDialog}
-        onClose={() => setDeactivateDialog(false)}
-        onConfirm={handleDeactivateConfirm}
+        onClose={() => {
+          setDeactivateDialog(false);
+          setDeactivateError('');
+        }}
+        onConfirm={handleDeactivateRequestOtp}
         title="Deactivate your account?"
-        message="This action will immediately sign you out and disable your account. You will need to contact Admin to reactivate. Are you sure?"
+        message={
+          deactivateError ||
+          "Deactivating your account will disable access and sign you out. A 6-digit verification code will be sent to your email to verify your identity. Do you wish to proceed?"
+        }
         variant="confirm"
-        confirmLabel={deactivateLoading ? 'Processing...' : 'Yes, deactivate'}
+        confirmLabel={deactivateLoading ? 'Sending code...' : 'Continue'}
         cancelLabel="Cancel"
       />
+
+      {/* Step 2: 6-Digit OTP Verification Modal */}
+      {otpModalOpen && (
+        <DeactivateOtpModal
+          isOpen={otpModalOpen}
+          userEmail={user?.email}
+          onClose={() => setOtpModalOpen(false)}
+          onSuccess={handleDeactivateSuccess}
+        />
+      )}
     </div>
   );
 };

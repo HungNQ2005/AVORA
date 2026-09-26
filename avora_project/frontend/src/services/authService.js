@@ -65,9 +65,18 @@ export const changePassword = async (current_password, new_password) => {
 };
 
 /**
- * Deactivate the current user's account.
+ * Request a 6-digit OTP for deactivating the current user's account.
  */
-export const deactivateAccount = async () => {
-  const res = await api.delete('/account/deactivate');
+export const requestDeactivateOtp = async () => {
+  const res = await api.post('/account/deactivate/request-otp');
+  return res.data;
+};
+
+/**
+ * Deactivate the current user's account with a 6-digit OTP.
+ * @param {string} otp
+ */
+export const deactivateAccount = async (otp) => {
+  const res = await api.delete('/account/deactivate', { data: { otp } });
   return res.data;
 };
