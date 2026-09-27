@@ -44,6 +44,9 @@ function App() {
             <Route path="/saved" element={<FavoritesPage />} />
             <Route path="/hotels" element={<HotelSearchPage />} />
             <Route path="/hotels/:id" element={<HotelDetailPage />} />
+            <Route path="/hotel/:id" element={<HotelDetailPage />} />
+            <Route path="/hotel-detail" element={<HotelDetailPage />} />
+            <Route path="/hotel-detail/:id" element={<HotelDetailPage />} />
             <Route path="/search" element={<HotelSearchPage />} />
           </Routes>
         </MainLayout>

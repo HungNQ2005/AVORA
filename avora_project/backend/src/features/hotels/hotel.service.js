@@ -465,7 +465,9 @@ const getHotelById = async (hotelId, options = {}) => {
 
   // 1. Fetch hotel record directly from m_hotel
   let hotel = null;
-  if (hotelId) {
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isUuid = hotelId && uuidPattern.test(String(hotelId).trim());
+  if (isUuid) {
     const { data } = await supabase
       .from('m_hotel')
       .select('*')

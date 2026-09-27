@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import MapModal from './components/MapModal';
@@ -586,7 +586,7 @@ const HotelDetailPage = () => {
                 <span className="hotel-card-title-icon">
                   <PinIcon />
                 </span>
-                <span>Vị trí tại {district_name || cityName || 'khu vực'}</span>
+                <span>Vị trí tại {district_name || city_name || 'khu vực'}</span>
               </h2>
               <span className="location-score-badge">
                 Điểm {Number(star_rating).toFixed(1)} / 10
@@ -685,9 +685,13 @@ const HotelDetailPage = () => {
 
                     <div className="room-image-wrap">
                       <img
-                        src={room.image || ''}
+                        src={room.image || images[1] || mainImage || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80'}
                         alt={room.name}
                         loading="lazy"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80';
+                        }}
                       />
                       <span className="room-count-badge">
                         {room.available_rooms > 0 ? `${room.available_rooms} phòng` : 'Hết phòng'}
