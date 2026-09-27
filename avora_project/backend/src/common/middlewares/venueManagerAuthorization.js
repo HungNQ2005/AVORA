@@ -43,7 +43,7 @@ const requireVenueManager = async (req, res, next) => {
       return next(roleError);
     }
 
-    if (role?.code_name !== 'VEN') {
+    if (!['VEN', 'ADM'].includes(role?.code_name)) {
       return sendError(res, 403, 'You do not have permission to access this resource.');
     }
 

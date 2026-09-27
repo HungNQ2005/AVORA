@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import HotelCard from './components/HotelCard';
@@ -7,6 +7,13 @@ import MapModal from './components/MapModal';
 import './HotelSearchPage.css';
 
 /* Custom SVG Icons */
+const PinIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+    <circle cx="12" cy="10" r="3" />
+  </svg>
+);
+
 const BedIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M2 4v16" />
@@ -71,31 +78,78 @@ const SORT_TABS = [
   { id: 'beach_distance', label: 'Gần bãi biển nhất' },
 ];
 
+const getWeekdayVN = (d) => {
+  if (!d) return '';
+  const day = d.getDay();
+  return day === 0 ? 'CN' : `T${day + 1}`;
+};
+
+const formatShortDateVN = (d) => {
+  if (!d) return '';
+  const wd = getWeekdayVN(d);
+  const day = String(d.getDate()).padStart(2, '0');
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  return `${wd}, ${day} Th${month}`;
+};
+
+const formatDateISO = (d) => {
+  if (!d) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return new Date();
+  if (dateStr instanceof Date) return dateStr;
+  const parts = String(dateStr).split('-');
+  if (parts.length === 3) {
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+  return new Date(dateStr);
+};
+
 const HotelSearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
+  const today = useMemo(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  }, []);
+
   // Primary Search Fields
   const [destination, setDestination] = useState(searchParams.get('destination') || '');
-  const [checkIn, setCheckIn] = useState(() => {
+  const [checkInDate, setCheckInDate] = useState(() => {
     const param = searchParams.get('checkIn');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (param && new Date(param) >= today) return param;
-    return today.toISOString().split('T')[0];
+    if (param) {
+      const d = parseLocalDate(param);
+      if (d >= today) return d;
+    }
+    return new Date(today);
   });
-  const [checkOut, setCheckOut] = useState(() => {
+  const [checkOutDate, setCheckOutDate] = useState(() => {
     const param = searchParams.get('checkOut');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (param && new Date(param) > today) return param;
+    if (param) {
+      const d = parseLocalDate(param);
+      if (d > today) return d;
+    }
     const d = new Date(today);
     d.setDate(d.getDate() + 2);
-    return d.toISOString().split('T')[0];
+    return d;
   });
   const [adults, setAdults] = useState(Number(searchParams.get('adults')) || 2);
   const [children, setChildren] = useState(Number(searchParams.get('children')) || 0);
   const [rooms, setRooms] = useState(Number(searchParams.get('rooms')) || 1);
+
+  // Month and year for calendar popover navigation
+  const [selectedMonth, setSelectedMonth] = useState(() => checkInDate.getMonth() + 1);
+  const [selectedYear, setSelectedYear] = useState(() => checkInDate.getFullYear());
+
+  const checkIn = useMemo(() => formatDateISO(checkInDate), [checkInDate]);
+  const checkOut = useMemo(() => formatDateISO(checkOutDate), [checkOutDate]);
 
   // Sorting
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'popularity');
@@ -126,33 +180,120 @@ const HotelSearchPage = () => {
   // Map Modal State
   const [isMapOpen, setIsMapOpen] = useState(false);
 
-  // Calculate stay nights
+  // Popovers state for compact search bar
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showGuestDropdown, setShowGuestDropdown] = useState(false);
+  const datePickerRef = useRef(null);
+  const guestDropdownRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(e.target)) {
+        setShowDatePicker(false);
+      }
+      if (guestDropdownRef.current && !guestDropdownRef.current.contains(e.target)) {
+        setShowGuestDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Calendar navigation & selection
+  const canGoPrevMonth = useMemo(() => {
+    const curMonth = today.getMonth() + 1;
+    const curYear = today.getFullYear();
+    if (selectedYear > curYear) return true;
+    if (selectedYear === curYear && selectedMonth > curMonth) return true;
+    return false;
+  }, [selectedMonth, selectedYear, today]);
+
+  const handlePrevMonth = () => {
+    if (!canGoPrevMonth) return;
+    if (selectedMonth === 1) {
+      setSelectedMonth(12);
+      setSelectedYear((prev) => prev - 1);
+    } else {
+      setSelectedMonth((prev) => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (selectedMonth === 12) {
+      setSelectedMonth(1);
+      setSelectedYear((prev) => prev + 1);
+    } else {
+      setSelectedMonth((prev) => prev + 1);
+    }
+  };
+
+  const handleDateSelect = (dateObj) => {
+    if (dateObj < today) return; // Disallow past dates
+
+    if (!checkInDate || (checkInDate && checkOutDate)) {
+      setCheckInDate(dateObj);
+      setCheckOutDate(null);
+    } else if (dateObj.getTime() > checkInDate.getTime()) {
+      setCheckOutDate(dateObj);
+      setShowDatePicker(false);
+    } else {
+      setCheckInDate(dateObj);
+      setCheckOutDate(null);
+    }
+  };
+
+  // Calendar days grid for monthly view
+  const calendarDays = useMemo(() => {
+    const daysInMonth = new Date(selectedYear, selectedMonth, 0).getDate();
+    const firstDay = new Date(selectedYear, selectedMonth - 1, 1).getDay();
+    const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+
+    const days = [];
+    for (let i = 0; i < startOffset; i++) {
+      days.push({ key: `empty-${i}`, isEmpty: true });
+    }
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateObj = new Date(selectedYear, selectedMonth - 1, day);
+      dateObj.setHours(0, 0, 0, 0);
+
+      const isPast = dateObj < today;
+      const isToday = dateObj.getTime() === today.getTime();
+      const isCheckIn = checkInDate && dateObj.getTime() === checkInDate.getTime();
+      const isCheckOut = checkOutDate && dateObj.getTime() === checkOutDate.getTime();
+      const isInRange = checkInDate && checkOutDate && dateObj > checkInDate && dateObj < checkOutDate;
+
+      days.push({
+        key: `day-${selectedYear}-${selectedMonth}-${day}`,
+        day,
+        dateObj,
+        isPast,
+        isToday,
+        isCheckIn,
+        isCheckOut,
+        isInRange,
+      });
+    }
+    return days;
+  }, [selectedMonth, selectedYear, today, checkInDate, checkOutDate]);
+
+  // Calculate stay nights dynamically
   const nights = useMemo(() => {
     try {
-      const d1 = new Date(checkIn);
-      const d2 = new Date(checkOut);
-      const diffTime = Math.abs(d2 - d1);
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays > 0 ? diffDays : 2;
+      if (!checkInDate || !checkOutDate) return 1;
+      const diffTime = checkOutDate.getTime() - checkInDate.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+      return diffDays > 0 ? diffDays : 1;
     } catch {
-      return 2;
+      return 1;
     }
-  }, [checkIn, checkOut]);
+  }, [checkInDate, checkOutDate]);
 
-  // Formatted date string for compact search bar
-  const formattedDates = useMemo(() => {
-    try {
-      const d1 = new Date(checkIn);
-      const d2 = new Date(checkOut);
-      const day1 = d1.getDate() < 10 ? `0${d1.getDate()}` : d1.getDate();
-      const m1 = d1.getMonth() + 1 < 10 ? `0${d1.getMonth() + 1}` : d1.getMonth() + 1;
-      const day2 = d2.getDate() < 10 ? `0${d2.getDate()}` : d2.getDate();
-      const m2 = d2.getMonth() + 1 < 10 ? `0${d2.getMonth() + 1}` : d2.getMonth() + 1;
-      return `T6, ${day1} Th${m1} – CN, ${day2} Th${m2} (${nights} đêm)`;
-    } catch {
-      return 'T6, 12 Th07 – CN, 14 Th07 (2 đêm)';
-    }
-  }, [checkIn, checkOut, nights]);
+  // Formatted date string for display in search frame
+  const formattedDatesOnly = useMemo(() => {
+    if (!checkInDate) return 'Chọn ngày nhận phòng';
+    if (!checkOutDate) return `${formatShortDateVN(checkInDate)} – Chọn ngày trả`;
+    return `${formatShortDateVN(checkInDate)} – ${formatShortDateVN(checkOutDate)}`;
+  }, [checkInDate, checkOutDate]);
 
   // Price range helper
   const getPriceBounds = useCallback((rangeKey) => {
@@ -250,6 +391,29 @@ const HotelSearchPage = () => {
   // Search Submit
   const handleSearchSubmit = (e) => {
     e.preventDefault();
+    let finalCheckIn = checkInDate || today;
+    let finalCheckOut = checkOutDate;
+    if (!finalCheckOut || finalCheckOut.getTime() <= finalCheckIn.getTime()) {
+      finalCheckOut = new Date(finalCheckIn);
+      finalCheckOut.setDate(finalCheckOut.getDate() + 2);
+      setCheckOutDate(finalCheckOut);
+    }
+
+    const cleanDest = destination ? destination.split(',')[0].trim() : '';
+    const queryParams = new URLSearchParams(searchParams);
+    if (cleanDest) {
+      queryParams.set('destination', cleanDest);
+    } else {
+      queryParams.delete('destination');
+    }
+    queryParams.set('checkIn', formatDateISO(finalCheckIn));
+    queryParams.set('checkOut', formatDateISO(finalCheckOut));
+    queryParams.set('adults', adults);
+    queryParams.set('children', children);
+    queryParams.set('rooms', rooms);
+    queryParams.set('sortBy', sortBy);
+
+    setSearchParams(queryParams, { replace: true });
     fetchHotels();
   };
 
@@ -297,55 +461,252 @@ const HotelSearchPage = () => {
 
   return (
     <div className="hotel-search-page">
-      {/* ─── 1. TOP COMPACT SEARCH BAR (YELLOW ACCENT BORDER) ─── */}
+      {/* ─── 1. TOP COMPACT SEARCH BAR (UPGRADED TO MATCH HOMEPAGE WITH FRAME NIGHTS BADGE) ─── */}
       <section className="search-bar-strip">
         <div className="search-bar-strip__container">
-          <form className="compact-search-box" onSubmit={handleSearchSubmit}>
-            {/* Field 1: Destination */}
-            <div className="compact-search-field compact-search-field--dest">
-              <span className="compact-search-field__icon">
-                <BedIcon />
-              </span>
-              <input
-                type="text"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="Điểm đến, khách sạn..."
-                className="compact-search-input"
-              />
-            </div>
+          <div className="compact-search-box">
+            <form className="compact-search-form" onSubmit={handleSearchSubmit}>
+              {/* Field 1: Destination */}
+              <div className="compact-search-field">
+                <div className="compact-search-field__icon">
+                  <PinIcon />
+                </div>
+                <div className="compact-search-field__content">
+                  <label>Bạn muốn đến đâu?</label>
+                  <input
+                    type="text"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="Nhập thành phố hoặc tên khách sạn..."
+                    className="compact-search-input"
+                  />
+                </div>
+                {destination && (
+                  <button
+                    type="button"
+                    className="compact-search-field__clear"
+                    onClick={() => setDestination('')}
+                    title="Xóa địa điểm"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
 
-            <div className="compact-search-divider" />
+              {/* Field 2: Dates Dropdown with Frame Nights Badge & Interactive Calendar */}
+              <div
+                ref={datePickerRef}
+                className={`compact-search-field compact-search-field--clickable ${showDatePicker ? 'is-active' : ''}`}
+                onClick={() => {
+                  setShowDatePicker((prev) => !prev);
+                  setShowGuestDropdown(false);
+                }}
+              >
+                <div className="compact-search-field__icon">
+                  <CalendarIcon />
+                </div>
+                <div className="compact-search-field__content">
+                  <label>Ngày nhận phòng – Ngày trả phòng</label>
+                  <div className="compact-search-field__value-text">
+                    <span className="compact-search-field__dates">{formattedDatesOnly}</span>
+                    <span className="compact-search-nights-pill">{nights} đêm</span>
+                  </div>
+                </div>
 
-            {/* Field 2: Dates */}
-            <div className="compact-search-field compact-search-field--dates">
-              <span className="compact-search-field__icon">
-                <CalendarIcon />
-              </span>
-              <span className="compact-search-field__text">{formattedDates}</span>
-            </div>
+                {/* Calendar Popover (Matches Homepage layout & functionality) */}
+                {showDatePicker && (
+                  <div className="avora-datepicker-popover" onClick={(e) => e.stopPropagation()}>
+                    <div className="avora-datepicker-popover__header">
+                      <button
+                        type="button"
+                        onClick={handlePrevMonth}
+                        disabled={!canGoPrevMonth}
+                        className="avora-datepicker__nav-btn"
+                        title={!canGoPrevMonth ? 'Không thể quay lại tháng trong quá khứ' : 'Tháng trước'}
+                        aria-label="Tháng trước"
+                      >
+                        ‹
+                      </button>
+                      <span className="avora-datepicker__title">Tháng {selectedMonth}, {selectedYear}</span>
+                      <button
+                        type="button"
+                        onClick={handleNextMonth}
+                        className="avora-datepicker__nav-btn"
+                        title="Tháng tiếp theo"
+                        aria-label="Tháng tiếp theo"
+                      >
+                        ›
+                      </button>
+                    </div>
 
-            <div className="compact-search-divider" />
+                    <div className="avora-datepicker-popover__weekdays">
+                      <span>T2</span><span>T3</span><span>T4</span><span>T5</span><span>T6</span><span>T7</span><span>CN</span>
+                    </div>
 
-            {/* Field 3: Guests & Rooms */}
-            <div className="compact-search-field compact-search-field--guests">
-              <span className="compact-search-field__icon">
-                <UsersIcon />
-              </span>
-              <span className="compact-search-field__text">
-                {adults} người lớn · {children} trẻ em · {rooms} phòng
-              </span>
-            </div>
+                    <div className="avora-datepicker-popover__days">
+                      {calendarDays.map((item) => {
+                        if (item.isEmpty) {
+                          return <div key={item.key} className="avora-datepicker__day is-empty" />;
+                        }
 
-            {/* Search Submit Button */}
-            <button
-              type="submit"
-              className="compact-search-btn"
-              aria-label="Tìm kiếm khách sạn"
-            >
-              <SearchIcon />
-            </button>
-          </form>
+                        const dayClasses = [
+                          'avora-datepicker__day',
+                          item.isCheckIn ? 'is-start' : '',
+                          item.isCheckOut ? 'is-end' : '',
+                          item.isInRange ? 'is-in-range' : '',
+                          item.isToday ? 'is-today' : '',
+                          item.isPast ? 'is-disabled' : '',
+                        ].filter(Boolean).join(' ');
+
+                        return (
+                          <button
+                            key={item.key}
+                            type="button"
+                            disabled={item.isPast}
+                            className={dayClasses}
+                            onClick={() => handleDateSelect(item.dateObj)}
+                            title={item.isPast ? 'Không thể chọn ngày trong quá khứ' : undefined}
+                          >
+                            {item.day}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="compact-popover__stay-summary">
+                      <span className="compact-popover__stay-text">
+                        {checkInDate && checkOutDate ? (
+                          <>Kỳ nghỉ: <strong>{nights} đêm</strong> ({formatShortDateVN(checkInDate)} – {formatShortDateVN(checkOutDate)})</>
+                        ) : (
+                          'Vui lòng chọn ngày trả phòng'
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        className="compact-popover__apply-btn"
+                        onClick={() => setShowDatePicker(false)}
+                      >
+                        Áp dụng
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Field 3: Guests & Rooms Popover */}
+              <div
+                ref={guestDropdownRef}
+                className={`compact-search-field compact-search-field--clickable ${showGuestDropdown ? 'is-active' : ''}`}
+                onClick={() => {
+                  setShowGuestDropdown((prev) => !prev);
+                  setShowDatePicker(false);
+                }}
+              >
+                <div className="compact-search-field__icon">
+                  <UsersIcon />
+                </div>
+                <div className="compact-search-field__content">
+                  <label>Số khách và phòng</label>
+                  <div className="compact-search-field__value-text">
+                    <strong>{adults} người lớn</strong> · {children} trẻ em · {rooms} phòng
+                  </div>
+                </div>
+
+                {showGuestDropdown && (
+                  <div className="avora-guest-popover" onClick={(e) => e.stopPropagation()}>
+                    <div className="avora-guest-popover__row">
+                      <div className="avora-guest-popover__info">
+                        <strong className="avora-guest-popover__title">Người lớn</strong>
+                        <span className="avora-guest-popover__sub">Từ 18 tuổi trở lên</span>
+                      </div>
+                      <div className="avora-guest-popover__counter">
+                        <button
+                          type="button"
+                          disabled={adults <= 1}
+                          onClick={() => setAdults((prev) => Math.max(1, prev - 1))}
+                        >
+                          -
+                        </button>
+                        <span className="avora-guest-popover__count">{adults}</span>
+                        <button
+                          type="button"
+                          onClick={() => setAdults((prev) => prev + 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="avora-guest-popover__row">
+                      <div className="avora-guest-popover__info">
+                        <strong className="avora-guest-popover__title">Trẻ em</strong>
+                        <span className="avora-guest-popover__sub">0 – 17 tuổi</span>
+                      </div>
+                      <div className="avora-guest-popover__counter">
+                        <button
+                          type="button"
+                          disabled={children <= 0}
+                          onClick={() => setChildren((prev) => Math.max(0, prev - 1))}
+                        >
+                          -
+                        </button>
+                        <span className="avora-guest-popover__count">{children}</span>
+                        <button
+                          type="button"
+                          onClick={() => setChildren((prev) => prev + 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="avora-guest-popover__row">
+                      <div className="avora-guest-popover__info">
+                        <strong className="avora-guest-popover__title">Phòng</strong>
+                        <span className="avora-guest-popover__sub">Số lượng phòng</span>
+                      </div>
+                      <div className="avora-guest-popover__counter">
+                        <button
+                          type="button"
+                          disabled={rooms <= 1}
+                          onClick={() => setRooms((prev) => Math.max(1, prev - 1))}
+                        >
+                          -
+                        </button>
+                        <span className="avora-guest-popover__count">{rooms}</span>
+                        <button
+                          type="button"
+                          onClick={() => setRooms((prev) => prev + 1)}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="compact-popover__footer">
+                      <button
+                        type="button"
+                        className="compact-popover__apply-btn"
+                        onClick={() => setShowGuestDropdown(false)}
+                      >
+                        Xong
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Search Submit Button */}
+              <button
+                type="submit"
+                className="compact-search-btn"
+                aria-label="Tìm kiếm khách sạn"
+                title="Tìm kiếm"
+              >
+                <SearchIcon />
+              </button>
+            </form>
+          </div>
         </div>
       </section>
 
@@ -419,7 +780,7 @@ const HotelSearchPage = () => {
                 <InfoCircleIcon />
               </span>
               <p className="hotel-urgency-banner__text">
-                <strong>78% chỗ nghỉ tại {destination || 'Đà Nẵng'} không còn phòng trống</strong> cho ngày bạn chọn trên trang web của chúng tôi. Hãy nhanh tay đặt ngay để giữ mức giá tốt này!
+                <strong>78% chỗ nghỉ tại {destination ? destination.split(',')[0].trim() : 'điểm đến này'} không còn phòng trống</strong> cho ngày bạn chọn trên trang web của chúng tôi. Hãy nhanh tay đặt ngay để giữ mức giá tốt này!
               </p>
             </div>
 
@@ -446,9 +807,13 @@ const HotelSearchPage = () => {
               </div>
             ) : errorMsg ? (
               <div className="hotel-empty-state">
-                <div className="hotel-empty-state__icon">⚠️</div>
-                <h3 className="hotel-empty-state__title">LỖI KẾT NỐI HỆ THỐNG</h3>
-                <p className="hotel-empty-state__desc">{errorMsg}</p>
+                <div className="hotel-empty-state__icon">🔍</div>
+                <h3 className="hotel-empty-state__title">Không tìm thấy phòng</h3>
+                <p className="hotel-empty-state__desc">
+                  {errorMsg.toLowerCase().includes('không tìm thấy') || errorMsg.toLowerCase().includes('not found') || errorMsg.toLowerCase().includes('500') || errorMsg.toLowerCase().includes('kết nối')
+                    ? 'Rất tiếc, hệ thống không tìm thấy phòng nào phù hợp hoặc kết nối tạm thời gián đoạn. Vui lòng kiểm tra lại thời gian hoặc thử lại.'
+                    : errorMsg}
+                </p>
                 <button
                   type="button"
                   className="hotel-empty-state__btn"
@@ -458,21 +823,19 @@ const HotelSearchPage = () => {
                 </button>
               </div>
             ) : isDbEmpty ? (
-              /* Mandatory requirement: If DB contains no data -> "CHƯA CÓ DỮ LIỆU" */
               <div className="hotel-empty-state">
                 <div className="hotel-empty-state__icon">🏨</div>
-                <h3 className="hotel-empty-state__title">CHƯA CÓ DỮ LIỆU</h3>
+                <h3 className="hotel-empty-state__title">Không tìm thấy phòng</h3>
                 <p className="hotel-empty-state__desc">
-                  Hiện tại chưa có thông tin khách sạn nào được lưu trữ trong cơ sở dữ liệu.
+                  Hiện tại chưa có thông tin phòng nào được lưu trữ trong cơ sở dữ liệu.
                 </p>
               </div>
             ) : hotels.length === 0 ? (
-              /* Mandatory requirement: If search/filter returns no matching results -> "KHÔNG TÌM THẤY NƠI NGHỈ PHÙ HỢP" */
               <div className="hotel-empty-state">
                 <div className="hotel-empty-state__icon">🔍</div>
-                <h3 className="hotel-empty-state__title">KHÔNG TÌM THẤY NƠI NGHỈ PHÙ HỢP</h3>
+                <h3 className="hotel-empty-state__title">Không tìm thấy phòng</h3>
                 <p className="hotel-empty-state__desc">
-                  Không có kết quả nào phù hợp với bộ lọc hiện tại của bạn. Vui lòng thử nới lỏng các tiêu chí tìm kiếm.
+                  Không có phòng nào phù hợp với yêu cầu tìm kiếm {destination ? `tại "${destination}"` : ''} trong khoảng thời gian {nights} đêm bạn đã chọn. Vui lòng thử nới lỏng các tiêu chí tìm kiếm hoặc đổi ngày lưu trú.
                 </p>
                 {hasActiveFilters && (
                   <button

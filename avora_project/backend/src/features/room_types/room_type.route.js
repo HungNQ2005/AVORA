@@ -16,7 +16,9 @@ const { requireVenueManager } = require('../../common/middlewares/venueManagerAu
 const router = Router();
 
 router.use('/room-types', authenticate, requireVenueManager);
-router.use('/hotels', authenticate, requireVenueManager);
+
+// GET /api/room-types/hotels (Hotel list for venue manager selector)
+router.get('/room-types/hotels', handleGetHotels);
 
 // GET /api/room-types
 router.get('/room-types', handleGetRoomTypes);

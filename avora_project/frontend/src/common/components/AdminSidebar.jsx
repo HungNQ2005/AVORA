@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { codeNameParser } from '../../utils/codeNameParser';
 import './AdminSidebar.css';
@@ -16,8 +16,9 @@ const getUserInitials = (name) => {
 };
 
 const AdminSidebar = () => {
-  const { user } = useAuth();
-  const canManageVenue = user?.role_code_name === 'VEN';
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const canManageVenue = ['VEN', 'ADM'].includes(user?.role_code_name);
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const roleCode = user?.role_code_name?.trim().toUpperCase();
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
@@ -26,10 +27,10 @@ const AdminSidebar = () => {
     <aside className="admin-sidebar">
       {/* Brand & Logo Header */}
       <div className="admin-sidebar__brand">
-        <div className="admin-sidebar__logo-group">
+        <Link to="/" className="admin-sidebar__logo-group" style={{ textDecoration: 'none' }} title="Quay lại trang chủ Avora">
           <span className="admin-sidebar__logo-text">Avora</span>
           <span className="admin-sidebar__badge">ENTERPRISE</span>
-        </div>
+        </Link>
         <button className="admin-sidebar__toggle-btn" title="Tìm nhanh & Thu gọn">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8"></circle>
@@ -225,7 +226,14 @@ const AdminSidebar = () => {
             <span className="admin-sidebar__user-name" title={userName}>{userName}</span>
             <span className="admin-sidebar__user-role" title={userRole}>{userRole}</span>
           </div>
-          <button className="admin-sidebar__logout-btn" title="Đăng xuất / Tùy chọn">
+          <button
+            className="admin-sidebar__logout-btn"
+            title="Đăng xuất"
+            onClick={() => {
+              logout();
+              navigate('/signin');
+            }}
+          >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
               <polyline points="16 17 21 12 16 7"></polyline>

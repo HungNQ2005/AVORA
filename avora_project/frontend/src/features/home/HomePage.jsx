@@ -119,8 +119,8 @@ const FilterGeniusIcon = () => (
 const HomePage = () => {
   const navigate = useNavigate();
 
-  // Search Form State
-  const [destination, setDestination] = useState('Đà Nẵng, Việt Nam');
+  // Search Form State (Empty by default to allow placeholder)
+  const [destination, setDestination] = useState('');
   // Current date baseline (normalized to midnight)
   const today = useMemo(() => {
     const d = new Date();
@@ -141,10 +141,10 @@ const HomePage = () => {
   const [selectedMonth, setSelectedMonth] = useState(() => defaultCheckIn.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(() => defaultCheckIn.getFullYear());
 
-  // Guest & Room State (Default: 3 adults, 0 children, 2 rooms as in reference image)
-  const [adults, setAdults] = useState(3);
+  // Guest & Room State (Standard default: 2 adults, 0 children, 1 room)
+  const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
-  const [rooms, setRooms] = useState(2);
+  const [rooms, setRooms] = useState(1);
 
   // Popover Toggles
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -271,12 +271,24 @@ const HomePage = () => {
     return `${y}-${m}-${day}`;
   };
 
+  const nights = useMemo(() => {
+    if (!checkInDate || !checkOutDate) return 1;
+    const diffTime = checkOutDate.getTime() - checkInDate.getTime();
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays > 0 ? diffDays : 1;
+  }, [checkInDate, checkOutDate]);
+
+  const formattedDatesOnly = useMemo(() => {
+    if (!checkInDate) return 'Chọn ngày nhận & trả phòng';
+    if (!checkOutDate) return `${formatShortDateVN(checkInDate)} – Chọn ngày trả`;
+    return `${formatShortDateVN(checkInDate)} – ${formatShortDateVN(checkOutDate)}`;
+  }, [checkInDate, checkOutDate]);
+
   const getFormattedDateRange = () => {
     if (!checkInDate) return 'Chọn ngày nhận & trả phòng';
     if (!checkOutDate) {
       return `${formatShortDateVN(checkInDate)} – Chọn ngày trả`;
     }
-    const nights = Math.max(1, Math.round((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24)));
     return `${formatShortDateVN(checkInDate)} – ${formatShortDateVN(checkOutDate)} (${nights} đêm)`;
   };
 
@@ -363,10 +375,17 @@ const HomePage = () => {
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
-    const cleanDest = destination.split(',')[0].trim();
+    const cleanDest = destination ? destination.split(',')[0].trim() : '';
     const checkInStr = formatDateISO(checkInDate);
     const checkOutStr = formatDateISO(checkOutDate || (checkInDate ? new Date(checkInDate.getTime() + 2 * 86400000) : today));
-    navigate(`/hotels?destination=${encodeURIComponent(cleanDest)}&checkIn=${checkInStr}&checkOut=${checkOutStr}&adults=${adults}&children=${children}&rooms=${rooms}`);
+    const queryParams = new URLSearchParams();
+    if (cleanDest) queryParams.set('destination', cleanDest);
+    queryParams.set('checkIn', checkInStr);
+    queryParams.set('checkOut', checkOutStr);
+    queryParams.set('adults', adults);
+    queryParams.set('children', children);
+    queryParams.set('rooms', rooms);
+    navigate(`/hotels?${queryParams.toString()}`);
   };
 
   const region = destination ? destination.split(',')[0].trim() : 'Đà Nẵng';
@@ -488,7 +507,10 @@ const HomePage = () => {
                 <div className="avora-search-field__content">
                   <label>Ngày nhận phòng – Ngày trả phòng</label>
                   <div className="avora-search-field__value-text">
-                    {getFormattedDateRange()}
+                    <span className="avora-search-field__dates">{formattedDatesOnly}</span>
+                    {checkInDate && checkOutDate && (
+                      <span className="avora-search-nights-pill">{nights} đêm</span>
+                    )}
                   </div>
                 </div>
 
@@ -550,6 +572,23 @@ const HomePage = () => {
                           </button>
                         );
                       })}
+                    </div>
+
+                    <div className="avora-datepicker-popover__stay-summary">
+                      <span className="avora-datepicker-popover__stay-text">
+                        {checkInDate && checkOutDate ? (
+                          <>Kỳ nghỉ: <strong>{nights} đêm</strong> ({formatShortDateVN(checkInDate)} – {formatShortDateVN(checkOutDate)})</>
+                        ) : (
+                          'Vui lòng chọn ngày trả phòng'
+                        )}
+                      </span>
+                      <button
+                        type="button"
+                        className="avora-datepicker-popover__apply-btn"
+                        onClick={() => setShowDatePicker(false)}
+                      >
+                        Áp dụng
+                      </button>
                     </div>
                   </div>
                 )}

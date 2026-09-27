@@ -94,14 +94,15 @@ export const softDeleteRoomType = async (id) => {
  * Fetch list of hotels for facility selector dropdown.
  */
 export const fetchHotels = async () => {
-  const response = await authenticatedFetch(API_ENDPOINTS.HOTELS);
+  const url = API_ENDPOINTS.ROOM_TYPES_HOTELS || `${API_ENDPOINTS.ROOM_TYPES}/hotels`;
+  const response = await authenticatedFetch(url);
   const json = await response.json();
 
   if (!response.ok || json.status === "error") {
     throw new Error(json.message || "Không thể tải danh sách khách sạn.");
   }
 
-  return json.data;
+  return Array.isArray(json.data) ? json.data : (json.data?.hotels || []);
 };
 
 /**
@@ -115,5 +116,5 @@ export const fetchFacilities = async () => {
     throw new Error(json.message || "Không thể tải danh sách tiện ích.");
   }
 
-  return json.data;
+  return Array.isArray(json.data) ? json.data : (json.data?.facilities || []);
 };

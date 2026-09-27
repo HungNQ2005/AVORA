@@ -220,6 +220,16 @@ const HotelDetailPage = () => {
     }
   }, [checkIn, checkOut]);
 
+  const formattedStayDates = useMemo(() => {
+    try {
+      const parts1 = checkIn.split('-');
+      const parts2 = checkOut.split('-');
+      return `${parts1[2]}/${parts1[1]} – ${parts2[2]}/${parts2[1]}`;
+    } catch {
+      return `${checkIn} – ${checkOut}`;
+    }
+  }, [checkIn, checkOut]);
+
   // Component state
   const [hotel, setHotel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -666,7 +676,7 @@ const HotelDetailPage = () => {
 
             <div className="rooms-date-pill">
               <CalendarIcon />
-              <span>12/07 – 14/07 ({adults} người lớn)</span>
+              <span>{formattedStayDates} ({adults} người lớn)</span>
             </div>
           </div>
 
@@ -912,7 +922,7 @@ const HotelDetailPage = () => {
               )}
               <div className="booking-modal-row">
                 <span>Thời gian lưu trú:</span>
-                <span>12/07 – 14/07 (2 đêm)</span>
+                <span>{formattedStayDates} ({nights} đêm)</span>
               </div>
               <div className="booking-modal-row">
                 <span>Số lượng khách:</span>

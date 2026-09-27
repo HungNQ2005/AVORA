@@ -36,7 +36,7 @@ const VenueManagerRoute = ({ children }) => {
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  if (user.role_code_name !== 'VEN') return <Navigate to="/" replace />;
+  if (!['VEN', 'ADM'].includes(user.role_code_name)) return <Navigate to="/" replace />;
 
   return children;
 };

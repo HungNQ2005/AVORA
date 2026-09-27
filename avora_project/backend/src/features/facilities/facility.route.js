@@ -23,6 +23,7 @@ router.patch('/amenities/:id', handleUpdateFacility);
 router.put('/amenities/:id', handleUpdateFacility);
 router.delete('/amenities/:id', handleDeleteFacility);
 
+router.get('/facilities', handleGetFacilities);
 router.get('/facilities/:id', handleGetFacilityById);
 router.post('/facilities', handleCreateFacility);
 router.patch('/facilities/:id', handleUpdateFacility);

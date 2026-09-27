@@ -445,6 +445,39 @@ function computeFilterStats(hotels) {
       boutiqueOldQuarter: hotels.filter((h) => h.star_quality <= 3).length,
     },
   };
+  return stats;
+}
+
+function computeEmptyFilterStats() {
+  return {
+    priceRanges: {
+      all: 0,
+      under1m2: 0,
+      from1m2To2m5: 0,
+      from2m5To5m: 0,
+      above5m: 0,
+    },
+    stars: {
+      5: 0,
+      4: 0,
+      3: 0,
+    },
+    ratings: {
+      9: 0,
+      8: 0,
+      7: 0,
+    },
+    popularFacilities: {
+      beach: 0,
+      pool: 0,
+      breakfast: 0,
+      freeCancel: 0,
+    },
+    hotelTypes: {
+      beachAndCenter: 0,
+      boutiqueOldQuarter: 0,
+    },
+  };
 }
 
 /**

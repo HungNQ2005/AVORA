@@ -106,7 +106,7 @@ const RoomTypeManagementPage = () => {
       try {
         const hotelList = await fetchHotels();
         if (isMounted) {
-          setHotels(hotelList || []);
+          setHotels(Array.isArray(hotelList) ? hotelList : []);
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách khách sạn:', err);

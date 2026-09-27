@@ -2,7 +2,7 @@
 
 const { Router } = require('express');
 const { handleSearchHotels, handleGetHotelById } = require('./hotel.controller');
-
+const { protect, isUser } = require('../../middleware/authMiddleware');
 const router = Router();
 
 // GET /api/hotels

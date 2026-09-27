@@ -25,90 +25,406 @@
 }
 
 .compact-search-box {
-  display: flex;
-  align-items: center;
-  background-color: #ffffff;
-  border: 4px solid #ffb700; /* Yellow accent border as in reference */
+  background-color: #ffb700;
+  border: 4px solid #ffb700; /* Signature yellow accent border */
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
-  height: 52px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  position: relative;
+  z-index: 50;
+}
+
+.compact-search-form {
+  display: grid;
+  grid-template-columns: 1.35fr 1.45fr 1.2fr 60px;
+  gap: 3px;
+  background-color: #ffb700;
+  border-radius: 4px;
 }
 
 .compact-search-field {
+  background-color: #ffffff;
+  padding: 8px 14px;
   display: flex;
   align-items: center;
-  padding: 0 14px;
-  height: 100%;
-  gap: 10px;
-  flex: 1;
+  gap: 12px;
+  position: relative;
+  min-height: 58px;
+  box-sizing: border-box;
 }
 
-.compact-search-field--dest {
-  flex: 1.2;
+.compact-search-field:first-child {
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
 }
 
-.compact-search-field--dates {
-  flex: 1.3;
+.compact-search-field--clickable {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.15s ease;
 }
 
-.compact-search-field--guests {
-  flex: 1.2;
+.compact-search-field--clickable:hover,
+.compact-search-field--clickable.is-active {
+  background-color: #f8fafc;
 }
 
 .compact-search-field__icon {
+  color: #003580;
   display: flex;
   align-items: center;
-  color: #4b5563;
+  justify-content: center;
   flex-shrink: 0;
+}
+
+.compact-search-field__content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  justify-content: center;
+  min-width: 0;
+}
+
+.compact-search-field__content label {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.35px;
+  line-height: 1.2;
+  margin-bottom: 2px;
 }
 
 .compact-search-input {
   border: none;
   outline: none;
   font-size: 14px;
-  font-weight: 500;
-  color: #1a1a1a;
+  font-weight: 700;
+  color: #111827;
   width: 100%;
+  font-family: inherit;
   background: transparent;
+  padding: 0;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
 }
 
 .compact-search-input::placeholder {
-  color: #6b7280;
+  color: #9ca3af;
+  font-weight: 500;
 }
 
-.compact-search-field__text {
+.compact-search-field__value-text {
   font-size: 13.5px;
-  font-weight: 500;
-  color: #1a1a1a;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.compact-search-field__dates {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.compact-search-divider {
-  width: 4px;
-  height: 100%;
-  background-color: #ffb700;
+/* Distinct Night count badge inside the search frame */
+.compact-search-nights-pill {
+  display: inline-flex;
+  align-items: center;
+  background-color: #e6f0ff;
+  color: #0052cc;
+  font-size: 11.5px;
+  font-weight: 800;
+  padding: 2.5px 8px;
+  border-radius: 999px;
+  border: 1px solid #bfdbfe;
   flex-shrink: 0;
+  letter-spacing: 0.2px;
+}
+
+.compact-search-field__clear {
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.compact-search-field__clear:hover {
+  color: #374151;
+  background-color: #f3f4f6;
 }
 
 .compact-search-btn {
-  background-color: #006ce4;
+  background-color: #0066ff;
   color: #ffffff;
   border: none;
   height: 100%;
-  padding: 0 28px;
+  border-top-right-radius: 4px;
+  border-bottom-right-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: background-color 0.15s ease;
-  flex-shrink: 0;
+  padding: 0;
 }
 
 .compact-search-btn:hover {
-  background-color: #0057b8;
+  background-color: #0052cc;
+}
+
+/* ─── DATE PICKER POPOVER ─────────────────────────────────────────────────── */
+.avora-datepicker-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  width: 330px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  z-index: 100;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+  cursor: default;
+}
+
+.avora-datepicker-popover__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.avora-datepicker__title {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+}
+
+.avora-datepicker__nav-btn {
+  background: #f3f4f6;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 18px;
+  font-weight: bold;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+
+.avora-datepicker__nav-btn:hover:not(:disabled) {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.avora-datepicker__nav-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.avora-datepicker-popover__weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 8px;
+}
+
+.avora-datepicker-popover__days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.avora-datepicker__day {
+  height: 36px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1f2937;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.avora-datepicker__day:hover:not(:disabled) {
+  background-color: #f3f4f6;
+  color: #0066ff;
+}
+
+.avora-datepicker__day.is-start,
+.avora-datepicker__day.is-end {
+  background-color: #0066ff !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  border-radius: 8px;
+}
+
+.avora-datepicker__day.is-in-range {
+  background-color: #e6f0ff !important;
+  color: #0052cc !important;
+  border-radius: 0;
+}
+
+.avora-datepicker__day.is-today:not(.is-start):not(.is-end) {
+  font-weight: 800;
+  color: #003580;
+  box-shadow: inset 0 0 0 1.5px #003580;
+}
+
+.avora-datepicker__day.is-disabled {
+  color: #c7cdd8 !important;
+  background-color: transparent !important;
+  cursor: not-allowed !important;
+  opacity: 0.4;
+  pointer-events: none;
+  text-decoration: line-through;
+}
+
+.avora-datepicker__day.is-empty {
+  cursor: default !important;
+  pointer-events: none;
+  background: transparent !important;
+}
+
+.compact-popover__stay-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.compact-popover__stay-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.compact-popover__stay-text strong {
+  color: #003580;
+  font-weight: 800;
+}
+
+.compact-popover__apply-btn {
+  background-color: #0066ff;
+  color: #ffffff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.compact-popover__apply-btn:hover {
+  background-color: #0052cc;
+}
+
+/* ─── GUEST & ROOM POPOVER ────────────────────────────────────────────────── */
+.avora-guest-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 320px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 18px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.22);
+  z-index: 100;
+  border: 1px solid #e5e7eb;
+  color: #111827;
+  cursor: default;
+}
+
+.avora-guest-popover__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.avora-guest-popover__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.avora-guest-popover__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.avora-guest-popover__sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.avora-guest-popover__counter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.avora-guest-popover__counter button {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid #0066ff;
+  background-color: #ffffff;
+  color: #0066ff;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.avora-guest-popover__counter button:hover:not(:disabled) {
+  background-color: #eff6ff;
+}
+
+.avora-guest-popover__counter button:disabled {
+  border-color: #e5e7eb;
+  color: #d1d5db;
+  cursor: not-allowed;
+}
+
+.avora-guest-popover__count {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  min-width: 20px;
+  text-align: center;
 }
 
 /* ─── 2. MAIN CONTAINER & BREADCRUMBS ─────────────────────────────────────── */
@@ -1069,17 +1385,16 @@
   }
 
   .compact-search-box {
-    flex-direction: column;
     height: auto;
   }
 
-  .compact-search-divider {
-    width: 100%;
-    height: 1px;
+  .compact-search-form {
+    grid-template-columns: 1fr;
   }
 
   .compact-search-btn {
     width: 100%;
-    height: 44px;
+    height: 48px;
+    border-radius: 0 0 4px 4px;
   }
 }

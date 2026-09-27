@@ -323,6 +323,8 @@ const Header = ({
         return;
       }
       setInternalTab(tabKey);
+      navigate('/admin/room-types');
+      return;
     } else {
       setInternalTab(null);
     }
