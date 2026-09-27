@@ -15,7 +15,7 @@ const SystemCodeTable = ({ data }) => {
       </div>
     );
   }
-
+ 
   return (
     <div className="sct-wrapper">
       <div className="sct-meta">

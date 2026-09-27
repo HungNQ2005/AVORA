@@ -15,7 +15,7 @@ const FACILITY_TYPE_LABELS = {
 
 const AmenityDetailModal = ({ isOpen, onClose, amenity, onEdit }) => {
   if (!isOpen || !amenity) return null;
-
+ 
   const displayName = amenity.name_vi || amenity.facility_name || 'Tiện ích';
 
   return (

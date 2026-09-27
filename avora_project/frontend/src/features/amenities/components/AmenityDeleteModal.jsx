@@ -10,7 +10,7 @@ const AmenityDeleteModal = ({
   error = '',
 }) => {
   if (!isOpen || !amenity) return null;
-
+ 
   const displayName = amenity.name_vi || amenity.facility_name || 'tiện ích này';
 
   return (

@@ -12,7 +12,7 @@ const FACILITY_TYPE_LABELS = {
   RESTAURANT: 'Nhà hàng',
   SPA: 'Spa & Chăm sóc',
 };
-
+ 
 const AmenityTable = ({
   amenities = [],
   loading = false,

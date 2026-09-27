@@ -13,7 +13,7 @@ import AmenityManagementPage from './features/amenities/AmenityManagementPage';
  * Configures routing for public/test views and the admin management portal.
  */
 function App() {
-  return (
+  return ( 
     <BrowserRouter>
       <Routes>
         {/* Public & Test pages with MainLayout */}

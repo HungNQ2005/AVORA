@@ -15,7 +15,7 @@ const ensureClient = () => {
     throw new Error('Database client is not initialized.');
   }
 };
-
+ 
 const parseFacilityNames = (rawName) => {
   if (!rawName) return { vi: '', en: '' };
 

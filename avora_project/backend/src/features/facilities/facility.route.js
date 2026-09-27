@@ -8,7 +8,7 @@ const {
   handleUpdateFacility,
   handleDeleteFacility,
 } = require('./facility.controller');
-
+ 
 const router = Router();
 
 router.get('/amenities', handleGetFacilities);

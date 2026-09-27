@@ -12,7 +12,7 @@ const FACILITY_TYPES = [
   { value: 'RESTAURANT', label: 'RESTAURANT (Nhà hàng)' },
   { value: 'SPA', label: 'SPA (Spa & Chăm sóc)' },
 ];
-
+ 
 const FACILITY_ICONS = [
   { value: 'wifi-icon', label: 'wifi-icon (Wi-Fi / Internet)' },
   { value: 'pool-icon', label: 'pool-icon (Hồ bơi)' },

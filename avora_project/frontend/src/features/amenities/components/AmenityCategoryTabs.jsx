@@ -4,7 +4,7 @@ import './AmenityCategoryTabs.css';
 const AmenityCategoryTabs = ({
   activeTab, // 'ALL' | 'ROOM' | 'HOTEL' | 'HIGHLIGHT'
   onTabChange,
-  stats,
+  stats, 
 }) => {
   const total = stats?.totalFacilities ?? 0;
   const roomCount = stats?.roomFacilitiesCount ?? 0;

@@ -14,6 +14,6 @@ const HomePage = () => {
       </p>
     </div>
   );
-};
+}; 
 
 export default HomePage;

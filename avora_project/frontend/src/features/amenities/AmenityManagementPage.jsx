@@ -13,7 +13,7 @@ import AmenityDetailModal from './components/AmenityDetailModal';
 import AmenityDeleteModal from './components/AmenityDeleteModal';
 import { exportAmenitiesToCSV } from './utils/exportToExcel';
 import './AmenityManagementPage.css';
-
+ 
 const VISIBLE_COLUMNS = {
   id: true,
   name: true,

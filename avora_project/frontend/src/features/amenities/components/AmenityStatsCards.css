@@ -16,7 +16,7 @@
   .amenity-stats-grid {
     grid-template-columns: 1fr;
   }
-}
+} 
 
 /* Individual Stat Card */
 .amenity-stat-card {

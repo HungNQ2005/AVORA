@@ -13,7 +13,7 @@ const AmenityFilterBar = ({
   sortBy,
   onSortChange,
   categories = [],
-}) => {
+}) => { 
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);

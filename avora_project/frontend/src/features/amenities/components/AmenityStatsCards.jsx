@@ -12,7 +12,7 @@ const AmenityStatsCards = ({ stats, onAuditClick }) => {
   const inactiveCount = stats?.inactiveCount ?? 0;
   const mostPopularName = stats?.mostPopularFacility?.name || 'Chưa có dữ liệu';
   const mostPopularRate = stats?.mostPopularFacility?.rate ?? '0%';
-
+ 
   return (
     <div className="amenity-stats-grid">
       {/* Card 1: TỔNG TIỆN NGHI HỆ THỐNG */}

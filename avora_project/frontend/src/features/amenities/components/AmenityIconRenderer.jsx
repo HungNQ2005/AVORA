@@ -17,7 +17,7 @@ export const AmenityIconRenderer = ({ name = '', code = '', type = '', icon = ''
       </svg>
     );
   }
-
+ 
   // Parking / Bãi đỗ xe
   if (text.includes('parking') || text.includes('đỗ xe') || text.includes('đậu xe') || text.includes('bãi đỗ')) {
     return (

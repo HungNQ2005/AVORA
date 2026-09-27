@@ -17,7 +17,7 @@ const STATUS_CONFIG = {
   [STATUS.SUCCESS]: { icon: '🟢', label: 'Kết nối Backend & DB thành công!', className: 'success' },
   [STATUS.ERROR]: { icon: '🔴', label: 'Lỗi kết nối', className: 'error' },
 };
-
+ 
 /**
  * TestConnectionPage — verifies backend + Supabase DB connectivity.
  * Displays connection status and fetched system code data.

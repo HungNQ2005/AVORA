@@ -10,7 +10,7 @@ const {
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
 
 const handleGetFacilities = async (req, res, next) => {
-  try {
+  try { 
     const filters = {
       search: req.query.search,
       category: req.query.category,

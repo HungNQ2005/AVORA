@@ -9,7 +9,7 @@ const connectionRoute = require('./features/connection_test/connection.route');
 const roomTypeRoute = require('./features/room_types/room_type.route');
 const facilityRoute = require('./features/facilities/facility.route');
 const env = require('./config/env');
-
+ 
 const app = express();
 
 // ─── Global Middlewares ───────────────────────────────────────────────────────
