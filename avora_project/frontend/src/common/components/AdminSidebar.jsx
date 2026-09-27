@@ -1,8 +1,27 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
+import { codeNameParser } from '../../utils/codeNameParser';
 import './AdminSidebar.css';
 
+const ROLE_LABELS = {
+  VEN: 'Hotel Manager',
+};
+
+const getUserInitials = (name) => {
+  const words = name?.trim().split(/\s+/).filter(Boolean) || [];
+  if (words.length === 0) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toLocaleUpperCase();
+  return `${words[0][0]}${words[words.length - 1][0]}`.toLocaleUpperCase();
+};
+
 const AdminSidebar = () => {
+  const { user } = useAuth();
+  const canManageVenue = user?.role_code_name === 'VEN';
+  const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
+  const roleCode = user?.role_code_name?.trim().toUpperCase();
+  const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
+
   return (
     <aside className="admin-sidebar">
       {/* Brand & Logo Header */}
@@ -104,19 +123,21 @@ const AdminSidebar = () => {
         {/* QUẢN LÝ PHÒNG & LƯU TRÚ (ACTIVE SECTION) */}
         <div className="admin-sidebar__group">
           <div className="admin-sidebar__group-title">QUẢN LÝ PHÒNG & LƯU TRÚ</div>
-          <NavLink
-            to="/admin/room-types"
-            className={({ isActive }) =>
-              `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-            }
-          >
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"></path>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Quản lý loại phòng</span>
-          </NavLink>
+          {canManageVenue && (
+            <NavLink
+              to="/admin/room-types"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"></path>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý loại phòng</span>
+            </NavLink>
+          )}
           <div className="admin-sidebar__link disabled">
             <span className="admin-sidebar__icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -127,22 +148,24 @@ const AdminSidebar = () => {
             </span>
             <span className="admin-sidebar__label">Sơ đồ buồng phòng & Trạng thái</span>
           </div>
-          <NavLink
-            to="/admin/amenities"
-            className={({ isActive }) =>
-              `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-            }
-          >
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
-                <line x1="6" y1="1" x2="6" y2="4"></line>
-                <line x1="10" y1="1" x2="10" y2="4"></line>
-                <line x1="14" y1="1" x2="14" y2="4"></line>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Quản lý tiện nghi</span>
-          </NavLink>
+          {canManageVenue && (
+            <NavLink
+              to="/admin/amenities"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                  <line x1="6" y1="1" x2="6" y2="4"></line>
+                  <line x1="10" y1="1" x2="10" y2="4"></line>
+                  <line x1="14" y1="1" x2="14" y2="4"></line>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý tiện nghi</span>
+            </NavLink>
+          )}
         </div>
 
         {/* MARKETING & DOANH THU */}
@@ -195,10 +218,12 @@ const AdminSidebar = () => {
       {/* User Profile Footer */}
       <div className="admin-sidebar__footer">
         <div className="admin-sidebar__profile">
-          <div className="admin-sidebar__avatar">TN</div>
+          <div className="admin-sidebar__avatar" aria-hidden="true">
+            {getUserInitials(userName)}
+          </div>
           <div className="admin-sidebar__user-info">
-            <span className="admin-sidebar__user-name">Nguyễn Thành Nam</span>
-            <span className="admin-sidebar__user-role">Hotel Manager</span>
+            <span className="admin-sidebar__user-name" title={userName}>{userName}</span>
+            <span className="admin-sidebar__user-role" title={userRole}>{userRole}</span>
           </div>
           <button className="admin-sidebar__logout-btn" title="Đăng xuất / Tùy chọn">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

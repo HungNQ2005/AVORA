@@ -6,12 +6,12 @@ import {
   fetchFacilities,
   softDeleteRoomType,
   updateRoomType,
-} from './services/roomTypeApi';
-import RoomTypeStatsOverview from './components/RoomTypeStatsOverview';
-import RoomTypeFilterBar from './components/RoomTypeFilterBar';
-import RoomTypeTable from './components/RoomTypeTable';
-import RoomTypeFormModal from './components/RoomTypeFormModal';
-import RoomTypeDeleteModal from './components/RoomTypeDeleteModal';
+} from '../../../services/roomTypeApi';
+import RoomTypeStatsOverview from '../components/RoomTypeStatsOverview';
+import RoomTypeFilterBar from '../components/RoomTypeFilterBar';
+import RoomTypeTable from '../components/RoomTypeTable';
+import RoomTypeFormModal from '../components/RoomTypeFormModal';
+import RoomTypeDeleteModal from '../components/RoomTypeDeleteModal';
 import './RoomTypeManagementPage.css';
 
 const RoomTypeManagementPage = () => {

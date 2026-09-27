@@ -8,8 +8,13 @@ const {
   handleUpdateFacility,
   handleDeleteFacility,
 } = require('./facility.controller');
+const { authenticate } = require('../../common/middlewares/authMiddleware');
+const { requireVenueManager } = require('../../common/middlewares/venueManagerAuthorization');
 
 const router = Router();
+
+router.use('/amenities', authenticate, requireVenueManager);
+router.use('/facilities', authenticate, requireVenueManager);
 
 router.get('/amenities', handleGetFacilities);
 router.get('/amenities/:id', handleGetFacilityById);

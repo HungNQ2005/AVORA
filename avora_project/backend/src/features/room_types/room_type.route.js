@@ -10,8 +10,13 @@ const {
   handleUpdateRoomType,
   handleSoftDeleteRoomType,
 } = require('./room_type.controller');
+const { authenticate } = require('../../common/middlewares/authMiddleware');
+const { requireVenueManager } = require('../../common/middlewares/venueManagerAuthorization');
 
 const router = Router();
+
+router.use('/room-types', authenticate, requireVenueManager);
+router.use('/hotels', authenticate, requireVenueManager);
 
 // GET /api/room-types
 router.get('/room-types', handleGetRoomTypes);
@@ -32,6 +37,6 @@ router.delete('/room-types/:id', handleSoftDeleteRoomType);
 router.get('/hotels', handleGetHotels);
 
 // GET /api/facilities
-router.get('/facilities', handleGetFacilities);
+router.get('/facilities', authenticate, requireVenueManager, handleGetFacilities);
 
 module.exports = router;

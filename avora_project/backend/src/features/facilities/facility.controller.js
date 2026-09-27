@@ -8,6 +8,7 @@ const {
   deleteFacility,
 } = require('./facility.service');
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
+const { validateFacilityPayload } = require('./facility.validation');
 
 const handleGetFacilities = async (req, res, next) => {
   try {
@@ -44,17 +45,10 @@ const handleGetFacilityById = async (req, res, next) => {
 
 const handleCreateFacility = async (req, res, next) => {
   try {
-    const { facility_name, name_vi, type, icon } = req.body;
-    const name = facility_name || name_vi;
-    if (!name || !String(name).trim()) {
-      return sendError(res, 400, 'Tên tiện ích không được để trống.');
-    }
+    const { payload, error } = validateFacilityPayload(req.body);
+    if (error) return sendError(res, 400, error);
 
-    const newFacility = await createFacility({
-      facility_name: name,
-      type,
-      icon,
-    });
+    const newFacility = await createFacility(payload);
     return sendSuccess(res, 201, 'Tạo tiện ích mới thành công', newFacility);
   } catch (error) {
     next(error);
@@ -68,14 +62,10 @@ const handleUpdateFacility = async (req, res, next) => {
       return sendError(res, 400, 'Mã tiện ích không hợp lệ.');
     }
 
-    const { facility_name, name_vi, type, icon } = req.body;
-    const name = facility_name || name_vi;
+    const { payload, error } = validateFacilityPayload(req.body, { partial: true });
+    if (error) return sendError(res, 400, error);
 
-    const updatedFacility = await updateFacility(id, {
-      facility_name: name,
-      type,
-      icon,
-    });
+    const updatedFacility = await updateFacility(id, payload);
     return sendSuccess(res, 200, 'Cập nhật tiện ích thành công', updatedFacility);
   } catch (error) {
     next(error);

@@ -3,8 +3,8 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   fetchRoomTypeById,
   softDeleteRoomType,
-} from './services/roomTypeApi';
-import RoomTypeDeleteModal from './components/RoomTypeDeleteModal';
+} from '../../../services/roomTypeApi';
+import RoomTypeDeleteModal from '../components/RoomTypeDeleteModal';
 import './RoomTypeDetailPage.css';
 
 const formatCurrency = (amount) => {

@@ -4,14 +4,14 @@ import {
   createAmenity,
   updateAmenity,
   deleteAmenity,
-} from './services/amenityApi';
-import AmenityStatsCards from './components/AmenityStatsCards';
-import AmenityFilterBar from './components/AmenityFilterBar';
-import AmenityTable from './components/AmenityTable';
-import AmenityFormModal from './components/AmenityFormModal';
-import AmenityDetailModal from './components/AmenityDetailModal';
-import AmenityDeleteModal from './components/AmenityDeleteModal';
-import { exportAmenitiesToCSV } from './utils/exportToExcel';
+} from '../../../services/amenityApi';
+import AmenityStatsCards from '../components/AmenityStatsCards';
+import AmenityFilterBar from '../components/AmenityFilterBar';
+import AmenityTable from '../components/AmenityTable';
+import AmenityFormModal from '../components/AmenityFormModal';
+import AmenityDetailModal from '../components/AmenityDetailModal';
+import AmenityDeleteModal from '../components/AmenityDeleteModal';
+import { exportAmenitiesToCSV } from '../../../utils/exportToExcel';
 import './AmenityManagementPage.css';
 
 const VISIBLE_COLUMNS = {
