@@ -8,6 +8,7 @@ const errorHandler = require('./common/middlewares/errorHandler');
 const connectionRoute = require('./features/connection_test/connection.route');
 const authRoute = require('./features/auth/auth.route');
 const otpRoute = require('./features/otp/otp.route');
+const hotelManagementRoute = require('./features/hotel_management/hotel_management.route');
 const env = require('./config/env');
 
 const app = express();
@@ -33,7 +34,7 @@ app.get('/api/health', (_req, res) => {
 app.use('/api', connectionRoute);
 app.use('/api', authRoute);
 app.use('/api', otpRoute);
-
+app.use('/api', hotelManagementRoute);
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
 
