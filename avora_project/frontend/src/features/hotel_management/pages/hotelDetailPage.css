@@ -25,10 +25,11 @@
 .hotel-detail__owner-contact, .hotel-detail__room-total { margin-top: .75rem; color: var(--hd-muted); font-size: .78rem; line-height: 1.5; overflow-wrap: anywhere; }
 .hotel-detail__room-total strong { color: var(--hd-ink); }
 .hotel-detail__inline-error, .hotel-detail__form-error { margin-top: .7rem; color: #b91c1c; font-size: .82rem; }
-.hotel-detail__form-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: .85rem 1rem; border: 1px solid var(--hd-border); border-radius: 10px; background: #fff; }
+.hotel-detail__form-actions { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding: .85rem 1rem; border: 1px solid var(--hd-border); border-radius: 10px; background: #ffffff; }
 .hotel-detail__form-actions > span { color: var(--hd-muted); font-size: .76rem; }
 .hotel-detail__form-actions code { color: #334155; font-size: .74rem; }
 .hotel-detail__form-actions div { display: flex; gap: .55rem; }
+.hotel-button--primary { background-color: #0052cc; color: #ffffff;}
 .hotel-detail-state { display: flex; min-height: 280px; align-items: center; justify-content: center; gap: .7rem; color: #475569; }
 .hotel-detail-state--error { flex-direction: column; }
 .hotel-detail-state--error p { color: #b91c1c; }
