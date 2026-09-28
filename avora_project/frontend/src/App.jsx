@@ -7,6 +7,9 @@ import SignUpPage from './features/auth/pages/SignUpPage';
 import SignInPage from './features/auth/pages/SignInPage';
 import MyAccountPage from './features/account/pages/MyAccountPage';
 import { AuthProvider } from './context/AuthContext';
+import HotelManagementGuard from './common/components/HotelManagementGuard';
+import HotelManagementPage from './features/hotel_management/pages/hotelManagementPage';
+import HotelDetailPage from './features/hotel_management/pages/hotelDetailPage';
 
 /**
  * Root application component.
@@ -30,6 +33,9 @@ function App() {
                   <Route path="/" element={<HomePage />} />
                   <Route path="/system_codes" element={<TestConnectionPage />} />
                   <Route path="/myaccount" element={<MyAccountPage />} />
+                  <Route path="/hotel-management" element={<HotelManagementGuard><HotelManagementPage /></HotelManagementGuard>} />
+                  <Route path="/hotel-management/:id" element={<HotelManagementGuard><HotelDetailPage /></HotelManagementGuard>} />
+                  <Route path="/forbidden" element={<section style={{ padding: '3rem 1rem', textAlign: 'center' }}><h1>Access denied</h1><p>Your account does not have permission to manage hotels.</p></section>} />
                 </Routes>
               </MainLayout>
             }

@@ -5,7 +5,7 @@ const supabase = require('../../../config/supabaseClient');
 const HOTEL_SELECT = `
   hotel_id, owner_id, name, description, address,
   city_id, district_id, ward_id, star_rating, star_quality,
-  lat, lng, status_cd, is_deleted, created_at, updated_at,
+  lat, lng, is_deleted, created_at, updated_at,
   city:m_city(city_id, city_name),
   district:m_district(district_id, district_name),
   ward:m_ward(ward_id, ward_name),
@@ -30,20 +30,7 @@ const checkQuery = (error) => {
 };
 
 const addStatusNames = async (hotels) => {
-  if (!hotels.length) return hotels;
-  const statusCodes = [...new Set(hotels.map((hotel) => hotel.status_cd).filter(Boolean))];
-  const { data: statuses, error } = await supabase
-    .from('m_system_code')
-    .select('code_cd, code_name')
-    .eq('business_cd', 'HOTEL_STATUS')
-    .in('code_cd', statusCodes);
-  checkQuery(error);
-
-  const names = new Map((statuses || []).map((status) => [String(status.code_cd), status.code_name]));
-  return hotels.map((hotel) => ({
-    ...hotel,
-    status_name: names.get(String(hotel.status_cd)) || hotel.status_cd,
-  }));
+  return hotels.map((hotel) => ({ ...hotel, status_cd: null, status_name: 'Not configured' }));
 };
 
 const listHotels = async ({ page, pageSize, keyword, search, city_id, district_id, star_rating, status_cd, ownerId }) => {
@@ -68,7 +55,6 @@ const listHotels = async ({ page, pageSize, keyword, search, city_id, district_i
   if (city_id) query = query.eq('city_id', city_id);
   if (district_id) query = query.eq('district_id', district_id);
   if (star_rating) query = query.eq('star_quality', star_rating);
-  if (status_cd) query = query.eq('status_cd', status_cd);
   if (ownerId) query = query.eq('owner_id', ownerId);
   query = query.eq('rooms.is_deleted', false);
 
@@ -119,30 +105,77 @@ const updateHotel = async (hotelId, updates, ownerId) => {
 };
 
 const publishHotel = async (hotelId, ownerId) => {
-  ensureClient();
-  let query = supabase
-    .from('m_hotel')
-    .update({ status_cd: 'ACTIVE', updated_at: new Date().toISOString() })
-    .eq('hotel_id', hotelId)
-    .eq('status_cd', 'DRAFT')
-    .eq('is_deleted', false);
-  if (ownerId) query = query.eq('owner_id', ownerId);
-
-  const { data, error } = await query.select('*').maybeSingle();
-  checkQuery(error);
-  if (!data) return null;
-  return (await addStatusNames([data]))[0];
+  const err = new Error('Hotel publication is unavailable because the deployed M_HOTEL schema has no publication-status column.');
+  err.statusCode = 409;
+  throw err;
 };
 
 const softDeleteHotel = async ({ hotelId, actorUserId, isSystemAdmin }) => {
   ensureClient();
-  const { data, error } = await supabase.rpc('hotel_soft_delete', {
-    p_hotel_id: String(hotelId),
-    p_actor_user_id: String(actorUserId),
-    p_is_system_admin: isSystemAdmin,
+  const { data: hotel, error: hotelError } = await supabase
+    .from('m_hotel')
+    .select('hotel_id, owner_id')
+    .eq('hotel_id', hotelId)
+    .eq('is_deleted', false)
+    .maybeSingle();
+  checkQuery(hotelError);
+  if (!hotel) return { status: 'not_found' };
+  if (!isSystemAdmin && String(hotel.owner_id) !== String(actorUserId)) return { status: 'forbidden' };
+
+  const { data: bookings, error: bookingError } = await supabase
+    .from('t_booking')
+    .select('booking_id, booking_status_cd, details:t_booking_detail(check_in_date)')
+    .eq('hotel_id', hotelId);
+  checkQuery(bookingError);
+
+  const bookingCodes = [...new Set((bookings || []).map((booking) => String(booking.booking_status_cd)))];
+  const { data: bookingStatuses, error: bookingStatusError } = await supabase
+    .from('m_system_code')
+    .select('code_cd, code_name')
+    .eq('business_cd', 'BOOKING_STS')
+    .in('code_cd', bookingCodes.length ? bookingCodes : ['__none__']);
+  checkQuery(bookingStatusError);
+  const bookingNames = new Map((bookingStatuses || []).map((status) => [String(status.code_cd), String(status.code_name).toUpperCase()]));
+  const today = new Date().toISOString().slice(0, 10);
+  const hasActiveBooking = (bookings || []).some((booking) => {
+    const code = String(booking.booking_status_cd).toUpperCase();
+    const status = bookingNames.get(code) || code;
+    if (['PND', 'PENDING', 'UPCOMING'].includes(status)) return true;
+    return ['CFM', 'CONFIRMED'].includes(status)
+      && (booking.details || []).some((detail) => String(detail.check_in_date) >= today);
   });
+  if (hasActiveBooking) return { status: 'active_bookings' };
+
+  const { data: rooms, error: roomError } = await supabase
+    .from('m_room')
+    .select('status_cd')
+    .eq('hotel_id', hotelId)
+    .eq('is_deleted', false);
+  checkQuery(roomError);
+  const roomCodes = [...new Set((rooms || []).map((room) => String(room.status_cd)))];
+  const { data: roomStatuses, error: roomStatusError } = await supabase
+    .from('m_system_code')
+    .select('code_cd, code_name')
+    .in('business_cd', ['ROOM_STS', 'ROOM_STATUS'])
+    .in('code_cd', roomCodes.length ? roomCodes : ['__none__']);
+  checkQuery(roomStatusError);
+  const roomNames = new Map((roomStatuses || []).map((status) => [String(status.code_cd), String(status.code_name).toUpperCase()]));
+  const hasOccupiedRoom = (rooms || []).some((room) => {
+    const code = String(room.status_cd).toUpperCase();
+    const status = roomNames.get(code) || code;
+    return ['OCCUPIED', 'RESERVED'].includes(status);
+  });
+  if (hasOccupiedRoom) return { status: 'active_bookings' };
+
+  let updateQuery = supabase
+    .from('m_hotel')
+    .update({ is_deleted: true, updated_at: new Date().toISOString() })
+    .eq('hotel_id', hotelId)
+    .eq('is_deleted', false);
+  if (!isSystemAdmin) updateQuery = updateQuery.eq('owner_id', actorUserId);
+  const { data, error } = await updateQuery.select('hotel_id').maybeSingle();
   checkQuery(error);
-  return data;
+  return data ? { status: 'deleted' } : { status: 'not_found' };
 };
 
 const toHotelDto = (hotel) => ({
@@ -161,7 +194,7 @@ const toHotelDto = (hotel) => ({
   lat: hotel.lat,
   lng: hotel.lng,
   status_cd: hotel.status_cd,
-  status_name: hotel.status_name || hotel.status_cd,
+  status_name: hotel.status_name || 'Not configured',
   room_count: hotel.rooms?.[0]?.count ?? 0,
   room_types: hotel.room_types || undefined,
   created_at: hotel.created_at,

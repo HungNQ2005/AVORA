@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import './Header.css';
 
 /* Custom SVG Icons matching the reference UI */
@@ -144,6 +145,10 @@ const Header = ({
   activeTab = "home",
   onNavClick
 }) => {
+  const { user } = useAuth();
+  const role = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const canManageHotels = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER'].includes(role);
   const [internalTab, setInternalTab] = useState(null);
   const currentTab = internalTab !== null ? internalTab : activeTab;
   const [showSupportToast, setShowSupportToast] = useState(false);
@@ -269,19 +274,20 @@ const Header = ({
                 </span>
               </button>
 
-              {/* Action Button: Hotel Management PMS */}
-              <button
-                type="button"
-                className={`avora-header__pill-btn avora-header__pill-btn--pms ${currentTab === 'pms' ? 'is-active' : ''}`}
-                onClick={handleAction('pms')}
-              >
-                <BuildingIcon />
-                <span className="avora-header__two-line">
-                  <span>Quản lý</span>
-                  <span>Khách sạn</span>
-                </span>
-                <span className="avora-header__pms-badge">PMS</span>
-              </button>
+              {canManageHotels && (
+                <Link
+                  to="/hotel-management"
+                  className={`avora-header__pill-btn avora-header__pill-btn--pms ${currentTab === 'pms' ? 'is-active' : ''}`}
+                  onClick={() => { setInternalTab('pms'); onNavClick?.('pms'); }}
+                >
+                  <BuildingIcon />
+                  <span className="avora-header__two-line">
+                    <span>Quản lý</span>
+                    <span>Khách sạn</span>
+                  </span>
+                  <span className="avora-header__pms-badge">PMS</span>
+                </Link>
+              )}
 
               {/* User Profile */}
               <button type="button" className="avora-header__user-profile" onClick={handleAction('profile')}>

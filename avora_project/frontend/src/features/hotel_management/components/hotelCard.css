@@ -1,0 +1,88 @@
+.hotel-card {
+  min-width: 0;
+  padding: 1.15rem 1.2rem 1rem;
+  border: 1px solid rgba(163, 184, 195, .18);
+  border-radius: 8px;
+  background: #111d25;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, .13);
+  transition: border-color .18s ease, transform .18s ease;
+}
+
+.hotel-card:hover {
+  border-color: rgba(113, 203, 177, .48);
+  transform: translateY(-2px);
+}
+
+.hotel-card__topline,
+.hotel-card__facts,
+.hotel-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+}
+
+.hotel-card__id {
+  overflow: hidden;
+  color: #91a6ae;
+  font-family: 'Courier New', monospace;
+  font-size: .72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hotel-card__status {
+  flex: 0 0 auto;
+  padding: .24rem .5rem;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 4px;
+  color: #c2ccd0;
+  font-size: .68rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.hotel-card__status--active { border-color: rgba(92, 196, 150, .4); color: #82d8ae; }
+.hotel-card__status--draft { border-color: rgba(227, 184, 98, .4); color: #e7c16f; }
+.hotel-card__status--maintenance { border-color: rgba(225, 144, 103, .4); color: #e9a47f; }
+.hotel-card__status--pending-approval { border-color: rgba(128, 171, 220, .4); color: #9fc5ee; }
+
+.hotel-card__title {
+  display: block;
+  overflow: hidden;
+  margin-top: 1rem;
+  color: #f0f5f3;
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hotel-card__title:hover { color: #8bd8bc; }
+
+.hotel-card__location {
+  display: flex;
+  min-height: 2.5rem;
+  align-items: flex-start;
+  gap: .45rem;
+  margin: .48rem 0 .9rem;
+  color: #a2b2b7;
+  font-size: .83rem;
+  line-height: 1.45;
+}
+
+.hotel-card__location span { color: #73cbb0; font-size: 1rem; }
+.hotel-card__facts { justify-content: flex-start; color: #a7b7bb; font-size: .76rem; }
+.hotel-card__stars { color: #eccb7a; white-space: nowrap; }
+.hotel-card__stars span { margin-left: .38rem; color: #a7b7bb; }
+.hotel-card__actions { justify-content: flex-start; margin-top: 1rem; padding-top: .8rem; border-top: 1px solid rgba(163, 184, 195, .12); }
+.hotel-card__actions a,
+.hotel-card__actions button { border: 0; background: transparent; color: #b6c7c9; cursor: pointer; font: inherit; font-size: .75rem; }
+.hotel-card__actions .hotel-card__details { margin-right: auto; color: #82d8bc; font-weight: 700; }
+.hotel-card__actions button:hover { color: #fff; }
+.hotel-card__actions .hotel-card__delete { color: #e99a8c; }
+
+@media (max-width: 560px) {
+  .hotel-card { padding: 1rem; }
+  .hotel-card__actions { gap: .75rem; }
+}

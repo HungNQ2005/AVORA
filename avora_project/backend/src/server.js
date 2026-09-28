@@ -35,6 +35,7 @@ app.use('/api', connectionRoute);
 app.use('/api', authRoute);
 app.use('/api', otpRoute);
 app.use('/api', hotelManagementRoute);
+app.use('/api/v1', hotelManagementRoute);
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
 

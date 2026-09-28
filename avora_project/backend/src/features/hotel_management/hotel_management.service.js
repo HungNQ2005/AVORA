@@ -2,21 +2,16 @@
 
 const hotelModel = require('./models/hotel.model');
 
-const HOTEL_STATUS = new Set(['DRAFT', 'ACTIVE', 'MAINTENANCE', 'PENDING_APPROVAL']);
-
 const createError = (message, statusCode) => {
 	const err = new Error(message);
 	err.statusCode = statusCode;
 	return err;
 };
 
-const assertHotelStatus = (status) => {
-	if (!HOTEL_STATUS.has(status)) {
-		throw createError('status_cd must be DRAFT, ACTIVE, MAINTENANCE, or PENDING_APPROVAL.', 400);
-	}
-};
-
 const getHotels = async (filters, access) => {
+	if (filters.status_cd) {
+		throw createError('Status filtering is unavailable because the deployed M_HOTEL schema has no status_cd column.', 400);
+	}
 	const page = Number(filters.page);
 	const result = await hotelModel.listHotels({
 		...filters,
@@ -54,7 +49,6 @@ const createHotel = async (input, access) => {
 		star_quality: input.star_rating,
 		lat: input.lat,
 		lng: input.lng,
-		status_cd: 'DRAFT',
 		is_deleted: false,
 	});
 
