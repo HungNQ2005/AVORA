@@ -18,7 +18,7 @@ const initialForm = (hotel) => hotel ? {
   star_rating: hotel.star_rating ?? '',
 } : emptyForm;
 
-const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit }) => {
+const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel }) => {
   const [form, setForm] = useState(() => initialForm(hotel));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -125,7 +125,7 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit }) => {
           <footer className="hotel-modal__actions">
             <button type="button" className="hotel-button hotel-button--quiet" onClick={onClose} disabled={loading}>Cancel</button>
             <button type="submit" className="hotel-button hotel-button--primary" disabled={loading}>
-              {loading ? 'Saving…' : isEdit ? 'Save changes' : 'Create draft'}
+              {loading ? 'Saving…' : isEdit ? 'Save changes' : (submitLabel || 'Create hotel')}
             </button>
           </footer>
         </form>

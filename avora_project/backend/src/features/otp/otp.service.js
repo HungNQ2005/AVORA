@@ -46,6 +46,10 @@ const sendOtp = async ({ identifier, email, purpose = 'GENERAL', expiryMinutes =
     purpose,
   });
 
+  if (purpose.startsWith('HOTEL_DELETE:')) {
+    console.log('OTP for deletion:', otp);
+  }
+
   // Simulate email sending via console log
   console.log('\n[EMAIL SIMULATION - OTP SERVICE] ========================================');
   console.log(`  To: ${email}`);

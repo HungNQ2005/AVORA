@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 const ALLOWED_ROLES = new Set([
   'ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'SYSTEM ADMIN',
   'BMR', 'BUSINESS_MANAGER', 'BUSINESS MANAGER',
+  'VEN', 'VENDOR',
 ]);
 
 const getRole = (user) => String(

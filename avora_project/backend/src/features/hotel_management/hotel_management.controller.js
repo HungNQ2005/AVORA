@@ -5,7 +5,7 @@ const { sendSuccess } = require('../../utils/responseHelper');
 
 const getHotels = async (req, res, next) => {
 	try {
-		const result = await hotelService.getHotels(req.query, req.hotelAccess);
+		const result = await hotelService.getHotels(req.validated.query, req.hotelAccess);
 		return sendSuccess(res, 200, 'Hotels fetched successfully.', result);
 	} catch (err) {
 		return next(err);
@@ -14,8 +14,17 @@ const getHotels = async (req, res, next) => {
 
 const getHotel = async (req, res, next) => {
 	try {
-		const hotel = await hotelService.getHotel(req.params.id, req.hotelAccess);
+		const hotel = await hotelService.getHotel(req.validated.params.id, req.hotelAccess);
 		return sendSuccess(res, 200, 'Hotel fetched successfully.', hotel);
+	} catch (err) {
+		return next(err);
+	}
+};
+
+const getVendors = async (req, res, next) => {
+	try {
+		const vendors = await hotelService.getVendors(req.hotelAccess);
+		return sendSuccess(res, 200, 'Active Vendors fetched successfully.', vendors);
 	} catch (err) {
 		return next(err);
 	}
@@ -23,8 +32,11 @@ const getHotel = async (req, res, next) => {
 
 const createHotel = async (req, res, next) => {
 	try {
-		const hotel = await hotelService.createHotel(req.body, req.hotelAccess);
-		return sendSuccess(res, 201, 'Hotel created successfully as Draft.', hotel);
+		const hotel = await hotelService.createHotel(req.validated.body, req.hotelAccess);
+		const message = req.hotelAccess.isVendor
+			? 'Hotel submitted for approval.'
+			: 'Hotel created successfully.';
+		return sendSuccess(res, 201, message, hotel);
 	} catch (err) {
 		return next(err);
 	}
@@ -32,17 +44,26 @@ const createHotel = async (req, res, next) => {
 
 const updateHotel = async (req, res, next) => {
 	try {
-		const hotel = await hotelService.updateHotel(req.params.id, req.body, req.hotelAccess);
+		const hotel = await hotelService.updateHotel(req.validated.params.id, req.validated.body, req.hotelAccess);
 		return sendSuccess(res, 200, 'Hotel updated successfully.', hotel);
 	} catch (err) {
 		return next(err);
 	}
 };
 
-const publishHotel = async (req, res, next) => {
+const requestDeleteOtp = async (req, res, next) => {
 	try {
-		const hotel = await hotelService.publishHotel(req.validated.params.id, req.hotelAccess);
-		return sendSuccess(res, 200, 'Hotel published successfully.', hotel);
+		const result = await hotelService.requestDeleteOtp(req.validated.params.id, req.hotelAccess);
+		return sendSuccess(res, 200, 'Deletion OTP sent to the account email.', result);
+	} catch (err) {
+		return next(err);
+	}
+};
+
+const approveHotel = async (req, res, next) => {
+	try {
+		const hotel = await hotelService.approveHotel(req.validated.params.id, req.hotelAccess);
+		return sendSuccess(res, 200, 'Hotel approved/restored successfully.', hotel);
 	} catch (err) {
 		return next(err);
 	}
@@ -50,11 +71,11 @@ const publishHotel = async (req, res, next) => {
 
 const deleteHotel = async (req, res, next) => {
 	try {
-		const result = await hotelService.deleteHotel(req.params.id, req.hotelAccess);
+		const result = await hotelService.deleteHotel(req.validated.params.id, req.validated.body, req.hotelAccess);
 		return sendSuccess(res, 200, 'Hotel soft-deleted successfully.', result);
 	} catch (err) {
 		return next(err);
 	}
 };
 
-module.exports = { getHotels, getHotel, createHotel, updateHotel, publishHotel, deleteHotel };
+module.exports = { getHotels, getHotel, getVendors, createHotel, updateHotel, requestDeleteOtp, approveHotel, deleteHotel };

@@ -6,6 +6,7 @@ const { sendError } = require('../../utils/responseHelper');
 const ROLE_NAMES = new Set([
   'ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'SYSTEM ADMIN',
   'BMR', 'BUSINESS_MANAGER', 'BUSINESS MANAGER',
+  'VEN', 'VENDOR',
 ]);
 
 const authorizeHotelManagement = async (req, res, next) => {
@@ -16,7 +17,7 @@ const authorizeHotelManagement = async (req, res, next) => {
   try {
     const { data: user, error: userError } = await supabase
       .from('m_user')
-      .select('user_id, role_cd, account_status, is_deleted')
+      .select('user_id, email, role_cd, account_status, is_deleted')
       .eq('user_id', req.user.user_id)
       .maybeSingle();
 
@@ -40,7 +41,11 @@ const authorizeHotelManagement = async (req, res, next) => {
 
     req.hotelAccess = {
       userId: user.user_id,
+      email: user.email,
+      roleName,
       isSystemAdmin: ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'SYSTEM ADMIN'].includes(roleName),
+      isBusinessManager: ['BMR', 'BUSINESS_MANAGER', 'BUSINESS MANAGER'].includes(roleName),
+      isVendor: ['VEN', 'VENDOR'].includes(roleName),
     };
     return next();
   } catch (err) {

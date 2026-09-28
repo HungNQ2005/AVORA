@@ -1,0 +1,14 @@
+.hotel-otp__overlay { position: fixed; z-index: 1250; inset: 0; display: grid; place-items: center; overflow-y: auto; padding: 1rem; background: rgba(15, 23, 42, .42); backdrop-filter: blur(3px); }
+.hotel-otp { width: min(100%, 430px); padding: 1.35rem; border: 1px solid #bfdbfe; border-radius: 12px; background: #fff; color: #1e293b; box-shadow: 0 24px 65px rgba(15, 23, 42, .2); }
+.hotel-otp__header { display: flex; align-items: flex-start; justify-content: space-between; }
+.hotel-otp__mark { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid #93c5fd; border-radius: 50%; background: #eff6ff; color: #0052cc; font-weight: 800; }
+.hotel-otp__header button { width: 34px; height: 34px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; color: #475569; font-size: 1.3rem; cursor: pointer; }
+.hotel-otp__eyebrow { margin-top: 1rem; color: #0052cc; font-size: .68rem; font-weight: 800; letter-spacing: .1em; }
+.hotel-otp h2 { margin-top: .35rem; color: #1e293b; font-size: 1.2rem; }
+.hotel-otp__copy { margin: .6rem 0 1.1rem; color: #64748b; font-size: .84rem; line-height: 1.55; }
+.hotel-otp form label { display: block; margin-bottom: .4rem; color: #475569; font-size: .76rem; font-weight: 750; }
+.hotel-otp form input { width: 100%; height: 48px; padding: .6rem .8rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: 0; background: #fff; color: #1e293b; font-family: 'Courier New', monospace; font-size: 1.2rem; letter-spacing: .25em; text-align: center; }
+.hotel-otp form input:focus { border-color: #1890ff; box-shadow: 0 0 0 3px rgba(24, 144, 255, .12); }
+.hotel-otp__error { margin-top: .6rem; color: #b91c1c; font-size: .78rem; }
+.hotel-otp form footer { display: flex; justify-content: flex-end; gap: .55rem; margin-top: 1.1rem; padding-top: .9rem; border-top: 1px solid #e2e8f0; }
+@media (max-width: 480px) { .hotel-otp { padding: 1.1rem; } .hotel-otp form footer { flex-direction: column-reverse; } .hotel-otp form footer button { width: 100%; } }

@@ -2,9 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import HotelCard from '../components/hotelCard';
 import EditHotelPopup from '../components/editHotelPopup';
+import HotelDeleteOtpModal from '../components/hotelDeleteOtpModal';
 import Dialog from '../../../common/components/Dialog';
 import { useAuth } from '../../../context/AuthContext';
-import { createHotel, deleteHotel, getHotels, updateHotel } from '../../../services/hotelManagementService';
+import { approveHotel, createHotel, deleteHotel, getHotels, requestHotelDeleteOtp, updateHotel } from '../../../services/hotelManagementService';
 import './hotelManagementPage.css';
 
 const HotelManagementPage = () => {
@@ -20,11 +21,14 @@ const HotelManagementPage = () => {
 	const [editingHotel, setEditingHotel] = useState(null);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState(null);
+	const [otpDeleteTarget, setOtpDeleteTarget] = useState(null);
 	const [deleteError, setDeleteError] = useState('');
 	const [toast, setToast] = useState(() => location.state?.notice || '');
 	const userRole = String(user?.role_code_name || user?.role_cd || '').trim().toUpperCase();
 	const hasActiveFilters = Boolean(debouncedKeyword || filters.city_id || filters.star_rating);
-	const managerHasNoAssignments = userRole === 'BMR' && !hasActiveFilters;
+	const isVendor = ['VEN', 'VENDOR'].includes(userRole);
+	const canApprove = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER'].includes(userRole);
+	const vendorHasNoHotels = isVendor && !hasActiveFilters;
 
 	useEffect(() => {
 		const timer = setTimeout(() => setDebouncedKeyword(filters.keyword.trim()), 300);
@@ -70,12 +74,44 @@ const HotelManagementPage = () => {
 	const handleCreate = async (payload) => {
 		const result = await createHotel(payload);
 		setCreateOpen(false);
-		setToast(`Created ${result.name}. Publication status is not configured.`);
+		setToast(isVendor ? `${result.name} was submitted for approval.` : `${result.name} was created.`);
 		setPagination((current) => ({ ...current, page: 1 }));
 		setDebouncedKeyword('');
 		setFilters((current) => ({ ...current, keyword: '' }));
 		setLoading(true);
 		setRefreshKey((current) => current + 1);
+	};
+
+	const handleDeleteRequest = async (hotel) => {
+		setDeleteError('');
+		if (isVendor) {
+			try {
+				await requestHotelDeleteOtp(hotel.hotel_id);
+				setOtpDeleteTarget(hotel);
+			} catch (err) {
+				setError(err.response?.data?.message || 'Could not send the deletion OTP.');
+			}
+			return;
+		}
+		setDeleteTarget(hotel);
+	};
+
+	const handleVendorDelete = async (otp) => {
+		await deleteHotel(otpDeleteTarget.hotel_id, otp);
+		setHotels((current) => current.filter((hotel) => hotel.hotel_id !== otpDeleteTarget.hotel_id));
+		setPagination((current) => ({ ...current, total_items: Math.max(0, current.total_items - 1) }));
+		setOtpDeleteTarget(null);
+		setToast(`${otpDeleteTarget.name} was deleted.`);
+	};
+
+	const handleApprove = async (hotel) => {
+		try {
+			const restored = await approveHotel(hotel.hotel_id);
+			setHotels((current) => current.map((item) => item.hotel_id === restored.hotel_id ? restored : item));
+			setToast(`${hotel.name} was approved/restored.`);
+		} catch (err) {
+			setError(err.response?.data?.message || 'Could not approve or restore this hotel.');
+		}
 	};
 
 	const handleUpdate = async (payload) => {
@@ -145,16 +181,18 @@ const HotelManagementPage = () => {
 						<HotelCard
 							key={hotel.hotel_id}
 							hotel={hotel}
+							canApprove={canApprove}
 							onEdit={() => setEditingHotel(hotel)}
-							onDelete={() => { setDeleteTarget(hotel); setDeleteError(''); }}
+							onDelete={() => handleDeleteRequest(hotel)}
+							onApprove={() => handleApprove(hotel)}
 						/>
 					))}
 				</div>
 			) : (
 				<div className="hotel-state hotel-state--empty">
 					<span className="hotel-state__mark" aria-hidden="true">⌂</span>
-					<h2>{managerHasNoAssignments ? 'No hotels assigned' : 'No hotels found'}</h2>
-					<p>{managerHasNoAssignments ? 'No properties are assigned to your account.' : 'Try changing the search or filters, or create a new hotel.'}</p>
+					<h2>{vendorHasNoHotels ? 'No approved hotels yet' : 'No hotels found'}</h2>
+					<p>{vendorHasNoHotels ? 'New hotels appear here after Admin or Business Manager approval.' : 'Try changing the search or filters, or create a new hotel.'}</p>
 				</div>
 			)}
 
@@ -167,10 +205,11 @@ const HotelManagementPage = () => {
 			</footer>
 
 			{toast && <div className="hotel-toast" role="status">{toast}</div>}
-			{createOpen && <EditHotelPopup isOpen mode="create" onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />}
+			{createOpen && <EditHotelPopup isOpen mode="create" submitLabel={isVendor ? 'Submit for approval' : 'Create hotel'} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />}
 			{editingHotel && <EditHotelPopup isOpen mode="edit" hotel={editingHotel} onClose={() => setEditingHotel(null)} onSubmit={handleUpdate} />}
+			{otpDeleteTarget && <HotelDeleteOtpModal hotel={otpDeleteTarget} onClose={() => setOtpDeleteTarget(null)} onConfirm={handleVendorDelete} />}
 			<Dialog
-				isOpen={Boolean(deleteTarget)}
+				isOpen={Boolean(deleteTarget) && !isVendor}
 				onClose={() => { setDeleteTarget(null); setDeleteError(''); }}
 				onConfirm={handleDelete}
 				title="Delete this hotel?"

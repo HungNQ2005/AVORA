@@ -48,13 +48,19 @@ const updateHotelSchema = z.object({
   star_rating: hotelFields.star_rating.optional(),
   lat: hotelFields.lat.optional(),
   lng: hotelFields.lng.optional(),
+  owner_id: z.string().trim().min(1).max(100).optional(),
 }).strict().refine((data) => Object.keys(data).length > 0, {
   message: 'At least one field must be provided.',
 });
+
+const deleteHotelSchema = z.preprocess((value) => value ?? {}, z.object({
+  otp: z.string().trim().regex(/^\d{6}$/, 'A valid 6-digit OTP is required.').optional(),
+}).strict());
 
 module.exports = {
   hotelIdParamsSchema,
   hotelListQuerySchema,
   createHotelSchema,
   updateHotelSchema,
+  deleteHotelSchema,
 };

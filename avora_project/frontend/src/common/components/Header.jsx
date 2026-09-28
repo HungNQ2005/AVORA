@@ -148,7 +148,7 @@ const Header = ({
   const { user } = useAuth();
   const role = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
-  const canManageHotels = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER'].includes(role);
+  const canManageHotels = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER', 'VEN', 'VENDOR'].includes(role);
   const [internalTab, setInternalTab] = useState(null);
   const currentTab = internalTab !== null ? internalTab : activeTab;
   const [showSupportToast, setShowSupportToast] = useState(false);
