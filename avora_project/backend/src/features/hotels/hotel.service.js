@@ -22,6 +22,68 @@ const supabase = require('../../config/supabaseClient');
  * @param {number} [params.minScore] - Minimum review score (e.g. 7, 8, 9)
  * @param {string[]} [params.facilities] - Array of facility IDs or names
  * @param {boolean} [params.onlyAvailable] - If true, only include hotels with available rooms
+/**
+ * Room capacity rule:
+ * - 2 giường tiêu chuẩn * 2 người = 4 người
+ * - Có thêm 1 giường phụ * 1 người = tối đa 5 người
+ * - Sức chứa tối đa của 1 phòng = 5 người
+ * - Không cho phép booking 6 người vào phòng này
+ */
+const getRoomTypeCapacity = (rt) => {
+  if (!rt) return { standardBeds: 1, standardCapacity: 2, hasExtraBed: true, extraBedCapacity: 1, maxCapacity: 3 };
+  const bedType = String(rt.bed_type || '').toLowerCase();
+  let bedCount = 1;
+  const match = bedType.match(/^(\d+)/);
+  if (match) {
+    bedCount = parseInt(match[1], 10);
+  } else if (bedType.includes('hai giường') || bedType.includes('twin')) {
+    bedCount = 2;
+  }
+
+  const isSingle = bedType.includes('single') || bedType.includes('đơn');
+  let standardCapacity = 2;
+  let standardBeds = 1;
+
+  if (isSingle) {
+    standardBeds = bedCount;
+    standardCapacity = bedCount;
+  } else if (bedCount >= 2 || (rt.max_adults && Number(rt.max_adults) >= 4) || bedType.includes('2 x') || bedType.includes('2 giường')) {
+    standardBeds = 2;
+    standardCapacity = 4; // 2 giường tiêu chuẩn x 2 người = 4 người
+  } else {
+    standardBeds = 1;
+    standardCapacity = 2; // 1 giường tiêu chuẩn x 2 người = 2 người
+  }
+
+  const hasExtraBed = standardCapacity >= 2;
+  const extraBedCapacity = hasExtraBed ? 1 : 0;
+  const maxCapacity = Math.min(5, standardCapacity + extraBedCapacity);
+
+  return {
+    standardBeds,
+    standardCapacity,
+    hasExtraBed,
+    extraBedCapacity,
+    maxCapacity,
+  };
+};
+
+/**
+ * Fetch hotels with search, filter, and sorting criteria.
+ * @param {Object} params
+ * @param {string} [params.destination] - Destination search term (city name, address, or hotel name)
+ * @param {string} [params.checkIn] - Check-in date string (YYYY-MM-DD)
+ * @param {string} [params.checkOut] - Check-out date string (YYYY-MM-DD)
+ * @param {number} [params.adults] - Number of adults
+ * @param {number} [params.children] - Number of children
+ * @param {number} [params.rooms] - Number of rooms needed
+ * @param {number} [params.minPrice] - Minimum price filter (VND)
+ * @param {number} [params.maxPrice] - Maximum price filter (VND)
+ * @param {number[]} [params.starRatings] - Array of star qualities [3, 4, 5]
+ * @param {number} [params.minScore] - Minimum review score (e.g. 7, 8, 9)
+ * @param {string[]} [params.facilities] - Array of facility IDs or names
+ * @param {string} [params.capacityFilter] - Capacity filter (standard_double | standard_two_beds | with_extra_bed)
+ * @param {boolean} [params.onlyAvailable] - If true, only include hotels with available rooms
  * @param {string} [params.sortBy] - Sorting key: 'popularity' | 'price_asc' | 'rating_price' | 'beach_distance'
  * @returns {Promise<{ hotels: Array, total: number, filterStats: Object }>}
  */
@@ -42,9 +104,35 @@ const searchHotels = async (params = {}) => {
     starRatings = [],
     minScore,
     facilities = [],
+    capacityFilter = 'all',
     onlyAvailable = false,
     sortBy = 'popularity',
   } = params;
+
+  // Calculate guests per room and validate capacity rule:
+  // 2 giường tiêu chuẩn * 2 người = 4 người
+  // Có thêm 1 giường phụ * 1 người = tối đa 5 người
+  // Không cho phép 6 người vào 1 phòng
+  const parsedAdults = parseInt(adults, 10) || 2;
+  const parsedChildren = parseInt(children, 10) || 0;
+  const parsedRooms = Math.max(1, parseInt(rooms, 10) || 1);
+  const totalGuests = parsedAdults + parsedChildren;
+  const guestsPerRoom = Math.ceil(totalGuests / parsedRooms);
+
+  // If guests per room exceeds 5, no single room in the system can accommodate it
+  if (guestsPerRoom > 5) {
+    return {
+      hotels: [],
+      total: 0,
+      filterStats: computeEmptyFilterStats(),
+      exceededCapacity: true,
+      guestsPerRoom,
+      totalGuests,
+      rooms: parsedRooms,
+      minRoomsRequired: Math.ceil(totalGuests / 5),
+      message: `Không có loại phòng nào như vậy. Sức chứa tối đa của 1 phòng là 5 người (2 giường tiêu chuẩn × 2 người = 4 người, có thêm 1 giường phụ × 1 người = tối đa 5 người). Bạn đang tìm cho ${guestsPerRoom} người/phòng, vượt quá sức chứa tối đa. Vui lòng tăng lên tối thiểu ${Math.ceil(totalGuests / 5)} phòng hoặc giảm số lượng người.`,
+    };
+  }
 
   // 1. Fetch cities for location matching
   let cityIds = [];
@@ -260,7 +348,7 @@ const searchHotels = async (params = {}) => {
   // Assemble enriched hotel objects
   let enrichedHotels = rawHotels.map((hotel) => {
     const images = imagesByHotel[hotel.hotel_id] || [];
-    const roomTypes = roomTypesByHotel[hotel.hotel_id] || [];
+    const allRoomTypes = roomTypesByHotel[hotel.hotel_id] || [];
     const hotelFacilities = facilitiesByHotel[hotel.hotel_id] || [];
     const policy = policiesByHotel[hotel.hotel_id] || defaultPolicy || {
       free_cancel_before_hours: 48,
@@ -268,7 +356,29 @@ const searchHotels = async (params = {}) => {
     };
     const reviewStats = reviewsStatsByHotel[hotel.hotel_id];
 
-    // Determine representative room & price
+    // Filter room types by capacity requirement (each room must hold guestsPerRoom)
+    const qualifyingRoomTypes = allRoomTypes.filter((rt) => {
+      const cap = getRoomTypeCapacity(rt);
+      return cap.maxCapacity >= guestsPerRoom;
+    });
+
+    // If hotel has room types configured but NONE can hold requested guests per room, hotel is unsuitable
+    if (allRoomTypes.length > 0 && qualifyingRoomTypes.length === 0) {
+      return null;
+    }
+
+    const roomTypes = qualifyingRoomTypes.length > 0 ? qualifyingRoomTypes : allRoomTypes;
+
+    // Collect capacity types for facet filtering
+    const capacityTypes = new Set();
+    allRoomTypes.forEach((rt) => {
+      const cap = getRoomTypeCapacity(rt);
+      if (cap.standardBeds === 1) capacityTypes.add('standard_double');
+      if (cap.standardBeds >= 2) capacityTypes.add('standard_two_beds');
+      if (cap.hasExtraBed) capacityTypes.add('with_extra_bed');
+    });
+
+    // Determine representative room & price from qualifying roomTypes
     let minPriceForHotel = Infinity;
     let originalPriceForHotel = null;
     let bestRoom = roomTypes[0] || null;
@@ -318,6 +428,8 @@ const searchHotels = async (params = {}) => {
       locationDescription = `${addressStr}, ${cityName}`;
     }
 
+    const bestRoomCap = bestRoom ? getRoomTypeCapacity(bestRoom) : null;
+
     return {
       hotel_id: hotel.hotel_id,
       name: hotel.name,
@@ -339,11 +451,17 @@ const searchHotels = async (params = {}) => {
         icon: f.icon,
         type: f.type,
       })),
+      capacity_types: Array.from(capacityTypes),
       room_highlight: bestRoom ? {
         room_type_id: bestRoom.room_type_id,
         name: bestRoom.type_name,
         bed_type: bestRoom.bed_type || '1 giường đôi cực lớn',
         room_size: bestRoom.room_size || '38 m²',
+        standard_beds: bestRoomCap ? bestRoomCap.standardBeds : 1,
+        standard_capacity: bestRoomCap ? bestRoomCap.standardCapacity : 2,
+        has_extra_bed: bestRoomCap ? bestRoomCap.hasExtraBed : true,
+        extra_bed_capacity: bestRoomCap ? bestRoomCap.extraBedCapacity : 1,
+        max_capacity: bestRoomCap ? bestRoomCap.maxCapacity : 3,
       } : null,
       price: minPriceForHotel,
       original_price: originalPriceForHotel,
@@ -355,12 +473,15 @@ const searchHotels = async (params = {}) => {
       tag: hotel.star_quality === 5 ? 'Ưu đãi mùa hè - Giảm 20%' : (minPriceForHotel < 2000000 ? 'Giá tốt nhất cho kỳ nghỉ này' : 'Ưu đãi chớp nhoáng'),
       is_genius: hotel.star_quality >= 4,
     };
-  });
+  }).filter(Boolean);
 
   // 5. Compute dynamic filter stats before applying filters to enable accurate counts
   const filterStats = computeFilterStats(enrichedHotels);
 
   // 6. Apply In-memory filters
+  if (capacityFilter && capacityFilter !== 'all') {
+    enrichedHotels = enrichedHotels.filter((h) => h.capacity_types?.includes(capacityFilter));
+  }
   if (minPrice !== undefined && minPrice !== null) {
     enrichedHotels = enrichedHotels.filter((h) => h.price >= Number(minPrice));
   }
@@ -444,6 +565,12 @@ function computeFilterStats(hotels) {
       beachAndCenter: hotels.filter((h) => h.star_quality >= 4).length,
       boutiqueOldQuarter: hotels.filter((h) => h.star_quality <= 3).length,
     },
+    capacities: {
+      all: hotels.length,
+      standard_double: hotels.filter((h) => h.capacity_types?.includes('standard_double')).length,
+      standard_two_beds: hotels.filter((h) => h.capacity_types?.includes('standard_two_beds')).length,
+      with_extra_bed: hotels.filter((h) => h.capacity_types?.includes('with_extra_bed')).length,
+    },
   };
   return stats;
 }
@@ -477,6 +604,12 @@ function computeEmptyFilterStats() {
       beachAndCenter: 0,
       boutiqueOldQuarter: 0,
     },
+    capacities: {
+      all: 0,
+      standard_double: 0,
+      standard_two_beds: 0,
+      with_extra_bed: 0,
+    },
   };
 }
 
@@ -494,7 +627,12 @@ const getHotelById = async (hotelId, options = {}) => {
     throw new Error('Database client is not initialized.');
   }
 
-  const { checkIn, checkOut } = options;
+  const { checkIn, checkOut, adults = 2, children = 0, rooms: requestedRooms = 1 } = options;
+  const parsedAdults = parseInt(adults, 10) || 2;
+  const parsedChildren = parseInt(children, 10) || 0;
+  const parsedRooms = Math.max(1, parseInt(requestedRooms, 10) || 1);
+  const totalGuests = parsedAdults + parsedChildren;
+  const guestsPerRoom = Math.ceil(totalGuests / parsedRooms);
 
   // 1. Fetch hotel record directly from m_hotel
   let hotel = null;
@@ -645,6 +783,8 @@ const getHotelById = async (hotelId, options = {}) => {
     }
 
     const origPrice = Math.round(price * 1.2);
+    const cap = getRoomTypeCapacity(rt);
+    const isExceeded = guestsPerRoom > cap.maxCapacity;
 
     return {
       room_type_id: rt.room_type_id,
@@ -653,6 +793,16 @@ const getHotelById = async (hotelId, options = {}) => {
       bed_type: rt.bed_type,
       max_adults: rt.max_adults,
       max_children: rt.max_children,
+      standard_beds: cap.standardBeds,
+      standard_capacity: cap.standardCapacity,
+      has_extra_bed: cap.hasExtraBed,
+      extra_bed_capacity: cap.extraBedCapacity,
+      max_capacity: cap.maxCapacity,
+      guests_per_room: guestsPerRoom,
+      is_capacity_exceeded: isExceeded,
+      capacity_warning: isExceeded
+        ? `Không được cho phép booking ${guestsPerRoom} người vào phòng này! Phòng này tối đa ${cap.maxCapacity} người (${cap.standardBeds} giường tiêu chuẩn × 2 người = ${cap.standardCapacity} người + 1 giường phụ = 1 người).`
+        : null,
       default_price: Number(rt.default_price),
       price: price,
       original_price: origPrice,

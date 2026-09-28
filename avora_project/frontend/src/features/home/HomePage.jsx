@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import { getSavedFavorites, toggleFavoriteHotel } from '../../utils/favoritesStorage';
+import { getMinRoomsRequired, MAX_ROOM_CAPACITY } from '../../utils/roomCapacityHelper';
 import './HomePage.css';
 
 /* Custom SVG Icons */
@@ -145,6 +146,46 @@ const HomePage = () => {
   const [adults, setAdults] = useState(2);
   const [children, setChildren] = useState(0);
   const [rooms, setRooms] = useState(1);
+  const [linkedNotice, setLinkedNotice] = useState(null);
+
+  const handleAdultsDelta = (delta) => {
+    const nextAdults = Math.max(1, adults + delta);
+    setAdults(nextAdults);
+    const nextTotal = nextAdults + children;
+    const requiredRooms = Math.ceil(nextTotal / 5);
+    if (requiredRooms > rooms) {
+      setRooms(requiredRooms);
+      setLinkedNotice(`Đã tự động liên kết: ${nextTotal} khách cần tối thiểu ${requiredRooms} phòng (tối đa 5 người/phòng gồm giường phụ).`);
+    } else {
+      setLinkedNotice(null);
+    }
+  };
+
+  const handleChildrenDelta = (delta) => {
+    const nextChildren = Math.max(0, children + delta);
+    setChildren(nextChildren);
+    const nextTotal = adults + nextChildren;
+    const requiredRooms = Math.ceil(nextTotal / 5);
+    if (requiredRooms > rooms) {
+      setRooms(requiredRooms);
+      setLinkedNotice(`Đã tự động liên kết: ${nextTotal} khách cần tối thiểu ${requiredRooms} phòng (tối đa 5 người/phòng gồm giường phụ).`);
+    } else {
+      setLinkedNotice(null);
+    }
+  };
+
+  const handleRoomsDelta = (delta) => {
+    const nextRooms = rooms + delta;
+    if (delta < 0) {
+      const minRequired = Math.ceil((adults + children) / 5);
+      if (nextRooms < minRequired) {
+        setLinkedNotice(`Không thể giảm dưới ${minRequired} phòng: 1 phòng tối đa 5 người (2 giường tiêu chuẩn × 2 + 1 giường phụ). ${adults + children} người cần ít nhất ${minRequired} phòng.`);
+        return;
+      }
+    }
+    setRooms(Math.max(1, nextRooms));
+    setLinkedNotice(null);
+  };
 
   // Popover Toggles
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -615,6 +656,20 @@ const HomePage = () => {
                 {/* Guest & Room Popover Matching Reference Image */}
                 {showGuestDropdown && (
                   <div className="avora-guest-popover" onClick={(e) => e.stopPropagation()}>
+                    {/* Capacity rule helper note */}
+                    <div className="compact-popover__capacity-rule">
+                      <span className="compact-popover__rule-icon">💡</span>
+                      <span>
+                        2 giường tiêu chuẩn = 4 người • Có thêm 1 giường phụ = tối đa 5 người/phòng.
+                      </span>
+                    </div>
+
+                    {linkedNotice && (
+                      <div className="compact-popover__linked-notice">
+                        {linkedNotice}
+                      </div>
+                    )}
+
                     {/* Row 1: Adults */}
                     <div className="avora-guest-popover__row">
                       <div className="avora-guest-popover__info">
@@ -625,14 +680,14 @@ const HomePage = () => {
                         <button
                           type="button"
                           disabled={adults <= 1}
-                          onClick={() => setAdults(prev => Math.max(1, prev - 1))}
+                          onClick={() => handleAdultsDelta(-1)}
                         >
                           -
                         </button>
                         <span className="avora-guest-popover__count">{adults}</span>
                         <button
                           type="button"
-                          onClick={() => setAdults(prev => prev + 1)}
+                          onClick={() => handleAdultsDelta(1)}
                         >
                           +
                         </button>
@@ -649,14 +704,14 @@ const HomePage = () => {
                         <button
                           type="button"
                           disabled={children <= 0}
-                          onClick={() => setChildren(prev => Math.max(0, prev - 1))}
+                          onClick={() => handleChildrenDelta(-1)}
                         >
                           -
                         </button>
                         <span className="avora-guest-popover__count">{children}</span>
                         <button
                           type="button"
-                          onClick={() => setChildren(prev => prev + 1)}
+                          onClick={() => handleChildrenDelta(1)}
                         >
                           +
                         </button>
@@ -673,14 +728,14 @@ const HomePage = () => {
                         <button
                           type="button"
                           disabled={rooms <= 1}
-                          onClick={() => setRooms(prev => Math.max(1, prev - 1))}
+                          onClick={() => handleRoomsDelta(-1)}
                         >
                           -
                         </button>
                         <span className="avora-guest-popover__count">{rooms}</span>
                         <button
                           type="button"
-                          onClick={() => setRooms(prev => prev + 1)}
+                          onClick={() => handleRoomsDelta(1)}
                         >
                           +
                         </button>

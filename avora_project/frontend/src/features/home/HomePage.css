@@ -1353,3 +1353,35 @@
     align-items: flex-start;
   }
 }
+
+/* Capacity and Bed Linking Styles for HomePage Guest Popover */
+.compact-popover__capacity-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.compact-popover__rule-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.compact-popover__linked-notice {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 11.5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}

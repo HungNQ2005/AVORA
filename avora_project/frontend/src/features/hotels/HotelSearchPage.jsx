@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import HotelCard from './components/HotelCard';
 import FilterSidebar from './components/FilterSidebar';
 import MapModal from './components/MapModal';
+import { getMinRoomsRequired, validateGuestRoomCapacity, MAX_ROOM_CAPACITY } from '../../utils/roomCapacityHelper';
 import './HotelSearchPage.css';
 
 /* Custom SVG Icons */
@@ -143,6 +144,52 @@ const HotelSearchPage = () => {
   const [adults, setAdults] = useState(Number(searchParams.get('adults')) || 2);
   const [children, setChildren] = useState(Number(searchParams.get('children')) || 0);
   const [rooms, setRooms] = useState(Number(searchParams.get('rooms')) || 1);
+  const [selectedCapacity, setSelectedCapacity] = useState(searchParams.get('capacity') || 'all');
+  const [capacityNotice, setCapacityNotice] = useState(null);
+  const [linkedNotice, setLinkedNotice] = useState(null);
+
+  const totalGuests = adults + children;
+  const guestsPerRoom = Math.ceil(totalGuests / Math.max(1, rooms));
+  const minRoomsRequired = Math.ceil(totalGuests / 5);
+
+  const handleAdultsDelta = (delta) => {
+    const nextAdults = Math.max(1, adults + delta);
+    setAdults(nextAdults);
+    const nextTotal = nextAdults + children;
+    const requiredRooms = Math.ceil(nextTotal / 5);
+    if (requiredRooms > rooms) {
+      setRooms(requiredRooms);
+      setLinkedNotice(`Đã tự động liên kết: ${nextTotal} khách cần tối thiểu ${requiredRooms} phòng (tối đa 5 người/phòng gồm giường phụ).`);
+    } else {
+      setLinkedNotice(null);
+    }
+  };
+
+  const handleChildrenDelta = (delta) => {
+    const nextChildren = Math.max(0, children + delta);
+    setChildren(nextChildren);
+    const nextTotal = adults + nextChildren;
+    const requiredRooms = Math.ceil(nextTotal / 5);
+    if (requiredRooms > rooms) {
+      setRooms(requiredRooms);
+      setLinkedNotice(`Đã tự động liên kết: ${nextTotal} khách cần tối thiểu ${requiredRooms} phòng (tối đa 5 người/phòng gồm giường phụ).`);
+    } else {
+      setLinkedNotice(null);
+    }
+  };
+
+  const handleRoomsDelta = (delta) => {
+    const nextRooms = rooms + delta;
+    if (delta < 0) {
+      const minRequired = Math.ceil((adults + children) / 5);
+      if (nextRooms < minRequired) {
+        setLinkedNotice(`Không thể giảm dưới ${minRequired} phòng: 1 phòng tối đa 5 người (2 giường tiêu chuẩn × 2 + 1 giường phụ). ${adults + children} người cần ít nhất ${minRequired} phòng.`);
+        return;
+      }
+    }
+    setRooms(Math.max(1, nextRooms));
+    setLinkedNotice(null);
+  };
 
   // Month and year for calendar popover navigation
   const [selectedMonth, setSelectedMonth] = useState(() => checkInDate.getMonth() + 1);
@@ -326,6 +373,7 @@ const HotelSearchPage = () => {
     if (adults) queryParams.set('adults', adults);
     if (children) queryParams.set('children', children);
     if (rooms) queryParams.set('rooms', rooms);
+    if (selectedCapacity && selectedCapacity !== 'all') queryParams.set('capacityFilter', selectedCapacity);
     if (sortBy) queryParams.set('sortBy', sortBy);
 
     if (minPrice !== null) queryParams.set('minPrice', minPrice);
@@ -347,17 +395,34 @@ const HotelSearchPage = () => {
         throw new Error(result.message || 'Không thể tải danh sách khách sạn');
       }
 
-      const hotelData = result.data?.hotels || [];
-      const stats = result.data?.filterStats || {};
-
-      setHotels(hotelData);
-      setFilterStats(stats);
-
-      // Check if DB is completely empty (no hotels at all)
-      if (stats.priceRanges?.all === 0 && (!destination || destination.trim() === '')) {
-        setIsDbEmpty(true);
+      if (result.data?.exceededCapacity) {
+        setHotels([]);
+        setFilterStats(result.data.filterStats || {});
+        setCapacityNotice(result.data);
+      } else if (Math.ceil((adults + children) / Math.max(1, rooms)) > 5) {
+        setHotels([]);
+        setCapacityNotice({
+          exceededCapacity: true,
+          totalGuests: adults + children,
+          rooms,
+          guestsPerRoom: Math.ceil((adults + children) / Math.max(1, rooms)),
+          minRoomsRequired: Math.ceil((adults + children) / 5),
+          message: 'Không có loại phòng nào như vậy. Sức chứa tối đa của 1 phòng là 5 người (2 giường tiêu chuẩn × 2 người = 4 người, có thêm 1 giường phụ × 1 người = tối đa 5 người). Không được phép đặt 6 người vào 1 phòng này.',
+        });
       } else {
-        setIsDbEmpty(false);
+        const hotelData = result.data?.hotels || [];
+        const stats = result.data?.filterStats || {};
+
+        setHotels(hotelData);
+        setFilterStats(stats);
+        setCapacityNotice(null);
+
+        // Check if DB is completely empty (no hotels at all)
+        if (stats.priceRanges?.all === 0 && (!destination || destination.trim() === '')) {
+          setIsDbEmpty(true);
+        } else {
+          setIsDbEmpty(false);
+        }
       }
     } catch (err) {
       console.error('Fetch hotels error:', err);
@@ -372,6 +437,7 @@ const HotelSearchPage = () => {
     adults,
     children,
     rooms,
+    selectedCapacity,
     sortBy,
     selectedPriceRange,
     selectedStars,
@@ -411,6 +477,11 @@ const HotelSearchPage = () => {
     queryParams.set('adults', adults);
     queryParams.set('children', children);
     queryParams.set('rooms', rooms);
+    if (selectedCapacity && selectedCapacity !== 'all') {
+      queryParams.set('capacity', selectedCapacity);
+    } else {
+      queryParams.delete('capacity');
+    }
     queryParams.set('sortBy', sortBy);
 
     setSearchParams(queryParams, { replace: true });
@@ -445,8 +516,11 @@ const HotelSearchPage = () => {
     setSelectedScore(null);
     setSelectedFacilities([]);
     setSelectedTypes([]);
+    setSelectedCapacity('all');
     setOnlyAvailable(false);
     setSortBy('popularity');
+    setCapacityNotice(null);
+    setLinkedNotice(null);
   };
 
   // Check if any filter is active
@@ -457,6 +531,7 @@ const HotelSearchPage = () => {
     selectedScore !== null ||
     selectedFacilities.length > 0 ||
     selectedTypes.length > 0 ||
+    selectedCapacity !== 'all' ||
     onlyAvailable;
 
   return (
@@ -614,6 +689,20 @@ const HotelSearchPage = () => {
 
                 {showGuestDropdown && (
                   <div className="avora-guest-popover" onClick={(e) => e.stopPropagation()}>
+                    {/* Capacity rule helper note */}
+                    <div className="compact-popover__capacity-rule">
+                      <span className="compact-popover__rule-icon">💡</span>
+                      <span>
+                        2 giường tiêu chuẩn = 4 người • Có thêm 1 giường phụ = tối đa 5 người/phòng.
+                      </span>
+                    </div>
+
+                    {linkedNotice && (
+                      <div className="compact-popover__linked-notice">
+                        {linkedNotice}
+                      </div>
+                    )}
+
                     <div className="avora-guest-popover__row">
                       <div className="avora-guest-popover__info">
                         <strong className="avora-guest-popover__title">Người lớn</strong>
@@ -623,14 +712,14 @@ const HotelSearchPage = () => {
                         <button
                           type="button"
                           disabled={adults <= 1}
-                          onClick={() => setAdults((prev) => Math.max(1, prev - 1))}
+                          onClick={() => handleAdultsDelta(-1)}
                         >
                           -
                         </button>
                         <span className="avora-guest-popover__count">{adults}</span>
                         <button
                           type="button"
-                          onClick={() => setAdults((prev) => prev + 1)}
+                          onClick={() => handleAdultsDelta(1)}
                         >
                           +
                         </button>
@@ -646,14 +735,14 @@ const HotelSearchPage = () => {
                         <button
                           type="button"
                           disabled={children <= 0}
-                          onClick={() => setChildren((prev) => Math.max(0, prev - 1))}
+                          onClick={() => handleChildrenDelta(-1)}
                         >
                           -
                         </button>
                         <span className="avora-guest-popover__count">{children}</span>
                         <button
                           type="button"
-                          onClick={() => setChildren((prev) => prev + 1)}
+                          onClick={() => handleChildrenDelta(1)}
                         >
                           +
                         </button>
@@ -668,15 +757,20 @@ const HotelSearchPage = () => {
                       <div className="avora-guest-popover__counter">
                         <button
                           type="button"
-                          disabled={rooms <= 1}
-                          onClick={() => setRooms((prev) => Math.max(1, prev - 1))}
+                          disabled={rooms <= 1 || (rooms - 1) * 5 < totalGuests}
+                          title={
+                            (rooms - 1) * 5 < totalGuests
+                              ? `1 phòng tối đa 5 người. ${totalGuests} người cần ít nhất ${minRoomsRequired} phòng!`
+                              : undefined
+                          }
+                          onClick={() => handleRoomsDelta(-1)}
                         >
                           -
                         </button>
                         <span className="avora-guest-popover__count">{rooms}</span>
                         <button
                           type="button"
-                          onClick={() => setRooms((prev) => prev + 1)}
+                          onClick={() => handleRoomsDelta(1)}
                         >
                           +
                         </button>
@@ -742,6 +836,9 @@ const HotelSearchPage = () => {
             onScoreChange={setSelectedScore}
             selectedFacilities={selectedFacilities}
             onFacilityToggle={handleFacilityToggle}
+            selectedCapacity={selectedCapacity}
+            onCapacityChange={setSelectedCapacity}
+            guestsPerRoom={guestsPerRoom}
             onlyAvailable={onlyAvailable}
             onOnlyAvailableChange={setOnlyAvailable}
             selectedTypes={selectedTypes}
@@ -829,6 +926,58 @@ const HotelSearchPage = () => {
                 <p className="hotel-empty-state__desc">
                   Hiện tại chưa có thông tin phòng nào được lưu trữ trong cơ sở dữ liệu.
                 </p>
+              </div>
+            ) : (capacityNotice || guestsPerRoom > 5) ? (
+              <div className="hotel-empty-state hotel-empty-state--capacity">
+                <div className="hotel-empty-state__icon">⚠️</div>
+                <h3 className="hotel-empty-state__title">Không có loại phòng như vậy!</h3>
+                <div className="hotel-capacity-rule-box">
+                  <p className="hotel-capacity-rule-title">Quy chuẩn sức chứa phòng:</p>
+                  <ul className="hotel-capacity-rule-list">
+                    <li><strong>2 giường tiêu chuẩn × 2 người = 4 người</strong></li>
+                    <li><strong>Có thêm 1 giường phụ × 1 người = tối đa 5 người</strong></li>
+                    <li className="hotel-capacity-rule-highlight">
+                      <strong>⛔ Không được cho phép booking 6 người vào phòng này!</strong>
+                    </li>
+                  </ul>
+                </div>
+                <p className="hotel-empty-state__desc">
+                  Bạn đang tìm kiếm cho <strong>{totalGuests} người</strong> trong <strong>{rooms} phòng</strong> ({guestsPerRoom} người/phòng).
+                  Hệ thống không có loại phòng nào chứa được vượt quá 5 người trong 1 phòng.
+                </p>
+                <div className="hotel-empty-state__actions">
+                  <button
+                    type="button"
+                    className="hotel-empty-state__btn hotel-empty-state__btn--primary"
+                    onClick={() => {
+                      const minR = Math.ceil(totalGuests / 5);
+                      setRooms(minR);
+                      setCapacityNotice(null);
+                      const qp = new URLSearchParams(searchParams);
+                      qp.set('rooms', minR);
+                      setSearchParams(qp, { replace: true });
+                    }}
+                  >
+                    Tự động tăng lên {minRoomsRequired} phòng và tìm kiếm
+                  </button>
+                  <button
+                    type="button"
+                    className="hotel-empty-state__btn"
+                    onClick={() => {
+                      setAdults(2);
+                      setChildren(0);
+                      setRooms(1);
+                      setCapacityNotice(null);
+                      const qp = new URLSearchParams(searchParams);
+                      qp.set('adults', 2);
+                      qp.set('children', 0);
+                      qp.set('rooms', 1);
+                      setSearchParams(qp, { replace: true });
+                    }}
+                  >
+                    Đặt lại: 2 người lớn · 1 phòng
+                  </button>
+                </div>
               </div>
             ) : hotels.length === 0 ? (
               <div className="hotel-empty-state">
