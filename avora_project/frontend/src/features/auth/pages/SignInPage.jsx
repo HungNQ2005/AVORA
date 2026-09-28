@@ -33,7 +33,7 @@ const EyeOffIcon = () => (
     <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24" />
     <path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68" />
     <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61" />
-    <line x1="2" x2="22" y1="2" x2="22" />
+    <line x1="2" x2="22" y1="2" y2="22" />
   </svg>
 );
 
@@ -85,7 +85,7 @@ const SignInPage = () => {
       return '🎉 Kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay bây giờ.';
     }
     if (location.state?.justSignedUp) {
-      return 'Tài khoản của bạn đã được tạo thành công! Vui lòng kiểm tra email kích hoạt (hoặc console Terminal backend) trước khi đăng nhập.';
+      return 'Tài khoản của bạn đã được tạo thành công! Vui lòng kiểm tra email kích hoạt trước khi đăng nhập.';
     }
     return '';
   });
@@ -128,7 +128,7 @@ const SignInPage = () => {
         setDialog({
           isOpen: true,
           title: 'Xác thực tài khoản',
-          message: 'Tài khoản của bạn đã được đăng ký nhưng chưa kích hoạt email. Vui lòng kiểm tra hộp thư email để nhấn liên kết kích hoạt trước khi đăng nhập (Trong môi trường chạy thử nghiệm, liên kết kích hoạt được in trực tiếp ở Terminal Backend).',
+          message: 'Tài khoản của bạn đã được đăng ký nhưng chưa kích hoạt email. Vui lòng kiểm tra hộp thư email để nhấn liên kết kích hoạt trước khi đăng nhập.',
           variant: 'warning',
         });
       } else if (msg === 'ACCOUNT_DEACTIVATED') {
@@ -168,7 +168,7 @@ const SignInPage = () => {
       setDialog({
         isOpen: true,
         title: 'Mã xác thực OTP đã được gửi',
-        message: `Mã OTP xác thực 6 chữ số đã được gửi tới email ${form.email.trim()}. (Trong môi trường thử nghiệm, mã OTP được in trực tiếp tại Terminal Backend).`,
+        message: `Mã OTP xác thực 6 chữ số đã được gửi tới email ${form.email.trim()}.`,
         variant: 'info',
       });
     } catch (err) {

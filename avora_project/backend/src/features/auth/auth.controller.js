@@ -2,6 +2,7 @@
 
 const authService = require('./auth.service');
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
+const { sendMail } = require('../../common/services/email/email.service');
 
 /**
  * POST /api/auth/signup
@@ -21,13 +22,17 @@ const handleSignUp = async (req, res, next) => {
 
     const { activationToken, user } = await authService.registerUser(email, password, full_name);
 
-    // Simulate sending email: log the activation link to console
+    // Send activation link using centralized email service
     const activationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${activationToken}`;
-    console.log('\n[EMAIL SIMULATION] ========================================');
-    console.log(`  To: ${user.email}`);
-    console.log(`  Subject: Activate your AVORA account`);
-    console.log(`  Activation Link: ${activationUrl}`);
-    console.log('============================================================\n');
+    await sendMail({
+      to: user.email,
+      subject: 'Kích hoạt tài khoản Avora Booking',
+      templateName: 'activation',
+      templateData: {
+        fullName: user.full_name || full_name,
+        activationUrl,
+      },
+    });
 
     return sendSuccess(res, 201, 'Account created successfully. Please check your email to activate.', {
       user_id: user.user_id,
@@ -56,7 +61,7 @@ const handleVerifyEmail = async (req, res, next) => {
       <html lang="en">
       <head>
         <meta charset="UTF-8" />
-        <title>Account Activated - AVORA</title>
+        <title>Đã kích hoạt tài khoản - AVORA</title>
         <style>
           body { font-family: Inter, sans-serif; background: #1e2330; color: #e2e8f0;
                  display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
@@ -69,9 +74,9 @@ const handleVerifyEmail = async (req, res, next) => {
       </head>
       <body>
         <div class="card">
-          <h1>Account Activated!</h1>
-          <p>Your account <strong>${user.email}</strong> is now active. You can sign in.</p>
-          <a href="http://localhost:5173/signin">Sign In</a>
+          <h1>Đã kích hoạt tài khoản!</h1>
+          <p>Tài khoản cho email <strong>${user.email}</strong> đã được kích hoạt thành công. Bây giờ bạn có thể đăng nhập.</p>
+          <a href="http://localhost:5173/signin">Đăng nhập</a>
         </div>
       </body>
       </html>
