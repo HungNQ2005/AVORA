@@ -48,7 +48,7 @@ function CustomerLayout() {
   return (
     <MainLayout>
       <Outlet />
-    </MainLayout>
+    </MainLayout> 
   );
 }
 
