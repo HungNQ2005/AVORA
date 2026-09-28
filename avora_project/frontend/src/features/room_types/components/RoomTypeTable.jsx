@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getRoomCapacityDetails } from '../../../utils/roomCapacityHelper';
 import './RoomTypeTable.css';
 
 const formatCurrency = (amount) => {
@@ -134,32 +135,37 @@ const RoomTypeTable = ({
 
                 {/* 3. SỨC CHỨA & GIƯỜNG */}
                 <td className="col-capacity">
-                  <div className="rt-capacity-cell">
-                    <span className="rt-capacity-people">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="rt-cell-icon">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                        <circle cx="9" cy="7" r="4"></circle>
-                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                      </svg>
-                      <span>{rt.max_adults} Người lớn • {rt.max_children} Trẻ em</span>
-                    </span>
-                    <span className="rt-capacity-bed">
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="rt-cell-icon">
-                        <path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"></path>
-                      </svg>
-                      <span>{rt.bed_type || 'Chưa cập nhật'}</span>
-                    </span>
-                    {/* {extraBedAllowed ? (
-                      <span className="rt-extra-bed rt-extra-bed--allowed">
-                        • Cho phép kê 1 Extra-bed
-                      </span>
-                    ) : (
-                      <span className="rt-extra-bed rt-extra-bed--none">
-                        Không hỗ trợ extra-bed
-                      </span>
-                    )} */}
-                  </div>
+                  {(() => {
+                    const cap = getRoomCapacityDetails(rt);
+                    return (
+                      <div className="rt-capacity-cell">
+                        <span className="rt-capacity-people">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="rt-cell-icon">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                          </svg>
+                          <span>{cap.standardBeds} giường chuẩn ({cap.standardCapacity} người)</span>
+                        </span>
+                        <span className="rt-capacity-bed">
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="rt-cell-icon">
+                            <path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"></path>
+                          </svg>
+                          <span>{rt.bed_type || 'Chưa cập nhật'}</span>
+                        </span>
+                        {cap.hasExtraBed ? (
+                          <span className="rt-extra-bed rt-extra-bed--allowed">
+                            • +1 giường phụ (Tối đa {cap.maxCapacity} người)
+                          </span>
+                        ) : (
+                          <span className="rt-extra-bed rt-extra-bed--none">
+                            Không hỗ trợ giường phụ
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </td>
 
                 {/* 4. SỐ BUỒNG */}

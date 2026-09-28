@@ -45,6 +45,9 @@ const FilterSidebar = ({
   onFacilityToggle,
   onlyAvailable,
   onOnlyAvailableChange,
+  selectedCapacity = 'all',
+  onCapacityChange,
+  guestsPerRoom = 2,
   selectedTypes = [],
   onTypeToggle,
   onResetAll,
@@ -55,6 +58,7 @@ const FilterSidebar = ({
   const scoreStats = filterStats.ratings || {};
   const facilityStats = filterStats.popularFacilities || {};
   const typeStats = filterStats.hotelTypes || {};
+  const capacityStats = filterStats.capacities || {};
 
   return (
     <aside className="filter-sidebar">
@@ -112,7 +116,63 @@ const FilterSidebar = ({
 
         <div className="filter-divider" />
 
-        {/* 1. NGÂN SÁCH CỦA BẠN (MỖI ĐÊM) */}
+        {/* 1. SỨC CHỨA & LOẠI GIƯỜNG (LIÊN KẾT BỘ LỌC) */}
+        <div className="filter-group">
+          <h3 className="filter-group__heading">SỨC CHỨA &amp; LOẠI GIƯỜNG</h3>
+          <div className="filter-capacity-rule-tip">
+            <span className="filter-capacity-rule-icon">ℹ️</span>
+            <span>
+              2 giường tiêu chuẩn = 4 người • Giường phụ = +1 người (Tối đa 5 người/phòng)
+            </span>
+          </div>
+          <div className="filter-options-list">
+            {[
+              { id: 'all', label: 'Tất cả loại phòng', count: capacityStats.all ?? priceStats.all ?? 0 },
+              {
+                id: 'standard_two_beds',
+                label: '2 giường tiêu chuẩn (4-5 người)',
+                count: capacityStats.standard_two_beds ?? 0,
+              },
+              {
+                id: 'standard_double',
+                label: '1 giường đôi (2-3 người)',
+                count: capacityStats.standard_double ?? 0,
+                disabled: guestsPerRoom > 3,
+                disabledReason: 'Không phù hợp số khách bạn chọn',
+              },
+              {
+                id: 'with_extra_bed',
+                label: 'Có hỗ trợ giường phụ (Tối đa 5 người)',
+                count: capacityStats.with_extra_bed ?? 0,
+              },
+            ].map((option) => (
+              <label
+                key={option.id}
+                className={`filter-option-row ${option.disabled ? 'is-disabled' : ''}`}
+                title={option.disabled ? option.disabledReason : undefined}
+              >
+                <div className="filter-option-left">
+                  <input
+                    type="radio"
+                    name="capacityFilter"
+                    checked={selectedCapacity === option.id}
+                    disabled={option.disabled}
+                    onChange={() => onCapacityChange && onCapacityChange(option.id)}
+                    className="filter-radio"
+                  />
+                  <span className="filter-option-name">{option.label}</span>
+                </div>
+                <span className="filter-option-count">
+                  {option.disabled ? '0' : option.count}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="filter-divider" />
+
+        {/* 2. NGÂN SÁCH CỦA BẠN (MỖI ĐÊM) */}
         <div className="filter-group">
           <h3 className="filter-group__heading">NGÂN SÁCH CỦA BẠN (MỖI ĐÊM)</h3>
           <div className="filter-options-list">

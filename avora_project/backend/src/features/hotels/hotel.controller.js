@@ -25,6 +25,7 @@ const handleSearchHotels = async (req, res, next) => {
       starRatings,
       minScore,
       facilities,
+      capacityFilter,
       onlyAvailable,
       sortBy,
     } = req.query;
@@ -49,6 +50,7 @@ const handleSearchHotels = async (req, res, next) => {
       starRatings: parsedStarRatings,
       minScore: minScore !== undefined ? Number(minScore) : null,
       facilities: parsedFacilities,
+      capacityFilter: capacityFilter || 'all',
       onlyAvailable: onlyAvailable === 'true' || onlyAvailable === true,
       sortBy: sortBy || 'popularity',
     };

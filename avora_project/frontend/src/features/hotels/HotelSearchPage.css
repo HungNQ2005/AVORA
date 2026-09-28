@@ -1398,3 +1398,134 @@
     border-radius: 0 0 4px 4px;
   }
 }
+
+/* ─── Capacity and Bed Linking Styles ─── */
+.compact-popover__capacity-rule {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.compact-popover__rule-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.compact-popover__linked-notice {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+  font-size: 11.5px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.filter-capacity-rule-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #4b5563;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+  padding: 6px 8px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+}
+
+.filter-capacity-rule-icon {
+  flex-shrink: 0;
+}
+
+.filter-option-row.is-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.filter-option-row.is-disabled input {
+  cursor: not-allowed;
+}
+
+/* Exceeded Capacity Empty State */
+.hotel-empty-state--capacity {
+  background-color: #fffaf0;
+  border: 1px solid #fed7aa;
+  padding: 36px 28px;
+  text-align: center;
+}
+
+.hotel-capacity-rule-box {
+  background-color: #ffffff;
+  border: 1px solid #fdba74;
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 16px auto 20px auto;
+  max-width: 520px;
+  text-align: left;
+}
+
+.hotel-capacity-rule-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #c2410c;
+  margin: 0 0 8px 0;
+}
+
+.hotel-capacity-rule-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13.5px;
+  color: #374151;
+}
+
+.hotel-capacity-rule-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hotel-capacity-rule-highlight {
+  color: #dc2626 !important;
+  font-size: 14px !important;
+  background-color: #fee2e2;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-top: 4px;
+}
+
+.hotel-empty-state__actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.hotel-empty-state__btn--primary {
+  background-color: #006ce4 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: none !important;
+}
+
+.hotel-empty-state__btn--primary:hover {
+  background-color: #0057b8 !important;
+}
+

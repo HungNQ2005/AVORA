@@ -1227,3 +1227,77 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ─── Capacity Alert and Overload States ─── */
+.room-card--capacity-exceeded {
+  border-color: #fca5a5 !important;
+  background-color: #fffaf0;
+}
+
+.room-capacity-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+  margin-top: 14px;
+}
+
+.room-capacity-alert--blocked {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.room-capacity-alert--blocked strong {
+  display: block;
+  font-size: 13.5px;
+  color: #b91c1c;
+  margin-bottom: 3px;
+}
+
+.room-capacity-alert--blocked p {
+  margin: 0;
+  color: #7f1d1d;
+  font-size: 12.5px;
+}
+
+.room-capacity-alert--extra-bed {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.room-capacity-alert--extra-bed strong {
+  display: block;
+  font-size: 13px;
+  color: #1d4ed8;
+  margin-bottom: 2px;
+}
+
+.room-capacity-alert--extra-bed p {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 12px;
+}
+
+.room-capacity-alert__icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.room-select-btn--blocked {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  cursor: not-allowed !important;
+  opacity: 0.9;
+  border: none !important;
+}
+
+.room-select-btn--blocked:hover {
+  background-color: #dc2626 !important;
+}
+

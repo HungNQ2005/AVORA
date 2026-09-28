@@ -4,6 +4,7 @@ import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import MapModal from './components/MapModal';
 import { useAuth } from '../../context/AuthContext';
 import { isHotelSaved, toggleFavoriteHotel } from '../../utils/favoritesStorage';
+import { getRoomCapacityDetails } from '../../utils/roomCapacityHelper';
 import './HotelDetailPage.css';
 
 /* ─── CUSTOM SVG ICONS ─────────────────────────────────────────────────────── */
@@ -209,6 +210,11 @@ const HotelDetailPage = () => {
   const checkIn = (rawCheckIn && rawCheckIn >= todayISO) ? rawCheckIn : todayISO;
   const checkOut = (rawCheckOut && rawCheckOut > checkIn) ? rawCheckOut : defaultCheckOutISO;
   const adults = Number(searchParams.get('adults')) || 2;
+  const children = Number(searchParams.get('children')) || 0;
+  const roomsCount = Math.max(1, Number(searchParams.get('rooms')) || 1);
+  const totalGuests = adults + children;
+  const guestsPerRoom = Math.ceil(totalGuests / roomsCount);
+
   const nights = useMemo(() => {
     try {
       const d1 = new Date(checkIn);
@@ -261,7 +267,7 @@ const HotelDetailPage = () => {
 
     const fetchDetails = async () => {
       try {
-        const url = `${API_ENDPOINTS.HOTEL_DETAIL(id || 1)}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}`;
+        const url = `${API_ENDPOINTS.HOTEL_DETAIL(id || 1)}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&children=${children}&rooms=${roomsCount}`;
         const res = await fetch(url);
         const json = await res.json();
 
@@ -289,7 +295,7 @@ const HotelDetailPage = () => {
     return () => {
       isMounted = false;
     };
-  }, [id, checkIn, checkOut, adults]);
+  }, [id, checkIn, checkOut, adults, children, roomsCount]);
 
   // Toast notification auto-dismiss
   useEffect(() => {
@@ -676,122 +682,179 @@ const HotelDetailPage = () => {
 
             <div className="rooms-date-pill">
               <CalendarIcon />
-              <span>{formattedStayDates} ({adults} người lớn)</span>
+              <span>
+                {formattedStayDates} ({adults} người lớn{children > 0 ? `, ${children} trẻ em` : ''} · {roomsCount} phòng)
+              </span>
             </div>
           </div>
 
           {/* Rooms Stack from DB */}
           {rooms.length > 0 ? (
             <div className="rooms-list">
-              {rooms.map((room) => (
-                <article key={room.room_type_id} className="room-card">
-                  {/* Column 1: Info & Photo */}
-                  <div className="room-card-col-info">
-                    <span className="room-badge room-badge--default">
-                      Hạng phòng tiêu chuẩn
-                    </span>
+              {rooms.map((room) => {
+                const capDetails = getRoomCapacityDetails(room);
+                const isCapacityExceeded = guestsPerRoom > capDetails.maxCapacity;
 
-                    <h3 className="room-name">{room.name}</h3>
-
-                    <div className="room-image-wrap">
-                      <img
-                        src={room.image || images[1] || mainImage || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80'}
-                        alt={room.name}
-                        loading="lazy"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80';
-                        }}
-                      />
-                      <span className="room-count-badge">
-                        {room.available_rooms > 0 ? `${room.available_rooms} phòng` : 'Hết phòng'}
+                return (
+                  <article
+                    key={room.room_type_id}
+                    className={`room-card ${isCapacityExceeded ? 'room-card--capacity-exceeded' : ''}`}
+                  >
+                    {/* Column 1: Info & Photo */}
+                    <div className="room-card-col-info">
+                      <span className="room-badge room-badge--default">
+                        Hạng phòng tiêu chuẩn
                       </span>
-                    </div>
 
-                    <ul className="room-specs-list">
-                      {room.room_size && (
-                        <li className="room-spec-item">
-                          <span className="room-spec-icon">📐</span>
-                          <span>Diện tích: {room.room_size}</span>
-                        </li>
-                      )}
-                      <li className="room-spec-item">
-                        <span className="room-spec-icon">👥</span>
-                        <span>Tối đa {room.max_adults} người lớn{room.max_children ? `, ${room.max_children} trẻ em` : ''}</span>
-                      </li>
-                      {room.bed_type && (
-                        <li className="room-spec-item">
-                          <span className="room-spec-icon">🛏️</span>
-                          <span>{room.bed_type}</span>
-                        </li>
-                      )}
-                    </ul>
-                  </div>
+                      <h3 className="room-name">{room.name}</h3>
 
-                  {/* Column 2: Benefits */}
-                  <div className="room-card-col-benefits">
-                    <h4 className="benefits-title">QUYỀN LỢI &amp; CHÍNH SÁCH</h4>
-
-                    <ul className="benefits-list">
-                      <li className="benefit-item">
-                        <span className="benefit-icon">
-                          <CheckIcon />
+                      <div className="room-image-wrap">
+                        <img
+                          src={room.image || images[1] || mainImage || 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80'}
+                          alt={room.name}
+                          loading="lazy"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = 'https://images.unsplash.com/photo-1590490360182-c33d57733427?auto=format&fit=crop&w=600&q=80';
+                          }}
+                        />
+                        <span className="room-count-badge">
+                          {room.available_rooms > 0 ? `${room.available_rooms} phòng` : 'Hết phòng'}
                         </span>
-                        <span>{room.policy_description || 'Theo chính sách đặt phòng của khách sạn'}</span>
-                      </li>
-                      <li className="benefit-item">
-                        <span className="benefit-icon">
-                          <CheckIcon />
-                        </span>
-                        <span>Xác nhận đặt phòng tức thì</span>
-                      </li>
-                      <li className="benefit-item">
-                        <span className="benefit-icon">
-                          <CheckIcon />
-                        </span>
-                        <span>Thanh toán tại quầy lễ tân khi nhận phòng</span>
-                      </li>
-                    </ul>
-
-                    {room.available_rooms > 0 && room.available_rooms <= 5 && (
-                      <div className="room-urgency-tag">
-                        <FlameIcon />
-                        <span>Còn {room.available_rooms} phòng trống theo cơ sở dữ liệu!</span>
                       </div>
-                    )}
-                  </div>
 
-                  {/* Column 3: Price & Action */}
-                  <div className="room-card-col-pricing">
-                    {room.original_price && room.original_price > room.price && (
-                      <span className="room-original-price">
-                        {formatPrice(room.original_price)}
+                      <ul className="room-specs-list">
+                        {room.room_size && (
+                          <li className="room-spec-item">
+                            <span className="room-spec-icon">📐</span>
+                            <span>Diện tích: {room.room_size}</span>
+                          </li>
+                        )}
+                        <li className="room-spec-item">
+                          <span className="room-spec-icon">👥</span>
+                          <span>
+                            Sức chứa: {capDetails.standardBeds} giường tiêu chuẩn ({capDetails.standardCapacity} người)
+                            {capDetails.hasExtraBed ? ` + 1 giường phụ (${capDetails.extraBedCapacity} người)` : ''} = Tối đa {capDetails.maxCapacity} người
+                          </span>
+                        </li>
+                        {room.bed_type && (
+                          <li className="room-spec-item">
+                            <span className="room-spec-icon">🛏️</span>
+                            <span>{room.bed_type}</span>
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+
+                    {/* Column 2: Benefits & Capacity Alerts */}
+                    <div className="room-card-col-benefits">
+                      <h4 className="benefits-title">QUYỀN LỢI &amp; CHÍNH SÁCH</h4>
+
+                      <ul className="benefits-list">
+                        <li className="benefit-item">
+                          <span className="benefit-icon">
+                            <CheckIcon />
+                          </span>
+                          <span>{room.policy_description || 'Theo chính sách đặt phòng của khách sạn'}</span>
+                        </li>
+                        <li className="benefit-item">
+                          <span className="benefit-icon">
+                            <CheckIcon />
+                          </span>
+                          <span>Xác nhận đặt phòng tức thì</span>
+                        </li>
+                        <li className="benefit-item">
+                          <span className="benefit-icon">
+                            <CheckIcon />
+                          </span>
+                          <span>Thanh toán tại quầy lễ tân khi nhận phòng</span>
+                        </li>
+                      </ul>
+
+                      {/* Capacity Status Notice */}
+                      {isCapacityExceeded ? (
+                        <div className="room-capacity-alert room-capacity-alert--blocked">
+                          <span className="room-capacity-alert__icon">⛔</span>
+                          <div className="room-capacity-alert__content">
+                            <strong>Không được cho phép booking {guestsPerRoom} người vào phòng này!</strong>
+                            <p>
+                              Phòng này chỉ gồm {capDetails.standardBeds} giường tiêu chuẩn ({capDetails.standardCapacity} người) + 1 giường phụ ({capDetails.extraBedCapacity} người) = tối đa {capDetails.maxCapacity} người.
+                              Không thể đặt cho {guestsPerRoom} người.
+                            </p>
+                          </div>
+                        </div>
+                      ) : guestsPerRoom === 5 && capDetails.maxCapacity === 5 ? (
+                        <div className="room-capacity-alert room-capacity-alert--extra-bed">
+                          <span className="room-capacity-alert__icon">🛏️</span>
+                          <div className="room-capacity-alert__content">
+                            <strong>Đã kích hoạt 01 giường phụ:</strong>
+                            <p>4 người ở 2 giường tiêu chuẩn + 1 người ở 1 giường phụ (tổng 5 người).</p>
+                          </div>
+                        </div>
+                      ) : null}
+
+                      {room.available_rooms > 0 && room.available_rooms <= 5 && (
+                        <div className="room-urgency-tag">
+                          <FlameIcon />
+                          <span>Còn {room.available_rooms} phòng trống theo cơ sở dữ liệu!</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Column 3: Price & Action */}
+                    <div className="room-card-col-pricing">
+                      {room.original_price && room.original_price > room.price && (
+                        <span className="room-original-price">
+                          {formatPrice(room.original_price)}
+                        </span>
+                      )}
+
+                      <div className="room-current-price">
+                        {formatPrice(room.price)}
+                      </div>
+
+                      <span className="room-tax-note">
+                        Giá niêm yết (chưa gồm thuế &amp; phí)
                       </span>
-                    )}
 
-                    <div className="room-current-price">
-                      {formatPrice(room.price)}
+                      {isCapacityExceeded ? (
+                        <button
+                          type="button"
+                          className="room-select-btn room-select-btn--blocked"
+                          disabled
+                          title={`Không được phép đặt ${guestsPerRoom} người vào phòng này! Tối đa ${capDetails.maxCapacity} người.`}
+                          onClick={() => {
+                            setToastMsg(`Không được cho phép booking ${guestsPerRoom} người vào phòng này! Phòng tối đa ${capDetails.maxCapacity} người.`);
+                          }}
+                        >
+                          <span>Quá sức chứa ({guestsPerRoom}/{capDetails.maxCapacity} người)</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          className="room-select-btn"
+                          onClick={() => {
+                            if (guestsPerRoom > capDetails.maxCapacity) {
+                              setToastMsg(`Không được cho phép booking ${guestsPerRoom} người vào phòng này! Tối đa ${capDetails.maxCapacity} người.`);
+                              return;
+                            }
+                            setSelectedRoomForBooking(room);
+                          }}
+                        >
+                          <CartIcon />
+                          <span>Chọn phòng này</span>
+                        </button>
+                      )}
+
+                      <div className="room-microcopy">
+                        {isCapacityExceeded
+                          ? 'Vui lòng chọn phòng có sức chứa lớn hơn'
+                          : 'Đặt phòng nhanh · Hỗ trợ 24/7'}
+                      </div>
                     </div>
-
-                    <span className="room-tax-note">
-                      Giá niêm yết (chưa gồm thuế &amp; phí)
-                    </span>
-
-                    <button
-                      type="button"
-                      className="room-select-btn"
-                      onClick={() => setSelectedRoomForBooking(room)}
-                    >
-                      <CartIcon />
-                      <span>Chọn phòng này</span>
-                    </button>
-
-                    <div className="room-microcopy">
-                      Đặt phòng nhanh · Hỗ trợ 24/7
-                    </div>
-                  </div>
-                </article>
-              ))}
+                  </article>
+                );
+              })}
             </div>
           ) : (
             <p style={{ color: '#6b7280', padding: '20px 0' }}>Chưa có thông tin phòng trống trong cơ sở dữ liệu.</p>
@@ -926,7 +989,19 @@ const HotelDetailPage = () => {
               </div>
               <div className="booking-modal-row">
                 <span>Số lượng khách:</span>
-                <span>{adults} người lớn</span>
+                <span>{adults} người lớn{children > 0 ? `, ${children} trẻ em` : ''} ({roomsCount} phòng)</span>
+              </div>
+              <div className="booking-modal-row">
+                <span>Cấu hình sức chứa:</span>
+                <span>
+                  {getRoomCapacityDetails(selectedRoomForBooking).standardBeds} giường tiêu chuẩn ({getRoomCapacityDetails(selectedRoomForBooking).standardCapacity} người)
+                  {getRoomCapacityDetails(selectedRoomForBooking).hasExtraBed ? ` + 1 giường phụ (${getRoomCapacityDetails(selectedRoomForBooking).extraBedCapacity} người)` : ''}
+                  {' '}= Tối đa {getRoomCapacityDetails(selectedRoomForBooking).maxCapacity} người
+                </span>
+              </div>
+              <div className="booking-modal-row">
+                <span>Trạng thái sức chứa:</span>
+                <span style={{ color: '#008009', fontWeight: 600 }}>✓ Hợp lệ (≤ {getRoomCapacityDetails(selectedRoomForBooking).maxCapacity} người/phòng)</span>
               </div>
               <div className="booking-modal-row">
                 <span>Chính sách hủy:</span>
