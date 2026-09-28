@@ -1,6 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
+const { sendMail } = require('../../common/services/email/email.service');
 
 // In-memory OTP store (prototype).
 // Key: `${identifier}:${purpose}`
@@ -46,13 +47,17 @@ const sendOtp = async ({ identifier, email, purpose = 'GENERAL', expiryMinutes =
     purpose,
   });
 
-  // Simulate email sending via console log
-  console.log('\n[EMAIL SIMULATION - OTP SERVICE] ========================================');
-  console.log(`  To: ${email}`);
-  console.log(`  Purpose: ${purpose}`);
-  console.log(`  OTP Code: ${otp}`);
-  console.log(`  Valid for: ${expiryMinutes} minutes (expires at ${new Date(expiresAt).toLocaleTimeString()})`);
-  console.log('=========================================================================\n');
+  // Send OTP email using centralized email service
+  await sendMail({
+    to: email,
+    subject: `Mã xác thực OTP - Avora Booking`,
+    templateName: 'otp',
+    templateData: {
+      otp,
+      purpose,
+      expiryMinutes,
+    },
+  });
 
   return {
     identifier,
