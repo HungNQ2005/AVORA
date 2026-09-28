@@ -17,8 +17,7 @@
 
 /* TOP BANNER: Newsletter Subscription */
 .avora-footer__newsletter {
-  background-color: #003580;
-  /* Primary Avora Deep Navy Blue */
+  background-color: #003580; /* Primary Avora Deep Navy Blue */
   color: #ffffff;
   padding: 20px 0;
 }
@@ -181,18 +180,16 @@
     flex-direction: column;
     align-items: flex-start;
   }
-
   .avora-footer__newsletter-form {
     width: 100%;
   }
-
   .avora-footer__newsletter-form input {
     flex: 1;
     width: auto;
   }
-
   .avora-footer__grid {
     grid-template-columns: 1fr;
     gap: 20px;
   }
 }
+

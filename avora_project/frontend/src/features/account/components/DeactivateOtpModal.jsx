@@ -161,12 +161,12 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
       await requestDeactivateOtp();
       setTimeLeft(OTP_EXPIRY_SECONDS);
       setDigits(Array(OTP_LENGTH).fill(''));
-      setSuccessMsg('A new 6-digit verification code has been sent to your email.');
+      setSuccessMsg('Mã xác thực 6 chữ số mới đã được gửi tới email của bạn.');
       setTimeout(() => {
         inputRefs.current[0]?.focus();
       }, 50);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Failed to resend verification code. Please try again.');
+      setErrorMsg(err.response?.data?.message || 'Không thể gửi lại mã xác thực. Vui lòng thử lại.');
     } finally {
       setResending(false);
     }
@@ -178,7 +178,7 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
     if (!isOtpComplete || loading) return;
 
     if (isExpired) {
-      setErrorMsg('Verification code has expired. Please click "Resend code" to get a new one.');
+      setErrorMsg('Mã xác thực đã hết hạn. Vui lòng bấm "Gửi lại mã" để nhận mã mới.');
       return;
     }
 
@@ -190,7 +190,7 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
       await deactivateAccount(otpString);
       setIsSuccess(true);
     } catch (err) {
-      setErrorMsg(err.response?.data?.message || 'Verification failed. Please check the code and try again.');
+      setErrorMsg(err.response?.data?.message || 'Xác thực không thành công. Vui lòng kiểm tra lại mã OTP.');
     } finally {
       setLoading(false);
     }
@@ -205,11 +205,11 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
             ✓
           </div>
 
-          <h2 className="otp-modal-title">Account Deactivated</h2>
+          <h2 className="otp-modal-title">Đã vô hiệu hóa tài khoản</h2>
           <p className="otp-modal-subtitle">
-            Your account has been deactivated successfully.
+            Tài khoản của bạn đã được vô hiệu hóa thành công.
             <br />
-            Redirecting to sign-in page in{' '}
+            Hệ thống đang chuyển về trang đăng nhập trong{' '}
             <span className="otp-countdown-num">{countdown}s</span>...
           </p>
 
@@ -224,7 +224,7 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
               className="otp-btn otp-btn--primary"
               onClick={onSuccess}
             >
-              Sign In Now
+              Về trang đăng nhập ngay
             </button>
           </div>
         </div>
@@ -239,10 +239,10 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
           !
         </div>
 
-        <h2 className="otp-modal-title">Security Verification</h2>
+        <h2 className="otp-modal-title">Xác thực bảo mật</h2>
         <p className="otp-modal-subtitle">
-          Please enter the 6-digit code sent to <br />
-          <span className="otp-modal-email">{userEmail}</span> to confirm deactivation.
+          Vui lòng nhập mã xác thực gồm 6 chữ số đã được gửi tới <br />
+          <span className="otp-modal-email">{userEmail}</span> để xác nhận vô hiệu hóa.
         </p>
 
         <form onSubmit={handleConfirmDeactivate}>
@@ -263,7 +263,7 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
                 onChange={(e) => handleChange(idx, e.target.value)}
                 onKeyDown={(e) => handleKeyDown(idx, e)}
                 disabled={loading}
-                aria-label={`Digit ${idx + 1} of 6`}
+                aria-label={`Chữ số thứ ${idx + 1}`}
               />
             ))}
           </div>
@@ -271,7 +271,7 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
           {/* Timer and Resend Row */}
           <div className="otp-timer-wrap">
             <span className="otp-timer-text">
-              Code expires in:
+              Mã hết hạn trong:
               <span className={`otp-timer-clock ${timeLeft <= 60 ? 'otp-timer-clock--urgent' : ''}`}>
                 {formatTime(timeLeft)}
               </span>
@@ -284,7 +284,7 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
               onClick={handleResend}
               disabled={resending || loading}
             >
-              {resending ? 'Sending...' : 'Resend code'}
+              {resending ? 'Đang gửi mã...' : 'Gửi lại mã'}
             </button>
           </div>
 
@@ -310,7 +310,7 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
               onClick={onClose}
               disabled={loading}
             >
-              Cancel
+              Hủy
             </button>
             <button
               id="otp-confirm-btn"
@@ -321,10 +321,10 @@ const DeactivateOtpModal = ({ isOpen, userEmail, onClose, onSuccess }) => {
               {loading ? (
                 <>
                   <span className="otp-btn-spinner" />
-                  Deactivating...
+                  Đang xử lý...
                 </>
               ) : (
-                'Confirm Deactivation'
+                'Xác nhận vô hiệu hóa'
               )}
             </button>
           </div>
