@@ -1,7 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import './AmenityFormModal.css';
 
-const FACILITY_TYPES = ['INTERNET', 'POOL', 'FOOD', 'PARKING', 'SERVICE', 'GYM', 'RESTAURANT', 'SPA'];
+const FACILITY_TYPE_OPTIONS = [
+  { value: 'INTERNET', label: 'Internet / Wi-Fi', icon: 'wifi-icon' },
+  { value: 'POOL', label: 'Hồ bơi', icon: 'pool-icon' },
+  { value: 'FOOD', label: 'Ẩm thực', icon: 'food-icon' },
+  { value: 'PARKING', label: 'Bãi đỗ xe', icon: 'parking-icon' },
+  { value: 'SERVICE', label: 'Dịch vụ', icon: 'service-icon' },
+  { value: 'GYM', label: 'Thể hình / Gym', icon: 'gym-icon' },
+  { value: 'RESTAURANT', label: 'Nhà hàng', icon: 'restaurant-icon' },
+  { value: 'SPA', label: 'Spa & Chăm sóc', icon: 'spa-icon' },
+];
 const hasControlCharacters = (value) => [...value].some((character) => {
   const code = character.charCodeAt(0);
   return code <= 0x1f || code === 0x7f;
@@ -20,7 +29,6 @@ const AmenityFormModal = ({
   const [formData, setFormData] = useState({
     facility_name: '',
     type: 'INTERNET',
-    icon: 'wifi-icon',
   });
 
   const [validationError, setValidationError] = useState('');
@@ -29,14 +37,14 @@ const AmenityFormModal = ({
     if (amenity) {
       setFormData({
         facility_name: amenity.name_vi || amenity.facility_name || '',
-        type: amenity.type || 'INTERNET',
-        icon: amenity.icon || 'wifi-icon',
+        type: FACILITY_TYPE_OPTIONS.some((option) => option.value === amenity.type)
+          ? amenity.type
+          : 'SERVICE',
       });
     } else {
       setFormData({
         facility_name: '',
         type: 'INTERNET',
-        icon: 'wifi-icon',
       });
     }
     setValidationError('');
@@ -47,18 +55,17 @@ const AmenityFormModal = ({
   const handleSubmit = (e) => {
     e.preventDefault();
     const name = formData.facility_name.trim();
-    const type = formData.type.trim();
-    const icon = formData.icon.trim();
+    const selectedType = FACILITY_TYPE_OPTIONS.find((option) => option.value === formData.type);
 
-    if (!name || !type || !icon) {
-      setValidationError('Vui lòng nhập đầy đủ tên, loại và biểu tượng tiện ích.');
+    if (!name || !selectedType) {
+      setValidationError('Vui lòng nhập tên và chọn loại tiện ích hợp lệ.');
       return;
     }
-    if (name.length > 255 || type.length > 100 || icon.length > 100) {
-      setValidationError('Tên tiện ích tối đa 255 ký tự; loại và biểu tượng tối đa 100 ký tự.');
+    if (name.length > 255) {
+      setValidationError('Tên tiện ích không được vượt quá 255 ký tự.');
       return;
     }
-    if ([name, type, icon].some(hasControlCharacters)) {
+    if (hasControlCharacters(name)) {
       setValidationError('Thông tin tiện ích chứa ký tự không hợp lệ.');
       return;
     }
@@ -67,8 +74,8 @@ const AmenityFormModal = ({
     onSave({
       facility_name: name,
       name_vi: name,
-      type: type.toUpperCase(),
-      icon,
+      type: selectedType.value,
+      icon: selectedType.icon,
     });
   };
 
@@ -136,18 +143,22 @@ const AmenityFormModal = ({
                 <label htmlFor="amenity-type">
                   Loại tiện ích (Type) <span className="req">*</span>
                 </label>
-                <input
+                <select
                   id="amenity-type"
-                  className="rt-input"
-                  type="text"
+                  className="rt-select"
                   value={formData.type}
                   onChange={(e) => {
                     setFormData({ ...formData, type: e.target.value });
                     setValidationError('');
                   }}
-                  maxLength={100}
                   required
-                />
+                >
+                  {FACILITY_TYPE_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -156,21 +167,11 @@ const AmenityFormModal = ({
               <h3 className="rt-section-title">Biểu tượng & hiển thị</h3>
 
               <div className="rt-form-group">
-                <label htmlFor="amenity-icon">
-                  Biểu tượng (Icon) <span className="req">*</span>
-                </label>
-                <input
-                  id="amenity-icon"
-                  className="rt-input"
-                  type="text"
-                  value={formData.icon}
-                  onChange={(e) => {
-                    setFormData({ ...formData, icon: e.target.value });
-                    setValidationError('');
-                  }}
-                  maxLength={100}
-                  required
-                />
+                <label>Biểu tượng (Icon)</label>
+                <div className="rt-input" aria-live="polite">
+                  {FACILITY_TYPE_OPTIONS.find((option) => option.value === formData.type)?.icon}
+                </div>
+                <small>Biểu tượng được tự động gán theo loại tiện ích.</small>
               </div>
 
               {/* <div className="amenity-rt-notice">

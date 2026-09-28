@@ -4,7 +4,19 @@ import React from 'react';
  * High-quality SVG icon renderer tailored for hospitality amenities.
  */
 export const AmenityIconRenderer = ({ name = '', code = '', type = '', icon = '', size = 20, className = '' }) => {
-  const text = `${name} ${code} ${type} ${icon}`.toLowerCase();
+  const typeIcons = {
+    INTERNET: 'wifi-icon',
+    POOL: 'pool-icon',
+    FOOD: 'food-icon',
+    PARKING: 'parking-icon',
+    SERVICE: 'service-icon',
+    GYM: 'gym-icon',
+    RESTAURANT: 'restaurant-icon',
+    SPA: 'spa-icon',
+  };
+  const normalizedType = String(type).toUpperCase();
+  const resolvedIcon = typeIcons[normalizedType] || icon;
+  const text = `${name} ${code} ${resolvedIcon}`.toLowerCase();
 
   // Swimming Pool / Bể bơi
   if (text.includes('pool') || text.includes('bơi') || text.includes('vô cực')) {

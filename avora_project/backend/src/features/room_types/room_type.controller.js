@@ -78,8 +78,8 @@ const validateRoomTypePayload = (body, isPartial = false) => {
     }
 
     if (field === 'default_price') {
-      if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) {
-        payload.error = 'Giá niêm yết phải là số không âm.';
+      if (!Number.isSafeInteger(value) || value < 0) {
+        payload.error = 'Giá niêm yết phải là số nguyên không âm (VND).';
       } else {
         payload.default_price = value;
       }
@@ -104,11 +104,29 @@ const validateRoomTypePayload = (body, isPartial = false) => {
         return;
       }
 
-      if (value !== null && (typeof value !== 'string' || value.length > 50)) {
-        payload.error = 'Diện tích phòng không được vượt quá 50 ký tự.';
-      } else {
-        payload[field] = value;
+      if (value === null || value === undefined) {
+        payload.room_size = value;
+        return;
       }
+
+      if (typeof value !== 'string' || !value.trim()) {
+        payload.error = 'Diện tích phòng phải là chuỗi lớn hơn 0 và không được rỗng.';
+        return;
+      }
+
+      const roomSizeText = value.trim();
+      const roomSizeNumber = Number(roomSizeText.replace(/\s*m(?:²|2)?\s*$/i, '').trim());
+      if (!Number.isFinite(roomSizeNumber) || roomSizeNumber <= 0) {
+        payload.error = 'Diện tích phòng phải lớn hơn 0.';
+        return;
+      }
+
+      if (roomSizeText.length > 50) {
+        payload.error = 'Diện tích phòng không được vượt quá 50 ký tự.';
+        return;
+      }
+
+      payload[field] = roomSizeText;
       return;
     }
 

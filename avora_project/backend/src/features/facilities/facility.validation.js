@@ -1,6 +1,18 @@
 'use strict';
 
 const allowedFields = new Set(['facility_name', 'name_vi', 'type', 'icon']);
+const facilityTypeIcons = Object.freeze({
+  INTERNET: 'wifi-icon',
+  POOL: 'pool-icon',
+  FOOD: 'food-icon',
+  PARKING: 'parking-icon',
+  SERVICE: 'service-icon',
+  GYM: 'gym-icon',
+  RESTAURANT: 'restaurant-icon',
+  SPA: 'spa-icon',
+});
+const allowedFacilityTypes = new Set(Object.keys(facilityTypeIcons));
+const allowedFacilityIcons = new Set(Object.values(facilityTypeIcons));
 
 const hasControlCharacters = (value) => [...value].some((character) => {
   const code = character.charCodeAt(0);
@@ -70,15 +82,38 @@ const validateFacilityPayload = (body, { partial = false } = {}) => {
     const error = validateTextField(body.type, 'Loại tiện ích', 100);
     if (error) return { error };
     payload.type = body.type.trim().toUpperCase();
+    if (!allowedFacilityTypes.has(payload.type)) {
+      return { error: 'Loại tiện ích không nằm trong danh mục được hỗ trợ.' };
+    }
   }
 
   if (hasIcon) {
     const error = validateTextField(body.icon, 'Biểu tượng', 100);
     if (error) return { error };
     payload.icon = body.icon.trim();
+    if (!allowedFacilityIcons.has(payload.icon)) {
+      return { error: 'Biểu tượng tiện ích không nằm trong danh mục được hỗ trợ.' };
+    }
+  }
+
+  if (!partial && !hasType) {
+    payload.type = 'SERVICE';
+  }
+  if (payload.type && payload.icon && facilityTypeIcons[payload.type] !== payload.icon) {
+    return { error: 'Loại tiện ích và biểu tượng không tương ứng.' };
+  }
+  if (partial && hasIcon && !hasType) {
+    return { error: 'Khi thay đổi biểu tượng, phải cung cấp loại tiện ích tương ứng.' };
+  }
+  if (payload.type) {
+    payload.icon = facilityTypeIcons[payload.type];
   }
 
   return { payload };
 };
 
-module.exports = { validateFacilityPayload };
+module.exports = {
+  allowedFacilityTypes,
+  facilityTypeIcons,
+  validateFacilityPayload,
+};

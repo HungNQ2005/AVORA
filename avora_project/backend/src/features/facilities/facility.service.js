@@ -1,6 +1,7 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const { facilityTypeIcons } = require('./facility.validation');
 
 const getDatabaseError = (message, databaseError) => {
   const error = new Error(
@@ -84,6 +85,8 @@ const mapFacility = (facility, mappingCount = 0) => {
   const names = parseFacilityNames(facility.facility_name);
   const scope = resolveScope(facility);
   const code = resolveCode(facility);
+  const normalizedType = String(facility.type || '').toUpperCase();
+  const normalizedIcon = facilityTypeIcons[normalizedType] || facility.icon || '';
   const isPaid = hasOwn(facility, 'is_paid')
     ? Boolean(facility.is_paid)
     : hasOwn(facility, 'price')
@@ -99,10 +102,10 @@ const mapFacility = (facility, mappingCount = 0) => {
   return {
     facility_id: facility.facility_id,
     facility_name: facility.facility_name,
-    icon: facility.icon || '',
+    icon: normalizedIcon,
     type: facility.type || '',
     code,
-    svgTag: facility.icon || code,
+    svgTag: normalizedIcon || code,
     name_vi: names.vi || facility.facility_name || '',
     name_en: names.en,
     scope_type: scope.scope_type,
@@ -114,7 +117,7 @@ const mapFacility = (facility, mappingCount = 0) => {
     is_active: isActive,
     is_paid: isPaid,
     pricing_label: isPaid ? 'Có phụ phí' : 'Miễn phí',
-    icon_key: facility.icon || '',
+    icon_key: normalizedIcon,
     created_at: facility.created_at || null,
     updated_at: facility.updated_at || null,
   };
@@ -301,7 +304,7 @@ const createFacility = async ({ facility_name, type, icon }) => {
   const newRecord = {
     facility_name: String(facility_name).trim(),
     type: type ? String(type).trim().toUpperCase() : 'SERVICE',
-    icon: icon ? String(icon).trim() : 'service-icon',
+    icon: facilityTypeIcons[type ? String(type).trim().toUpperCase() : 'SERVICE'],
   };
 
   const { data, error } = await supabase
@@ -322,8 +325,10 @@ const updateFacility = async (id, { facility_name, type, icon }) => {
 
   const updates = {};
   if (facility_name !== undefined) updates.facility_name = String(facility_name).trim();
-  if (type !== undefined) updates.type = String(type).trim().toUpperCase();
-  if (icon !== undefined) updates.icon = String(icon).trim();
+  if (type !== undefined) {
+    updates.type = String(type).trim().toUpperCase();
+    updates.icon = facilityTypeIcons[updates.type];
+  }
   updates.updated_at = new Date().toISOString();
 
   const { data, error } = await supabase

@@ -98,8 +98,8 @@ const RoomTypeFormModal = ({
       setValidationError('Số trẻ em phải là số nguyên không âm.');
       return;
     }
-    if (formData.default_price === '' || !Number.isFinite(price) || price < 0) {
-      setValidationError('Giá niêm yết phải là số không âm.');
+    if (formData.default_price === '' || !Number.isSafeInteger(price) || price < 0) {
+      setValidationError('Giá niêm yết phải là số nguyên không âm (VND).');
       return;
     }
     if (formData.bed_count === '' || !Number.isSafeInteger(bedCount) || bedCount < 1) {
@@ -110,7 +110,17 @@ const RoomTypeFormModal = ({
       setValidationError('Vui lòng chọn loại giường trong danh sách.');
       return;
     }
-    if (formData.room_size.trim().length + (formData.room_size.trim() ? 3 : 0) > 50) {
+    const roomSizeValue = formData.room_size.trim();
+    const roomSizeNumber = Number(roomSizeValue.replace(/\s*m(?:²|2)?\s*$/i, '').trim());
+    if (!roomSizeValue) {
+      setValidationError('Diện tích phòng phải lớn hơn 0.');
+      return;
+    }
+    if (!Number.isFinite(roomSizeNumber) || roomSizeNumber <= 0) {
+      setValidationError('Diện tích phòng phải lớn hơn 0.');
+      return;
+    }
+    if (roomSizeValue.length + (roomSizeValue ? 3 : 0) > 50) {
       setValidationError('Diện tích tối đa 50 ký tự.');
       return;
     }
@@ -327,7 +337,8 @@ const RoomTypeFormModal = ({
                   className="rt-input"
                   type="number"
                   name="default_price"
-                  step="any"
+                  min="0"
+                  step="1"
                   value={formData.default_price}
                   onChange={updateField}
                 />

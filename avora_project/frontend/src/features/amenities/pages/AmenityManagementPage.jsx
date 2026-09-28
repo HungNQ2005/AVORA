@@ -33,7 +33,6 @@ const AmenityManagementPage = () => {
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [pricingFilter, setPricingFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('POPULAR');
 
@@ -71,7 +70,6 @@ const AmenityManagementPage = () => {
       const result = await fetchAmenities({
         search: searchTerm,
         category: categoryFilter,
-        pricing: pricingFilter,
         status: statusFilter,
         sort: sortBy,
         scope: 'ALL',
@@ -90,7 +88,7 @@ const AmenityManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, categoryFilter, pricingFilter, statusFilter, sortBy]);
+  }, [searchTerm, categoryFilter, statusFilter, sortBy]);
 
   useEffect(() => {
     loadAmenities();
@@ -242,11 +240,6 @@ const AmenityManagementPage = () => {
         categoryFilter={categoryFilter}
         onCategoryChange={(val) => {
           setCategoryFilter(val);
-          setPage(1);
-        }}
-        pricingFilter={pricingFilter}
-        onPricingChange={(val) => {
-          setPricingFilter(val);
           setPage(1);
         }}
         statusFilter={statusFilter}

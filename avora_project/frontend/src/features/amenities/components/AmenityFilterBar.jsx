@@ -6,8 +6,6 @@ const AmenityFilterBar = ({
   onSearchChange,
   categoryFilter,
   onCategoryChange,
-  pricingFilter,
-  onPricingChange,
   statusFilter,
   onStatusChange,
   sortBy,
@@ -15,31 +13,22 @@ const AmenityFilterBar = ({
   categories = [],
 }) => {
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
-  const [isPricingOpen, setIsPricingOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
 
   const catRef = useRef(null);
-  const priceRef = useRef(null);
   const statusRef = useRef(null);
   const sortRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (catRef.current && !catRef.current.contains(e.target)) setIsCategoryOpen(false);
-      if (priceRef.current && !priceRef.current.contains(e.target)) setIsPricingOpen(false);
       if (statusRef.current && !statusRef.current.contains(e.target)) setIsStatusOpen(false);
       if (sortRef.current && !sortRef.current.contains(e.target)) setIsSortOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const pricingOptions = [
-    { value: 'ALL', label: 'Biểu phí (Tất cả)' },
-    { value: 'FREE', label: 'Miễn phí (Free)' },
-    { value: 'PAID', label: 'Có phụ phí (Paid)' },
-  ];
 
   const statusOptions = [
     { value: 'ALL', label: 'Trạng thái (Tất cả)' },
@@ -51,10 +40,8 @@ const AmenityFilterBar = ({
     { value: 'POPULAR', label: 'Phổ biến nhất' },
     { value: 'NAME_ASC', label: 'Tên tiện nghi (A - Z)' },
     { value: 'NAME_DESC', label: 'Tên tiện nghi (Z - A)' },
-    { value: 'CODE_ASC', label: 'Mã tiện nghi' },
   ];
 
-  const currentPricingLabel = pricingOptions.find((p) => p.value === pricingFilter)?.label || 'Biểu phí (Tất cả)';
   const currentStatusLabel = statusOptions.find((s) => s.value === statusFilter)?.label || 'Trạng thái (Tất cả)';
   const currentSortLabel = sortOptions.find((s) => s.value === sortBy)?.label || 'Phổ biến nhất';
   const currentCategoryLabel = categoryFilter === 'ALL'
@@ -130,39 +117,7 @@ const AmenityFilterBar = ({
         )}
       </div>
 
-      {/* Dropdown 2: Pricing */}
-      <div className="amenity-filter-dropdown" ref={priceRef}>
-        <button
-          type="button"
-          className={`amenity-filter-dropdown__btn ${isPricingOpen ? 'amenity-filter-dropdown__btn--open' : ''} ${pricingFilter !== 'ALL' ? 'amenity-filter-dropdown__btn--active' : ''}`}
-          onClick={() => setIsPricingOpen((prev) => !prev)}
-        >
-          <span className="amenity-filter-dropdown__label">{currentPricingLabel}</span>
-          <svg className={`amenity-filter-chevron ${isPricingOpen ? 'amenity-filter-chevron--up' : ''}`} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
-
-        {isPricingOpen && (
-          <div className="amenity-filter-menu">
-            {pricingOptions.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                className={`amenity-filter-menu__item ${pricingFilter === opt.value ? 'amenity-filter-menu__item--active' : ''}`}
-                onClick={() => {
-                  onPricingChange(opt.value);
-                  setIsPricingOpen(false);
-                }}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Dropdown 3: Status */}
+      {/* Dropdown 2: Status */}
       <div className="amenity-filter-dropdown" ref={statusRef}>
         <button
           type="button"
