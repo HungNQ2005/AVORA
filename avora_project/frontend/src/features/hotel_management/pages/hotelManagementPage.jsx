@@ -142,9 +142,11 @@ const HotelManagementPage = () => {
 					<h1>Manage hotels</h1>
 					<p className="hotel-management__lede">Review property details, status, and room inventory.</p>
 				</div>
-				<button className="hotel-button hotel-button--primary" type="button" onClick={() => setCreateOpen(true)}>
-					<span aria-hidden="true">+</span> Add New Hotel
-				</button>
+				{isVendor && (
+					<button className="hotel-button hotel-button--primary" type="button" onClick={() => setCreateOpen(true)}>
+						<span aria-hidden="true">+</span> Add New Hotel
+					</button>
+				)}
 			</header>
 
 			<div className="hotel-toolbar" role="search">
@@ -199,8 +201,8 @@ const HotelManagementPage = () => {
 			<footer className="hotel-pagination">
 				<span>Page {pagination.page} of {Math.max(pagination.total_pages, 1)}</span>
 				<div>
-					  <button type="button" aria-label="Previous page" disabled={pagination.page <= 1 || loading} onClick={() => { setLoading(true); setPagination((current) => ({ ...current, page: current.page - 1 })); }}>←</button>
-					  <button type="button" aria-label="Next page" disabled={pagination.page >= pagination.total_pages || loading} onClick={() => { setLoading(true); setPagination((current) => ({ ...current, page: current.page + 1 })); }}>→</button>
+					<button type="button" aria-label="Previous page" disabled={pagination.page <= 1 || loading} onClick={() => { setLoading(true); setPagination((current) => ({ ...current, page: current.page - 1 })); }}>←</button>
+					<button type="button" aria-label="Next page" disabled={pagination.page >= pagination.total_pages || loading} onClick={() => { setLoading(true); setPagination((current) => ({ ...current, page: current.page + 1 })); }}>→</button>
 				</div>
 			</footer>
 
