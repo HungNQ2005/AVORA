@@ -12,6 +12,7 @@ const otpRoute = require('./features/otp/otp.route');
 const hotelRoute = require('./features/hotels/hotel.route');
 const roomTypeRoute = require('./features/room_types/room_type.route');
 const facilityRoute = require('./features/facilities/facility.route');
+const userRoute = require('./features/users/user.route');
 const env = require('./config/env');
 
 
@@ -43,6 +44,7 @@ app.use('/api', hotelRoute);
 app.use('/api', otpRoute);
 app.use("/api", roomTypeRoute);
 app.use("/api", facilityRoute);
+app.use("/api", userRoute);
 
 
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
