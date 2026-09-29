@@ -62,6 +62,10 @@ const formatPrice = (val) => {
  * Single Hotel Card Component matching the reference UI exactly.
  */
 const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
+  if (!hotel || (hotel.hotel_status && hotel.hotel_status !== 'ACTIVE')) {
+    return null;
+  }
+
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [isFavorite, setIsFavorite] = useState(() => isHotelSaved(hotel?.hotel_id || hotel?.id));
 

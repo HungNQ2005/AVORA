@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import MainLayout from './common/components/MainLayout';
+import AdminLayout from './common/components/AdminLayout';
 import HomePage from './features/home/HomePage';
 import TestConnectionPage from './features/connection_test/TestConnectionPage';
 import SignUpPage from './features/auth/pages/SignUpPage';
@@ -147,6 +148,5 @@ function App() {
     </AuthProvider>
   );
 }
-
 
 export default App;

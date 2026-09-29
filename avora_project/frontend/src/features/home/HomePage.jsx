@@ -242,7 +242,10 @@ const HomePage = () => {
         const res = await fetch(API_ENDPOINTS.HOTELS);
         const json = await res.json();
         if (isMounted && json?.data?.hotels) {
-          setHotels(json.data.hotels);
+          const activeHotels = json.data.hotels.filter(
+            (h) => !h.hotel_status || h.hotel_status === 'ACTIVE'
+          );
+          setHotels(activeHotels);
         }
       } catch (err) {
         console.error('Lỗi khi tải danh sách khách sạn từ database:', err);
@@ -437,7 +440,7 @@ const HomePage = () => {
     return hotels.filter((h) => {
       const matchCity = region
         ? (h.city_name?.toLowerCase().includes(region.toLowerCase()) ||
-           h.address?.toLowerCase().includes(region.toLowerCase()))
+          h.address?.toLowerCase().includes(region.toLowerCase()))
         : true;
       const hasOffer = Boolean(
         h.tag?.toLowerCase().includes('ưu đãi') ||
@@ -1232,4 +1235,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-

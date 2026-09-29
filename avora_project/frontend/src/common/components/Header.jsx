@@ -319,6 +319,16 @@ const Header = ({
       if (!user || !canManageHotels) return;
       setInternalTab(tabKey);
       navigate('/dashboard');
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+      if (!isPartnerOrAdmin) {
+        alert('Tài khoản của bạn không có quyền truy cập hệ thống Quản lý Khách sạn (PMS).');
+        return;
+      }
+      setInternalTab(tabKey);
+      navigate('/admin/room-types');
       return;
     } else {
       setInternalTab(null);
@@ -807,19 +817,3 @@ const Header = ({
 };
 
 export default Header;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
