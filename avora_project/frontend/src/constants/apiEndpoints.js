@@ -13,4 +13,5 @@ export const API_ENDPOINTS = {
   ROOM_TYPES_HOTELS: `${API_BASE_URL}/api/room-types/hotels`,
   FACILITIES: `${API_BASE_URL}/api/facilities`,
   AMENITIES: `${API_BASE_URL}/api/amenities`,
+  PROMOTIONS: `${API_BASE_URL}/api/promotions`,
 };
