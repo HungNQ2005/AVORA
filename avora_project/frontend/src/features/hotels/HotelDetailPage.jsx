@@ -275,6 +275,10 @@ const HotelDetailPage = () => {
           throw new Error(json.message || 'Không thể tải thông tin khách sạn');
         }
 
+        if (json.data?.hotel_status && json.data.hotel_status !== 'ACTIVE') {
+          throw new Error('Khách sạn hiện không hoạt động hoặc chưa được kích hoạt.');
+        }
+
         if (isMounted) {
           setHotel(json.data);
         }
