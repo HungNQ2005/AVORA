@@ -7,6 +7,11 @@ const hotelIdParamsSchema = z.object({
   id: z.string().trim().min(1).max(100),
 });
 
+const hotelImageParamsSchema = z.object({
+  id: z.string().trim().min(1).max(100),
+  imageId: z.string().trim().min(1).max(100),
+});
+
 const hotelListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   keyword: z.string().trim().max(120).optional(),
@@ -14,7 +19,7 @@ const hotelListQuerySchema = z.object({
   city_id: optionalId,
   district_id: optionalId,
   star_rating: z.coerce.number().int().min(1).max(5).optional(),
-  status_cd: z.enum(['DRAFT', 'ACTIVE', 'MAINTENANCE', 'PENDING_APPROVAL']).optional(),
+  status_cd: z.enum(['PENDING', 'ACTIVE']).optional(),
 });
 
 const hotelFields = {
@@ -53,14 +58,10 @@ const updateHotelSchema = z.object({
   message: 'At least one field must be provided.',
 });
 
-const deleteHotelSchema = z.preprocess((value) => value ?? {}, z.object({
-  otp: z.string().trim().regex(/^\d{6}$/, 'A valid 6-digit OTP is required.').optional(),
-}).strict());
-
 module.exports = {
   hotelIdParamsSchema,
+  hotelImageParamsSchema,
   hotelListQuerySchema,
   createHotelSchema,
   updateHotelSchema,
-  deleteHotelSchema,
 };

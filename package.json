@@ -1,0 +1,9 @@
+{
+  "name": "avora-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix avora_project",
+    "dev:backend": "npm run dev --prefix avora_project/backend",
+    "dev:frontend": "npm run dev --prefix avora_project/frontend"
+  }
+}

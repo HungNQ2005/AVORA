@@ -158,7 +158,22 @@ const signInUser = async (email, password) => {
   // Strip sensitive fields before returning
   const { password_hash: _ph, ...safeUser } = user;
 
-  return { token, user: safeUser };
+  // Resolve role_cd -> code_name for client convenience
+  let role_code_name = user.role_cd;
+  if (user.role_cd) {
+    const { data: sysCode } = await supabase
+      .from('m_system_code')
+      .select('code_name')
+      .eq('business_cd', 'USER_ROLE')
+      .eq('code_cd', user.role_cd)
+      .maybeSingle();
+
+    if (sysCode) {
+      role_code_name = sysCode.code_name;
+    }
+  }
+
+  return { token, user: { ...safeUser, role_code_name } };
 };
 
 /**
@@ -181,6 +196,7 @@ const getUserProfile = async (userId) => {
     err.statusCode = 404;
     throw err;
   }
+
 
   // Resolve role_cd (code_cd) -> code_name from m_system_code lookup table
   let role_code_name = user.role_cd; // fallback to raw value

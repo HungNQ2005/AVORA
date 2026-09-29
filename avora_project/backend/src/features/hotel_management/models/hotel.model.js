@@ -5,13 +5,14 @@ const supabase = require('../../../config/supabaseClient');
 const HOTEL_SELECT = `
   hotel_id, owner_id, name, description, address,
   city_id, district_id, ward_id, star_rating, star_quality,
-  lat, lng, is_deleted, created_at, updated_at,
+  lat, lng, is_deleted, hotel_status, created_at, updated_at,
   city:m_city(city_id, city_name),
   district:m_district(district_id, district_name),
   ward:m_ward(ward_id, ward_name),
   owner:m_user(user_id, full_name, phone, email),
   rooms:m_room(count),
-  room_type_summary:m_room_type(count)
+  room_type_summary:m_room_type(count),
+  images:m_hotel_image(image_id, image_url, is_thumbnail, sort_order)
 `;
 
 const ensureClient = () => {
@@ -41,15 +42,29 @@ const getVendorRoleCode = async () => {
   return (data || []).map((row) => String(row.code_cd));
 };
 
-const addStatusNames = async (hotels) => {
-  return hotels.map((hotel) => ({
-    ...hotel,
-    status_cd: hotel.is_deleted ? 'PENDING_APPROVAL' : 'ACTIVE',
-    status_name: hotel.is_deleted ? 'Pending Approval / Soft Deleted' : 'Active',
-  }));
+const STATUS_LABELS = {
+  PENDING: 'Chờ duyệt',
+  ACTIVE: 'Đang hoạt động',
 };
 
-const listHotels = async ({ page, pageSize, keyword, search, city_id, district_id, star_rating, status_cd, ownerId, includeDeleted = false }) => {
+const addStatusNames = async (hotels) => {
+  return hotels.map((hotel) => {
+    const statusCd = hotel.hotel_status || 'ACTIVE';
+    const images = Array.isArray(hotel.images)
+      ? [...hotel.images].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+      : [];
+    const thumbnail = images.find((img) => img.is_thumbnail) || images[0] || null;
+    return {
+      ...hotel,
+      status_cd: statusCd,
+      status_name: STATUS_LABELS[statusCd] || statusCd,
+      images,
+      thumbnail_url: thumbnail?.image_url || null,
+    };
+  });
+};
+
+const listHotels = async ({ page, pageSize, keyword, search, city_id, district_id, star_rating, status_cd, ownerId, includeDeleted = false, includeStatuses = null }) => {
   ensureClient();
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -72,7 +87,8 @@ const listHotels = async ({ page, pageSize, keyword, search, city_id, district_i
   if (city_id) query = query.eq('city_id', city_id);
   if (district_id) query = query.eq('district_id', district_id);
   if (star_rating) query = query.eq('star_quality', star_rating);
-  if (status_cd) query = query.eq('is_deleted', status_cd === 'PENDING_APPROVAL');
+  if (status_cd) query = query.eq('hotel_status', status_cd);
+  else if (Array.isArray(includeStatuses) && includeStatuses.length) query = query.in('hotel_status', includeStatuses);
   if (ownerId) query = query.eq('owner_id', ownerId);
   query = query.eq('rooms.is_deleted', false);
 
@@ -101,7 +117,7 @@ const createHotel = async (input) => {
   const { data, error } = await supabase
     .from('m_hotel')
     .insert(input)
-    .select('*')
+    .select(HOTEL_SELECT)
     .single();
   checkQuery(error);
   return (await addStatusNames([data]))[0];
@@ -155,6 +171,22 @@ const isActiveVendor = async (userId) => {
   return Boolean(data);
 };
 
+// PENDING -> ACTIVE only. An already-ACTIVE hotel can never revert to PENDING.
+const approveHotel = async (hotelId) => {
+  ensureClient();
+  const { data, error } = await supabase
+    .from('m_hotel')
+    .update({ hotel_status: 'ACTIVE', updated_at: new Date().toISOString() })
+    .eq('hotel_id', hotelId)
+    .eq('hotel_status', 'PENDING')
+    .select('*')
+    .maybeSingle();
+  checkQuery(error);
+  if (!data) return null;
+  return (await addStatusNames([data]))[0];
+};
+
+// Admin/Business Manager only: un-delete a hotel without touching its approval status.
 const restoreHotel = async (hotelId) => {
   ensureClient();
   const { data, error } = await supabase
@@ -173,7 +205,7 @@ const softDeleteHotel = async ({ hotelId, access }) => {
   ensureClient();
   let hotelQuery = supabase
     .from('m_hotel')
-    .select('hotel_id, owner_id, is_deleted')
+    .select('hotel_id, owner_id, is_deleted, hotel_status')
     .eq('hotel_id', hotelId)
     .eq('is_deleted', false)
     ;
@@ -181,6 +213,7 @@ const softDeleteHotel = async ({ hotelId, access }) => {
   const { data: hotel, error: hotelError } = await hotelQuery.maybeSingle();
   checkQuery(hotelError);
   if (!hotel) return { status: 'not_found' };
+  if (access.isVendor && hotel.hotel_status === 'ACTIVE') return { status: 'active_hotel_locked' };
 
   const { data: bookings, error: bookingError } = await supabase
     .from('t_booking')
@@ -238,6 +271,134 @@ const softDeleteHotel = async ({ hotelId, access }) => {
   return data ? { status: 'deleted' } : { status: 'not_found' };
 };
 
+const HOTEL_IMAGE_BUCKET = 'hotel-images';
+
+// Confirms the hotel exists and the caller is allowed to manage it (owner Vendor, or Admin/BM).
+const assertHotelAccess = async (hotelId, access) => {
+  let query = supabase.from('m_hotel').select('hotel_id, owner_id').eq('hotel_id', hotelId);
+  if (access.isVendor) query = query.eq('owner_id', access.userId);
+  const { data, error } = await query.maybeSingle();
+  checkQuery(error);
+  return Boolean(data);
+};
+
+const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbnail }, access) => {
+  ensureClient();
+  if (!(await assertHotelAccess(hotelId, access))) return null;
+
+  const fileExt = (originalName?.split('.').pop() || 'jpg').toLowerCase();
+  const objectPath = `${hotelId}/${Date.now()}-${Math.round(Math.random() * 1e6)}.${fileExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from(HOTEL_IMAGE_BUCKET)
+    .upload(objectPath, buffer, { contentType: mimeType, upsert: false });
+  checkQuery(uploadError);
+
+  const { data: publicUrlData } = supabase.storage.from(HOTEL_IMAGE_BUCKET).getPublicUrl(objectPath);
+  const imageUrl = publicUrlData?.publicUrl;
+
+  if (isThumbnail) {
+    const { error: resetError } = await supabase
+      .from('m_hotel_image')
+      .update({ is_thumbnail: false })
+      .eq('hotel_id', hotelId);
+    checkQuery(resetError);
+  }
+
+  const { count } = await supabase
+    .from('m_hotel_image')
+    .select('image_id', { count: 'exact', head: true })
+    .eq('hotel_id', hotelId);
+
+  const { data, error } = await supabase
+    .from('m_hotel_image')
+    .insert({
+      hotel_id: hotelId,
+      image_url: imageUrl,
+      is_thumbnail: Boolean(isThumbnail) || !count,
+      sort_order: count || 0,
+    })
+    .select('image_id, image_url, is_thumbnail, sort_order')
+    .single();
+  checkQuery(error);
+  return data;
+};
+
+const deleteHotelImage = async (hotelId, imageId, access) => {
+  ensureClient();
+  if (!(await assertHotelAccess(hotelId, access))) return { status: 'forbidden' };
+
+  const { data: image, error: fetchError } = await supabase
+    .from('m_hotel_image')
+    .select('image_id, image_url, is_thumbnail')
+    .eq('image_id', imageId)
+    .eq('hotel_id', hotelId)
+    .maybeSingle();
+  checkQuery(fetchError);
+  if (!image) return { status: 'not_found' };
+
+  const { error: deleteError } = await supabase
+    .from('m_hotel_image')
+    .delete()
+    .eq('image_id', imageId);
+  checkQuery(deleteError);
+
+  // Storage cleanup is best-effort; the DB row is the source of truth for the UI.
+  try {
+    const marker = `/${HOTEL_IMAGE_BUCKET}/`;
+    const idx = image.image_url?.indexOf(marker);
+    if (idx !== -1 && idx !== undefined) {
+      const objectPath = image.image_url.slice(idx + marker.length);
+      await supabase.storage.from(HOTEL_IMAGE_BUCKET).remove([objectPath]);
+    }
+  } catch (storageErr) {
+    console.error(`[HOTEL MODEL] Storage cleanup failed: ${storageErr.message}`);
+  }
+
+  if (image.is_thumbnail) {
+    const { data: nextImage } = await supabase
+      .from('m_hotel_image')
+      .select('image_id')
+      .eq('hotel_id', hotelId)
+      .order('sort_order', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+    if (nextImage) {
+      await supabase.from('m_hotel_image').update({ is_thumbnail: true }).eq('image_id', nextImage.image_id);
+    }
+  }
+
+  return { status: 'deleted' };
+};
+
+const setHotelImageThumbnail = async (hotelId, imageId, access) => {
+  ensureClient();
+  if (!(await assertHotelAccess(hotelId, access))) return { status: 'forbidden' };
+
+  const { data: image, error: fetchError } = await supabase
+    .from('m_hotel_image')
+    .select('image_id')
+    .eq('image_id', imageId)
+    .eq('hotel_id', hotelId)
+    .maybeSingle();
+  checkQuery(fetchError);
+  if (!image) return { status: 'not_found' };
+
+  const { error: resetError } = await supabase
+    .from('m_hotel_image')
+    .update({ is_thumbnail: false })
+    .eq('hotel_id', hotelId);
+  checkQuery(resetError);
+
+  const { error: setError } = await supabase
+    .from('m_hotel_image')
+    .update({ is_thumbnail: true })
+    .eq('image_id', imageId);
+  checkQuery(setError);
+
+  return { status: 'updated' };
+};
+
 const toHotelDto = (hotel) => ({
   hotel_id: hotel.hotel_id,
   owner_id: hotel.owner_id,
@@ -262,9 +423,17 @@ const toHotelDto = (hotel) => ({
   star_rating: hotel.star_quality ?? hotel.star_rating,
   lat: hotel.lat,
   lng: hotel.lng,
+  hotel_status: hotel.hotel_status || 'ACTIVE',
   status_cd: hotel.status_cd,
-  status_name: hotel.status_name || (hotel.is_deleted ? 'Pending Approval / Soft Deleted' : 'Active'),
+  status_name: hotel.status_name,
   is_deleted: Boolean(hotel.is_deleted),
+  images: (hotel.images || []).map((img) => ({
+    image_id: img.image_id,
+    image_url: img.image_url,
+    is_thumbnail: Boolean(img.is_thumbnail),
+    sort_order: img.sort_order ?? 0,
+  })),
+  thumbnail_url: hotel.thumbnail_url || null,
   total_rooms: hotel.rooms?.[0]?.count ?? 0,
   total_room_types: hotel.room_type_summary?.[0]?.count ?? hotel.room_types?.length ?? 0,
   room_count: hotel.rooms?.[0]?.count ?? 0,
@@ -273,4 +442,4 @@ const toHotelDto = (hotel) => ({
   updated_at: hotel.updated_at,
 });
 
-module.exports = { listHotels, getHotelById, createHotel, updateHotel, listActiveVendors, isActiveVendor, restoreHotel, softDeleteHotel, toHotelDto };
+module.exports = { listHotels, getHotelById, createHotel, updateHotel, listActiveVendors, isActiveVendor, approveHotel, restoreHotel, softDeleteHotel, addHotelImage, deleteHotelImage, setHotelImageThumbnail, toHotelDto };

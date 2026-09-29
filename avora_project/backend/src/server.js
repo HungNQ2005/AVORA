@@ -1,41 +1,51 @@
-'use strict';
+"use strict";
 
-require('./config/env'); // Load & validate env vars first
-const express = require('express');
-const cors = require('cors');
+require("./config/env"); // Load & validate env vars first
+const express = require("express");
+const cors = require("cors");
 
 const errorHandler = require('./common/middlewares/errorHandler');
 const connectionRoute = require('./features/connection_test/connection.route');
 const authRoute = require('./features/auth/auth.route');
 const otpRoute = require('./features/otp/otp.route');
 const hotelManagementRoute = require('./features/hotel_management/hotel_management.route');
+const hotelRoute = require('./features/hotels/hotel.route');
+const locationRoute = require('./features/locations/location.route');
+const roomTypeRoute = require('./features/room_types/room_type.route');
+const facilityRoute = require('./features/facilities/facility.route');
 const env = require('./config/env');
+
 
 const app = express();
 
 // ─── Global Middlewares ───────────────────────────────────────────────────────
-app.use(cors({ origin: '*' }));
+app.use(cors({ origin: "*" }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Request Logger (dev only) ────────────────────────────────────────────────
-if (env.NODE_ENV === 'development') {
+if (env.NODE_ENV === "development") {
   app.use((req, _res, next) => {
-    console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+    console.log(
+      `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`,
+    );
     next();
   });
 }
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'success', message: 'AVORA Backend is running 🚀' });
+app.get("/api/health", (_req, res) => {
+  res.json({ status: "success", message: "AVORA Backend is running 🚀" });
 });
 
 app.use('/api', connectionRoute);
 app.use('/api', authRoute);
+app.use('/api', hotelRoute);
 app.use('/api', otpRoute);
-app.use('/api', hotelManagementRoute);
 app.use('/api/v1', hotelManagementRoute);
+app.use('/api/v1', locationRoute);
+app.use("/api", roomTypeRoute);
+app.use("/api", facilityRoute);
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
 

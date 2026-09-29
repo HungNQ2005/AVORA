@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import LocationSelect from './locationSelect';
+import { getDefaultCoordsForCity } from '../../../utils/vnCityCoords';
 import './editHotelPopup.css';
 
 const emptyForm = {
@@ -31,21 +33,37 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
     setError('');
   };
 
+  const updateLocation = (patch) => {
+    setForm((current) => {
+      const next = { ...current, city_id: patch.city_id, district_id: patch.district_id, ward_id: patch.ward_id };
+      // Auto-assign a sensible default lat/lng once a City is chosen, if not set yet.
+      if (patch.city_name && (current.lat === '' || current.lng === '')) {
+        const defaults = getDefaultCoordsForCity(patch.city_name);
+        if (defaults) {
+          next.lat = defaults.lat;
+          next.lng = defaults.lng;
+        }
+      }
+      return next;
+    });
+    setError('');
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.address.trim() || form.lat === '' || form.lng === '' || form.star_rating === '') {
-      setError('Name, address, coordinates, and star rating are required.');
+    if (!form.name.trim() || !form.address.trim() || !form.city_id || form.star_rating === '') {
+      setError('Vui lòng nhập tên, địa chỉ, tỉnh/thành phố và hạng sao.');
       return;
     }
     const latitude = Number(form.lat);
     const longitude = Number(form.lng);
     const stars = Number(form.star_rating);
     if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      setError('Enter valid latitude (-90 to 90) and longitude (-180 to 180).');
+      setError('Vĩ độ phải trong khoảng -90 đến 90 và kinh độ trong khoảng -180 đến 180.');
       return;
     }
     if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
-      setError('Star rating must be between 1 and 5.');
+      setError('Hạng sao phải là số nguyên từ 1 đến 5.');
       return;
     }
 
@@ -53,9 +71,9 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
       name: form.name.trim(),
       description: form.description.trim() || null,
       address: form.address.trim(),
-      city_id: form.city_id.trim() || null,
-      district_id: form.district_id.trim() || null,
-      ward_id: form.ward_id.trim() || null,
+      city_id: form.city_id || null,
+      district_id: form.district_id || null,
+      ward_id: form.ward_id || null,
       lat: latitude,
       lng: longitude,
       star_rating: stars,
@@ -65,7 +83,7 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
     try {
       await onSubmit(payload);
     } catch (err) {
-      setError(err.response?.data?.message || 'Could not save hotel details.');
+      setError(err.response?.data?.message || 'Không thể lưu thông tin khách sạn.');
     } finally {
       setLoading(false);
     }
@@ -76,56 +94,45 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
       <section className="hotel-modal" role="dialog" aria-modal="true" aria-labelledby="hotel-modal-title">
         <header className="hotel-modal__header">
           <div>
-            <p>HOTEL RECORD</p>
-            <h2 id="hotel-modal-title">{isEdit ? 'Edit hotel' : 'Create a hotel'}</h2>
+            <p>HỒ SƠ KHÁCH SẠN</p>
+            <h2 id="hotel-modal-title">{isEdit ? 'Chỉnh sửa khách sạn' : 'Tạo khách sạn mới'}</h2>
           </div>
-          <button type="button" className="hotel-modal__close" onClick={onClose} disabled={loading} aria-label="Close dialog">×</button>
+          <button type="button" className="hotel-modal__close" onClick={onClose} disabled={loading} aria-label="Đóng hộp thoại">×</button>
         </header>
         <form className="hotel-modal__form" onSubmit={handleSubmit}>
           <label className="hotel-modal__field hotel-modal__field--wide">
-            <span>Hotel name <b>*</b></span>
+            <span>Tên khách sạn <b>*</b></span>
             <input name="name" value={form.name} onChange={updateField} maxLength={200} required autoFocus />
           </label>
           <label className="hotel-modal__field hotel-modal__field--wide">
-            <span>Address <b>*</b></span>
+            <span>Địa chỉ <b>*</b></span>
             <input name="address" value={form.address} onChange={updateField} maxLength={500} required />
           </label>
           <label className="hotel-modal__field hotel-modal__field--wide">
-            <span>Description</span>
+            <span>Mô tả</span>
             <textarea name="description" value={form.description} onChange={updateField} maxLength={10000} rows={3} />
           </label>
+          <LocationSelect cityId={form.city_id} districtId={form.district_id} wardId={form.ward_id} onChange={updateLocation} disabled={loading} />
           <label className="hotel-modal__field">
-            <span>City ID</span>
-            <input name="city_id" value={form.city_id} onChange={updateField} />
-          </label>
-          <label className="hotel-modal__field">
-            <span>District ID</span>
-            <input name="district_id" value={form.district_id} onChange={updateField} />
-          </label>
-          <label className="hotel-modal__field">
-            <span>Ward ID</span>
-            <input name="ward_id" value={form.ward_id} onChange={updateField} />
-          </label>
-          <label className="hotel-modal__field">
-            <span>Star rating <b>*</b></span>
+            <span>Hạng sao <b>*</b></span>
             <select name="star_rating" value={form.star_rating} onChange={updateField} required>
-              <option value="">Select rating</option>
-              {[1, 2, 3, 4, 5].map((stars) => <option value={stars} key={stars}>{stars} star{stars === 1 ? '' : 's'}</option>)}
+              <option value="">Chọn hạng sao</option>
+              {[1, 2, 3, 4, 5].map((stars) => <option value={stars} key={stars}>{stars} sao</option>)}
             </select>
           </label>
           <label className="hotel-modal__field">
-            <span>Latitude <b>*</b></span>
+            <span>Vĩ độ (Latitude) <b>*</b></span>
             <input name="lat" type="number" min="-90" max="90" step="any" value={form.lat} onChange={updateField} required />
           </label>
           <label className="hotel-modal__field">
-            <span>Longitude <b>*</b></span>
+            <span>Kinh độ (Longitude) <b>*</b></span>
             <input name="lng" type="number" min="-180" max="180" step="any" value={form.lng} onChange={updateField} required />
           </label>
           {error && <p className="hotel-modal__error" role="alert">{error}</p>}
           <footer className="hotel-modal__actions">
-            <button type="button" className="hotel-button hotel-button--quiet" onClick={onClose} disabled={loading}>Cancel</button>
+            <button type="button" className="hotel-button hotel-button--quiet" onClick={onClose} disabled={loading}>Hủy</button>
             <button type="submit" className="hotel-button hotel-button--primary" disabled={loading}>
-              {loading ? 'Saving…' : isEdit ? 'Save changes' : (submitLabel || 'Create hotel')}
+              {loading ? 'Đang lưu…' : isEdit ? 'Lưu thay đổi' : (submitLabel || 'Tạo khách sạn')}
             </button>
           </footer>
         </form>
@@ -135,3 +142,4 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
 };
 
 export default EditHotelPopup;
+

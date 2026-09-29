@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import './Footer.css';
 
 const BuildingPmsIcon = () => (
@@ -103,10 +104,10 @@ const Footer = ({ onLinkClick }) => {
             <h4 className="avora-footer__col-title">Dành cho đối tác</h4>
             <ul className="avora-footer__links">
               <li className="avora-footer__pms-item">
-                <a href="#" className="avora-footer__pms-link" onClick={handleLink('pms-portal')}>
+                <Link to="/admin/room-types" className="avora-footer__pms-link">
                   <BuildingPmsIcon />
                   <span>Cổng Quản lý khách sạn (PMS)</span>
-                </a>
+                </Link>
               </li>
               <li><a href="#" onClick={handleLink('extranet')}>Đăng nhập Extranet</a></li>
               <li><a href="#" onClick={handleLink('partner-help')}>Trợ giúp đối tác</a></li>
@@ -133,3 +134,4 @@ const Footer = ({ onLinkClick }) => {
 };
 
 export default Footer;
+

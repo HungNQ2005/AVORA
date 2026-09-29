@@ -2,6 +2,8 @@
 .hotel-detail__back { display: inline-flex; margin-bottom: 1rem; color: var(--hd-blue); font-size: .84rem; font-weight: 700; }
 .hotel-detail__back:hover { color: var(--hd-bright); }
 .hotel-detail__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; padding: .8rem 0 1.15rem; border-bottom: 1px solid var(--hd-border); }
+.hotel-detail__thumb { width: 84px; height: 84px; flex: 0 0 auto; border-radius: 12px; }
+.hotel-detail__header > div:nth-child(2) { flex: 1; min-width: 0; }
 .hotel-detail__eyebrow { margin-bottom: .4rem; color: var(--hd-blue); font-size: .72rem; font-weight: 750; }
 .hotel-detail__header h1 { overflow-wrap: anywhere; color: var(--hd-ink); font-size: 1.65rem; }
 .hotel-detail__location { margin-top: .4rem; color: var(--hd-muted); font-size: .9rem; }
@@ -9,7 +11,8 @@
 .hotel-detail__status-line { display: flex; align-items: center; gap: 1rem; padding: .9rem 0; }
 .hotel-detail__status { padding: .32rem .6rem; border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .74rem; font-weight: 750; }
 .hotel-detail__status--active { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
-.hotel-detail__status--pending-approval { border-color: #fde68a; background: #fffbeb; color: #a16207; }
+.hotel-detail__status--pending { border-color: #fde68a; background: #fffbeb; color: #a16207; }
+.hotel-detail__status--deleted { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
 .hotel-detail__rating { color: #475569; font-size: .82rem; }
 .hotel-detail__rating b { color: #d97706; }
 .hotel-detail__columns { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr); gap: 1rem; }
