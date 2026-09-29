@@ -186,7 +186,7 @@ const AdminSidebar = () => {
                   <line x1="7" y1="7" x2="7.01" y2="7"></line>
                 </svg>
               </span>
-              <span className="admin-sidebar__label">Quản lý mã giảm giá</span>
+              <span className="admin-sidebar__label">Quản lý mã khuyến mãi</span>
             </NavLink>
           )}
           <div className="admin-sidebar__link disabled">

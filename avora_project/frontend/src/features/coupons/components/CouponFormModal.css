@@ -1,210 +1,296 @@
-/* ─── Overlay ─────────────────────────────────────────────── */
-.pfm-overlay {
+/* ─── Modal Overlay & Container synchronized with Room Types & Amenities ─── */
+.rt-modal-overlay {
   position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.5);
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   padding: 1rem;
-  animation: pfm-fadein 0.15s ease-out;
 }
 
-@keyframes pfm-fadein {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-/* ─── Modal ───────────────────────────────────────────────── */
-.pfm-modal {
+.coupon-modal-content {
   background: #ffffff;
-  border-radius: 12px;
+  border-radius: 8px;
   width: 100%;
-  max-width: 640px;
+  max-width: 900px;
   max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  animation: pfm-slideup 0.2s ease-out;
-}
-
-@keyframes pfm-slideup {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ─── Header ──────────────────────────────────────────────── */
-.pfm-header {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 1.25rem 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+  animation: rtModalFadeIn 0.2s ease-out;
 }
 
-.pfm-title {
-  font-size: 1.1rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0;
-}
-
-.pfm-close-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  color: #64748b;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.15s;
-}
-
-.pfm-close-btn:hover:not(:disabled) {
-  background: #f1f5f9;
-  color: #0f172a;
-}
-
-.pfm-close-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* ─── Form ────────────────────────────────────────────────── */
-.pfm-form {
-  padding: 1.5rem;
-}
-
-.pfm-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-@media (max-width: 560px) {
-  .pfm-grid {
-    grid-template-columns: 1fr;
+@keyframes rtModalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
 
-.pfm-field {
+/* ─── Header (Dark Blue #1e3a8a matching Room Types & Amenities) ─── */
+.coupon-modal-content .rt-modal-header {
+  background: #1e3a8a;
+  color: white;
+  padding: 16px 24px;
   display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+  justify-content: space-between;
+  align-items: flex-start;
 }
 
-.pfm-field--full {
-  grid-column: 1 / -1;
-}
-
-.pfm-label {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #334155;
-}
-
-.pfm-required {
-  color: #dc2626;
-}
-
-.pfm-input {
-  padding: 0.55rem 0.75rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.88rem;
-  color: #0f172a;
-  background: #ffffff;
-  transition: border-color 0.15s, box-shadow 0.15s;
-  outline: none;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.pfm-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.pfm-input:disabled {
-  background: #f8fafc;
-  color: #94a3b8;
-  cursor: not-allowed;
-}
-
-.pfm-input--error {
-  border-color: #dc2626;
-}
-
-.pfm-input--error:focus {
-  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
-}
-
-.pfm-error {
-  font-size: 0.75rem;
-  color: #dc2626;
-  font-weight: 500;
-}
-
-/* ─── Actions ─────────────────────────────────────────────── */
-.pfm-actions {
+.coupon-modal-content .rt-modal-header-info {
   display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #f1f5f9;
-}
-
-.pfm-btn {
-  display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  padding: 0.55rem 1.2rem;
+  gap: 16px;
+}
+
+.coupon-modal-content .rt-modal-icon {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  color: #fbbf24; /* Golden yellow matching Room Types */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.coupon-modal-content .rt-modal-title {
+  margin: 0 0 4px 0;
+  font-size: 1.125rem;
   font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s;
-  border: none;
-}
-
-.pfm-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.pfm-btn--cancel {
-  background: #f1f5f9;
-  color: #475569;
-}
-
-.pfm-btn--cancel:hover:not(:disabled) {
-  background: #e2e8f0;
-  color: #0f172a;
-}
-
-.pfm-btn--submit {
-  background: #2563eb;
+  display: flex;
+  align-items: center;
+  gap: 12px;
   color: #ffffff;
 }
 
-.pfm-btn--submit:hover:not(:disabled) {
-  background: #1d4ed8;
+.coupon-modal-content .rt-modal-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #bfdbfe;
 }
 
-.pfm-spinner {
+.coupon-modal-content .rt-modal-close {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1.15rem;
+  line-height: 1;
+  transition: background 0.2s;
+}
+
+.coupon-modal-content .rt-modal-close:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ─── Body ─── */
+.coupon-modal-content .rt-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.coupon-modal-content .rt-modal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+}
+
+.coupon-modal-content .rt-modal-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.coupon-modal-content .rt-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin: 0 0 20px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.coupon-modal-content .rt-form-group {
+  margin-bottom: 16px;
+}
+
+.coupon-modal-content .rt-form-group label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 8px;
+}
+
+.coupon-modal-content .req {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.coupon-modal-content .rt-label-right {
+  font-weight: 400;
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+/* ─── Inputs & Selects ─── */
+.coupon-modal-content .rt-input,
+.coupon-modal-content .rt-select {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  appearance: none;
+  -webkit-appearance: none;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #1e293b;
+  background-color: #ffffff;
+  font-family: inherit;
+  outline: none;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+}
+
+.coupon-modal-content .rt-input:hover,
+.coupon-modal-content .rt-select:hover {
+  border-color: #94a3b8;
+}
+
+.coupon-modal-content .rt-input:focus,
+.coupon-modal-content .rt-select:focus {
+  border-color: #3b82f6;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.coupon-modal-content .rt-input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.coupon-modal-content .rt-select {
+  padding-right: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  cursor: pointer;
+}
+
+.coupon-modal-content .rt-input--error {
+  border-color: #ef4444 !important;
+  background-color: #fffafb;
+}
+
+.coupon-modal-content .rt-input--error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+.coupon-modal-content .rt-field-error {
+  display: block;
+  color: #dc2626;
+  font-size: 0.78rem;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+/* ─── Footer (Synchronized with Room Types & Amenities) ─── */
+.coupon-modal-content .rt-modal-footer {
+  border-top: 1px solid #e2e8f0;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+}
+
+.coupon-modal-content .rt-modal-footer-right {
+  display: flex;
+  gap: 12px;
+}
+
+.coupon-modal-content .rt-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  font-family: inherit;
+}
+
+.coupon-modal-content .rt-btn-cancel {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.coupon-modal-content .rt-btn-cancel:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.coupon-modal-content .rt-btn-primary {
+  background: #1e3a8a;
+  color: white;
+}
+
+.coupon-modal-content .rt-btn-primary:hover:not(:disabled) {
+  background: #1e40af;
+}
+
+.coupon-modal-content .rt-btn:disabled,
+.coupon-modal-content .rt-modal-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.coupon-modal-content .rt-spinner-sm {
   width: 14px;
   height: 14px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: #ffffff;
   border-radius: 50%;
-  animation: pfm-spin 0.6s linear infinite;
+  animation: rtModalSpin 0.6s linear infinite;
 }
 
-@keyframes pfm-spin {
+@keyframes rtModalSpin {
   to { transform: rotate(360deg); }
+}
+
+@media (max-width: 768px) {
+  .coupon-modal-content .rt-modal-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
 }

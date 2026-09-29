@@ -5,37 +5,50 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, couponCode, loading = 
   if (!isOpen) return null;
 
   return (
-    <div className="dcm-overlay" onClick={onClose}>
-      <div className="dcm-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="dcm-icon-wrap">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-            <line x1="12" y1="9" x2="12" y2="13"></line>
-            <line x1="12" y1="17" x2="12.01" y2="17"></line>
-          </svg>
+    <div className="rt-modal-overlay" onClick={onClose}>
+      <div
+        className="rt-delete-modal-content"
+        role="dialog"
+        aria-modal="true"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="rt-delete-modal-header">
+          <div className="rt-delete-icon-wrapper" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+          </div>
+          <h2 className="rt-delete-modal-title">Xóa mã khuyến mãi</h2>
         </div>
 
-        <h3 className="dcm-title">Vô hiệu hóa mã khuyến mãi</h3>
-        <p className="dcm-message">
-          Bạn có chắc chắn muốn vô hiệu hóa mã{' '}
-          <span className="dcm-code">{couponCode}</span>?
-          <br />
-          Mã này sẽ không thể sử dụng được nữa trên hệ thống.
-        </p>
+        <div className="rt-delete-modal-body">
+          <p>
+            Bạn có chắc chắn muốn xóa mã khuyến mãi <strong>"{couponCode}"</strong> khỏi hệ thống không?
+          </p>
+          <p className="rt-delete-modal-warning">
+            Mã này sẽ bị xóa khỏi danh sách quản lý và không thể sử dụng trên hệ thống.
+          </p>
+        </div>
 
-        <div className="dcm-actions">
-          <button className="dcm-btn dcm-btn--cancel" onClick={onClose} disabled={loading}>
+        <div className="rt-delete-modal-footer">
+          <button
+            type="button"
+            className="rt-btn rt-btn-cancel"
+            onClick={onClose}
+            disabled={loading}
+          >
             Hủy bỏ
           </button>
-          <button className="dcm-btn dcm-btn--confirm" onClick={onConfirm} disabled={loading}>
-            {loading ? (
-              <>
-                <span className="dcm-spinner"></span>
-                Đang xử lý...
-              </>
-            ) : (
-              'Vô hiệu hóa'
-            )}
+          <button
+            type="button"
+            className="rt-btn rt-btn-danger"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading ? 'Đang xóa...' : 'Xác nhận xóa'}
           </button>
         </div>
       </div>

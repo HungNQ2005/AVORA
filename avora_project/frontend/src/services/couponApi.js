@@ -99,7 +99,7 @@ export const deletePromotion = async (id) => {
   const json = await response.json();
 
   if (!response.ok || json.status === 'error') {
-    throw new Error(json.message || 'Không thể vô hiệu hóa mã khuyến mãi.');
+    throw new Error(json.message || 'Không thể xóa mã khuyến mãi.');
   }
 
   return json.data;

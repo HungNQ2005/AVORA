@@ -72,7 +72,7 @@ const PromotionManagementPage = () => {
   const [discountTypeFilter, setDiscountTypeFilter] = useState('ALL'); // ALL | PERCENT | FIXED
   const [sortBy, setSortBy] = useState('NEWEST');
   const [page, setPage] = useState(1);
-  const pageSize = 8;
+  const pageSize = 5;
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -84,7 +84,7 @@ const PromotionManagementPage = () => {
     setError(null);
     let active = true;
 
-    fetchPromotions({ include_deleted: true })
+    fetchPromotions()
       .then((res) => {
         if (active) {
           setPromotions(res.coupons || []);
@@ -201,7 +201,7 @@ const PromotionManagementPage = () => {
     setDeleteLoading(true);
     try {
       await deletePromotion(deletingPromotion.coupon_id);
-      showToast(`Đã vô hiệu hóa mã "${deletingPromotion?.code}".`);
+      showToast(`Đã xóa mã khuyến mãi "${deletingPromotion?.code}".`);
       setDeleteModalOpen(false);
       setDeletingPromotion(null);
       loadData();
@@ -221,21 +221,17 @@ const PromotionManagementPage = () => {
       <nav className="promo-breadcrumb">
         <span>Marketing &amp; Doanh thu</span>
         <span className="promo-breadcrumb__sep">&gt;</span>
-        <span className="promo-breadcrumb__active">Khuyến mãi &amp; Coupon</span>
+        <span className="promo-breadcrumb__active">Quản lý mã khuyến mãi</span>
       </nav>
 
       {/* Header */}
       <div className="promo-page__header">
         <div className="promo-page__title-area">
           <div className="promo-page__title-row">
-            <h1 className="promo-page__title">Quản lý Khuyến mãi &amp; Mã Ưu Đãi</h1>
-            <span className="promo-badge-live">
-              <span className="promo-badge-live__dot"></span>
-              COUPON ENGINE
-            </span>
+            <h1 className="promo-page__title">Quản lý mã khuyến mãi</h1>
           </div>
           <p className="promo-page__subtitle">
-            Quản lý toàn bộ mã giảm giá, chương trình ưu đãi và chiến dịch khuyến mãi trên hệ thống đặt phòng.
+            Quản lý toàn bộ mã khuyến mãi và ưu đãi trên hệ thống đặt phòng.
           </p>
         </div>
 
@@ -532,7 +528,7 @@ const PromotionManagementPage = () => {
                         <button
                           className="promo-action-btn promo-action-btn--delete"
                           onClick={(e) => openDeleteModal(p, e)}
-                          title="Vô hiệu hóa"
+                          title="Xóa mã"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="3 6 5 6 21 6"></polyline>

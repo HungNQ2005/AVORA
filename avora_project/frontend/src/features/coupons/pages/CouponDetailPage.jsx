@@ -373,12 +373,6 @@ const PromotionDetailPage = () => {
                 <span className="pd-audit-label">Cập nhật lần cuối:</span>
                 <span className="pd-audit-val">{formatDateTime(coupon.updated_at)}</span>
               </div>
-              <div className="pd-audit-item">
-                <span className="pd-audit-label">Trạng thái dữ liệu:</span>
-                <span className="pd-audit-val">
-                  {coupon.is_deleted ? '⚠️ Đã vô hiệu hóa' : '✅ Hoạt động bình thường'}
-                </span>
-              </div>
             </div>
           </section>
         </div>

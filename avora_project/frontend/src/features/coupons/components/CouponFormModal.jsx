@@ -75,158 +75,250 @@ const PromotionFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loa
   };
 
   return (
-    <div className="pfm-overlay" onClick={onClose}>
-      <div className="pfm-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="pfm-header">
-          <h2 className="pfm-title">{isEdit ? 'Chỉnh sửa mã khuyến mãi' : 'Tạo mã khuyến mãi mới'}</h2>
-          <button className="pfm-close-btn" onClick={onClose} disabled={loading}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
+    <div className="rt-modal-overlay" onClick={onClose}>
+      <form
+        className="rt-modal-content coupon-modal-content"
+        onSubmit={handleSubmit}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Modal Header (Dark Blue #1e3a8a) */}
+        <div className="rt-modal-header">
+          <div className="rt-modal-header-info">
+            <div className="rt-modal-icon" aria-hidden="true">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+                <line x1="7" y1="7" x2="7.01" y2="7" />
+              </svg>
+            </div>
+            <div>
+              <h2 className="rt-modal-title">
+                {isEdit ? 'Chỉnh sửa mã khuyến mãi' : 'Thêm mã khuyến mãi'}
+              </h2>
+              <p className="rt-modal-subtitle">
+                Thông tin được lưu trực tiếp vào cơ sở dữ liệu khuyến mãi.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="rt-modal-close"
+            onClick={onClose}
+            aria-label="Đóng"
+            disabled={loading}
+          >
+            ×
           </button>
         </div>
 
-        <form className="pfm-form" onSubmit={handleSubmit}>
-          <div className="pfm-grid">
-            {/* Code */}
-            <div className="pfm-field pfm-field--full">
-              <label className="pfm-label">Mã Coupon <span className="pfm-required">*</span></label>
-              <input
-                className={`pfm-input ${errors.code ? 'pfm-input--error' : ''}`}
-                type="text"
-                placeholder="VD: SUMMER2024"
-                value={form.code}
-                onChange={(e) => handleChange('code', e.target.value)}
-                disabled={loading}
-              />
-              {errors.code && <span className="pfm-error">{errors.code}</span>}
+        {/* Modal Body */}
+        <div className="rt-modal-body">
+          <div className="rt-modal-grid">
+            {/* Cột 1: THÔNG TIN MÃ & ƯU ĐÃI */}
+            <div className="rt-modal-col">
+              <h3 className="rt-section-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                  <line x1="6" y1="8" x2="10" y2="8" />
+                  <line x1="6" y1="12" x2="18" y2="12" />
+                  <line x1="6" y1="16" x2="14" y2="16" />
+                </svg>
+                Thông tin mã &amp; Ưu đãi
+              </h3>
+
+              {/* Code */}
+              <div className="rt-form-group">
+                <label htmlFor="coupon-code">
+                  Mã Coupon <span className="req">*</span>
+                </label>
+                <input
+                  id="coupon-code"
+                  className={`rt-input ${errors.code ? 'rt-input--error' : ''}`}
+                  type="text"
+                  placeholder="Ví dụ: SUMMER2024, AVORA50"
+                  value={form.code}
+                  onChange={(e) => handleChange('code', e.target.value)}
+                  disabled={loading}
+                  autoFocus
+                />
+                {errors.code && <span className="rt-field-error">{errors.code}</span>}
+              </div>
+
+              {/* Discount Type */}
+              <div className="rt-form-group">
+                <label htmlFor="coupon-discount-type">
+                  Loại giảm giá <span className="req">*</span>
+                </label>
+                <select
+                  id="coupon-discount-type"
+                  className="rt-select"
+                  value={form.discount_type}
+                  onChange={(e) => handleChange('discount_type', e.target.value)}
+                  disabled={loading}
+                >
+                  <option value="PERCENT">Phần trăm (%)</option>
+                  <option value="FIXED">Số tiền cố định (VNĐ)</option>
+                </select>
+              </div>
+
+              {/* Discount Value */}
+              <div className="rt-form-group">
+                <label htmlFor="coupon-discount-val">
+                  Giá trị ưu đãi <span className="req">*</span>
+                  <span className="rt-label-right">
+                    {form.discount_type === 'PERCENT' ? 'Đơn vị: %' : 'Đơn vị: VNĐ'}
+                  </span>
+                </label>
+                <input
+                  id="coupon-discount-val"
+                  className={`rt-input ${errors.discount_value ? 'rt-input--error' : ''}`}
+                  type="number"
+                  min="0"
+                  step={form.discount_type === 'PERCENT' ? '1' : '1000'}
+                  placeholder={form.discount_type === 'PERCENT' ? 'Ví dụ: 15, 20...' : 'Ví dụ: 100000, 200000...'}
+                  value={form.discount_value}
+                  onChange={(e) => handleChange('discount_value', e.target.value)}
+                  disabled={loading}
+                />
+                {errors.discount_value && <span className="rt-field-error">{errors.discount_value}</span>}
+              </div>
+
+              {/* Max Discount */}
+              <div className="rt-form-group">
+                <label htmlFor="coupon-max-discount">
+                  Giảm tối đa (VNĐ)
+                  <span className="rt-label-right">Tùy chọn</span>
+                </label>
+                <input
+                  id="coupon-max-discount"
+                  className={`rt-input ${errors.max_discount_amount ? 'rt-input--error' : ''}`}
+                  type="number"
+                  min="0"
+                  step="1000"
+                  placeholder="Bỏ trống = Không giới hạn trần"
+                  value={form.max_discount_amount}
+                  onChange={(e) => handleChange('max_discount_amount', e.target.value)}
+                  disabled={loading}
+                />
+                {errors.max_discount_amount && <span className="rt-field-error">{errors.max_discount_amount}</span>}
+              </div>
             </div>
 
-            {/* Discount Type */}
-            <div className="pfm-field">
-              <label className="pfm-label">Loại giảm giá <span className="pfm-required">*</span></label>
-              <select
-                className="pfm-input"
-                value={form.discount_type}
-                onChange={(e) => handleChange('discount_type', e.target.value)}
-                disabled={loading}
-              >
-                <option value="PERCENT">Phần trăm (%)</option>
-                <option value="FIXED">Số tiền cố định (VNĐ)</option>
-              </select>
-            </div>
+            {/* Cột 2: ĐIỀU KIỆN & THỜI HẠN */}
+            <div className="rt-modal-col">
+              <h3 className="rt-section-title">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                Điều kiện &amp; Thời hạn
+              </h3>
 
-            {/* Discount Value */}
-            <div className="pfm-field">
-              <label className="pfm-label">
-                Giá trị ưu đãi <span className="pfm-required">*</span>
-                {form.discount_type === 'PERCENT' ? '(%)' : '(VNĐ)'}
-              </label>
-              <input
-                className={`pfm-input ${errors.discount_value ? 'pfm-input--error' : ''}`}
-                type="number"
-                min="0"
-                step={form.discount_type === 'PERCENT' ? '1' : '1000'}
-                placeholder={form.discount_type === 'PERCENT' ? 'VD: 20' : 'VD: 100000'}
-                value={form.discount_value}
-                onChange={(e) => handleChange('discount_value', e.target.value)}
-                disabled={loading}
-              />
-              {errors.discount_value && <span className="pfm-error">{errors.discount_value}</span>}
-            </div>
+              {/* Min Order */}
+              <div className="rt-form-group">
+                <label htmlFor="coupon-min-order">
+                  Đơn hàng tối thiểu (VNĐ)
+                  <span className="rt-label-right">Tùy chọn</span>
+                </label>
+                <input
+                  id="coupon-min-order"
+                  className={`rt-input ${errors.min_order_amount ? 'rt-input--error' : ''}`}
+                  type="number"
+                  min="0"
+                  step="1000"
+                  placeholder="Bỏ trống = Không áp dụng"
+                  value={form.min_order_amount}
+                  onChange={(e) => handleChange('min_order_amount', e.target.value)}
+                  disabled={loading}
+                />
+                {errors.min_order_amount && <span className="rt-field-error">{errors.min_order_amount}</span>}
+              </div>
 
-            {/* Max Discount */}
-            <div className="pfm-field">
-              <label className="pfm-label">Giảm tối đa (VNĐ)</label>
-              <input
-                className={`pfm-input ${errors.max_discount_amount ? 'pfm-input--error' : ''}`}
-                type="number"
-                min="0"
-                step="1000"
-                placeholder="Bỏ trống = không giới hạn"
-                value={form.max_discount_amount}
-                onChange={(e) => handleChange('max_discount_amount', e.target.value)}
-                disabled={loading}
-              />
-              {errors.max_discount_amount && <span className="pfm-error">{errors.max_discount_amount}</span>}
-            </div>
+              {/* Usage Limit */}
+              <div className="rt-form-group">
+                <label htmlFor="coupon-usage-limit">
+                  Giới hạn lượt dùng
+                  <span className="rt-label-right">Tùy chọn</span>
+                </label>
+                <input
+                  id="coupon-usage-limit"
+                  className={`rt-input ${errors.usage_limit ? 'rt-input--error' : ''}`}
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="Bỏ trống = Không giới hạn"
+                  value={form.usage_limit}
+                  onChange={(e) => handleChange('usage_limit', e.target.value)}
+                  disabled={loading}
+                />
+                {errors.usage_limit && <span className="rt-field-error">{errors.usage_limit}</span>}
+              </div>
 
-            {/* Min Order */}
-            <div className="pfm-field">
-              <label className="pfm-label">Đơn hàng tối thiểu (VNĐ)</label>
-              <input
-                className={`pfm-input ${errors.min_order_amount ? 'pfm-input--error' : ''}`}
-                type="number"
-                min="0"
-                step="1000"
-                placeholder="Bỏ trống = không giới hạn"
-                value={form.min_order_amount}
-                onChange={(e) => handleChange('min_order_amount', e.target.value)}
-                disabled={loading}
-              />
-              {errors.min_order_amount && <span className="pfm-error">{errors.min_order_amount}</span>}
-            </div>
+              {/* Valid From */}
+              <div className="rt-form-group">
+                <label htmlFor="coupon-valid-from">
+                  Ngày bắt đầu hiệu lực <span className="req">*</span>
+                </label>
+                <input
+                  id="coupon-valid-from"
+                  className={`rt-input ${errors.valid_from ? 'rt-input--error' : ''}`}
+                  type="date"
+                  value={form.valid_from}
+                  onChange={(e) => handleChange('valid_from', e.target.value)}
+                  disabled={loading}
+                />
+                {errors.valid_from && <span className="rt-field-error">{errors.valid_from}</span>}
+              </div>
 
-            {/* Usage Limit */}
-            <div className="pfm-field">
-              <label className="pfm-label">Giới hạn sử dụng (lượt)</label>
-              <input
-                className={`pfm-input ${errors.usage_limit ? 'pfm-input--error' : ''}`}
-                type="number"
-                min="1"
-                step="1"
-                placeholder="Bỏ trống = không giới hạn"
-                value={form.usage_limit}
-                onChange={(e) => handleChange('usage_limit', e.target.value)}
-                disabled={loading}
-              />
-              {errors.usage_limit && <span className="pfm-error">{errors.usage_limit}</span>}
-            </div>
-
-            {/* Valid From */}
-            <div className="pfm-field">
-              <label className="pfm-label">Ngày bắt đầu <span className="pfm-required">*</span></label>
-              <input
-                className={`pfm-input ${errors.valid_from ? 'pfm-input--error' : ''}`}
-                type="date"
-                value={form.valid_from}
-                onChange={(e) => handleChange('valid_from', e.target.value)}
-                disabled={loading}
-              />
-              {errors.valid_from && <span className="pfm-error">{errors.valid_from}</span>}
-            </div>
-
-            {/* Valid To */}
-            <div className="pfm-field">
-              <label className="pfm-label">Ngày kết thúc <span className="pfm-required">*</span></label>
-              <input
-                className={`pfm-input ${errors.valid_to ? 'pfm-input--error' : ''}`}
-                type="date"
-                value={form.valid_to}
-                min={form.valid_from || undefined}
-                onChange={(e) => handleChange('valid_to', e.target.value)}
-                disabled={loading}
-              />
-              {errors.valid_to && <span className="pfm-error">{errors.valid_to}</span>}
+              {/* Valid To */}
+              <div className="rt-form-group">
+                <label htmlFor="coupon-valid-to">
+                  Ngày kết thúc hiệu lực <span className="req">*</span>
+                </label>
+                <input
+                  id="coupon-valid-to"
+                  className={`rt-input ${errors.valid_to ? 'rt-input--error' : ''}`}
+                  type="date"
+                  value={form.valid_to}
+                  min={form.valid_from || undefined}
+                  onChange={(e) => handleChange('valid_to', e.target.value)}
+                  disabled={loading}
+                />
+                {errors.valid_to && <span className="rt-field-error">{errors.valid_to}</span>}
+              </div>
             </div>
           </div>
+        </div>
 
-          <div className="pfm-actions">
-            <button type="button" className="pfm-btn pfm-btn--cancel" onClick={onClose} disabled={loading}>
-              Hủy bỏ
-            </button>
-            <button type="submit" className="pfm-btn pfm-btn--submit" disabled={loading}>
+        {/* Modal Footer */}
+        <div className="rt-modal-footer">
+          <button
+            type="button"
+            className="rt-btn rt-btn-cancel"
+            onClick={onClose}
+            disabled={loading}
+          >
+            Hủy bỏ
+          </button>
+          <div className="rt-modal-footer-right">
+            <button
+              type="submit"
+              className="rt-btn rt-btn-primary"
+              disabled={loading}
+            >
               {loading ? (
                 <>
-                  <span className="pfm-spinner"></span>
+                  <span className="rt-spinner-sm"></span>
                   Đang xử lý...
                 </>
-              ) : isEdit ? 'Lưu thay đổi' : 'Tạo mã khuyến mãi'}
+              ) : isEdit ? (
+                'Lưu thay đổi'
+              ) : (
+                'Thêm mã khuyến mãi'
+              )}
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
   );
 };
