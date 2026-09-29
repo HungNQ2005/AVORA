@@ -18,7 +18,8 @@ const getUserInitials = (name) => {
 const AdminSidebar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const canManageVenue = ['VEN', 'ADM'].includes(user?.role_code_name);
+  const canManageVenue = ['ADM'].includes(user?.role_code_name);
+  const canManageCoupons = user?.role_code_name === 'BMR';
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const roleCode = user?.role_code_name?.trim().toUpperCase();
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
@@ -172,9 +173,9 @@ const AdminSidebar = () => {
         {/* MARKETING & DOANH THU */}
         <div className="admin-sidebar__group">
           <div className="admin-sidebar__group-title">MARKETING & DOANH THU</div>
-          {canManageVenue && (
+          {canManageCoupons && (
             <NavLink
-              to="/admin/promotions"
+              to="/admin/coupons"
               className={({ isActive }) =>
                 `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
               }
@@ -185,7 +186,7 @@ const AdminSidebar = () => {
                   <line x1="7" y1="7" x2="7.01" y2="7"></line>
                 </svg>
               </span>
-              <span className="admin-sidebar__label">Khuyến mãi & Coupon</span>
+              <span className="admin-sidebar__label">Quản lý mã giảm giá</span>
             </NavLink>
           )}
           <div className="admin-sidebar__link disabled">

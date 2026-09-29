@@ -1,9 +1,14 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchPromotions } from '../../../services/promotionApi';
-import PromotionFormModal from '../components/PromotionFormModal';
+import {
+  createPromotion,
+  deletePromotion,
+  fetchPromotions,
+  updatePromotion,
+} from '../../../services/couponApi';
+import PromotionFormModal from '../components/CouponFormModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
-import './PromotionManagementPage.css';
+import './CouponManagementPage.css';
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 const formatCurrency = (amount) => {
@@ -153,7 +158,7 @@ const PromotionManagementPage = () => {
   }, [filtered, page]);
 
   const handleRowClick = (couponId) => {
-    navigate(`/admin/promotions/${couponId}`);
+    navigate(`/admin/coupons/${couponId}`);
   };
 
   /* ── Modal Handlers ── */
@@ -177,8 +182,11 @@ const PromotionManagementPage = () => {
   const handleFormSubmit = async (formData) => {
     setFormLoading(true);
     try {
-      // TODO: Replace with actual API call when backend is ready
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      if (editingPromotion) {
+        await updatePromotion(editingPromotion.coupon_id, formData);
+      } else {
+        await createPromotion(formData);
+      }
       showToast(editingPromotion ? 'Cập nhật mã khuyến mãi thành công!' : 'Tạo mã khuyến mãi mới thành công!');
       setFormModalOpen(false);
       loadData();
@@ -192,8 +200,7 @@ const PromotionManagementPage = () => {
   const handleDeleteConfirm = async () => {
     setDeleteLoading(true);
     try {
-      // TODO: Replace with actual API call when backend is ready
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      await deletePromotion(deletingPromotion.coupon_id);
       showToast(`Đã vô hiệu hóa mã "${deletingPromotion?.code}".`);
       setDeleteModalOpen(false);
       setDeletingPromotion(null);

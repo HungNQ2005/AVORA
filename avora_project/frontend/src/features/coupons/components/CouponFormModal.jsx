@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import './PromotionFormModal.css';
+import './CouponFormModal.css';
 
 const EMPTY_FORM = {
   code: '',

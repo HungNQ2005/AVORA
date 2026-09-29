@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { fetchPromotionById } from '../../../services/promotionApi';
-import './PromotionDetailPage.css';
+import { fetchPromotionById } from '../../../services/couponApi';
+import './CouponDetailPage.css';
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 const formatCurrency = (amount) => {
@@ -93,7 +93,7 @@ const PromotionDetailPage = () => {
         </svg>
         <h3 className="pd-state-title">Không thể tải dữ liệu</h3>
         <p className="pd-state-desc">{error || 'Không tìm thấy mã khuyến mãi.'}</p>
-        <button className="pd-back-btn" onClick={() => navigate('/admin/promotions')}>
+        <button className="pd-back-btn" onClick={() => navigate('/admin/coupons')}>
           ← Quay lại danh sách khuyến mãi
         </button>
       </div>
@@ -118,7 +118,7 @@ const PromotionDetailPage = () => {
       <nav className="pd-breadcrumb">
         <Link to="/admin" className="pd-breadcrumb__link">Tổng quan</Link>
         <span className="pd-breadcrumb__sep">/</span>
-        <Link to="/admin/promotions" className="pd-breadcrumb__link">Quản lý Khuyến mãi</Link>
+        <Link to="/admin/coupons" className="pd-breadcrumb__link">Quản lý Coupons</Link>
         <span className="pd-breadcrumb__sep">/</span>
         <span className="pd-breadcrumb__current">{coupon.code}</span>
       </nav>
@@ -128,7 +128,7 @@ const PromotionDetailPage = () => {
         <div className="pd-header__left">
           <button
             className="pd-back-nav-btn"
-            onClick={() => navigate('/admin/promotions')}
+            onClick={() => navigate('/admin/coupons')}
             title="Quay lại danh sách"
           >
             ←

@@ -13,8 +13,8 @@ import HotelDetailPage from './features/hotels/HotelDetailPage';
 import RoomTypeManagementPage from './features/room_types/pages/RoomTypeManagementPage';
 import RoomTypeDetailPage from './features/room_types/pages/RoomTypeDetailPage';
 import AmenityManagementPage from './features/amenities/pages/AmenityManagementPage';
-import PromotionManagementPage from './features/promotions/pages/PromotionManagementPage';
-import PromotionDetailPage from './features/promotions/pages/PromotionDetailPage';
+import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
+import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 /**
@@ -44,13 +44,26 @@ const VenueManagerRoute = ({ children }) => {
 };
 
 /**
+ * Guard coupon management routes for Business Managers only.
+ */
+const BusinessManagerRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  if (user.role_code_name !== 'BMR') return <Navigate to="/" replace />;
+
+  return children;
+};
+
+/**
  * Layout wrapper for public/customer-facing routes with Header & Footer.
  */
 function CustomerLayout() {
   return (
     <MainLayout>
       <Outlet />
-    </MainLayout> 
+    </MainLayout>
   );
 }
 
@@ -117,19 +130,19 @@ function App() {
               }
             />
             <Route
-              path="promotions"
+              path="coupons"
               element={
-                <VenueManagerRoute>
-                  <PromotionManagementPage />
-                </VenueManagerRoute>
+                <BusinessManagerRoute>
+                  <CouponManagementPage />
+                </BusinessManagerRoute>
               }
             />
             <Route
-              path="promotions/:id"
+              path="coupons/:id"
               element={
-                <VenueManagerRoute>
-                  <PromotionDetailPage />
-                </VenueManagerRoute>
+                <BusinessManagerRoute>
+                  <CouponDetailPage />
+                </BusinessManagerRoute>
               }
             />
           </Route>
@@ -138,7 +151,7 @@ function App() {
           <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
           <Route path="/amenities" element={<Navigate to="/admin/amenities" replace />} />
           <Route path="/facilities" element={<Navigate to="/admin/facilities" replace />} />
-          <Route path="/promotions" element={<Navigate to="/admin/promotions" replace />} />
+          <Route path="/coupons" element={<Navigate to="/admin/coupons" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
