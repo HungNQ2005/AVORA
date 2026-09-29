@@ -410,7 +410,9 @@ const HotelSearchPage = () => {
           message: 'Không có loại phòng nào như vậy. Sức chứa tối đa của 1 phòng là 5 người (2 giường tiêu chuẩn × 2 người = 4 người, có thêm 1 giường phụ × 1 người = tối đa 5 người). Không được phép đặt 6 người vào 1 phòng này.',
         });
       } else {
-        const hotelData = result.data?.hotels || [];
+        const hotelData = (result.data?.hotels || []).filter(
+          (h) => !h.hotel_status || h.hotel_status === 'ACTIVE'
+        );
         const stats = result.data?.filterStats || {};
 
         setHotels(hotelData);

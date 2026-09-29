@@ -36,8 +36,9 @@ const getHotels = async () => {
 
   const { data, error } = await supabase
     .from('m_hotel')
-    .select('hotel_id, name, address, star_rating')
+    .select('hotel_id, name, address, star_rating, hotel_status')
     .eq('is_deleted', false)
+    .eq('hotel_status', 'ACTIVE')
     .order('name', { ascending: true });
 
   if (error) {
@@ -261,10 +262,10 @@ const getRoomTypes = async (filters = {}) => {
     standard_compliance_rate: 100,
     best_seller: bestSellerItem
       ? {
-          room_type_id: bestSellerItem.room_type_id,
-          type_name: bestSellerItem.type_name,
-          occupancy_rate: '94.8%',
-        }
+        room_type_id: bestSellerItem.room_type_id,
+        type_name: bestSellerItem.type_name,
+        occupancy_rate: '94.8%',
+      }
       : null,
     adr,
     adr_growth: '+8.4%',

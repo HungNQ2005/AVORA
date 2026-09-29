@@ -165,11 +165,13 @@ const searchHotels = async (params = {}) => {
       star_quality,
       lat,
       lng,
+      hotel_status,
       is_deleted,
       created_at,
       updated_at
     `)
-    .or('is_deleted.is.null,is_deleted.eq.false');
+    .or('is_deleted.is.null,is_deleted.eq.false')
+    .eq('hotel_status', 'ACTIVE');
 
   // Filter by destination if provided (skip filter if searching all of Vietnam)
   if (destination && destination.trim() && !isAllVietnam) {
@@ -441,6 +443,7 @@ const searchHotels = async (params = {}) => {
       star_rating: reviewStats.score,
       reviews_count: reviewStats.count,
       score_label: scoreLabel,
+      hotel_status: hotel.hotel_status || 'ACTIVE',
       lat: hotel.lat,
       lng: hotel.lng,
       images: images.map((i) => i.image_url),
@@ -643,6 +646,8 @@ const getHotelById = async (hotelId, options = {}) => {
       .from('m_hotel')
       .select('*')
       .eq('hotel_id', String(hotelId).trim())
+      .eq('hotel_status', 'ACTIVE')
+      .or('is_deleted.is.null,is_deleted.eq.false')
       .maybeSingle();
 
     if (data) hotel = data;
@@ -653,6 +658,7 @@ const getHotelById = async (hotelId, options = {}) => {
     const { data: firstHotel } = await supabase
       .from('m_hotel')
       .select('*')
+      .eq('hotel_status', 'ACTIVE')
       .or('is_deleted.is.null,is_deleted.eq.false')
       .limit(1)
       .maybeSingle();
@@ -866,6 +872,7 @@ const getHotelById = async (hotelId, options = {}) => {
     star_rating: finalScore,
     reviews_count: reviews.length,
     score_label: scoreLabel,
+    hotel_status: hotel.hotel_status || 'ACTIVE',
     lat: hotel.lat,
     lng: hotel.lng,
     facilities: facilities,
