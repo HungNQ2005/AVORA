@@ -143,7 +143,7 @@ function App() {
             <Route
               path="coupons/:id"
               element={
-                <BusinessManagerRout>
+                <BusinessManagerRoute>
                   <CouponDetailPage />
                 </BusinessManagerRoute>
               }
