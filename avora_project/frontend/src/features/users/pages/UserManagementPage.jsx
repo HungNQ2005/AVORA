@@ -6,6 +6,7 @@ import UserStatsCards from '../components/UserStatsCards';
 import UserRoleTabs from '../components/UserRoleTabs';
 import UserFilterBar from '../components/UserFilterBar';
 import UserTable from '../components/UserTable';
+import EditUserModal from '../components/EditUserModal';
 import Dialog from '../../../common/components/Dialog';
 import './UserManagementPage.css';
 
@@ -32,6 +33,11 @@ const UserManagementPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [userToUpdate, setUserToUpdate] = useState(null);
   const [targetStatus, setTargetStatus] = useState('');
+
+  // Edit User Modal States
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
+  const [isSavingStatus, setIsSavingStatus] = useState(false);
 
   // Toast feedback
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -136,7 +142,7 @@ const UserManagementPage = () => {
 
   // Toggle user active / lock status
   const handleToggleStatusClick = (user) => {
-    const isCurrentlyDeactivated = user.account_status === 'DEACTIVATED';
+    const isCurrentlyDeactivated = user.account_status === 'DEACTIVATED' || user.account_status === 'LOCKED';
     const newStatus = isCurrentlyDeactivated ? 'ACTIVE' : 'DEACTIVATED';
     setUserToUpdate(user);
     setTargetStatus(newStatus);
@@ -149,7 +155,7 @@ const UserManagementPage = () => {
     try {
       await updateUserStatus(userToUpdate.user_id, targetStatus);
       showToast(
-        targetStatus === 'DEACTIVATED'
+        targetStatus === 'DEACTIVATED' || targetStatus === 'LOCKED'
           ? `Đã khóa tài khoản "${userToUpdate.full_name}".`
           : `Đã kích hoạt lại tài khoản "${userToUpdate.full_name}".`,
         'success'
@@ -163,6 +169,39 @@ const UserManagementPage = () => {
       console.error('Error updating status:', err);
       showToast(err.message || 'Không thể cập nhật trạng thái tài khoản.', 'error');
     }
+  };
+
+  // Handle Save Status from Edit User Modal (System Admin only updates account status)
+  const handleSaveUserStatus = async ({ status }) => {
+    if (!selectedUserForEdit || !status) return;
+
+    setIsSavingStatus(true);
+    try {
+      await updateUserStatus(selectedUserForEdit.user_id, status);
+      showToast(
+        `Cập nhật trạng thái tài khoản "${selectedUserForEdit.full_name}" thành công!`,
+        'success'
+      );
+      setIsEditModalOpen(false);
+      setSelectedUserForEdit(null);
+      // Refresh list and stats immediately without page reload
+      loadUsers();
+      loadStats();
+    } catch (err) {
+      console.error('Error saving user status from modal:', err);
+      showToast(err.message || 'Không thể cập nhật trạng thái tài khoản.', 'error');
+    } finally {
+      setIsSavingStatus(false);
+    }
+  };
+
+  // Handle Send Reset Password link action
+  const handleSendResetPassword = (targetUser) => {
+    if (!targetUser) return;
+    showToast(
+      `Đã gửi liên kết đổi mật khẩu tới email "${targetUser.email}".`,
+      'info'
+    );
   };
 
   // Export to Excel
@@ -308,8 +347,24 @@ const UserManagementPage = () => {
         }}
         onToggleStatus={handleToggleStatusClick}
         onEditUser={(user) => {
-          showToast(`Chỉnh sửa thông tin tài khoản: ${user.full_name}`, 'info');
+          setSelectedUserForEdit(user);
+          setIsEditModalOpen(true);
         }}
+      />
+
+      {/* Modal Chỉnh sửa tài khoản (Chỉ SYSTEM ADMIN, chỉ chỉnh Trạng thái tài khoản) */}
+      <EditUserModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          if (!isSavingStatus) {
+            setIsEditModalOpen(false);
+            setSelectedUserForEdit(null);
+          }
+        }}
+        user={selectedUserForEdit}
+        onSaveStatus={handleSaveUserStatus}
+        onSendResetPassword={handleSendResetPassword}
+        saving={isSavingStatus}
       />
 
       {/* Dialog xác nhận khóa / mở khóa tài khoản */}

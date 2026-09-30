@@ -341,14 +341,40 @@
   border-color: #fecaca;
 }
 
-.user-action-btn--unlock {
-  color: #ef4444;
-}
-
 .user-action-btn--unlock:hover {
   background: #ecfdf5;
   color: #10b981;
   border-color: #a7f3d0;
+}
+
+.user-btn-quick-unlock {
+  background: #002244;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.user-btn-quick-unlock:hover {
+  background: #0a3666;
+}
+
+.user-status-lock-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  cursor: default;
+  user-select: none;
 }
 
 /* Pagination Footer */

@@ -227,6 +227,12 @@ const UserTable = ({
                           <div className="user-name-row">
                             <span className="user-full-name">{u.full_name}</span>
                             {u.is_new && <span className="user-badge-new">MỚI</span>}
+                            {(u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
+                              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" title="Tài khoản đang bị khóa">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
+                            )}
                           </div>
                           <span className="user-emp-code">{u.employee_code}</span>
                         </div>
@@ -319,14 +325,14 @@ const UserTable = ({
                           <span className="user-status-dot">●</span> Đang hoạt động
                         </span>
                       )}
-                      {u.account_status === 'VERIFYING' && (
+                      {(u.account_status === 'VERIFYING' || u.account_status === 'PENDING') && (
                         <span className="user-status-pill user-status-pill--pending">
                           <span className="user-status-dot">●</span> Chờ kích hoạt
                         </span>
                       )}
-                      {u.account_status === 'DEACTIVATED' && (
+                      {(u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
                         <span className="user-status-pill user-status-pill--locked">
-                          <span className="user-status-dot">●</span> Đang khóa
+                          <span className="user-status-dot">●</span> Đang bị khóa
                         </span>
                       )}
                     </td>
@@ -334,6 +340,20 @@ const UserTable = ({
                     {/* Thao tác */}
                     <td>
                       <div className="user-action-buttons">
+                        {(u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
+                          <button
+                            type="button"
+                            className="user-btn-quick-unlock"
+                            title="Mở khóa tài khoản"
+                            onClick={() => onToggleStatus(u)}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                            <span>Mở khóa</span>
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="user-action-btn"
@@ -345,24 +365,35 @@ const UserTable = ({
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                           </svg>
                         </button>
-                        <button
-                          type="button"
-                          className={`user-action-btn ${u.account_status === 'DEACTIVATED' ? 'user-action-btn--unlock' : 'user-action-btn--lock'}`}
-                          title={u.account_status === 'DEACTIVATED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
-                          onClick={() => onToggleStatus(u)}
+                        {/* Icon ổ khóa ở cuối mỗi dòng CHỈ DÙNG ĐỂ HIỂN THỊ trạng thái tài khoản */}
+                        <span
+                          className="user-status-lock-indicator"
+                          title={
+                            u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED'
+                              ? 'Tài khoản đang bị khóa'
+                              : u.account_status === 'VERIFYING' || u.account_status === 'PENDING'
+                              ? 'Tài khoản đang chờ duyệt'
+                              : 'Tài khoản đang hoạt động'
+                          }
+                          aria-label="Trạng thái tài khoản"
                         >
-                          {u.account_status === 'DEACTIVATED' ? (
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          {u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED' ? (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                          ) : u.account_status === 'VERIFYING' || u.account_status === 'PENDING' ? (
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
                               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                               <path d="M7 11V7a5 5 0 0 1 9.9-1" />
                             </svg>
                           ) : (
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
                               <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
                             </svg>
                           )}
-                        </button>
+                        </span>
                       </div>
                     </td>
                   </tr>

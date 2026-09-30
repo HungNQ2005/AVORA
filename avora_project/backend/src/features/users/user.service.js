@@ -192,11 +192,19 @@ const getUserStats = async () => {
  * Update user account status (e.g. approve, lock, activate).
  */
 const updateUserStatus = async (userId, newStatus) => {
-  const validStatuses = ['ACTIVE', 'VERIFYING', 'DEACTIVATED'];
-  const statusUpper = (newStatus || '').toUpperCase();
+  const STATUS_MAP = {
+    ACTIVE: 'ACTIVE',
+    PENDING: 'VERIFYING',
+    VERIFYING: 'VERIFYING',
+    LOCKED: 'DEACTIVATED',
+    DEACTIVATED: 'DEACTIVATED',
+  };
 
-  if (!validStatuses.includes(statusUpper)) {
-    const err = new Error('Trạng thái không hợp lệ. Chọn ACTIVE, VERIFYING, hoặc DEACTIVATED.');
+  const statusUpper = (newStatus || '').toUpperCase();
+  const resolvedStatus = STATUS_MAP[statusUpper];
+
+  if (!resolvedStatus) {
+    const err = new Error('Trạng thái không hợp lệ. Chọn ACTIVE, PENDING, hoặc LOCKED.');
     err.statusCode = 400;
     throw err;
   }
@@ -204,7 +212,7 @@ const updateUserStatus = async (userId, newStatus) => {
   const { data: user, error } = await supabase
     .from('m_user')
     .update({
-      account_status: statusUpper,
+      account_status: resolvedStatus,
       updated_at: new Date().toISOString(),
     })
     .eq('user_id', userId)
