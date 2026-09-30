@@ -92,10 +92,10 @@ const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
             </div>
             <div>
               <h2 className="rt-modal-title">
-                {isEdit ? 'Chỉnh sửa coupon' : 'Thêm coupon'}
+                {isEdit ? 'Chỉnh sửa mã khuyến mãi' : 'Thêm mã khuyến mãi'}
               </h2>
               <p className="rt-modal-subtitle">
-                Thông tin được lưu trực tiếp vào danh sách coupons.
+                Thông tin được lưu trực tiếp vào danh sách mã khuyến mãi.
               </p>
             </div>
           </div>
@@ -122,13 +122,13 @@ const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
                   <line x1="6" y1="12" x2="18" y2="12" />
                   <line x1="6" y1="16" x2="14" y2="16" />
                 </svg>
-                Thông tin mã &amp; Ưu đãi
+                Thông tin mã khuyến mãi &amp; ưu đãi
               </h3>
 
               {/* Code */}
               <div className="rt-form-group">
                 <label htmlFor="coupon-code">
-                  Mã Coupon <span className="req">*</span>
+                  Mã khuyến mãi <span className="req">*</span>
                 </label>
                 <input
                   id="coupon-code"

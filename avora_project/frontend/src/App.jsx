@@ -14,6 +14,9 @@ import HotelDetailPage from './features/hotels/HotelDetailPage';
 import RoomTypeManagementPage from './features/room_types/pages/RoomTypeManagementPage';
 import RoomTypeDetailPage from './features/room_types/pages/RoomTypeDetailPage';
 import AmenityManagementPage from './features/amenities/pages/AmenityManagementPage';
+import UserManagementPage from './features/users/pages/UserManagementPage';
+import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
+import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 /**
@@ -43,6 +46,19 @@ const VenueManagerRoute = ({ children }) => {
 };
 
 /**
+ * Guard route for system admins only.
+ */
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  if (user.role_code_name !== 'ADM') return <Navigate to="/" replace />;
+
+  return children;
+};
+
+/**
  * Guard coupon management routes for Business Managers only.
  */
 const BusinessManagerRoute = ({ children }) => {
@@ -53,6 +69,20 @@ const BusinessManagerRoute = ({ children }) => {
   if (user.role_code_name !== 'BMR') return <Navigate to="/" replace />;
 
   return children;
+};
+
+/**
+ * Redirect /admin to the appropriate dashboard based on the logged-in role.
+ */
+const AdminDashboardRedirect = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  if (user.role_code_name === 'BMR') return <Navigate to="/admin/coupons" replace />;
+  if (['VEN', 'ADM'].includes(user.role_code_name)) return <Navigate to="/admin/room-types" replace />;
+
+  return <Navigate to="/" replace />;
 };
 
 /**
@@ -96,7 +126,15 @@ function App() {
 
           {/* Admin Management Portal (wrapped in AdminLayout with Sidebar) */}
           <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<Navigate to="/admin/room-types" replace />} />
+            <Route index element={<AdminDashboardRedirect />} />
+            <Route
+              path="users"
+              element={
+                <AdminRoute>
+                  <UserManagementPage />
+                </AdminRoute>
+              }
+            />
             <Route
               path="room-types"
               element={
@@ -127,6 +165,22 @@ function App() {
                 <VenueManagerRoute>
                   <AmenityManagementPage />
                 </VenueManagerRoute>
+              }
+            />
+            <Route
+              path="coupons"
+              element={
+                <BusinessManagerRoute>
+                  <CouponManagementPage />
+                </BusinessManagerRoute>
+              }
+            />
+            <Route
+              path="coupons/:id"
+              element={
+                <BusinessManagerRoute>
+                  <CouponDetailPage />
+                </BusinessManagerRoute>
               }
             />
           </Route>

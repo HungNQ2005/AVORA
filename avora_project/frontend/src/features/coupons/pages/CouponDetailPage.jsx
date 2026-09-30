@@ -118,7 +118,7 @@ const CouponDetailPage = () => {
       <nav className="pd-breadcrumb">
         <Link to="/admin" className="pd-breadcrumb__link">Tổng quan</Link>
         <span className="pd-breadcrumb__sep">/</span>
-        <Link to="/admin/coupons" className="pd-breadcrumb__link">Quản lý Coupons</Link>
+        <Link to="/admin/coupons" className="pd-breadcrumb__link">Quản lý mã khuyến mãi</Link>
         <span className="pd-breadcrumb__sep">/</span>
         <span className="pd-breadcrumb__current">{coupon.code}</span>
       </nav>

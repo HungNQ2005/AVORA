@@ -221,17 +221,17 @@ const CouponManagementPage = () => {
       <nav className="promo-breadcrumb">
         <span>Marketing &amp; Doanh thu</span>
         <span className="promo-breadcrumb__sep">&gt;</span>
-        <span className="promo-breadcrumb__active">Quản lý Coupons</span>
+        <span className="promo-breadcrumb__active">Quản lý mã khuyến mãi</span>
       </nav>
 
       {/* Header */}
       <div className="promo-page__header">
         <div className="promo-page__title-area">
           <div className="promo-page__title-row">
-            <h1 className="promo-page__title">Quản lý Coupons</h1>
+            <h1 className="promo-page__title">Quản lý mã khuyến mãi</h1>
           </div>
           <p className="promo-page__subtitle">
-            Quản lý coupon và ưu đãi trên hệ thống đặt phòng.
+            Quản lý mã khuyến mãi và ưu đãi trên hệ thống đặt phòng.
           </p>
         </div>
 
@@ -278,7 +278,7 @@ const CouponManagementPage = () => {
       {/* Stats */}
       <div className="promo-stats-grid">
         <StatCard
-          label="Tổng số Coupons"
+          label="Tổng số mã khuyến mãi"
           value={loading ? '—' : (stats?.total_coupons ?? 0)}
           sub={`${stats?.active_coupons ?? 0} đang hoạt động`}
           accent="blue"
@@ -357,7 +357,7 @@ const CouponManagementPage = () => {
             <input
               className="promo-search-box__input"
               type="text"
-              placeholder="Tìm mã coupon..."
+              placeholder="Tìm mã khuyến mãi..."
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             />
@@ -407,7 +407,7 @@ const CouponManagementPage = () => {
           <table className="promo-table">
             <thead>
               <tr>
-                <th>Mã Coupon</th>
+                <th>Mã khuyến mãi</th>
                 <th>Loại giảm giá</th>
                 <th>Giá trị ưu đãi</th>
                 <th>Điều kiện áp dụng</th>
