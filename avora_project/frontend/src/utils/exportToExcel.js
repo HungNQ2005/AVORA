@@ -403,3 +403,77 @@ export const exportAmenitiesToExcel = async (amenities, customFilename) => {
  * Backward compatibility alias
  */
 export const exportAmenitiesToCSV = exportAmenitiesToExcel;
+
+/**
+ * Export users list to Excel (.xlsx) file.
+ */
+export const exportUsersToExcel = async (users = [], customFilename) => {
+  if (!users || users.length === 0) {
+    return { success: false, message: 'Không có dữ liệu người dùng để xuất file.' };
+  }
+
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const filename = customFilename || `AVORA_Danh_sach_nguoi_dung_${dateStr}.xlsx`;
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'AVORA System Management';
+    const worksheet = workbook.addWorksheet('Danh sách người dùng', {
+      properties: { defaultRowHeight: 22 },
+    });
+
+    worksheet.columns = [
+      { header: 'STT', key: 'stt', width: 8 },
+      { header: 'Mã NV', key: 'code', width: 16 },
+      { header: 'Họ và tên', key: 'name', width: 26 },
+      { header: 'Email', key: 'email', width: 32 },
+      { header: 'Số điện thoại', key: 'phone', width: 18 },
+      { header: 'Vai trò', key: 'role', width: 20 },
+      { header: 'Cơ sở trực thuộc', key: 'hotel', width: 28 },
+      { header: 'Trạng thái', key: 'status', width: 18 },
+      { header: 'Ngày tạo', key: 'created_at', width: 20 },
+    ];
+
+    // Style Header Row
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0B1E3F' },
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    users.forEach((u, idx) => {
+      worksheet.addRow({
+        stt: idx + 1,
+        code: u.employee_code || '-',
+        name: u.full_name || 'Chưa cập nhật',
+        email: u.email || '-',
+        phone: u.phone || '-',
+        role: u.role_label || u.role_code || '-',
+        hotel: u.hotel?.name || 'Toàn hệ thống',
+        status: u.account_status === 'ACTIVE' ? 'Đang hoạt động' : u.account_status === 'VERIFYING' ? 'Chờ kích hoạt' : 'Đang khóa',
+        created_at: u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '-',
+      });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    return { success: true, count: users.length, filename };
+  } catch (error) {
+    console.error('Error exporting users to Excel:', error);
+    return { success: false, message: error.message || 'Lỗi khi xuất file Excel.' };
+  }
+};
+

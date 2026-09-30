@@ -60,7 +60,12 @@ const AdminSidebar = () => {
         {/* NGƯỜI DÙNG & PHÂN QUYỀN */}
         <div className="admin-sidebar__group">
           <div className="admin-sidebar__group-title">NGƯỜI DÙNG & PHÂN QUYỀN</div>
-          <div className="admin-sidebar__link disabled">
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) =>
+              `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+            }
+          >
             <span className="admin-sidebar__icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -70,7 +75,7 @@ const AdminSidebar = () => {
               </svg>
             </span>
             <span className="admin-sidebar__label">Quản lý người dùng</span>
-          </div>
+          </NavLink>
           <div className="admin-sidebar__link disabled">
             <span className="admin-sidebar__icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

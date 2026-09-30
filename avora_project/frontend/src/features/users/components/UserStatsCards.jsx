@@ -5,12 +5,12 @@ import './UserStatsCards.css';
  * 4 Dashboard KPI Cards matching the exact layout & styling in the reference image.
  */
 const UserStatsCards = ({ stats = {} }) => {
-  const total = stats.totalUsers ?? 128;
-  const active = stats.activeUsers ?? 116;
-  const pending = stats.pendingUsers ?? 8;
-  const locked = stats.lockedUsers ?? 4;
+  const total = typeof stats.totalUsers === 'number' ? stats.totalUsers : 0;
+  const active = typeof stats.activeUsers === 'number' ? stats.activeUsers : 0;
+  const pending = typeof stats.pendingUsers === 'number' ? stats.pendingUsers : 0;
+  const locked = typeof stats.lockedUsers === 'number' ? stats.lockedUsers : 0;
 
-  const onlineRate = total > 0 ? ((active / total) * 100).toFixed(1) : '90.6';
+  const onlineRate = total > 0 ? ((active / total) * 100).toFixed(1) : '0.0';
 
   return (
     <div className="user-stats-grid">

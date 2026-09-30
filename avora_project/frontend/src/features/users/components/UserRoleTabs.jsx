@@ -15,7 +15,7 @@ const UserRoleTabs = ({ currentRole = 'ALL', onRoleChange, roleCounts = {}, tota
     {
       id: 'VEN',
       label: 'Hotel Manager',
-      count: roleCounts.hotelManager ?? 42,
+      count: roleCounts.hotelManager ?? 0,
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
@@ -25,7 +25,7 @@ const UserRoleTabs = ({ currentRole = 'ALL', onRoleChange, roleCounts = {}, tota
     {
       id: 'BMR',
       label: 'Business Manager',
-      count: roleCounts.businessManager ?? 28,
+      count: roleCounts.businessManager ?? 0,
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
@@ -36,7 +36,7 @@ const UserRoleTabs = ({ currentRole = 'ALL', onRoleChange, roleCounts = {}, tota
     {
       id: 'CUS',
       label: 'Customer',
-      count: roleCounts.customer ?? 52,
+      count: roleCounts.customer ?? 0,
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -47,7 +47,7 @@ const UserRoleTabs = ({ currentRole = 'ALL', onRoleChange, roleCounts = {}, tota
     {
       id: 'ADM',
       label: 'System Admin',
-      count: roleCounts.systemAdmin ?? 6,
+      count: roleCounts.systemAdmin ?? 0,
       icon: (
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <circle cx="12" cy="12" r="3" />

@@ -13,6 +13,7 @@ import HotelDetailPage from './features/hotels/HotelDetailPage';
 import RoomTypeManagementPage from './features/room_types/pages/RoomTypeManagementPage';
 import RoomTypeDetailPage from './features/room_types/pages/RoomTypeDetailPage';
 import AmenityManagementPage from './features/amenities/pages/AmenityManagementPage';
+import UserManagementPage from './features/users/pages/UserManagementPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 /**
@@ -114,12 +115,21 @@ function App() {
                 </VenueManagerRoute>
               }
             />
+            <Route
+              path="users"
+              element={
+                <VenueManagerRoute>
+                  <UserManagementPage />
+                </VenueManagerRoute>
+              }
+            />
           </Route>
 
           {/* Friendly redirect aliases for admin paths */}
           <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
           <Route path="/amenities" element={<Navigate to="/admin/amenities" replace />} />
           <Route path="/facilities" element={<Navigate to="/admin/facilities" replace />} />
+          <Route path="/users" element={<Navigate to="/admin/users" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
