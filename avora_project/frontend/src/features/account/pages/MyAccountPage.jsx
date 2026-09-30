@@ -436,7 +436,7 @@ const MyAccountPage = () => {
             <span className="breadcrumb-link" onClick={() => switchTab('info')}>Tài khoản của tôi</span>
             <span className="breadcrumb-separator">&gt;</span>
             <span className="breadcrumb-current">
-              {activeTab === 'favorites' ? 'Chỗ nghỉ đã lưu' : activeTab === 'security' ? 'Bảo mật tài khoản' : 'Quản lý hồ sơ'}
+              {activeTab === 'favorites' ? 'Chỗ nghỉ yêu thích' : activeTab === 'security' ? 'Bảo mật tài khoản' : 'Quản lý hồ sơ'}
             </span>
           </nav>
 
@@ -511,7 +511,7 @@ const MyAccountPage = () => {
               onClick={() => switchTab('favorites')}
             >
               <HeartIcon />
-              <span>Chỗ nghỉ đã lưu ({savedAccommodations.length})</span>
+              <span>Chỗ nghỉ yêu thích ({savedAccommodations.length})</span>
             </button>
 
             <button
@@ -539,7 +539,7 @@ const MyAccountPage = () => {
 
           <div className="stat-card stat-card--pink" onClick={() => switchTab('favorites')}>
             <div className="stat-card__label-row">
-              <span className="stat-card__label">Chỗ nghỉ đã lưu</span>
+              <span className="stat-card__label">Chỗ nghỉ yêu thích</span>
               <span className="stat-card__icon"><HeartIcon filled={savedAccommodations.length > 0} /></span>
             </div>
             <div className="stat-card__value">{savedAccommodationsCountDisplay}</div>
@@ -577,7 +577,7 @@ const MyAccountPage = () => {
               >
                 <div className="profile-nav-item__left">
                   <HeartIcon />
-                  <span>Chỗ nghỉ đã lưu</span>
+                  <span>Chỗ nghỉ yêu thích</span>
                 </div>
                 <span className="profile-nav-badge">{savedAccommodations.length}</span>
               </button>
@@ -817,17 +817,17 @@ const MyAccountPage = () => {
               </div>
             )}
 
-            {/* ════ TAB 2: CHỖ NGHỈ ĐÃ LƯU ════ */}
+            {/* ════ TAB 2: CHỖ NGHỈ YÊU THÍCH ════ */}
             {activeTab === 'favorites' && (
               <div className="profile-card profile-favorites-card">
                 <div className="profile-card__header">
                   <div>
                     <div className="profile-card__title-row">
-                      <h2 className="profile-card__title">Chỗ nghỉ đã lưu</h2>
+                      <h2 className="profile-card__title">Chỗ nghỉ yêu thích</h2>
                       <span className="saved-count-pill">{savedAccommodations.length} chỗ nghỉ</span>
                     </div>
                     <p className="profile-card__subtitle">
-                      Các khách sạn và khu nghỉ dưỡng bạn đã lưu lại để chuẩn bị cho kỳ nghỉ tiếp theo.
+                      Các khách sạn và khu nghỉ dưỡng bạn yêu thích để chuẩn bị cho kỳ nghỉ tiếp theo.
                     </p>
                   </div>
 
@@ -940,7 +940,7 @@ const MyAccountPage = () => {
                     </div>
                     <div className="saved-empty-state__title">Chưa có</div>
                     <p className="saved-empty-state__desc">
-                      Bạn chưa có chỗ nghỉ nào được lưu trong tài khoản. Hãy khám phá và lưu lại những điểm lưu trú yêu thích!
+                      Bạn chưa có chỗ nghỉ nào trong danh sách yêu thích. Hãy khám phá và thêm vào danh sách yêu thích!
                     </p>
                     <button
                       type="button"

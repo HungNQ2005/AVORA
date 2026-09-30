@@ -444,7 +444,7 @@ const FavoritesPage = () => {
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
             >
-              <option value="recent">Đã lưu gần đây nhất</option>
+              <option value="recent">Yêu thích gần đây nhất</option>
               <option value="price_asc">Giá thấp đến cao</option>
               <option value="price_desc">Giá cao đến thấp</option>
               <option value="rating">Đánh giá cao nhất</option>
@@ -599,7 +599,7 @@ const FavoritesPage = () => {
                       {hotel.room_highlight && (
                         <div className="fav-card__room-highlight">
                           <div className="fav-room-highlight__header">
-                            HẠNG PHÒNG ĐÃ LƯU CỤ THỂ:
+                            HẠNG PHÒNG YÊU THÍCH CỤ THỂ:
                           </div>
                           <div className="fav-room-highlight__title">
                             {hotel.room_highlight.name || hotel.room_highlight.title}
@@ -609,7 +609,7 @@ const FavoritesPage = () => {
                           </div>
                           <div className="fav-room-highlight__guarantee">
                             <CheckIcon />
-                            <span>Bảo đảm giá độc quyền cho phòng đã lưu</span>
+                            <span>Bảo đảm giá độc quyền cho phòng yêu thích</span>
                           </div>
                         </div>
                       )}
@@ -719,14 +719,14 @@ const FavoritesPage = () => {
               </div>
             </div>
 
-            {/* Widget 2: Bản đồ các địa điểm đã lưu */}
+            {/* Widget 2: Bản đồ các địa điểm yêu thích */}
             <div className="fav-widget">
               <div className="fav-widget__header-row">
                 <div className="fav-widget__title-group">
                   <span className="fav-widget__icon-map">
                     <MapIcon />
                   </span>
-                  <h3 className="fav-widget__title">Bản đồ các địa điểm đã lưu</h3>
+                  <h3 className="fav-widget__title">Bản đồ các địa điểm yêu thích</h3>
                 </div>
               </div>
 
