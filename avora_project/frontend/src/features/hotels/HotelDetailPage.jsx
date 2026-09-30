@@ -325,7 +325,7 @@ const HotelDetailPage = () => {
     const targetObj = hotel || { hotel_id: id };
     const nowSaved = toggleFavoriteHotel(targetObj);
     setIsFavorited(nowSaved);
-    setToastMsg(nowSaved ? 'Đã lưu khách sạn vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích');
+    setToastMsg(nowSaved ? 'Đã thêm khách sạn vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích');
   };
 
   const handleOpenLightbox = (index = 0) => {
@@ -509,7 +509,7 @@ const HotelDetailPage = () => {
                   onClick={handleFavoriteClick}
                 >
                   <HeartIcon filled={isFavorited} />
-                  <span>{isFavorited ? 'Đã lưu' : 'Lưu'}</span>
+                  <span>{isFavorited ? 'Đã yêu thích' : 'Yêu thích'}</span>
                 </button>
 
                 <button

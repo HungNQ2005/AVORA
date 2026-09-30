@@ -388,8 +388,8 @@ const Header = ({
               >
                 <HeartIcon />
                 <span className="avora-header__two-line">
-                  <span>Đã</span>
-                  <span>Lưu</span>
+                  <span>Yêu</span>
+                  <span>thích</span>
                 </span>
                 <span className="avora-header__count-badge">{internalSavedCount}</span>
               </button>
