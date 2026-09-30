@@ -80,3 +80,31 @@ export const deactivateAccount = async (otp) => {
   const res = await api.delete('/account/deactivate', { data: { otp } });
   return res.data;
 };
+
+/**
+ * Request a password reset link to be sent to user email.
+ * @param {string} email
+ */
+export const requestPasswordReset = async (email) => {
+  const res = await api.post('/auth/forgot-password', { email });
+  return res.data;
+};
+
+/**
+ * Verify if a reset password token is valid before rendering form.
+ * @param {string} token
+ */
+export const verifyResetToken = async (token) => {
+  const res = await api.get(`/auth/verify-reset-token/${token}`);
+  return res.data;
+};
+
+/**
+ * Reset password using one-time token.
+ * @param {string} token
+ * @param {string} new_password
+ */
+export const resetPasswordWithToken = async (token, new_password) => {
+  const res = await api.post('/auth/reset-password', { token, new_password });
+  return res.data;
+};

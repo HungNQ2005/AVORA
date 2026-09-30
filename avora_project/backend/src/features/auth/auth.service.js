@@ -2,6 +2,7 @@
 
 const supabase = require('../../config/supabaseClient');
 const otpService = require('../otp/otp.service');
+const { sendMail } = require('../../common/services/email/email.service');
 const { hashPassword, comparePassword } = require('../../utils/passwordHelper');
 const { signJwt, generateSecureToken } = require('../../utils/tokenHelper');
 
@@ -348,6 +349,146 @@ const deactivateAccount = async (userId, otp) => {
 // Replace with a database table in production.
 const tokenStore = new Map();
 
+// In-memory token store for password reset (prototype).
+// Key: resetToken, Value: { userId, email, otp, expiresAt }
+const passwordResetTokenStore = new Map();
+
+/**
+ * Request password reset link.
+ * Finds user, generates 1-time reset token & OTP, stores with 15-minute TTL, and sends email.
+ * @param {string} email
+ * @param {string} [originHost] - e.g. 'http://localhost:5173'
+ * @returns {Promise<{ email: string, message: string }>}
+ */
+const requestPasswordReset = async (email, originHost = 'http://localhost:5173') => {
+  if (!email || typeof email !== 'string') {
+    const err = new Error('Vui lòng cung cấp địa chỉ email.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const { data: user, error } = await supabase
+    .from('m_user')
+    .select('user_id, email, full_name, account_status')
+    .eq('email', email.trim().toLowerCase())
+    .eq('is_deleted', false)
+    .maybeSingle();
+
+  if (error || !user) {
+    const err = new Error('Không tìm thấy tài khoản với email này trong hệ thống.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (user.account_status === STATUS.DEACTIVATED) {
+    const err = new Error('Tài khoản này đã bị vô hiệu hóa. Vui lòng liên hệ Admin để được hỗ trợ.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // Generate 1-time secure reset token
+  const resetToken = generateSecureToken(32);
+  const ttlMs = 15 * 60 * 1000; // 15 minutes
+  const expiresAt = Date.now() + ttlMs;
+
+  passwordResetTokenStore.set(resetToken, {
+    userId: user.user_id,
+    email: user.email,
+    expiresAt,
+  });
+
+  const resetUrl = `${originHost}/reset-password?token=${resetToken}`;
+
+  // Dispatch email with reset link
+  await sendMail({
+    to: user.email,
+    subject: 'Đặt lại mật khẩu - Avora Booking',
+    templateName: 'resetPassword',
+    templateData: {
+      fullName: user.full_name || 'Quý khách',
+      resetUrl,
+      expiresInMinutes: 15,
+    },
+  });
+
+  return {
+    email: user.email,
+    message: 'Đã gửi email kèm liên kết đặt lại mật khẩu. Vui lòng kiểm tra hộp thư của bạn.',
+  };
+};
+
+/**
+ * Verify whether a reset token is valid and active.
+ * @param {string} token
+ * @returns {{ valid: boolean, email: string }}
+ */
+const verifyResetPasswordToken = (token) => {
+  if (!token) {
+    const err = new Error('Mã liên kết không hợp lệ.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const entry = passwordResetTokenStore.get(token);
+  if (!entry || Date.now() > entry.expiresAt) {
+    if (entry) passwordResetTokenStore.delete(token);
+    const err = new Error('Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  return { valid: true, email: entry.email };
+};
+
+/**
+ * Reset user password using the one-time token.
+ * Validates token, hashes new password, updates DB, and consumes token.
+ * @param {string} token
+ * @param {string} newPassword
+ */
+const resetPasswordWithToken = async (token, newPassword) => {
+  if (!token) {
+    const err = new Error('Liên kết đặt lại mật khẩu không hợp lệ.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const entry = passwordResetTokenStore.get(token);
+  if (!entry || Date.now() > entry.expiresAt) {
+    if (entry) passwordResetTokenStore.delete(token);
+    const err = new Error('Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!newPassword || typeof newPassword !== 'string' || newPassword.length < 8) {
+    const err = new Error('Mật khẩu mới phải có tối thiểu 8 ký tự.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const newHash = await hashPassword(newPassword);
+
+  const { error } = await supabase
+    .from('m_user')
+    .update({
+      password_hash: newHash,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', entry.userId);
+
+  if (error) {
+    const err = new Error('Không thể cập nhật mật khẩu. Vui lòng thử lại.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  // Consume token — strictly single-use
+  passwordResetTokenStore.delete(token);
+
+  return { success: true, message: 'Đặt lại mật khẩu thành công. Bạn có thể đăng nhập ngay.' };
+};
+
 module.exports = {
   registerUser,
   verifyEmail,
@@ -357,4 +498,7 @@ module.exports = {
   changePassword,
   requestDeactivateOtp,
   deactivateAccount,
+  requestPasswordReset,
+  verifyResetPasswordToken,
+  resetPasswordWithToken,
 };

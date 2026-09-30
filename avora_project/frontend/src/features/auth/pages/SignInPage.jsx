@@ -4,6 +4,7 @@ import { signIn } from '../../../services/authService';
 import { sendOtp } from '../../../services/otpService';
 import { useAuth } from '../../../context/AuthContext';
 import Dialog from '../../../common/components/Dialog';
+import ForgotPasswordModal from '../components/ForgotPasswordModal';
 import './AuthPages.css';
 
 /* SVG Icons matching Reference Image 2 */
@@ -79,8 +80,12 @@ const SignInPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpLoading, setOtpLoading] = useState(false);
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
   const [error, setError] = useState('');
   const [successNotice, setSuccessNotice] = useState(() => {
+    if (location.state?.successMessage) {
+      return location.state.successMessage;
+    }
     if (activatedParam === 'true') {
       return '🎉 Kích hoạt tài khoản thành công! Bạn có thể đăng nhập ngay bây giờ.';
     }
@@ -148,12 +153,7 @@ const SignInPage = () => {
 
   const handleForgotPassword = (e) => {
     e.preventDefault();
-    setDialog({
-      isOpen: true,
-      title: 'Quên mật khẩu',
-      message: 'Vui lòng liên hệ hotline hỗ trợ 1900 8668 hoặc gửi email đến hotro@avora.vn để được hỗ trợ khôi phục tài khoản.',
-      variant: 'info',
-    });
+    setForgotModalOpen(true);
   };
 
   const handleMagicLink = async () => {
@@ -355,6 +355,13 @@ const SignInPage = () => {
         message={dialog.message}
         variant={dialog.variant}
         confirmLabel="Đã hiểu"
+      />
+
+      {/* Forgot Password Modal */}
+      <ForgotPasswordModal
+        isOpen={forgotModalOpen}
+        onClose={() => setForgotModalOpen(false)}
+        initialEmail={form.email}
       />
     </div>
   );
