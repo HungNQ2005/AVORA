@@ -94,6 +94,9 @@ const restoreHotel = async (hotelId, access) => {
 };
 
 const updateHotel = async (hotelId, input, access) => {
+	if (!access.isVendor && !access.isSystemAdmin && !access.isBusinessManager) {
+		throw createError('You do not have permission to update hotels.', 403);
+	}
 	const updates = { ...input };
 	if (updates.owner_id !== undefined) {
 		if (!access.isSystemAdmin && !access.isBusinessManager) {
