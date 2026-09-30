@@ -6,6 +6,7 @@ import HomePage from './features/home/HomePage';
 import TestConnectionPage from './features/connection_test/TestConnectionPage';
 import SignUpPage from './features/auth/pages/SignUpPage';
 import SignInPage from './features/auth/pages/SignInPage';
+import ResetPasswordPage from './features/auth/pages/ResetPasswordPage';
 import MyAccountPage from './features/account/pages/MyAccountPage';
 import FavoritesPage from './features/account/pages/FavoritesPage';
 import HotelSearchPage from './features/hotels/HotelSearchPage';
@@ -67,6 +68,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/signup" element={<SignUpPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/system_codes" element={<TestConnectionPage />} />
             <Route path="/myaccount" element={<MyAccountPage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
