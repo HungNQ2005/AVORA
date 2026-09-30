@@ -30,9 +30,9 @@ const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onRestore, canApprove, 
         <Link className="hotel-card__title" to={detailHref}>{hotel.name}</Link>
         <p className="hotel-card__location"><span aria-hidden="true">⌖</span>{location}</p>
         <div className="hotel-card__facts">
-          <span className="hotel-card__stars" aria-label={`Hạng ${hotel.star_rating || 0} sao`}>
-            {'★'.repeat(Math.max(0, Math.min(5, Number(hotel.star_rating) || 0)))}
-            <span>{hotel.star_rating || '—'} sao</span>
+          <span className="hotel-card__stars" aria-label={`Hạng ${hotel.star_quality || 0} sao`}>
+            {'★'.repeat(Math.max(0, Math.min(5, Number(hotel.star_quality) || 0)))}
+            <span>{hotel.star_quality || '—'} sao</span>
           </span>
           <span>{hotel.total_rooms ?? hotel.room_count ?? 0} phòng</span>
         </div>

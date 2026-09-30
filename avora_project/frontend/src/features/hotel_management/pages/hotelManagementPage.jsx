@@ -13,7 +13,7 @@ const HotelManagementPage = () => {
 	const [hotels, setHotels] = useState([]);
 	const [pagination, setPagination] = useState({ page: 1, page_size: 10, total_items: 0, total_pages: 0 });
 	const [refreshKey, setRefreshKey] = useState(0);
-	const [filters, setFilters] = useState({ keyword: '', city_id: '', star_rating: '' });
+	const [filters, setFilters] = useState({ keyword: '', city_id: '', star_quality: '' });
 	const [debouncedKeyword, setDebouncedKeyword] = useState('');
 	const [cities, setCities] = useState([]);
 	const [loading, setLoading] = useState(true);
@@ -23,10 +23,10 @@ const HotelManagementPage = () => {
 	const [deleteTarget, setDeleteTarget] = useState(null);
 	const [deleteError, setDeleteError] = useState('');
 	const [toast, setToast] = useState(() => location.state?.notice || '');
-	const userRole = String(user?.role_code_name || user?.role_cd || '').trim().toUpperCase();
-	const hasActiveFilters = Boolean(debouncedKeyword || filters.city_id || filters.star_rating);
-	const isVendor = ['VEN', 'VENDOR'].includes(userRole);
-	const canApprove = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER'].includes(userRole);
+	const userRole = String(user?.role_code_name || '').trim().toUpperCase();
+	const hasActiveFilters = Boolean(debouncedKeyword || filters.city_id || filters.star_quality);
+	const isVendor = userRole === 'VEN';
+	const canApprove = userRole === 'ADM' || userRole === 'BMR';
 	const vendorHasNoHotels = isVendor && !hasActiveFilters;
 
 	useEffect(() => {
@@ -46,7 +46,7 @@ const HotelManagementPage = () => {
 			page: pagination.page,
 			keyword: debouncedKeyword,
 			city_id: filters.city_id,
-			star_rating: filters.star_rating,
+			star_quality: filters.star_quality,
 		})
 			.then(({ items, pagination: resultPagination }) => {
 				if (!active) return;
@@ -60,7 +60,7 @@ const HotelManagementPage = () => {
 				if (active) setLoading(false);
 			});
 		return () => { active = false; };
-	}, [pagination.page, debouncedKeyword, filters.city_id, filters.star_rating, refreshKey]);
+	}, [pagination.page, debouncedKeyword, filters.city_id, filters.star_quality, refreshKey]);
 
 	useEffect(() => {
 		if (!toast) return undefined;
@@ -162,7 +162,7 @@ const HotelManagementPage = () => {
 				</label>
 				<label className="hotel-filter">
 					<span>Hạng sao</span>
-					<select name="star_rating" value={filters.star_rating} onChange={updateFilter}>
+					<select name="star_quality" value={filters.star_quality} onChange={updateFilter}>
 						<option value="">Tất cả hạng sao</option>
 						{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} sao</option>)}
 					</select>

@@ -16,7 +16,7 @@ const toHotelForm = (hotel) => ({
   city_id: hotel.city_id || '',
   district_id: hotel.district_id || '',
   ward_id: hotel.ward_id || '',
-  star_rating: hotel.star_rating ?? '',
+  star_quality: hotel.star_quality ?? '',
   lat: hotel.lat ?? '',
   lng: hotel.lng ?? '',
   owner_id: hotel.owner_id || '',
@@ -35,9 +35,9 @@ const HotelDetailPage = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState('');
-  const role = String(user?.role_code_name || user?.role_cd || '').trim().toUpperCase();
-  const isVendor = ['VEN', 'VENDOR'].includes(role);
-  const canApprove = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER'].includes(role);
+  const role = String(user?.role_code_name || '').trim().toUpperCase();
+  const isVendor = role === 'VEN';
+  const canApprove = role === 'ADM' || role === 'BMR';
   const [images, setImages] = useState([]);
 
   useEffect(() => {
@@ -87,7 +87,7 @@ const HotelDetailPage = () => {
 
     const latitude = form.lat === '' ? undefined : Number(form.lat);
     const longitude = form.lng === '' ? undefined : Number(form.lng);
-    const stars = Number(form.star_rating);
+    const stars = Number(form.star_quality);
     if ((latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90))
       || (longitude !== undefined && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180))
       || !Number.isInteger(stars) || stars < 1 || stars > 5) {
@@ -105,7 +105,7 @@ const HotelDetailPage = () => {
         city_id: form.city_id || null,
         district_id: form.district_id || null,
         ward_id: form.ward_id || null,
-        star_rating: stars,
+        star_quality: stars,
       };
       if (latitude !== undefined) payload.lat = latitude;
       if (longitude !== undefined) payload.lng = longitude;
@@ -204,7 +204,7 @@ const HotelDetailPage = () => {
 
       <div className="hotel-detail__status-line">
         <span className={`hotel-detail__status hotel-detail__status--${hotel.is_deleted ? 'deleted' : (isPending ? 'pending' : 'active')}`}>{status}</span>
-        <span className="hotel-detail__rating"><b aria-hidden="true">{'★'.repeat(Math.max(0, Math.min(5, Number(hotel.star_rating) || 0)))}</b> Hạng {hotel.star_rating || '—'} sao</span>
+        <span className="hotel-detail__rating"><b aria-hidden="true">{'★'.repeat(Math.max(0, Math.min(5, Number(hotel.star_quality) || 0)))}</b> Hạng {hotel.star_quality || '—'} sao</span>
       </div>
 
       <form className="hotel-detail__form" onSubmit={handleSave}>
@@ -223,7 +223,7 @@ const HotelDetailPage = () => {
               <LocationSelect cityId={form?.city_id} districtId={form?.district_id} wardId={form?.ward_id} onChange={updateLocation} disabled={actionLoading} />
               <label className="hotel-detail__field">
                 <span>Hạng sao</span>
-                <select name="star_rating" value={form?.star_rating ?? ''} onChange={updateField} required>
+                <select name="star_quality" value={form?.star_quality ?? ''} onChange={updateField} required>
                   <option value="">Chọn hạng sao</option>
                   {[1, 2, 3, 4, 5].map((stars) => <option value={stars} key={stars}>{stars} sao</option>)}
                 </select>

@@ -5,7 +5,7 @@ import './editHotelPopup.css';
 
 const emptyForm = {
   name: '', description: '', address: '', city_id: '', district_id: '', ward_id: '',
-  lat: '', lng: '', star_rating: '',
+  lat: '', lng: '', star_quality: '',
 };
 
 const initialForm = (hotel) => hotel ? {
@@ -17,7 +17,7 @@ const initialForm = (hotel) => hotel ? {
   ward_id: hotel.ward_id || '',
   lat: hotel.lat ?? '',
   lng: hotel.lng ?? '',
-  star_rating: hotel.star_rating ?? '',
+  star_quality: hotel.star_quality ?? '',
 } : emptyForm;
 
 const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel }) => {
@@ -51,13 +51,13 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!form.name.trim() || !form.address.trim() || !form.city_id || form.star_rating === '') {
+    if (!form.name.trim() || !form.address.trim() || !form.city_id || form.star_quality === '') {
       setError('Vui lòng nhập tên, địa chỉ, tỉnh/thành phố và hạng sao.');
       return;
     }
     const latitude = Number(form.lat);
     const longitude = Number(form.lng);
-    const stars = Number(form.star_rating);
+    const stars = Number(form.star_quality);
     if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
       setError('Vĩ độ phải trong khoảng -90 đến 90 và kinh độ trong khoảng -180 đến 180.');
       return;
@@ -76,7 +76,7 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
       ward_id: form.ward_id || null,
       lat: latitude,
       lng: longitude,
-      star_rating: stars,
+      star_quality: stars,
     };
     setLoading(true);
     setError('');
@@ -115,7 +115,7 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
           <LocationSelect cityId={form.city_id} districtId={form.district_id} wardId={form.ward_id} onChange={updateLocation} disabled={loading} />
           <label className="hotel-modal__field">
             <span>Hạng sao <b>*</b></span>
-            <select name="star_rating" value={form.star_rating} onChange={updateField} required>
+            <select name="star_quality" value={form.star_quality} onChange={updateField} required>
               <option value="">Chọn hạng sao</option>
               {[1, 2, 3, 4, 5].map((stars) => <option value={stars} key={stars}>{stars} sao</option>)}
             </select>

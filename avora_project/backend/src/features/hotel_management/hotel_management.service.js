@@ -52,6 +52,10 @@ const getVendors = async (access) => {
 };
 
 const createHotel = async (input, access) => {
+	if (!access?.isVendor) {
+		throw createError('Only Vendors can create hotels.', 403);
+	}
+
 	const hotel = await hotelModel.createHotel({
 		owner_id: access.userId,
 		name: input.name.trim(),
@@ -60,11 +64,10 @@ const createHotel = async (input, access) => {
 		city_id: input.city_id || null,
 		district_id: input.district_id || null,
 		ward_id: input.ward_id || null,
-		star_quality: input.star_rating,
+		star_quality: input.star_quality,
 		lat: input.lat,
 		lng: input.lng,
-		// Vendor submissions always start as PENDING and must be approved by
-		// System Admin / Business Manager. Staff-created hotels go live immediately.
+		// Vendor submissions always start as PENDING and require staff approval.
 		hotel_status: access.isVendor ? 'PENDING' : 'ACTIVE',
 		is_deleted: false,
 	});
@@ -103,11 +106,6 @@ const updateHotel = async (hotelId, input, access) => {
 	if (updates.name !== undefined) updates.name = updates.name.trim();
 	if (updates.address !== undefined) updates.address = updates.address.trim();
 	if (updates.description !== undefined) updates.description = updates.description.trim() || null;
-	if (updates.star_rating !== undefined) {
-		updates.star_quality = updates.star_rating;
-		delete updates.star_rating;
-	}
-
 	const hotel = await hotelModel.updateHotel(hotelId, updates, {
 		ownerId: access.isVendor ? access.userId : null,
 		includeDeleted: !access.isVendor,

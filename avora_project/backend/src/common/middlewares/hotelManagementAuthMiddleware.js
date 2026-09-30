@@ -3,12 +3,6 @@
 const supabase = require('../../config/supabaseClient');
 const { sendError } = require('../../utils/responseHelper');
 
-const ROLE_NAMES = new Set([
-  'ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'SYSTEM ADMIN',
-  'BMR', 'BUSINESS_MANAGER', 'BUSINESS MANAGER',
-  'VEN', 'VENDOR',
-]);
-
 const authorizeHotelManagement = async (req, res, next) => {
   if (!supabase) {
     return sendError(res, 503, 'Database client is not initialized.');
@@ -35,7 +29,10 @@ const authorizeHotelManagement = async (req, res, next) => {
 
     if (roleError) throw roleError;
     const roleName = String(role?.code_name || '').trim().toUpperCase();
-    if (!ROLE_NAMES.has(roleName)) {
+    const isSystemAdmin = roleName === 'ADM';
+    const isBusinessManager = roleName === 'BMR';
+    const isVendor = roleName === 'VEN';
+    if (!isSystemAdmin && !isBusinessManager && !isVendor) {
       return sendError(res, 403, 'You do not have permission to manage hotels.');
     }
 
@@ -43,9 +40,9 @@ const authorizeHotelManagement = async (req, res, next) => {
       userId: user.user_id,
       email: user.email,
       roleName,
-      isSystemAdmin: ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'SYSTEM ADMIN'].includes(roleName),
-      isBusinessManager: ['BMR', 'BUSINESS_MANAGER', 'BUSINESS MANAGER'].includes(roleName),
-      isVendor: ['VEN', 'VENDOR'].includes(roleName),
+      isSystemAdmin,
+      isBusinessManager,
+      isVendor,
     };
     return next();
   } catch (err) {

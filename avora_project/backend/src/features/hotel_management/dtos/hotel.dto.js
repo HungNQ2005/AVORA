@@ -18,7 +18,7 @@ const hotelListQuerySchema = z.object({
   search: z.string().trim().max(120).optional(),
   city_id: optionalId,
   district_id: optionalId,
-  star_rating: z.coerce.number().int().min(1).max(5).optional(),
+  star_quality: z.coerce.number().int().min(1).max(5).optional(),
   status_cd: z.enum(['PENDING', 'ACTIVE']).optional(),
 });
 
@@ -29,7 +29,7 @@ const hotelFields = {
   city_id: optionalId,
   district_id: optionalId,
   ward_id: optionalId,
-  star_rating: z.coerce.number().int().min(1).max(5),
+  star_quality: z.coerce.number().int().min(1).max(5),
   lat: z.coerce.number().finite().min(-90).max(90),
   lng: z.coerce.number().finite().min(-180).max(180),
 };
@@ -50,7 +50,7 @@ const updateHotelSchema = z.object({
   city_id: optionalId,
   district_id: optionalId,
   ward_id: optionalId,
-  star_rating: hotelFields.star_rating.optional(),
+  star_quality: hotelFields.star_quality.optional(),
   lat: hotelFields.lat.optional(),
   lng: hotelFields.lng.optional(),
   owner_id: z.string().trim().min(1).max(100).optional(),

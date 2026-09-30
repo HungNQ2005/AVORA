@@ -64,7 +64,7 @@ const addStatusNames = async (hotels) => {
   });
 };
 
-const listHotels = async ({ page, pageSize, keyword, search, city_id, district_id, star_rating, status_cd, ownerId, includeDeleted = false, includeStatuses = null }) => {
+const listHotels = async ({ page, pageSize, keyword, search, city_id, district_id, star_quality, status_cd, ownerId, includeDeleted = false, includeStatuses = null }) => {
   ensureClient();
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
@@ -86,7 +86,7 @@ const listHotels = async ({ page, pageSize, keyword, search, city_id, district_i
   }
   if (city_id) query = query.eq('city_id', city_id);
   if (district_id) query = query.eq('district_id', district_id);
-  if (star_rating) query = query.eq('star_quality', star_rating);
+  if (star_quality) query = query.eq('star_quality', star_quality);
   if (status_cd) query = query.eq('hotel_status', status_cd);
   else if (Array.isArray(includeStatuses) && includeStatuses.length) query = query.in('hotel_status', includeStatuses);
   if (ownerId) query = query.eq('owner_id', ownerId);
@@ -420,7 +420,8 @@ const toHotelDto = (hotel) => ({
   owner_name: hotel.owner?.full_name || null,
   owner_phone: hotel.owner?.phone || null,
   owner_email: hotel.owner?.email || null,
-  star_rating: hotel.star_quality ?? hotel.star_rating,
+  star_rating: hotel.star_rating,
+  star_quality: hotel.star_quality,
   lat: hotel.lat,
   lng: hotel.lng,
   hotel_status: hotel.hotel_status || 'ACTIVE',
