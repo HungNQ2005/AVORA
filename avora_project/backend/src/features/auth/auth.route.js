@@ -10,6 +10,9 @@ const {
   handleChangePassword,
   handleRequestDeactivateOtp,
   handleDeactivateAccount,
+  handleForgotPassword,
+  handleVerifyResetToken,
+  handleResetPassword,
 } = require('./auth.controller');
 const { authenticate } = require('../../common/middlewares/authMiddleware');
 
@@ -24,6 +27,15 @@ router.get('/auth/verify/:token', handleVerifyEmail);
 
 // POST /api/auth/signin
 router.post('/auth/signin', handleSignIn);
+
+// POST /api/auth/forgot-password
+router.post('/auth/forgot-password', handleForgotPassword);
+
+// GET /api/auth/verify-reset-token/:token
+router.get('/auth/verify-reset-token/:token', handleVerifyResetToken);
+
+// POST /api/auth/reset-password
+router.post('/auth/reset-password', handleResetPassword);
 
 // ─── Protected Account Routes ─────────────────────────────────────────────────
 // GET /api/account/profile

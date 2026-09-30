@@ -3,6 +3,7 @@
 const authService = require('./auth.service');
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
 const { sendMail } = require('../../common/services/email/email.service');
+const { renderExpiredLinkPage } = require('./templates/expiredLinkPage');
 
 /**
  * POST /api/auth/signup
@@ -55,37 +56,74 @@ const handleVerifyEmail = async (req, res, next) => {
     const { token } = req.params;
     const user = await authService.verifyEmail(token);
 
-    // Return a simple HTML page so clicking the email link gives feedback
+    // Return unified white-and-blue brand success page
     return res.send(`
       <!DOCTYPE html>
-      <html lang="en">
+      <html lang="vi">
       <head>
         <meta charset="UTF-8" />
-        <title>Đã kích hoạt tài khoản - AVORA</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Kích hoạt tài khoản thành công - AVORA</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
         <style>
-          body { font-family: Inter, sans-serif; background: #1e2330; color: #e2e8f0;
-                 display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
-          .card { background: #2b3245; border-radius: 12px; padding: 48px; text-align: center; max-width: 420px; }
-          h1 { color: #5865f2; margin-bottom: 12px; }
-          p { color: #94a3b8; margin-bottom: 24px; }
-          a { display: inline-block; background: #5865f2; color: white; padding: 12px 32px;
-              border-radius: 8px; text-decoration: none; font-weight: 600; }
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f8fafc 100%);
+            display: flex; align-items: center; justify-content: center; min-height: 100vh; padding: 20px;
+          }
+          .card {
+            background: #ffffff; border: 2px solid #e0f2fe; border-radius: 24px; padding: 48px 36px;
+            text-align: center; max-width: 460px; width: 100%;
+            box-shadow: 0 20px 45px -10px rgba(14, 165, 233, 0.18);
+            animation: pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+          }
+          @keyframes pop { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
+          .logo {
+            display: inline-block; font-size: 22px; font-weight: 800;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+          }
+          .icon {
+            width: 72px; height: 72px; border-radius: 50%; background: #dcfce7; color: #16a34a;
+            display: flex; align-items: center; justify-content: center; font-size: 36px; margin: 0 auto 20px;
+          }
+          h1 { color: #0f172a; font-size: 22px; margin-bottom: 12px; font-weight: 800; }
+          p { color: #64748b; font-size: 15px; line-height: 1.6; margin-bottom: 28px; }
+          .btn {
+            display: block; background: linear-gradient(135deg, #0284c7, #2563eb); color: white;
+            padding: 14px 28px; border-radius: 14px; text-decoration: none; font-weight: 700;
+            font-size: 15px; box-shadow: 0 10px 20px -5px rgba(37, 99, 235, 0.4);
+            transition: transform 0.2s;
+          }
+          .btn:hover { transform: translateY(-2px); }
         </style>
       </head>
       <body>
         <div class="card">
-          <h1>Đã kích hoạt tài khoản!</h1>
+          <div class="logo">AVORA VIỆT NAM</div>
+          <div class="icon">✓</div>
+          <h1>Kích hoạt thành công!</h1>
           <p>Tài khoản cho email <strong>${user.email}</strong> đã được kích hoạt thành công. Bây giờ bạn có thể đăng nhập.</p>
-          <a href="http://localhost:5173/signin">Đăng nhập</a>
+          <a href="http://localhost:5173/signin?activated=true" class="btn">Đăng nhập ngay</a>
         </div>
       </body>
       </html>
     `);
   } catch (err) {
-    if (err.statusCode) {
-      return sendError(res, err.statusCode, err.message);
-    }
-    next(err);
+    // If token is invalid, expired, or already used — render the cute white & blue 410 page!
+    return res.status(err.statusCode || 400).send(
+      renderExpiredLinkPage({
+        code: '410',
+        title: 'Ối... Hình như bạn bị lạc rồi! (｡•́︿•̀｡)',
+        message: 'Liên kết kích hoạt tài khoản này đã được sử dụng trước đó, hoặc đã hết hạn mất rồi.',
+        backUrl: 'http://localhost:5173/signin',
+        backLabel: 'Về trang đăng nhập',
+      })
+    );
   }
 };
 
@@ -207,6 +245,67 @@ const handleDeactivateAccount = async (req, res, next) => {
   }
 };
 
+/**
+ * POST /api/auth/forgot-password
+ * Request a one-time password reset link.
+ */
+const handleForgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return sendError(res, 400, 'Vui lòng cung cấp địa chỉ email.');
+    }
+
+    const originHost = req.headers.origin || 'http://localhost:5173';
+    const result = await authService.requestPasswordReset(email, originHost);
+
+    return sendSuccess(res, 200, result.message, { email: result.email });
+  } catch (err) {
+    if (err.statusCode) {
+      return sendError(res, err.statusCode, err.message);
+    }
+    next(err);
+  }
+};
+
+/**
+ * GET /api/auth/verify-reset-token/:token
+ * Check if a reset token is valid before rendering the form.
+ */
+const handleVerifyResetToken = async (req, res, next) => {
+  try {
+    const { token } = req.params;
+    const result = authService.verifyResetPasswordToken(token);
+    return sendSuccess(res, 200, 'Mã liên kết hợp lệ.', result);
+  } catch (err) {
+    if (err.statusCode) {
+      return sendError(res, err.statusCode, err.message);
+    }
+    next(err);
+  }
+};
+
+/**
+ * POST /api/auth/reset-password
+ * Reset user password using the one-time token.
+ */
+const handleResetPassword = async (req, res, next) => {
+  try {
+    const { token, new_password } = req.body;
+    if (!token || !new_password) {
+      return sendError(res, 400, 'Vui lòng cung cấp token và mật khẩu mới.');
+    }
+
+    const result = await authService.resetPasswordWithToken(token, new_password);
+    return sendSuccess(res, 200, result.message);
+  } catch (err) {
+    if (err.statusCode) {
+      return sendError(res, err.statusCode, err.message);
+    }
+    next(err);
+  }
+};
+
 module.exports = {
   handleSignUp,
   handleVerifyEmail,
@@ -216,4 +315,7 @@ module.exports = {
   handleChangePassword,
   handleRequestDeactivateOtp,
   handleDeactivateAccount,
+  handleForgotPassword,
+  handleVerifyResetToken,
+  handleResetPassword,
 };
