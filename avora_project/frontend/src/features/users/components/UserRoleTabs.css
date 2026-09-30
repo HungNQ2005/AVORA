@@ -1,0 +1,65 @@
+.user-role-tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.user-role-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.95rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.user-role-tab:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0b1e3f;
+}
+
+.user-role-tab--active {
+  background: #0b1e3f;
+  border-color: #0b1e3f;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(11, 30, 63, 0.15);
+}
+
+.user-role-tab--active:hover {
+  background: #142a52;
+  border-color: #142a52;
+  color: #ffffff;
+}
+
+.user-role-tab__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-role-tab__count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 0.1rem 0.4rem;
+  border-radius: 10px;
+  line-height: 1.2;
+}
+
+.user-role-tab__count--active {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
