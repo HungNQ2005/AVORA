@@ -183,12 +183,22 @@ function App() {
                 </BusinessManagerRoute>
               }
             />
+            <Route
+              path="users"
+              element={
+                <AdminRoute>
+                  <UserManagementPage />
+                </AdminRoute>
+              }
+            />
           </Route>
 
           {/* Friendly redirect aliases for admin paths */}
           <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
           <Route path="/amenities" element={<Navigate to="/admin/amenities" replace />} />
           <Route path="/facilities" element={<Navigate to="/admin/facilities" replace />} />
+          <Route path="/coupons" element={<Navigate to="/admin/coupons" replace />} />
+          <Route path="/users" element={<Navigate to="/admin/users" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

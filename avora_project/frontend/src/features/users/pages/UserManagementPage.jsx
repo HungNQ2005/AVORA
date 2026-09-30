@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '../../../context/AuthContext';
 import { fetchUsers, fetchUserStats, updateUserStatus } from '../../../services/userService';
 import { fetchHotels } from '../../../services/roomTypeApi';
 import { exportUsersToExcel } from '../../../utils/exportToExcel';
@@ -11,6 +13,13 @@ import Dialog from '../../../common/components/Dialog';
 import './UserManagementPage.css';
 
 const UserManagementPage = () => {
+  const { user, loading: authLoading } = useAuth();
+
+  // Guard: Only System Admin (ADM) can access
+  if (!authLoading && user && user.role_code_name !== 'ADM') {
+    return <Navigate to="/admin" replace />;
+  }
+
   // Main Data States
   const [users, setUsers] = useState([]);
   const [stats, setStats] = useState(null);
@@ -141,10 +150,19 @@ const UserManagementPage = () => {
   };
 
   // Toggle user active / lock status
-  const handleToggleStatusClick = (user) => {
-    const isCurrentlyDeactivated = user.account_status === 'DEACTIVATED' || user.account_status === 'LOCKED';
+  const handleToggleStatusClick = (targetUser) => {
+    // Không cho phép tự khóa tài khoản của chính mình
+    if (
+      (user?.user_id && String(targetUser.user_id) === String(user.user_id)) ||
+      (user?.email && targetUser.email === user.email)
+    ) {
+      showToast('Bạn không thể tự khóa tài khoản của chính mình.', 'error');
+      return;
+    }
+
+    const isCurrentlyDeactivated = targetUser.account_status === 'DEACTIVATED' || targetUser.account_status === 'LOCKED';
     const newStatus = isCurrentlyDeactivated ? 'ACTIVE' : 'DEACTIVATED';
-    setUserToUpdate(user);
+    setUserToUpdate(targetUser);
     setTargetStatus(newStatus);
     setIsDialogOpen(true);
   };
@@ -174,6 +192,17 @@ const UserManagementPage = () => {
   // Handle Save Status from Edit User Modal (System Admin only updates account status)
   const handleSaveUserStatus = async ({ status }) => {
     if (!selectedUserForEdit || !status) return;
+
+    // Không cho phép tự khóa tài khoản của chính mình
+    const isSelf =
+      (user?.user_id && String(selectedUserForEdit.user_id) === String(user.user_id)) ||
+      (user?.email && selectedUserForEdit.email === user.email);
+
+    const statusUpper = (status || '').toUpperCase();
+    if (isSelf && ['DEACTIVATED', 'LOCKED', 'VERIFYING', 'PENDING'].includes(statusUpper)) {
+      showToast('Bạn không thể tự khóa hoặc đổi trạng thái tài khoản của chính mình.', 'error');
+      return;
+    }
 
     setIsSavingStatus(true);
     try {
@@ -334,6 +363,8 @@ const UserManagementPage = () => {
       {/* Bảng danh sách người dùng & Phân trang */}
       <UserTable
         users={users}
+        currentUserId={user?.user_id}
+        currentUserEmail={user?.email}
         loading={loading}
         error={error}
         onRetry={loadUsers}
@@ -362,6 +393,8 @@ const UserManagementPage = () => {
           }
         }}
         user={selectedUserForEdit}
+        currentUserId={user?.user_id}
+        currentUserEmail={user?.email}
         onSaveStatus={handleSaveUserStatus}
         onSendResetPassword={handleSendResetPassword}
         saving={isSavingStatus}

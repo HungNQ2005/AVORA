@@ -56,6 +56,15 @@ const handleUpdateUserStatus = async (req, res, next) => {
       return sendError(res, 400, 'User ID và trạng thái mới là bắt buộc.');
     }
 
+    // Không cho phép System Admin tự khóa hoặc vô hiệu hóa tài khoản của chính mình
+    const statusUpper = (status || '').toUpperCase();
+    if (
+      String(req.user?.user_id) === String(id) &&
+      ['DEACTIVATED', 'LOCKED', 'VERIFYING', 'PENDING'].includes(statusUpper)
+    ) {
+      return sendError(res, 400, 'Bạn không thể tự khóa hoặc đổi trạng thái tài khoản của chính mình.');
+    }
+
     const updatedUser = await userService.updateUserStatus(id, status);
     return sendSuccess(res, 200, 'Cập nhật trạng thái người dùng thành công.', updatedUser);
   } catch (err) {

@@ -9,10 +9,19 @@ const EditUserModal = ({
   isOpen,
   onClose,
   user,
+  currentUserId,
+  currentUserEmail,
   onSaveStatus,
   onSendResetPassword,
   saving = false,
 }) => {
+  const isSelf = Boolean(
+    user && (
+      (currentUserId && String(user.user_id) === String(currentUserId)) ||
+      (currentUserEmail && user.email === currentUserEmail)
+    )
+  );
+
   // Normalize status from DB (ACTIVE, VERIFYING, DEACTIVATED) to selection value
   const getNormalizedStatus = (accountStatus) => {
     if (!accountStatus) return 'ACTIVE';
@@ -34,7 +43,7 @@ const EditUserModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (saving) return;
+    if (saving || isSelf) return;
 
     // Send only status payload
     onSaveStatus?.({
@@ -68,6 +77,7 @@ const EditUserModal = ({
             <div className="user-modal-title-wrap">
               <h2 className="user-modal-title">
                 Chỉnh sửa tài khoản: {user.full_name || 'Người dùng'}
+                {isSelf && <span className="user-modal-self-badge">Tài khoản của bạn</span>}
               </h2>
               <span className="user-modal-subtitle">
                 #{user.employee_code || user.user_id}
@@ -147,16 +157,31 @@ const EditUserModal = ({
             {/* Trạng thái tài khoản - DUY NHẤT ĐƯỢC PHÉP CHỈNH */}
             <div className="user-modal-form-group">
               <label className="user-modal-label">Trạng thái tài khoản</label>
-              <select
-                className="user-modal-select"
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                disabled={saving}
-              >
-                <option value="ACTIVE">Đang hoạt động (Active)</option>
-                <option value="PENDING">Chờ kích hoạt / Duyệt (Pending)</option>
-                <option value="LOCKED">Tạm khóa tài khoản (Locked)</option>
-              </select>
+              {isSelf ? (
+                <div className="user-modal-self-lock-box">
+                  <div className="user-modal-self-lock-status">
+                    <span className="user-status-dot">●</span> Đang hoạt động (Active)
+                  </div>
+                  <div className="user-modal-self-lock-hint">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    </svg>
+                    <span>Bạn đang đăng nhập bằng tài khoản này. Không thể tự khóa tài khoản của chính mình.</span>
+                  </div>
+                </div>
+              ) : (
+                <select
+                  className="user-modal-select"
+                  value={selectedStatus}
+                  onChange={(e) => setSelectedStatus(e.target.value)}
+                  disabled={saving}
+                >
+                  <option value="ACTIVE">Đang hoạt động (Active)</option>
+                  <option value="PENDING">Chờ kích hoạt / Duyệt (Pending)</option>
+                  <option value="LOCKED">Tạm khóa tài khoản (Locked)</option>
+                </select>
+              )}
             </div>
           </div>
 
@@ -184,15 +209,17 @@ const EditUserModal = ({
                 onClick={onClose}
                 disabled={saving}
               >
-                Hủy
+                {isSelf ? 'Đóng' : 'Hủy'}
               </button>
-              <button
-                type="submit"
-                className="user-modal-btn-save"
-                disabled={saving}
-              >
-                {saving ? 'Đang lưu...' : 'Lưu cập nhật'}
-              </button>
+              {!isSelf && (
+                <button
+                  type="submit"
+                  className="user-modal-btn-save"
+                  disabled={saving}
+                >
+                  {saving ? 'Đang lưu...' : 'Lưu cập nhật'}
+                </button>
+              )}
             </div>
           </div>
         </form>

@@ -6,8 +6,12 @@ const {
   handleGetUserStats,
   handleUpdateUserStatus,
 } = require('./user.controller');
+const { authenticate, requireRole } = require('../../common/middlewares/authMiddleware');
 
 const router = Router();
+
+// Guard all user management routes for System Admin (ADM) only
+router.use('/users', authenticate, requireRole('ADM'));
 
 // GET /api/users - List of users with search, role filter, status filter, and pagination
 router.get('/users', handleGetUsers);

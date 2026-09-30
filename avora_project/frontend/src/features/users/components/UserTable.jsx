@@ -42,6 +42,8 @@ const formatActivityTime = (user) => {
 
 const UserTable = ({
   users = [],
+  currentUserId,
+  currentUserEmail,
   loading = false,
   error = null,
   onRetry,
@@ -55,10 +57,17 @@ const UserTable = ({
 }) => {
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  // Checkbox handlers
+  // Checkbox handlers (exclude self from bulk actions)
+  const isUserSelf = (u) =>
+    Boolean(
+      (currentUserId && String(u.user_id) === String(currentUserId)) ||
+      (currentUserEmail && u.email === currentUserEmail)
+    );
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      setSelectedIds(new Set(users.map((u) => u.user_id)));
+      const selectable = users.filter((u) => !isUserSelf(u));
+      setSelectedIds(new Set(selectable.map((u) => u.user_id)));
     } else {
       setSelectedIds(new Set());
     }
@@ -73,7 +82,9 @@ const UserTable = ({
     });
   };
 
-  const allSelected = users.length > 0 && users.every((u) => selectedIds.has(u.user_id));
+  const selectableUsers = users.filter((u) => !isUserSelf(u));
+  const allSelected =
+    selectableUsers.length > 0 && selectableUsers.every((u) => selectedIds.has(u.user_id));
 
   // Quick stats for current page
   const activeCount = users.filter((u) => u.account_status === 'ACTIVE').length;
@@ -204,6 +215,7 @@ const UserTable = ({
               {users.map((u) => {
                 const activity = formatActivityTime(u);
                 const isSelected = selectedIds.has(u.user_id);
+                const isSelf = isUserSelf(u);
 
                 return (
                   <tr key={u.user_id} className={isSelected ? 'user-table-row--selected' : ''}>
@@ -213,7 +225,9 @@ const UserTable = ({
                         type="checkbox"
                         className="user-checkbox"
                         checked={isSelected}
-                        onChange={() => handleSelectOne(u.user_id)}
+                        disabled={isSelf}
+                        title={isSelf ? 'Không thể chọn tài khoản của chính mình' : undefined}
+                        onChange={() => !isSelf && handleSelectOne(u.user_id)}
                       />
                     </td>
 
@@ -226,6 +240,7 @@ const UserTable = ({
                         <div className="user-info-col">
                           <div className="user-name-row">
                             <span className="user-full-name">{u.full_name}</span>
+                            {isSelf && <span className="user-badge-self">Tài khoản của bạn</span>}
                             {u.is_new && <span className="user-badge-new">MỚI</span>}
                             {(u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
                               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" title="Tài khoản đang bị khóa">
@@ -340,7 +355,7 @@ const UserTable = ({
                     {/* Thao tác */}
                     <td>
                       <div className="user-action-buttons">
-                        {(u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
+                        {!isSelf && (u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
                           <button
                             type="button"
                             className="user-btn-quick-unlock"
@@ -357,7 +372,7 @@ const UserTable = ({
                         <button
                           type="button"
                           className="user-action-btn"
-                          title="Chỉnh sửa thông tin"
+                          title={isSelf ? 'Xem thông tin tài khoản của bạn (Không thể tự khóa)' : 'Chỉnh sửa thông tin'}
                           onClick={() => onEditUser?.(u)}
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -365,35 +380,46 @@ const UserTable = ({
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                           </svg>
                         </button>
-                        {/* Icon ổ khóa ở cuối mỗi dòng CHỈ DÙNG ĐỂ HIỂN THỊ trạng thái tài khoản */}
-                        <span
-                          className="user-status-lock-indicator"
-                          title={
-                            u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED'
-                              ? 'Tài khoản đang bị khóa'
-                              : u.account_status === 'VERIFYING' || u.account_status === 'PENDING'
-                              ? 'Tài khoản đang chờ duyệt'
-                              : 'Tài khoản đang hoạt động'
-                          }
-                          aria-label="Trạng thái tài khoản"
-                        >
-                          {u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED' ? (
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        {isSelf ? (
+                          <span
+                            className="user-status-lock-indicator user-status-lock-indicator--self"
+                            title="Tài khoản hiện tại của bạn (Được bảo vệ - Không thể tự khóa)"
+                            aria-label="Tài khoản đang đăng nhập"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="2.2">
+                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                             </svg>
-                          ) : u.account_status === 'VERIFYING' || u.account_status === 'PENDING' ? (
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-                            </svg>
-                          ) : (
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-                            </svg>
-                          )}
-                        </span>
+                          </span>
+                        ) : (
+                          <span
+                            className="user-status-lock-indicator"
+                            title={
+                              u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED'
+                                ? 'Tài khoản đang bị khóa'
+                                : u.account_status === 'VERIFYING' || u.account_status === 'PENDING'
+                                ? 'Tài khoản đang chờ duyệt'
+                                : 'Tài khoản đang hoạt động'
+                            }
+                            aria-label="Trạng thái tài khoản"
+                          >
+                            {u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED' ? (
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
+                            ) : u.account_status === 'VERIFYING' || u.account_status === 'PENDING' ? (
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                              </svg>
+                            ) : (
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+                              </svg>
+                            )}
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>

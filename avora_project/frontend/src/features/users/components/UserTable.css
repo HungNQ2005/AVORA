@@ -163,6 +163,20 @@
   letter-spacing: 0.03em;
 }
 
+.user-badge-self {
+  display: inline-flex;
+  align-items: center;
+  background: #eff6ff;
+  color: #1e40af;
+  border: 1px solid #bfdbfe;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
 .user-emp-code {
   font-size: 0.74rem;
   color: #94a3b8;
@@ -348,7 +362,7 @@
 }
 
 .user-btn-quick-unlock {
-  background: #002244;
+  background: #1e3a8a;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -364,7 +378,7 @@
 }
 
 .user-btn-quick-unlock:hover {
-  background: #0a3666;
+  background: #1e40af;
 }
 
 .user-status-lock-indicator {
@@ -375,6 +389,13 @@
   height: 26px;
   cursor: default;
   user-select: none;
+}
+
+.user-status-lock-indicator--self {
+  cursor: help;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
 }
 
 /* Pagination Footer */
