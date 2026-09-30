@@ -12,7 +12,7 @@ const EMPTY_FORM = {
   valid_to: '',
 };
 
-const PromotionFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loading = false }) => {
+const CouponFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loading = false }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
 
@@ -92,10 +92,10 @@ const PromotionFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loa
             </div>
             <div>
               <h2 className="rt-modal-title">
-                {isEdit ? 'Chỉnh sửa mã khuyến mãi' : 'Thêm mã khuyến mãi'}
+                {isEdit ? 'Chỉnh sửa coupon' : 'Thêm coupon'}
               </h2>
               <p className="rt-modal-subtitle">
-                Thông tin được lưu trực tiếp vào cơ sở dữ liệu khuyến mãi.
+                Thông tin được lưu trực tiếp vào danh sách coupons.
               </p>
             </div>
           </div>
@@ -313,7 +313,7 @@ const PromotionFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loa
               ) : isEdit ? (
                 'Lưu thay đổi'
               ) : (
-                'Thêm mã khuyến mãi'
+                'Thêm coupon'
               )}
             </button>
           </div>
@@ -323,4 +323,4 @@ const PromotionFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loa
   );
 };
 
-export default PromotionFormModal;
+export default CouponFormModal;

@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  createPromotion,
-  deletePromotion,
-  fetchPromotions,
-  updatePromotion,
+  createCoupon,
+  deleteCoupon,
+  fetchCoupons,
+  updateCoupon,
 } from '../../../services/couponApi';
-import PromotionFormModal from '../components/CouponFormModal';
+import CouponFormModal from '../components/CouponFormModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
 import './CouponManagementPage.css';
 
@@ -48,10 +48,10 @@ const StatCard = ({ label, value, sub, icon, accent }) => (
 );
 
 /* ─── Main Page Component ─────────────────────────────────── */
-const PromotionManagementPage = () => {
+const CouponManagementPage = () => {
   const navigate = useNavigate();
 
-  const [promotions, setPromotions] = useState([]);
+  const [coupons, setCoupons] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -60,9 +60,9 @@ const PromotionManagementPage = () => {
 
   // Modal states
   const [formModalOpen, setFormModalOpen] = useState(false);
-  const [editingPromotion, setEditingPromotion] = useState(null);
+  const [editingCoupon, setEditingCoupon] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [deletingPromotion, setDeletingPromotion] = useState(null);
+  const [deletingCoupon, setDeletingCoupon] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -84,10 +84,10 @@ const PromotionManagementPage = () => {
     setError(null);
     let active = true;
 
-    fetchPromotions()
+    fetchCoupons()
       .then((res) => {
         if (active) {
-          setPromotions(res.coupons || []);
+          setCoupons(res.coupons || []);
           setStats(res.stats || null);
           setLoading(false);
           setRefreshing(false);
@@ -111,7 +111,7 @@ const PromotionManagementPage = () => {
 
   /* Filter + Sort */
   const filtered = useMemo(() => {
-    let result = [...promotions];
+    let result = [...coupons];
 
     if (searchTerm.trim()) {
       const term = searchTerm.trim().toLowerCase();
@@ -140,15 +140,15 @@ const PromotionManagementPage = () => {
     });
 
     return result;
-  }, [promotions, searchTerm, activeFilter, discountTypeFilter, sortBy]);
+  }, [coupons, searchTerm, activeFilter, discountTypeFilter, sortBy]);
 
   /* Counts for filter pills */
   const counts = useMemo(() => ({
-    ALL: promotions.length,
-    ACTIVE: promotions.filter((p) => p.status === 'ACTIVE').length,
-    EXPIRED: promotions.filter((p) => p.status === 'EXPIRED').length,
-    UPCOMING: promotions.filter((p) => p.status === 'UPCOMING').length,
-  }), [promotions]);
+    ALL: coupons.length,
+    ACTIVE: coupons.filter((coupon) => coupon.status === 'ACTIVE').length,
+    EXPIRED: coupons.filter((coupon) => coupon.status === 'EXPIRED').length,
+    UPCOMING: coupons.filter((coupon) => coupon.status === 'UPCOMING').length,
+  }), [coupons]);
 
   /* Pagination */
   const totalPages = Math.ceil(filtered.length / pageSize) || 1;
@@ -163,31 +163,31 @@ const PromotionManagementPage = () => {
 
   /* ── Modal Handlers ── */
   const openCreateModal = () => {
-    setEditingPromotion(null);
+    setEditingCoupon(null);
     setFormModalOpen(true);
   };
 
-  const openEditModal = (promotion, e) => {
+  const openEditModal = (coupon, e) => {
     e.stopPropagation();
-    setEditingPromotion(promotion);
+    setEditingCoupon(coupon);
     setFormModalOpen(true);
   };
 
-  const openDeleteModal = (promotion, e) => {
+  const openDeleteModal = (coupon, e) => {
     e.stopPropagation();
-    setDeletingPromotion(promotion);
+    setDeletingCoupon(coupon);
     setDeleteModalOpen(true);
   };
 
   const handleFormSubmit = async (formData) => {
     setFormLoading(true);
     try {
-      if (editingPromotion) {
-        await updatePromotion(editingPromotion.coupon_id, formData);
+      if (editingCoupon) {
+        await updateCoupon(editingCoupon.coupon_id, formData);
       } else {
-        await createPromotion(formData);
+        await createCoupon(formData);
       }
-      showToast(editingPromotion ? 'Cập nhật mã khuyến mãi thành công!' : 'Tạo mã khuyến mãi mới thành công!');
+      showToast(editingCoupon ? 'Cập nhật coupon thành công!' : 'Tạo coupon mới thành công!');
       setFormModalOpen(false);
       loadData();
     } catch (err) {
@@ -200,10 +200,10 @@ const PromotionManagementPage = () => {
   const handleDeleteConfirm = async () => {
     setDeleteLoading(true);
     try {
-      await deletePromotion(deletingPromotion.coupon_id);
-      showToast(`Đã xóa mã khuyến mãi "${deletingPromotion?.code}".`);
+      await deleteCoupon(deletingCoupon.coupon_id);
+      showToast(`Đã xóa coupon "${deletingCoupon?.code}".`);
       setDeleteModalOpen(false);
-      setDeletingPromotion(null);
+      setDeletingCoupon(null);
       loadData();
     } catch (err) {
       showToast(err.message || 'Có lỗi xảy ra, vui lòng thử lại.');
@@ -221,17 +221,17 @@ const PromotionManagementPage = () => {
       <nav className="promo-breadcrumb">
         <span>Marketing &amp; Doanh thu</span>
         <span className="promo-breadcrumb__sep">&gt;</span>
-        <span className="promo-breadcrumb__active">Quản lý mã khuyến mãi</span>
+        <span className="promo-breadcrumb__active">Quản lý Coupons</span>
       </nav>
 
       {/* Header */}
       <div className="promo-page__header">
         <div className="promo-page__title-area">
           <div className="promo-page__title-row">
-            <h1 className="promo-page__title">Quản lý mã khuyến mãi</h1>
+            <h1 className="promo-page__title">Quản lý Coupons</h1>
           </div>
           <p className="promo-page__subtitle">
-            Quản lý toàn bộ mã khuyến mãi và ưu đãi trên hệ thống đặt phòng.
+            Quản lý coupon và ưu đãi trên hệ thống đặt phòng.
           </p>
         </div>
 
@@ -278,7 +278,7 @@ const PromotionManagementPage = () => {
       {/* Stats */}
       <div className="promo-stats-grid">
         <StatCard
-          label="Tổng mã khuyến mãi"
+          label="Tổng số Coupons"
           value={loading ? '—' : (stats?.total_coupons ?? 0)}
           sub={`${stats?.active_coupons ?? 0} đang hoạt động`}
           accent="blue"
@@ -428,7 +428,7 @@ const PromotionManagementPage = () => {
                           <line x1="7" y1="7" x2="7.01" y2="7"></line>
                         </svg>
                       </div>
-                      <h3 className="promo-empty-state__title">Không tìm thấy mã khuyến mãi</h3>
+                      <h3 className="promo-empty-state__title">Không tìm thấy coupon</h3>
                       <p className="promo-empty-state__desc">Thử thay đổi bộ lọc hoặc tìm kiếm để kết quả khác</p>
                     </div>
                   </td>
@@ -548,7 +548,7 @@ const PromotionManagementPage = () => {
       {/* Footer / Pagination */}
       <div className="promo-footer-bar">
         <div className="promo-footer-bar__info">
-          <span>Hiển thị {paginated.length} trên {filtered.length} mã khuyến mãi</span>
+          <span>Hiển thị {paginated.length} trên {filtered.length} coupon</span>
           <span className="promo-footer-bar__dot">•</span>
           <button
             className="promo-footer-bar__sync-btn"
@@ -587,22 +587,22 @@ const PromotionManagementPage = () => {
       </div>
 
       {/* Modals */}
-      <PromotionFormModal
+      <CouponFormModal
         isOpen={formModalOpen}
         onClose={() => setFormModalOpen(false)}
         onSubmit={handleFormSubmit}
-        initialData={editingPromotion}
+        initialData={editingCoupon}
         loading={formLoading}
       />
       <DeleteConfirmModal
         isOpen={deleteModalOpen}
         onClose={() => setDeleteModalOpen(false)}
         onConfirm={handleDeleteConfirm}
-        couponCode={deletingPromotion?.code}
+        couponCode={deletingCoupon?.code}
         loading={deleteLoading}
       />
     </div>
   );
 };
 
-export default PromotionManagementPage;
+export default CouponManagementPage;

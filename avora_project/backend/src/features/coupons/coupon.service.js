@@ -68,7 +68,7 @@ const getBookingStats = async (couponIds) => {
 };
 
 /**
- * Fetch all coupons (promotions) with usage statistics.
+ * Fetch all coupons with usage statistics.
  * READ-ONLY.
  * @param {{ search?: string, discount_type?: string, include_deleted?: boolean }} filters
  */
@@ -90,7 +90,7 @@ const getCoupons = async (filters = {}) => {
 
   const { data: coupons, error } = await query;
   if (error) {
-    throwDatabaseError("Không thể tải danh sách khuyến mãi", error);
+    throwDatabaseError("Không thể tải danh sách coupon", error);
   }
 
   const couponList = coupons || [];
@@ -190,10 +190,10 @@ const getCouponById = async (couponId) => {
     .maybeSingle();
 
   if (error) {
-    throwDatabaseError("Không thể tải thông tin mã khuyến mãi", error);
+    throwDatabaseError("Không thể tải thông tin coupon", error);
   }
   if (!coupon) {
-    const notFound = new Error("Không tìm thấy mã khuyến mãi.");
+    const notFound = new Error("Không tìm thấy coupon.");
     notFound.statusCode = 404;
     throw notFound;
   }
@@ -216,7 +216,7 @@ const getCouponById = async (couponId) => {
     .order("created_at", { ascending: false })
     .limit(20);
   if (bookingsError) {
-    throwDatabaseError("Không thể tải lịch sử sử dụng mã khuyến mãi", bookingsError);
+    throwDatabaseError("Không thể tải lịch sử sử dụng coupon", bookingsError);
   }
 
   const usageStats = await getBookingStats([couponId]);

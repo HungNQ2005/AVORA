@@ -1,6 +1,6 @@
 "use strict";
 
-const promotionService = require("./coupon.service");
+const couponService = require("./coupon.service");
 const { sendSuccess, sendError } = require("../../utils/responseHelper");
 const { validateCouponPayload } = require("./coupon.validation");
 
@@ -32,9 +32,9 @@ const getAllCoupons = async (req, res, next) => {
       include_deleted: req.query.include_deleted === "true",
     };
 
-    const result = await promotionService.getCoupons(filters);
+    const result = await couponService.getCoupons(filters);
 
-    return sendSuccess(res, 200, "Lấy danh sách mã khuyến mãi thành công", result);
+    return sendSuccess(res, 200, "Lấy danh sách coupon thành công", result);
   } catch (err) {
     next(err);
   }
@@ -50,9 +50,9 @@ const getCouponById = async (req, res, next) => {
     if (!validateCouponId(id)) {
       return sendError(res, 400, "Mã coupon không hợp lệ.");
     }
-    const coupon = await promotionService.getCouponById(id);
+    const coupon = await couponService.getCouponById(id);
 
-    return sendSuccess(res, 200, "Lấy chi tiết mã khuyến mãi thành công", coupon);
+    return sendSuccess(res, 200, "Lấy chi tiết coupon thành công", coupon);
   } catch (err) {
     next(err);
   }
@@ -63,8 +63,8 @@ const createCoupon = async (req, res, next) => {
     const { payload, error } = validateCouponPayload(req.body);
     if (error) return sendError(res, 400, error);
 
-    const coupon = await promotionService.createCoupon(payload);
-    return sendSuccess(res, 201, "Tạo mã khuyến mãi thành công", coupon);
+    const coupon = await couponService.createCoupon(payload);
+    return sendSuccess(res, 201, "Tạo coupon thành công", coupon);
   } catch (err) {
     next(err);
   }
@@ -80,8 +80,8 @@ const updateCoupon = async (req, res, next) => {
     const { payload, error } = validateCouponPayload(req.body, { partial: req.method === "PATCH" });
     if (error) return sendError(res, 400, error);
 
-    const coupon = await promotionService.updateCoupon(id, payload);
-    return sendSuccess(res, 200, "Cập nhật mã khuyến mãi thành công", coupon);
+    const coupon = await couponService.updateCoupon(id, payload);
+    return sendSuccess(res, 200, "Cập nhật coupon thành công", coupon);
   } catch (err) {
     next(err);
   }
@@ -94,8 +94,8 @@ const deleteCoupon = async (req, res, next) => {
       return sendError(res, 400, "Mã coupon không hợp lệ.");
     }
 
-    await promotionService.deleteCoupon(id);
-    return sendSuccess(res, 200, "Vô hiệu hóa mã khuyến mãi thành công");
+    await couponService.deleteCoupon(id);
+    return sendSuccess(res, 200, "Vô hiệu hóa coupon thành công");
   } catch (err) {
     next(err);
   }

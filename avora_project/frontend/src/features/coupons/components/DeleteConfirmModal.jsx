@@ -21,15 +21,15 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, couponCode, loading = 
               <line x1="14" y1="11" x2="14" y2="17" />
             </svg>
           </div>
-          <h2 className="rt-delete-modal-title">Xóa mã khuyến mãi</h2>
+          <h2 className="rt-delete-modal-title">Vô hiệu hóa coupon</h2>
         </div>
 
         <div className="rt-delete-modal-body">
           <p>
-            Bạn có chắc chắn muốn xóa mã khuyến mãi <strong>"{couponCode}"</strong> khỏi hệ thống không?
+            Bạn có chắc chắn muốn vô hiệu hóa coupon <strong>"{couponCode}"</strong> không?
           </p>
           <p className="rt-delete-modal-warning">
-            Mã này sẽ bị xóa khỏi danh sách quản lý và không thể sử dụng trên hệ thống.
+            Coupon sẽ không thể được sử dụng trong các lượt đặt phòng mới.
           </p>
         </div>
 
@@ -48,7 +48,7 @@ const DeleteConfirmModal = ({ isOpen, onClose, onConfirm, couponCode, loading = 
             onClick={onConfirm}
             disabled={loading}
           >
-            {loading ? 'Đang xóa...' : 'Xác nhận xóa'}
+            {loading ? 'Đang xử lý...' : 'Vô hiệu hóa coupon'}
           </button>
         </div>
       </div>

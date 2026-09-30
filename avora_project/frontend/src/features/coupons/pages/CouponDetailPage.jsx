@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { fetchPromotionById } from '../../../services/couponApi';
+import { fetchCouponById } from '../../../services/couponApi';
 import './CouponDetailPage.css';
 
 /* ─── Helpers ─────────────────────────────────────────────── */
@@ -46,7 +46,7 @@ const getBookingStatusLabel = (statusCd) => {
 };
 
 /* ─── Detail Page ─────────────────────────────────────────── */
-const PromotionDetailPage = () => {
+const CouponDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -60,10 +60,10 @@ const PromotionDetailPage = () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchPromotionById(id);
+        const data = await fetchCouponById(id);
         if (isMounted) setCoupon(data);
       } catch (err) {
-        if (isMounted) setError(err.message || 'Không thể tải dữ liệu chi tiết khuyến mãi.');
+        if (isMounted) setError(err.message || 'Không thể tải dữ liệu chi tiết coupon.');
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -77,7 +77,7 @@ const PromotionDetailPage = () => {
     return (
       <div className="pd-state-container">
         <div className="pd-spinner"></div>
-        <p className="pd-state-text">Đang tải chi tiết mã khuyến mãi...</p>
+        <p className="pd-state-text">Đang tải chi tiết coupon...</p>
       </div>
     );
   }
@@ -92,9 +92,9 @@ const PromotionDetailPage = () => {
           <line x1="12" y1="17" x2="12.01" y2="17"></line>
         </svg>
         <h3 className="pd-state-title">Không thể tải dữ liệu</h3>
-        <p className="pd-state-desc">{error || 'Không tìm thấy mã khuyến mãi.'}</p>
+        <p className="pd-state-desc">{error || 'Không tìm thấy coupon.'}</p>
         <button className="pd-back-btn" onClick={() => navigate('/admin/coupons')}>
-          ← Quay lại danh sách khuyến mãi
+          ← Quay lại danh sách coupons
         </button>
       </div>
     );
@@ -381,4 +381,4 @@ const PromotionDetailPage = () => {
   );
 };
 
-export default PromotionDetailPage;
+export default CouponDetailPage;

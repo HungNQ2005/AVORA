@@ -2,10 +2,10 @@ import { API_ENDPOINTS } from '../constants/apiEndpoints';
 import { authenticatedFetch } from './authenticatedFetch';
 
 /**
- * Fetch list of promotions/coupons with optional filtering.
+ * Fetch coupons with optional filtering.
  * @param {{ search?: string, discount_type?: string, include_deleted?: boolean }} params
  */
-export const fetchPromotions = async (params = {}) => {
+export const fetchCoupons = async (params = {}) => {
   const query = new URLSearchParams();
   if (params.search) {
     query.append('search', params.search);
@@ -22,34 +22,34 @@ export const fetchPromotions = async (params = {}) => {
   const json = await response.json();
 
   if (!response.ok || json.status === 'error') {
-    throw new Error(json.message || 'Không thể tải danh sách khuyến mãi.');
+    throw new Error(json.message || 'Không thể tải danh sách coupon.');
   }
 
   return json.data;
 };
 
 /**
- * Fetch single promotion detail by ID.
+ * Fetch a coupon by ID.
  * @param {string} id
  */
-export const fetchPromotionById = async (id) => {
+export const fetchCouponById = async (id) => {
   const response = await authenticatedFetch(
     `${API_ENDPOINTS.COUPONS}/${encodeURIComponent(id)}`
   );
   const json = await response.json();
 
   if (!response.ok || json.status === 'error') {
-    throw new Error(json.message || 'Không thể tải thông tin chi tiết khuyến mãi.');
+    throw new Error(json.message || 'Không thể tải thông tin chi tiết coupon.');
   }
 
   return json.data;
 };
 
 /**
- * Create a promotion/coupon.
+ * Create a coupon.
  * @param {object} payload
  */
-export const createPromotion = async (payload) => {
+export const createCoupon = async (payload) => {
   const response = await authenticatedFetch(API_ENDPOINTS.COUPONS, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -58,18 +58,18 @@ export const createPromotion = async (payload) => {
   const json = await response.json();
 
   if (!response.ok || json.status === 'error') {
-    throw new Error(json.message || 'Không thể tạo mã khuyến mãi.');
+    throw new Error(json.message || 'Không thể tạo coupon.');
   }
 
   return json.data;
 };
 
 /**
- * Update an existing promotion/coupon.
+ * Update a coupon.
  * @param {string} id
  * @param {object} payload
  */
-export const updatePromotion = async (id, payload) => {
+export const updateCoupon = async (id, payload) => {
   const response = await authenticatedFetch(
     `${API_ENDPOINTS.COUPONS}/${encodeURIComponent(id)}`,
     {
@@ -81,17 +81,17 @@ export const updatePromotion = async (id, payload) => {
   const json = await response.json();
 
   if (!response.ok || json.status === 'error') {
-    throw new Error(json.message || 'Không thể cập nhật mã khuyến mãi.');
+    throw new Error(json.message || 'Không thể cập nhật coupon.');
   }
 
   return json.data;
 };
 
 /**
- * Disable a promotion/coupon without removing its booking history.
+ * Disable a coupon without removing its booking history.
  * @param {string} id
  */
-export const deletePromotion = async (id) => {
+export const deleteCoupon = async (id) => {
   const response = await authenticatedFetch(
     `${API_ENDPOINTS.COUPONS}/${encodeURIComponent(id)}`,
     { method: 'DELETE' }
@@ -99,7 +99,7 @@ export const deletePromotion = async (id) => {
   const json = await response.json();
 
   if (!response.ok || json.status === 'error') {
-    throw new Error(json.message || 'Không thể xóa mã khuyến mãi.');
+    throw new Error(json.message || 'Không thể vô hiệu hóa coupon.');
   }
 
   return json.data;
