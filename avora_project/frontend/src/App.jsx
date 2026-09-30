@@ -16,6 +16,7 @@ import RoomTypeDetailPage from './features/room_types/pages/RoomTypeDetailPage';
 import AmenityManagementPage from './features/amenities/pages/AmenityManagementPage';
 import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
+import UserManagementPage from './features/users/pages/UserManagementPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 /**
@@ -142,9 +143,19 @@ function App() {
             <Route
               path="coupons/:id"
               element={
-                <BusinessManagerRoute>
+                <BusinessManagerRout>
                   <CouponDetailPage />
                 </BusinessManagerRoute>
+              }
+            />
+            <Route
+              path="users"
+
+              element={
+                <VenueManagerRoute>
+                  <UserManagementPage />
+                </VenueManagerRoute>
+
               }
             />
           </Route>
@@ -154,6 +165,7 @@ function App() {
           <Route path="/amenities" element={<Navigate to="/admin/amenities" replace />} />
           <Route path="/facilities" element={<Navigate to="/admin/facilities" replace />} />
           <Route path="/coupons" element={<Navigate to="/admin/coupons" replace />} />
+          <Route path="/users" element={<Navigate to="/admin/users" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
