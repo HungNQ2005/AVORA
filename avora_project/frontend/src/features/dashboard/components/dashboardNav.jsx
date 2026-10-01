@@ -5,7 +5,9 @@ import { codeNameParser } from '../../../utils/codeNameParser';
 import './dashboardNav.css';
 
 const ROLE_LABELS = {
-  VEN: 'Hotel Manager',
+  ADM: 'Quản trị viên hệ thống',
+  BMR: 'Quản lý doanh nghiệp',
+  VEN: 'Quản lý khách sạn',
 };
 
 const getUserInitials = (name) => {
@@ -18,9 +20,10 @@ const getUserInitials = (name) => {
 const DashboardNav = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const canManageVenue = ['VEN', 'ADM'].includes(user?.role_code_name);
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const canManageVenue = roleCd === '1';
+  const canManageHotels = canManageVenue || roleCd === '3';
   const roleCode = user?.role_code_name?.trim().toUpperCase();
-  const canManageHotels = ['VEN', 'VENDOR', 'ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER'].includes(roleCode);
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
 

@@ -9,19 +9,13 @@ const createError = (message, statusCode) => {
 };
 
 const getHotels = async (filters, access) => {
-	if (filters.status_cd && !['ACTIVE', 'PENDING'].includes(filters.status_cd)) {
-		throw createError('status_cd must be either PENDING or ACTIVE.', 400);
-	}
-
 	const page = Number(filters.page);
 	const result = await hotelModel.listHotels({
 		...filters,
 		page,
 		pageSize: 10,
-		// Vendors only ever see their own, non-deleted hotels (both PENDING and ACTIVE).
-		// System Admin / Business Manager see every hotel, including soft-deleted ones.
 		ownerId: access.isVendor ? access.userId : null,
-		includeDeleted: !access.isVendor,
+		includeDeleted: Boolean(access.isSystemAdmin),
 	});
 
 	return {
@@ -38,22 +32,15 @@ const getHotels = async (filters, access) => {
 const getHotel = async (hotelId, access) => {
 	const hotel = await hotelModel.getHotelById(hotelId, {
 		ownerId: access.isVendor ? access.userId : null,
-		includeDeleted: !access.isVendor,
+		includeDeleted: Boolean(access.isSystemAdmin),
 	});
-	if (!hotel) throw createError('Hotel not found.', 404);
+	if (!hotel) throw createError('Không tìm thấy khách sạn.', 404);
 	return hotelModel.toHotelDto(hotel);
-};
-
-const getVendors = async (access) => {
-	if (!access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('Only System Admin and Business Manager can assign hotel owners.', 403);
-	}
-	return hotelModel.listActiveVendors();
 };
 
 const createHotel = async (input, access) => {
 	if (!access?.isVendor) {
-		throw createError('Only Vendors can create hotels.', 403);
+		throw createError('Chỉ Nhà cung cấp mới có quyền tạo khách sạn.', 403);
 	}
 
 	const hotel = await hotelModel.createHotel({
@@ -68,7 +55,7 @@ const createHotel = async (input, access) => {
 		lat: input.lat,
 		lng: input.lng,
 		// Vendor submissions always start as PENDING and require staff approval.
-		hotel_status: access.isVendor ? 'PENDING' : 'ACTIVE',
+		hotel_status: 'PENDING',
 		is_deleted: false,
 	});
 
@@ -77,76 +64,84 @@ const createHotel = async (input, access) => {
 
 const approveHotel = async (hotelId, access) => {
 	if (!access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('Only System Admin and Business Manager can approve hotels.', 403);
+		throw createError('Chỉ Quản trị viên hệ thống và Quản lý doanh nghiệp mới có quyền phê duyệt khách sạn.', 403);
 	}
 	const hotel = await hotelModel.approveHotel(hotelId);
-	if (!hotel) throw createError('Hotel not found, already active, or has been deleted.', 404);
-	return hotelModel.toHotelDto(hotel);
-};
-
-const restoreHotel = async (hotelId, access) => {
-	if (!access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('Only System Admin and Business Manager can restore deleted hotels.', 403);
-	}
-	const hotel = await hotelModel.restoreHotel(hotelId);
-	if (!hotel) throw createError('Deleted hotel not found.', 404);
+	if (!hotel) throw createError('Không tìm thấy khách sạn, khách sạn đã hoạt động hoặc đã bị xóa.', 404);
 	return hotelModel.toHotelDto(hotel);
 };
 
 const updateHotel = async (hotelId, input, access) => {
-	if (!access.isVendor && !access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('You do not have permission to update hotels.', 403);
-	}
 	const updates = { ...input };
+	const isStaff = access.isSystemAdmin || access.isBusinessManager;
+	if (!access.isVendor && !isStaff) {
+		throw createError('Bạn không có quyền cập nhật khách sạn.', 403);
+	}
 	if (updates.owner_id !== undefined) {
-		if (!access.isSystemAdmin && !access.isBusinessManager) {
-			throw createError('Only System Admin and Business Manager can change hotel ownership.', 403);
+		throw createError('Không thể thay đổi chủ sở hữu khách sạn.', 403);
+	}
+	const hotel = await hotelModel.getHotelById(hotelId, {
+		ownerId: access.isVendor ? access.userId : null,
+		includeDeleted: Boolean(access.isSystemAdmin),
+	});
+	if (!hotel) throw createError('Không tìm thấy khách sạn.', 404);
+
+	const informationFields = ['name', 'description', 'address', 'city_id', 'district_id', 'ward_id', 'star_quality', 'lat', 'lng'];
+	if (isStaff && informationFields.some((field) => updates[field] !== undefined)) {
+		throw createError('Nhân viên chỉ được phép cập nhật trạng thái khách sạn.', 403);
+	}
+	if (updates.hotel_status !== undefined) {
+		if (access.isVendor && (updates.hotel_status !== 'PENDING' || hotel.hotel_status !== 'INACTIVE')) {
+			throw createError('Nhà cung cấp chỉ có thể yêu cầu mở lại khách sạn đang ngừng hoạt động.', 403);
 		}
-		if (!(await hotelModel.isActiveVendor(updates.owner_id))) {
-			throw createError('owner_id must belong to an active Vendor account.', 400);
+		if (access.isVendor && Object.keys(updates).length !== 1) {
+			throw createError('Vui lòng gửi yêu cầu mở lại riêng, không kèm thông tin cập nhật.', 400);
+		}
+		if (isStaff && updates.hotel_status === 'ACTIVE' && hotel.hotel_status !== 'PENDING') {
+			throw createError('Chỉ khách sạn đang chờ duyệt mới có thể được phê duyệt.', 403);
+		}
+		if (isStaff && updates.hotel_status === 'PENDING') {
+			throw createError('Chỉ Nhà cung cấp mới có thể yêu cầu mở lại khách sạn.', 403);
 		}
 	}
 	if (updates.name !== undefined) updates.name = updates.name.trim();
 	if (updates.address !== undefined) updates.address = updates.address.trim();
 	if (updates.description !== undefined) updates.description = updates.description.trim() || null;
-	const hotel = await hotelModel.updateHotel(hotelId, updates, {
+	const updateOptions = {
 		ownerId: access.isVendor ? access.userId : null,
-		includeDeleted: !access.isVendor,
-	});
-	if (!hotel) throw createError('Hotel not found.', 404);
-	const details = await hotelModel.getHotelById(hotel.hotel_id, {
-		ownerId: access.isVendor ? access.userId : null,
-		includeDeleted: !access.isVendor,
-	});
-	return hotelModel.toHotelDto(details || hotel);
+		includeDeleted: Boolean(access.isSystemAdmin),
+		expectedStatus: updates.hotel_status !== undefined ? hotel.hotel_status : null,
+	};
+	const updatedHotel = updates.hotel_status === 'INACTIVE'
+		? await hotelModel.deactivateHotel({ hotelId, access, options: updateOptions })
+		: await hotelModel.updateHotel(hotelId, updates, updateOptions);
+	if (updatedHotel?.status === 'active_bookings') {
+		throw createError('Không thể ngừng hoạt động khách sạn khi còn đặt phòng đang chờ, sắp diễn ra hoặc phòng đang được sử dụng.', 409);
+	}
+	if (!updatedHotel) throw createError('Không tìm thấy khách sạn hoặc trạng thái đã thay đổi. Vui lòng tải lại trang và thử lại.', 404);
+	const details = await hotelModel.getHotelById(hotelId, updateOptions);
+	return hotelModel.toHotelDto(details || updatedHotel);
 };
 
 const deleteHotel = async (hotelId, access) => {
-	if (!access.isVendor && !access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('You do not have permission to delete hotels.', 403);
+	if (!access.isVendor) throw createError('Chỉ Nhà cung cấp mới có thể ngừng hoạt động khách sạn bằng thao tác này.', 403);
+	const hotel = await hotelModel.deactivateHotel({
+		hotelId,
+		access,
+		options: { ownerId: access.userId, includeDeleted: false },
+	});
+	if (!hotel) throw createError('Không tìm thấy khách sạn hoặc bạn không được phân công quản lý khách sạn này.', 404);
+	if (hotel.status === 'active_bookings') {
+		throw createError('Không thể ngừng hoạt động khách sạn khi còn đặt phòng đang chờ, sắp diễn ra hoặc phòng đang được sử dụng.', 409);
 	}
-
-	const result = await hotelModel.softDeleteHotel({ hotelId, access });
-
-	if (result?.status === 'not_found') throw createError('Hotel not found.', 404);
-	if (result?.status === 'forbidden') throw createError('You are not assigned to this hotel.', 403);
-	if (result?.status === 'active_hotel_locked') {
-		throw createError('Only PENDING hotels can be self-deleted by a Vendor. Active hotels must be handled by System Admin or Business Manager.', 403);
-	}
-	if (result?.status === 'active_bookings') {
-		throw createError('Hotel cannot be deleted while it has Pending or Upcoming bookings, or rooms in an active operational state.', 409);
-	}
-	if (result?.status !== 'deleted') throw createError('Hotel could not be deleted.', 500);
-
-	return { hotel_id: hotelId, is_deleted: true };
+	const details = await hotelModel.getHotelById(hotelId, { ownerId: access.userId });
+	return hotelModel.toHotelDto(details || hotel);
 };
 
 const uploadHotelImage = async (hotelId, file, access) => {
-	if (!access.isVendor && !access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('You do not have permission to manage hotel images.', 403);
-	}
-	if (!file) throw createError('An image file is required.', 400);
-	if (!file.mimetype?.startsWith('image/')) throw createError('Only image files are allowed.', 400);
+	if (!access.isVendor) throw createError('Chỉ Nhà cung cấp sở hữu khách sạn mới được quản lý hình ảnh.', 403);
+	if (!file) throw createError('Vui lòng chọn tệp hình ảnh.', 400);
+	if (!file.mimetype?.startsWith('image/')) throw createError('Chỉ chấp nhận tệp hình ảnh.', 400);
 
 	const image = await hotelModel.addHotelImage(hotelId, {
 		buffer: file.buffer,
@@ -154,28 +149,24 @@ const uploadHotelImage = async (hotelId, file, access) => {
 		originalName: file.originalname,
 		isThumbnail: false,
 	}, access);
-	if (!image) throw createError('Hotel not found or you are not assigned to it.', 404);
+	if (!image) throw createError('Không tìm thấy khách sạn hoặc bạn không được phân công quản lý khách sạn này.', 404);
 	return image;
 };
 
 const deleteHotelImage = async (hotelId, imageId, access) => {
-	if (!access.isVendor && !access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('You do not have permission to manage hotel images.', 403);
-	}
+	if (!access.isVendor) throw createError('Chỉ Nhà cung cấp sở hữu khách sạn mới được quản lý hình ảnh.', 403);
 	const result = await hotelModel.deleteHotelImage(hotelId, imageId, access);
-	if (result?.status === 'forbidden') throw createError('You are not assigned to this hotel.', 403);
-	if (result?.status === 'not_found') throw createError('Image not found.', 404);
+	if (result?.status === 'forbidden') throw createError('Bạn không được phân công quản lý khách sạn này.', 403);
+	if (result?.status === 'not_found') throw createError('Không tìm thấy hình ảnh.', 404);
 	return { image_id: imageId };
 };
 
 const setHotelImageThumbnail = async (hotelId, imageId, access) => {
-	if (!access.isVendor && !access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('You do not have permission to manage hotel images.', 403);
-	}
+	if (!access.isVendor) throw createError('Chỉ Nhà cung cấp sở hữu khách sạn mới được quản lý hình ảnh.', 403);
 	const result = await hotelModel.setHotelImageThumbnail(hotelId, imageId, access);
-	if (result?.status === 'forbidden') throw createError('You are not assigned to this hotel.', 403);
-	if (result?.status === 'not_found') throw createError('Image not found.', 404);
+	if (result?.status === 'forbidden') throw createError('Bạn không được phân công quản lý khách sạn này.', 403);
+	if (result?.status === 'not_found') throw createError('Không tìm thấy hình ảnh.', 404);
 	return { image_id: imageId, is_thumbnail: true };
 };
 
-module.exports = { getHotels, getHotel, getVendors, createHotel, updateHotel, approveHotel, restoreHotel, deleteHotel, uploadHotelImage, deleteHotelImage, setHotelImageThumbnail };
+module.exports = { getHotels, getHotel, createHotel, updateHotel, approveHotel, deleteHotel, uploadHotelImage, deleteHotelImage, setHotelImageThumbnail };

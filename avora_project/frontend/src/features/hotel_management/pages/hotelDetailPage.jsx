@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import Dialog from '../../../common/components/Dialog';
 import LocationSelect from '../components/locationSelect';
 import HotelThumb from '../components/hotelThumb';
 import HotelImageManager from '../components/hotelImageManager';
 import { useAuth } from '../../../context/AuthContext';
-import { approveHotel, deleteHotel, getHotel, getVendors, restoreHotel, updateHotel } from '../../../services/hotelManagementService';
+import { approveHotel, deleteHotel, getHotel, updateHotel } from '../../../services/hotelManagementService';
 import '../components/hotelThumb.css';
 import './hotelDetailPage.css';
 
@@ -19,17 +19,13 @@ const toHotelForm = (hotel) => ({
   star_quality: hotel.star_quality ?? '',
   lat: hotel.lat ?? '',
   lng: hotel.lng ?? '',
-  owner_id: hotel.owner_id || '',
 });
 
 const HotelDetailPage = () => {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const [hotel, setHotel] = useState(null);
   const [form, setForm] = useState(null);
-  const [vendors, setVendors] = useState([]);
-  const [vendorsError, setVendorsError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -39,15 +35,6 @@ const HotelDetailPage = () => {
   const isVendor = role === 'VEN';
   const canApprove = role === 'ADM' || role === 'BMR';
   const [images, setImages] = useState([]);
-
-  useEffect(() => {
-    if (!canApprove) return;
-    let active = true;
-    getVendors()
-      .then((records) => { if (active) setVendors(records); })
-      .catch((err) => { if (active) setVendorsError(err.response?.data?.message || 'Không thể tải danh sách Chủ khách sạn (Vendor).'); });
-    return () => { active = false; };
-  }, [canApprove]);
 
   useEffect(() => {
     let active = true;
@@ -80,7 +67,8 @@ const HotelDetailPage = () => {
 
   const handleSave = async (event) => {
     event.preventDefault();
-    if (!form?.name.trim() || !form?.address.trim()) {
+    if (!isVendor) return;
+    if (isVendor && (!form?.name.trim() || !form?.address.trim())) {
       setError('Tên khách sạn và địa chỉ là bắt buộc.');
       return;
     }
@@ -88,9 +76,9 @@ const HotelDetailPage = () => {
     const latitude = form.lat === '' ? undefined : Number(form.lat);
     const longitude = form.lng === '' ? undefined : Number(form.lng);
     const stars = Number(form.star_quality);
-    if ((latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90))
+    if (isVendor && ((latitude !== undefined && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90))
       || (longitude !== undefined && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180))
-      || !Number.isInteger(stars) || stars < 1 || stars > 5) {
+      || !Number.isInteger(stars) || stars < 1 || stars > 5)) {
       setError('Nhập tọa độ hợp lệ (nếu có) và hạng sao là số nguyên từ 1 đến 5.');
       return;
     }
@@ -106,10 +94,9 @@ const HotelDetailPage = () => {
         district_id: form.district_id || null,
         ward_id: form.ward_id || null,
         star_quality: stars,
+        ...(latitude !== undefined ? { lat: latitude } : {}),
+        ...(longitude !== undefined ? { lng: longitude } : {}),
       };
-      if (latitude !== undefined) payload.lat = latitude;
-      if (longitude !== undefined) payload.lng = longitude;
-      if (canApprove && form.owner_id !== hotel.owner_id && form.owner_id) payload.owner_id = form.owner_id;
 
       const updated = await updateHotel(id, payload);
       setHotel(updated);
@@ -141,15 +128,29 @@ const HotelDetailPage = () => {
     }
   };
 
-  const handleRestore = async () => {
+  const handleReactivate = async () => {
     setActionLoading(true);
     try {
-      const restored = await restoreHotel(id);
-      setHotel(restored);
-      setForm(toHotelForm(restored));
-      setToast('Khách sạn đã được khôi phục.');
+      const reopened = await updateHotel(id, { hotel_status: 'PENDING' });
+      setHotel(reopened);
+      setForm(toHotelForm(reopened));
+      setToast('Yêu cầu mở lại đã được gửi để phê duyệt.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Không thể khôi phục khách sạn này.');
+      setError(err.response?.data?.message || 'Không thể gửi yêu cầu mở lại khách sạn này.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSetStatus = async (hotelStatus) => {
+    setActionLoading(true);
+    try {
+      const updated = await updateHotel(id, { hotel_status: hotelStatus });
+      setHotel(updated);
+      setForm(toHotelForm(updated));
+      setToast('Trạng thái khách sạn đã được cập nhật.');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể cập nhật trạng thái khách sạn.');
     } finally {
       setActionLoading(false);
     }
@@ -163,10 +164,13 @@ const HotelDetailPage = () => {
   const handleDelete = async () => {
     setActionLoading(true);
     try {
-      await deleteHotel(id);
-      navigate('/dashboard/hotel-management', { replace: true, state: { notice: 'Đã xóa khách sạn.' } });
+      const deactivated = await deleteHotel(id);
+      setHotel(deactivated);
+      setForm(toHotelForm(deactivated));
+      setDeleteOpen(false);
+      setToast('Khách sạn đã ngừng hoạt động.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Không thể xóa khách sạn này.');
+      setError(err.response?.data?.message || 'Không thể ngừng hoạt động khách sạn này.');
     } finally {
       setActionLoading(false);
     }
@@ -179,10 +183,11 @@ const HotelDetailPage = () => {
   if (!hotel) return null;
 
   const isPending = hotel.status_cd === 'PENDING';
-  const status = hotel.is_deleted ? 'Đã xóa' : (isPending ? 'Chờ duyệt' : 'Đang hoạt động');
+  const isInactive = hotel.status_cd === 'INACTIVE';
+  const status = hotel.is_deleted ? 'Lịch sử đã xóa' : (hotel.status_name || (isPending ? 'Chờ duyệt' : 'Đang hoạt động'));
   const addressParts = [hotel.address, hotel.ward_name, hotel.district_name, hotel.city_name].filter(Boolean);
-  const vendorCanDelete = isVendor && !hotel.is_deleted && isPending;
-  const staffCanDelete = canApprove && !hotel.is_deleted;
+  const vendorCanDeactivate = isVendor && !hotel.is_deleted && !isInactive;
+  const staffCanDeactivate = canApprove && !hotel.is_deleted && !isInactive;
 
   return (
     <section className="hotel-detail">
@@ -196,14 +201,15 @@ const HotelDetailPage = () => {
           <p className="hotel-detail__location">{addressParts.join(', ') || 'Chưa có vị trí'}</p>
         </div>
         <div className="hotel-detail__actions">
-          {canApprove && hotel.is_deleted && <button type="button" className="hotel-button hotel-button--primary" onClick={handleRestore} disabled={actionLoading}>{actionLoading ? 'Đang khôi phục…' : 'Khôi phục'}</button>}
           {canApprove && !hotel.is_deleted && isPending && <button type="button" className="hotel-button hotel-button--primary" onClick={handleApprove} disabled={actionLoading}>{actionLoading ? 'Đang duyệt…' : 'Phê duyệt'}</button>}
-          {(vendorCanDelete || staffCanDelete) && <button type="button" className="hotel-button hotel-button--danger" onClick={requestDelete} disabled={actionLoading}>Xóa</button>}
+          {isVendor && !hotel.is_deleted && isInactive && <button type="button" className="hotel-button hotel-button--primary" onClick={handleReactivate} disabled={actionLoading}>Yêu cầu mở lại</button>}
+          {staffCanDeactivate && <button type="button" className="hotel-button hotel-button--danger" onClick={() => handleSetStatus('INACTIVE')} disabled={actionLoading}>Ngừng hoạt động</button>}
+          {vendorCanDeactivate && <button type="button" className="hotel-button hotel-button--danger" onClick={requestDelete} disabled={actionLoading}>Ngừng hoạt động</button>}
         </div>
       </header>
 
       <div className="hotel-detail__status-line">
-        <span className={`hotel-detail__status hotel-detail__status--${hotel.is_deleted ? 'deleted' : (isPending ? 'pending' : 'active')}`}>{status}</span>
+        <span className={`hotel-detail__status hotel-detail__status--${hotel.is_deleted ? 'deleted' : (isInactive ? 'inactive' : (isPending ? 'pending' : 'active'))}`}>{status}</span>
         <span className="hotel-detail__rating"><b aria-hidden="true">{'★'.repeat(Math.max(0, Math.min(5, Number(hotel.star_quality) || 0)))}</b> Hạng {hotel.star_quality || '—'} sao</span>
       </div>
 
@@ -214,23 +220,23 @@ const HotelDetailPage = () => {
             <div className="hotel-detail__field-grid">
               <label className="hotel-detail__field hotel-detail__field--wide">
                 <span>Tên khách sạn</span>
-                <input name="name" value={form?.name || ''} onChange={updateField} required maxLength={200} />
+                <input name="name" value={form?.name || ''} onChange={updateField} readOnly={!isVendor} required={isVendor} maxLength={200} />
               </label>
               <label className="hotel-detail__field hotel-detail__field--wide">
                 <span>Địa chỉ</span>
-                <input name="address" value={form?.address || ''} onChange={updateField} required maxLength={500} />
+                <input name="address" value={form?.address || ''} onChange={updateField} readOnly={!isVendor} required={isVendor} maxLength={500} />
               </label>
-              <LocationSelect cityId={form?.city_id} districtId={form?.district_id} wardId={form?.ward_id} onChange={updateLocation} disabled={actionLoading} />
+              <LocationSelect cityId={form?.city_id} districtId={form?.district_id} wardId={form?.ward_id} onChange={updateLocation} disabled={!isVendor || actionLoading} />
               <label className="hotel-detail__field">
                 <span>Hạng sao</span>
-                <select name="star_quality" value={form?.star_quality ?? ''} onChange={updateField} required>
+                <select name="star_quality" value={form?.star_quality ?? ''} onChange={updateField} disabled={!isVendor} required>
                   <option value="">Chọn hạng sao</option>
                   {[1, 2, 3, 4, 5].map((stars) => <option value={stars} key={stars}>{stars} sao</option>)}
                 </select>
               </label>
               <label className="hotel-detail__field hotel-detail__field--wide">
                 <span>Mô tả</span>
-                <textarea name="description" rows={4} value={form?.description || ''} onChange={updateField} maxLength={10000} />
+                <textarea name="description" rows={4} value={form?.description || ''} onChange={updateField} readOnly={!isVendor} maxLength={10000} />
               </label>
             </div>
           </section>
@@ -239,29 +245,18 @@ const HotelDetailPage = () => {
             <h2>Vị trí & chủ sở hữu</h2>
             <div className="hotel-detail__field-grid">
               <label className="hotel-detail__field">
-                <span>Vĩ độ (Latitude)</span>
-                <input name="lat" type="number" min="-90" max="90" step="any" value={form?.lat ?? ''} onChange={updateField} required />
+                <span>Vĩ độ</span>
+                <input name="lat" type="number" min="-90" max="90" step="any" value={form?.lat ?? ''} onChange={updateField} readOnly={!isVendor} required={isVendor} />
               </label>
               <label className="hotel-detail__field">
-                <span>Kinh độ (Longitude)</span>
-                <input name="lng" type="number" min="-180" max="180" step="any" value={form?.lng ?? ''} onChange={updateField} required />
+                <span>Kinh độ</span>
+                <input name="lng" type="number" min="-180" max="180" step="any" value={form?.lng ?? ''} onChange={updateField} readOnly={!isVendor} required={isVendor} />
               </label>
               <label className="hotel-detail__field hotel-detail__field--wide">
                 <span>Chủ sở hữu</span>
-                {canApprove ? (
-                  <select name="owner_id" value={form?.owner_id || ''} onChange={updateField}>
-                    <option value="">Chọn Vendor</option>
-                    {hotel.owner_id && !vendors.some((vendor) => vendor.user_id === hotel.owner_id) && (
-                      <option value={hotel.owner_id}>{hotel.owner?.full_name || 'Chủ sở hữu hiện tại'} (đang gán)</option>
-                    )}
-                    {vendors.map((vendor) => <option key={vendor.user_id} value={vendor.user_id}>{vendor.full_name} · {vendor.email}</option>)}
-                  </select>
-                ) : (
-                  <input value={hotel.owner?.full_name || hotel.owner_name || 'Chưa gán'} readOnly />
-                )}
+                <input value={hotel.owner?.full_name || hotel.owner_name || 'Chưa gán'} readOnly />
               </label>
             </div>
-            {vendorsError && <p className="hotel-detail__inline-error" role="alert">{vendorsError}</p>}
             {canApprove && hotel.owner && <p className="hotel-detail__owner-contact">Chủ sở hữu hiện tại: {hotel.owner.full_name} · {hotel.owner.phone || 'Chưa có số điện thoại'} · {hotel.owner.email}</p>}
             <p className="hotel-detail__room-total"><strong>{hotel.total_rooms ?? hotel.room_count ?? 0}</strong> phòng thực tế · <strong>{hotel.total_room_types ?? 0}</strong> loại phòng</p>
             <a href={`https://www.google.com/maps?q=${encodeURIComponent(`${form?.lat},${form?.lng}`)}`} target="_blank" rel="noreferrer">Xem tọa độ trên bản đồ ↗</a>
@@ -271,24 +266,24 @@ const HotelDetailPage = () => {
         {error && <p className="hotel-detail__form-error" role="alert">{error}</p>}
         <footer className="hotel-detail__form-actions">
           <span>Mã khách sạn: <code>{hotel.hotel_id}</code></span>
-          <div>
+          {isVendor && <div>
             <button type="button" className="hotel-button hotel-button--quiet" onClick={handleCancelChanges} disabled={actionLoading}>Hủy</button>
             <button type="submit" className="hotel-button hotel-button--primary" disabled={actionLoading}>{actionLoading ? 'Đang lưu…' : 'Lưu thay đổi'}</button>
-          </div>
+          </div>}
         </footer>
       </form>
 
-      <HotelImageManager hotelId={hotel.hotel_id} images={images} onImagesChange={setImages} canManage={isVendor || canApprove} />
+      <HotelImageManager hotelId={hotel.hotel_id} images={images} onImagesChange={setImages} canManage={isVendor} />
 
       {toast && <div className="hotel-toast" role="status">{toast}</div>}
       <Dialog
         isOpen={deleteOpen}
         onClose={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
-        title="Xóa khách sạn này?"
-        message={error || `"${hotel.name}" sẽ bị xóa mềm. Không thể xóa khách sạn đang có đặt phòng hoặc phòng đang sử dụng/được giữ.`}
+        title="Ngừng hoạt động khách sạn này?"
+        message={error || `"${hotel.name}" sẽ chuyển sang trạng thái Ngừng hoạt động. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
         variant="confirm"
-        confirmLabel={actionLoading ? 'Đang xóa…' : 'Xóa khách sạn'}
+        confirmLabel={actionLoading ? 'Đang cập nhật…' : 'Ngừng hoạt động'}
       />
     </section>
   );

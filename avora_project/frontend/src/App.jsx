@@ -38,10 +38,11 @@ function ScrollToTop() {
  */
 const VenueManagerRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  if (!['VEN', 'ADM'].includes(user.role_code_name)) return <Navigate to="/" replace />;
+  if (roleCd !== '1') return <Navigate to="/" replace />;
 
   return children;
 };

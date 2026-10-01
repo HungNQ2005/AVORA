@@ -12,6 +12,7 @@
 .hotel-detail__status { padding: .32rem .6rem; border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; color: #1d4ed8; font-size: .74rem; font-weight: 750; }
 .hotel-detail__status--active { border-color: #bbf7d0; background: #f0fdf4; color: #15803d; }
 .hotel-detail__status--pending { border-color: #fde68a; background: #fffbeb; color: #a16207; }
+.hotel-detail__status--inactive { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
 .hotel-detail__status--deleted { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
 .hotel-detail__rating { color: #475569; font-size: .82rem; }
 .hotel-detail__rating b { color: #d97706; }

@@ -121,11 +121,11 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
             </select>
           </label>
           <label className="hotel-modal__field">
-            <span>Vĩ độ (Latitude) <b>*</b></span>
+            <span>Vĩ độ <b>*</b></span>
             <input name="lat" type="number" min="-90" max="90" step="any" value={form.lat} onChange={updateField} required />
           </label>
           <label className="hotel-modal__field">
-            <span>Kinh độ (Longitude) <b>*</b></span>
+            <span>Kinh độ <b>*</b></span>
             <input name="lng" type="number" min="-180" max="180" step="any" value={form.lng} onChange={updateField} required />
           </label>
           {error && <p className="hotel-modal__error" role="alert">{error}</p>}

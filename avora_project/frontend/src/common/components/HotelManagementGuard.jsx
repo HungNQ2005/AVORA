@@ -8,7 +8,7 @@ const HotelManagementGuard = ({ children }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
-  if (loading) return <div className="hotel-detail-state" role="status">Checking access…</div>;
+  if (loading) return <div className="hotel-detail-state" role="status">Đang kiểm tra quyền truy cập…</div>;
   if (!user) return <Navigate to="/signin" replace state={{ from: location }} />;
   const role = getRole(user);
   if (role !== 'ADM' && role !== 'BMR' && role !== 'VEN') return <Navigate to="/forbidden" replace />;

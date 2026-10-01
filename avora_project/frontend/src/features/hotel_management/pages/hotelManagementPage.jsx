@@ -4,7 +4,7 @@ import HotelCard from '../components/hotelCard';
 import EditHotelPopup from '../components/editHotelPopup';
 import Dialog from '../../../common/components/Dialog';
 import { useAuth } from '../../../context/AuthContext';
-import { approveHotel, createHotel, deleteHotel, getCities, getHotels, restoreHotel, updateHotel } from '../../../services/hotelManagementService';
+import { approveHotel, createHotel, deleteHotel, getCities, getHotels, updateHotel } from '../../../services/hotelManagementService';
 import './hotelManagementPage.css';
 
 const HotelManagementPage = () => {
@@ -102,13 +102,23 @@ const HotelManagementPage = () => {
 		}
 	};
 
-	const handleRestore = async (hotel) => {
+	const handleReactivate = async (hotel) => {
 		try {
-			const restored = await restoreHotel(hotel.hotel_id);
-			setHotels((current) => current.map((item) => item.hotel_id === restored.hotel_id ? restored : item));
-			setToast(`${hotel.name} đã được khôi phục.`);
+			const reopened = await updateHotel(hotel.hotel_id, { hotel_status: 'PENDING' });
+			setHotels((current) => current.map((item) => item.hotel_id === reopened.hotel_id ? reopened : item));
+			setToast(`${hotel.name} đã được gửi yêu cầu mở lại.`);
 		} catch (err) {
-			setError(err.response?.data?.message || 'Không thể khôi phục khách sạn này.');
+			setError(err.response?.data?.message || 'Không thể gửi yêu cầu mở lại khách sạn này.');
+		}
+	};
+
+	const handleSetStatus = async (hotel, hotelStatus) => {
+		try {
+			const updated = await updateHotel(hotel.hotel_id, { hotel_status: hotelStatus });
+			setHotels((current) => current.map((item) => item.hotel_id === updated.hotel_id ? updated : item));
+			setToast(`${hotel.name} đã cập nhật trạng thái.`);
+		} catch (err) {
+			setError(err.response?.data?.message || 'Không thể cập nhật trạng thái khách sạn.');
 		}
 	};
 
@@ -122,13 +132,12 @@ const HotelManagementPage = () => {
 	const handleDelete = async () => {
 		setDeleteError('');
 		try {
-			await deleteHotel(deleteTarget.hotel_id);
-			setHotels((current) => current.filter((hotel) => hotel.hotel_id !== deleteTarget.hotel_id));
-			setPagination((current) => ({ ...current, total_items: Math.max(0, current.total_items - 1) }));
-			setToast(`${deleteTarget.name} đã được xóa.`);
+			const deactivated = await deleteHotel(deleteTarget.hotel_id);
+			setHotels((current) => current.map((hotel) => hotel.hotel_id === deactivated.hotel_id ? deactivated : hotel));
+			setToast(`${deleteTarget.name} đã ngừng hoạt động.`);
 			setDeleteTarget(null);
 		} catch (err) {
-			setDeleteError(err.response?.data?.message || 'Không thể xóa khách sạn này.');
+					setDeleteError(err.response?.data?.message || 'Không thể ngừng hoạt động khách sạn này.');
 		}
 	};
 
@@ -185,10 +194,12 @@ const HotelManagementPage = () => {
 							hotel={hotel}
 							canApprove={canApprove}
 							isVendor={isVendor}
+							canEdit={isVendor}
 							onEdit={() => setEditingHotel(hotel)}
 							onDelete={() => handleDeleteRequest(hotel)}
 							onApprove={() => handleApprove(hotel)}
-							onRestore={() => handleRestore(hotel)}
+							onReactivate={() => handleReactivate(hotel)}
+							onSetStatus={(status) => handleSetStatus(hotel, status)}
 						/>
 					))}
 				</div>
@@ -215,10 +226,10 @@ const HotelManagementPage = () => {
 				isOpen={Boolean(deleteTarget)}
 				onClose={() => { setDeleteTarget(null); setDeleteError(''); }}
 				onConfirm={handleDelete}
-				title="Xóa khách sạn này?"
-				message={deleteError || `"${deleteTarget?.name || ''}" sẽ bị xóa khỏi danh sách quản lý. Thao tác này không thể thực hiện nếu còn đặt phòng đang chờ/sắp tới hoặc phòng đang sử dụng/được giữ.`}
+				title="Ngừng hoạt động khách sạn này?"
+				message={deleteError || `"${deleteTarget?.name || ''}" sẽ chuyển sang trạng thái Ngừng hoạt động. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
 				variant="confirm"
-				confirmLabel="Xóa khách sạn"
+				confirmLabel="Ngừng hoạt động"
 			/>
 		</section>
 	);

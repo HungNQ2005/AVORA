@@ -6,7 +6,7 @@ const { sendSuccess } = require('../../utils/responseHelper');
 const getHotels = async (req, res, next) => {
 	try {
 		const result = await hotelService.getHotels(req.validated.query, req.hotelAccess);
-		return sendSuccess(res, 200, 'Hotels fetched successfully.', result);
+		return sendSuccess(res, 200, 'Lấy danh sách khách sạn thành công.', result);
 	} catch (err) {
 		return next(err);
 	}
@@ -15,16 +15,7 @@ const getHotels = async (req, res, next) => {
 const getHotel = async (req, res, next) => {
 	try {
 		const hotel = await hotelService.getHotel(req.validated.params.id, req.hotelAccess);
-		return sendSuccess(res, 200, 'Hotel fetched successfully.', hotel);
-	} catch (err) {
-		return next(err);
-	}
-};
-
-const getVendors = async (req, res, next) => {
-	try {
-		const vendors = await hotelService.getVendors(req.hotelAccess);
-		return sendSuccess(res, 200, 'Active Vendors fetched successfully.', vendors);
+		return sendSuccess(res, 200, 'Lấy thông tin khách sạn thành công.', hotel);
 	} catch (err) {
 		return next(err);
 	}
@@ -34,8 +25,8 @@ const createHotel = async (req, res, next) => {
 	try {
 		const hotel = await hotelService.createHotel(req.validated.body, req.hotelAccess);
 		const message = req.hotelAccess.isVendor
-			? 'Hotel submitted for approval.'
-			: 'Hotel created successfully.';
+			? 'Khách sạn đã được gửi để chờ phê duyệt.'
+			: 'Tạo khách sạn thành công.';
 		return sendSuccess(res, 201, message, hotel);
 	} catch (err) {
 		return next(err);
@@ -45,7 +36,7 @@ const createHotel = async (req, res, next) => {
 const updateHotel = async (req, res, next) => {
 	try {
 		const hotel = await hotelService.updateHotel(req.validated.params.id, req.validated.body, req.hotelAccess);
-		return sendSuccess(res, 200, 'Hotel updated successfully.', hotel);
+		return sendSuccess(res, 200, 'Cập nhật thông tin khách sạn thành công.', hotel);
 	} catch (err) {
 		return next(err);
 	}
@@ -54,16 +45,7 @@ const updateHotel = async (req, res, next) => {
 const approveHotel = async (req, res, next) => {
 	try {
 		const hotel = await hotelService.approveHotel(req.validated.params.id, req.hotelAccess);
-		return sendSuccess(res, 200, 'Hotel approved successfully.', hotel);
-	} catch (err) {
-		return next(err);
-	}
-};
-
-const restoreHotel = async (req, res, next) => {
-	try {
-		const hotel = await hotelService.restoreHotel(req.validated.params.id, req.hotelAccess);
-		return sendSuccess(res, 200, 'Hotel restored successfully.', hotel);
+		return sendSuccess(res, 200, 'Phê duyệt khách sạn thành công.', hotel);
 	} catch (err) {
 		return next(err);
 	}
@@ -71,8 +53,8 @@ const restoreHotel = async (req, res, next) => {
 
 const deleteHotel = async (req, res, next) => {
 	try {
-		const result = await hotelService.deleteHotel(req.validated.params.id, req.hotelAccess);
-		return sendSuccess(res, 200, 'Hotel soft-deleted successfully.', result);
+		const hotel = await hotelService.deleteHotel(req.validated.params.id, req.hotelAccess);
+		return sendSuccess(res, 200, 'Ngừng hoạt động khách sạn thành công.', hotel);
 	} catch (err) {
 		return next(err);
 	}
@@ -81,7 +63,7 @@ const deleteHotel = async (req, res, next) => {
 const uploadHotelImage = async (req, res, next) => {
 	try {
 		const image = await hotelService.uploadHotelImage(req.validated.params.id, req.file, req.hotelAccess);
-		return sendSuccess(res, 201, 'Hotel image uploaded successfully.', image);
+		return sendSuccess(res, 201, 'Tải ảnh khách sạn lên thành công.', image);
 	} catch (err) {
 		return next(err);
 	}
@@ -90,7 +72,7 @@ const uploadHotelImage = async (req, res, next) => {
 const deleteHotelImage = async (req, res, next) => {
 	try {
 		const result = await hotelService.deleteHotelImage(req.validated.params.id, req.validated.params.imageId, req.hotelAccess);
-		return sendSuccess(res, 200, 'Hotel image deleted successfully.', result);
+		return sendSuccess(res, 200, 'Xóa ảnh khách sạn thành công.', result);
 	} catch (err) {
 		return next(err);
 	}
@@ -99,10 +81,10 @@ const deleteHotelImage = async (req, res, next) => {
 const setHotelImageThumbnail = async (req, res, next) => {
 	try {
 		const result = await hotelService.setHotelImageThumbnail(req.validated.params.id, req.validated.params.imageId, req.hotelAccess);
-		return sendSuccess(res, 200, 'Thumbnail updated successfully.', result);
+		return sendSuccess(res, 200, 'Cập nhật ảnh đại diện thành công.', result);
 	} catch (err) {
 		return next(err);
 	}
 };
 
-module.exports = { getHotels, getHotel, getVendors, createHotel, updateHotel, approveHotel, restoreHotel, deleteHotel, uploadHotelImage, deleteHotelImage, setHotelImageThumbnail };
+module.exports = { getHotels, getHotel, createHotel, updateHotel, approveHotel, deleteHotel, uploadHotelImage, deleteHotelImage, setHotelImageThumbnail };

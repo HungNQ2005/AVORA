@@ -10,7 +10,7 @@ const { sendError } = require('../../utils/responseHelper');
 // eslint-disable-next-line no-unused-vars
 const errorHandler = (err, req, res, next) => {
   const statusCode = err.statusCode || err.status || 500;
-  const message = err.message || 'Internal Server Error';
+  const message = err.message || 'Đã xảy ra lỗi hệ thống.';
 
   console.error(`[ERROR] ${req.method} ${req.originalUrl} - ${statusCode}: ${message}`);
   if (err.stack && process.env.NODE_ENV === 'development') {

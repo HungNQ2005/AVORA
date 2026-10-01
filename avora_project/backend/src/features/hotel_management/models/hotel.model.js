@@ -17,7 +17,7 @@ const HOTEL_SELECT = `
 
 const ensureClient = () => {
   if (!supabase) {
-    const err = new Error('Database client is not initialized.');
+    const err = new Error('Kết nối cơ sở dữ liệu chưa được khởi tạo.');
     err.statusCode = 503;
     throw err;
   }
@@ -26,25 +26,16 @@ const ensureClient = () => {
 const checkQuery = (error) => {
   if (error) {
     console.error(`[HOTEL MODEL] ${error.code || 'DB_ERROR'}: ${error.message}`);
-    const err = new Error('Hotel data operation failed.');
+    const err = new Error('Không thể xử lý dữ liệu khách sạn.');
     err.statusCode = 500;
     throw err;
   }
 };
 
-const getVendorRoleCode = async () => {
-  const { data, error } = await supabase
-    .from('m_system_code')
-    .select('code_cd')
-    .eq('business_cd', 'USER_ROLE')
-    .in('code_name', ['VEN', 'VENDOR']);
-  checkQuery(error);
-  return (data || []).map((row) => String(row.code_cd));
-};
-
 const STATUS_LABELS = {
   PENDING: 'Chờ duyệt',
   ACTIVE: 'Đang hoạt động',
+  INACTIVE: 'Ngừng hoạt động',
 };
 
 const addStatusNames = async (hotels) => {
@@ -123,7 +114,7 @@ const createHotel = async (input) => {
   return (await addStatusNames([data]))[0];
 };
 
-const updateHotel = async (hotelId, updates, { ownerId = null, includeDeleted = false } = {}) => {
+const updateHotel = async (hotelId, updates, { ownerId = null, includeDeleted = false, expectedStatus = null } = {}) => {
   ensureClient();
   let query = supabase
     .from('m_hotel')
@@ -131,44 +122,12 @@ const updateHotel = async (hotelId, updates, { ownerId = null, includeDeleted = 
     .eq('hotel_id', hotelId);
   if (!includeDeleted) query = query.eq('is_deleted', false);
   if (ownerId) query = query.eq('owner_id', ownerId);
+  if (expectedStatus) query = query.eq('hotel_status', expectedStatus);
 
   const { data, error } = await query.select('*').maybeSingle();
   checkQuery(error);
   if (!data) return null;
   return (await addStatusNames([data]))[0];
-};
-
-const listActiveVendors = async () => {
-  ensureClient();
-  const roleCodes = await getVendorRoleCode();
-  if (!roleCodes.length) return [];
-
-  const { data, error } = await supabase
-    .from('m_user')
-    .select('user_id, full_name, phone, email')
-    .eq('account_status', 'ACTIVE')
-    .eq('is_deleted', false)
-    .in('role_cd', roleCodes)
-    .order('full_name', { ascending: true });
-  checkQuery(error);
-  return data || [];
-};
-
-const isActiveVendor = async (userId) => {
-  ensureClient();
-  const roleCodes = await getVendorRoleCode();
-  if (!roleCodes.length) return false;
-
-  const { data, error } = await supabase
-    .from('m_user')
-    .select('user_id')
-    .eq('user_id', userId)
-    .eq('account_status', 'ACTIVE')
-    .eq('is_deleted', false)
-    .in('role_cd', roleCodes)
-    .maybeSingle();
-  checkQuery(error);
-  return Boolean(data);
 };
 
 // PENDING -> ACTIVE only. An already-ACTIVE hotel can never revert to PENDING.
@@ -179,6 +138,7 @@ const approveHotel = async (hotelId) => {
     .update({ hotel_status: 'ACTIVE', updated_at: new Date().toISOString() })
     .eq('hotel_id', hotelId)
     .eq('hotel_status', 'PENDING')
+    .eq('is_deleted', false)
     .select('*')
     .maybeSingle();
   checkQuery(error);
@@ -186,34 +146,18 @@ const approveHotel = async (hotelId) => {
   return (await addStatusNames([data]))[0];
 };
 
-// Admin/Business Manager only: un-delete a hotel without touching its approval status.
-const restoreHotel = async (hotelId) => {
-  ensureClient();
-  const { data, error } = await supabase
-    .from('m_hotel')
-    .update({ is_deleted: false, updated_at: new Date().toISOString() })
-    .eq('hotel_id', hotelId)
-    .eq('is_deleted', true)
-    .select('*')
-    .maybeSingle();
-  checkQuery(error);
-  if (!data) return null;
-  return (await addStatusNames([data]))[0];
-};
-
-const softDeleteHotel = async ({ hotelId, access }) => {
+const deactivateHotel = async ({ hotelId, access, options = {} }) => {
   ensureClient();
   let hotelQuery = supabase
     .from('m_hotel')
     .select('hotel_id, owner_id, is_deleted, hotel_status')
-    .eq('hotel_id', hotelId)
-    .eq('is_deleted', false)
-    ;
-  if (access.isVendor) hotelQuery = hotelQuery.eq('owner_id', access.userId);
+    .eq('hotel_id', hotelId);
+  if (!options.includeDeleted) hotelQuery = hotelQuery.eq('is_deleted', false);
+  if (options.ownerId) hotelQuery = hotelQuery.eq('owner_id', options.ownerId);
+  if (options.expectedStatus) hotelQuery = hotelQuery.eq('hotel_status', options.expectedStatus);
   const { data: hotel, error: hotelError } = await hotelQuery.maybeSingle();
   checkQuery(hotelError);
-  if (!hotel) return { status: 'not_found' };
-  if (access.isVendor && hotel.hotel_status === 'ACTIVE') return { status: 'active_hotel_locked' };
+  if (!hotel) return null;
 
   const { data: bookings, error: bookingError } = await supabase
     .from('t_booking')
@@ -262,21 +206,24 @@ const softDeleteHotel = async ({ hotelId, access }) => {
 
   let updateQuery = supabase
     .from('m_hotel')
-    .update({ is_deleted: true, updated_at: new Date().toISOString() })
+    .update({ hotel_status: 'INACTIVE', updated_at: new Date().toISOString() })
     .eq('hotel_id', hotelId)
-    .eq('is_deleted', false);
-  if (access.isVendor) updateQuery = updateQuery.eq('owner_id', access.userId);
-  const { data, error } = await updateQuery.select('hotel_id').maybeSingle();
+    .eq('hotel_status', hotel.hotel_status);
+  if (!options.includeDeleted) updateQuery = updateQuery.eq('is_deleted', false);
+  if (options.ownerId) updateQuery = updateQuery.eq('owner_id', options.ownerId);
+  if (options.expectedStatus) updateQuery = updateQuery.eq('hotel_status', options.expectedStatus);
+  const { data, error } = await updateQuery.select('*').maybeSingle();
   checkQuery(error);
-  return data ? { status: 'deleted' } : { status: 'not_found' };
+  return data ? (await addStatusNames([data]))[0] : null;
 };
 
 const HOTEL_IMAGE_BUCKET = 'hotel-images';
 
-// Confirms the hotel exists and the caller is allowed to manage it (owner Vendor, or Admin/BM).
+// Confirms the hotel exists and belongs to the Vendor performing the image operation.
 const assertHotelAccess = async (hotelId, access) => {
-  let query = supabase.from('m_hotel').select('hotel_id, owner_id').eq('hotel_id', hotelId);
-  if (access.isVendor) query = query.eq('owner_id', access.userId);
+  let query = supabase.from('m_hotel').select('hotel_id, owner_id').eq('hotel_id', hotelId).eq('is_deleted', false);
+  if (!access.isVendor) return false;
+  query = query.eq('owner_id', access.userId);
   const { data, error } = await query.maybeSingle();
   checkQuery(error);
   return Boolean(data);
@@ -443,4 +390,4 @@ const toHotelDto = (hotel) => ({
   updated_at: hotel.updated_at,
 });
 
-module.exports = { listHotels, getHotelById, createHotel, updateHotel, listActiveVendors, isActiveVendor, approveHotel, restoreHotel, softDeleteHotel, addHotelImage, deleteHotelImage, setHotelImageThumbnail, toHotelDto };
+module.exports = { listHotels, getHotelById, createHotel, updateHotel, approveHotel, deactivateHotel, addHotelImage, deleteHotelImage, setHotelImageThumbnail, toHotelDto };

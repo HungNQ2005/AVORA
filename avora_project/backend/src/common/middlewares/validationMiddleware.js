@@ -10,7 +10,7 @@ const validateRequest = (schemas) => (req, res, next) => {
         field: path.join('.'),
         message,
       }));
-      return sendError(res, 400, 'Request validation failed.', { issues });
+      return sendError(res, 400, 'Dữ liệu gửi lên không hợp lệ.', { issues });
     }
     req.validated = req.validated || {};
     req.validated[key] = result.data;

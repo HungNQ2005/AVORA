@@ -20,11 +20,9 @@ export const getHotels = async (params) => {
   return unwrap(await api.get('/hotels', { params: query }));
 };
 export const getHotel = async (hotelId) => unwrap(await api.get(`/hotels/${encodeURIComponent(hotelId)}`));
-export const getVendors = async () => unwrap(await api.get('/users/vendors'));
 export const createHotel = async (payload) => unwrap(await api.post('/hotels', payload));
 export const updateHotel = async (hotelId, payload) => unwrap(await api.put(`/hotels/${encodeURIComponent(hotelId)}`, payload));
 export const approveHotel = async (hotelId) => unwrap(await api.post(`/hotels/${encodeURIComponent(hotelId)}/approve`));
-export const restoreHotel = async (hotelId) => unwrap(await api.post(`/hotels/${encodeURIComponent(hotelId)}/restore`));
 export const deleteHotel = async (hotelId) => unwrap(await api.delete(`/hotels/${encodeURIComponent(hotelId)}`));
 
 export const uploadHotelImage = async (hotelId, file) => {

@@ -18,13 +18,11 @@ const router = Router();
 const protectHotelManagement = [authenticate, authorizeHotelManagement];
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-router.get('/users/vendors', ...protectHotelManagement, hotelController.getVendors);
 router.get('/hotels', ...protectHotelManagement, validateRequest({ query: hotelListQuerySchema }), hotelController.getHotels);
 router.get('/hotels/:id', ...protectHotelManagement, validateRequest({ params: hotelIdParamsSchema }), hotelController.getHotel);
 router.post('/hotels', ...protectHotelManagement, validateRequest({ body: createHotelSchema }), hotelController.createHotel);
 router.put('/hotels/:id', ...protectHotelManagement, validateRequest({ params: hotelIdParamsSchema, body: updateHotelSchema }), hotelController.updateHotel);
 router.post('/hotels/:id/approve', ...protectHotelManagement, validateRequest({ params: hotelIdParamsSchema }), hotelController.approveHotel);
-router.post('/hotels/:id/restore', ...protectHotelManagement, validateRequest({ params: hotelIdParamsSchema }), hotelController.restoreHotel);
 router.delete('/hotels/:id', ...protectHotelManagement, validateRequest({ params: hotelIdParamsSchema }), hotelController.deleteHotel);
 router.post('/hotels/:id/images', ...protectHotelManagement, validateRequest({ params: hotelIdParamsSchema }), upload.single('image'), hotelController.uploadHotelImage);
 router.delete('/hotels/:id/images/:imageId', ...protectHotelManagement, validateRequest({ params: hotelImageParamsSchema }), hotelController.deleteHotelImage);

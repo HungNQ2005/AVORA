@@ -5,7 +5,7 @@ const { sendError } = require('../../utils/responseHelper');
 
 const authorizeHotelManagement = async (req, res, next) => {
   if (!supabase) {
-    return sendError(res, 503, 'Database client is not initialized.');
+    return sendError(res, 503, 'Kết nối cơ sở dữ liệu chưa được khởi tạo.');
   }
 
   try {
@@ -17,7 +17,7 @@ const authorizeHotelManagement = async (req, res, next) => {
 
     if (userError) throw userError;
     if (!user || user.is_deleted || user.account_status !== 'ACTIVE') {
-      return sendError(res, 403, 'An active account is required to manage hotels.');
+      return sendError(res, 403, 'Cần sử dụng tài khoản đang hoạt động để quản lý khách sạn.');
     }
 
     const { data: role, error: roleError } = await supabase
@@ -33,7 +33,7 @@ const authorizeHotelManagement = async (req, res, next) => {
     const isBusinessManager = roleName === 'BMR';
     const isVendor = roleName === 'VEN';
     if (!isSystemAdmin && !isBusinessManager && !isVendor) {
-      return sendError(res, 403, 'You do not have permission to manage hotels.');
+      return sendError(res, 403, 'Bạn không có quyền quản lý khách sạn.');
     }
 
     req.hotelAccess = {
@@ -47,7 +47,7 @@ const authorizeHotelManagement = async (req, res, next) => {
     return next();
   } catch (err) {
     console.error(`[HOTEL AUTH] ${err.message}`);
-    return sendError(res, 500, 'Failed to verify hotel-management permissions.');
+    return sendError(res, 500, 'Không thể xác minh quyền quản lý khách sạn.');
   }
 };
 
