@@ -29,9 +29,19 @@ const UserManagementPage = () => {
 
   // Filters & Search
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [currentRole, setCurrentRole] = useState('ALL');
   const [hotelFilter, setHotelFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  // Debounce search query to avoid jitter and excessive queries
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -90,7 +100,7 @@ const UserManagementPage = () => {
       const result = await fetchUsers({
         page,
         limit: pageSize,
-        search: searchTerm,
+        search: debouncedSearch,
         role: currentRole,
         status: statusFilter,
         hotel_id: hotelFilter,
@@ -106,7 +116,7 @@ const UserManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, searchTerm, currentRole, statusFilter, hotelFilter]);
+  }, [page, pageSize, debouncedSearch, currentRole, statusFilter, hotelFilter]);
 
   // Initial load
   useEffect(() => {
@@ -122,7 +132,6 @@ const UserManagementPage = () => {
   // Handle Search & Filter events (reset to page 1)
   const handleSearchChange = (val) => {
     setSearchTerm(val);
-    setPage(1);
   };
 
   const handleRoleChange = (role) => {
@@ -160,7 +169,19 @@ const UserManagementPage = () => {
       return;
     }
 
+    // Không cho phép khóa tài khoản có vai trò System Admin (ADM)
+    const isTargetAdmin =
+      targetUser.role_code === 'ADM' ||
+      targetUser.role_code_name === 'ADM' ||
+      String(targetUser.role_cd) === 'ADM';
+
     const isCurrentlyDeactivated = targetUser.account_status === 'DEACTIVATED' || targetUser.account_status === 'LOCKED';
+
+    if (isTargetAdmin && !isCurrentlyDeactivated) {
+      showToast('Tài khoản Quản trị viên hệ thống (System Admin) không thể bị khóa.', 'warning');
+      return;
+    }
+
     const newStatus = isCurrentlyDeactivated ? 'ACTIVE' : 'DEACTIVATED';
     setUserToUpdate(targetUser);
     setTargetStatus(newStatus);
@@ -169,6 +190,19 @@ const UserManagementPage = () => {
 
   const handleConfirmStatusChange = async () => {
     if (!userToUpdate || !targetStatus) return;
+
+    // Chặn khóa tài khoản System Admin
+    const isTargetAdmin =
+      userToUpdate.role_code === 'ADM' ||
+      userToUpdate.role_code_name === 'ADM' ||
+      String(userToUpdate.role_cd) === 'ADM';
+
+    if (isTargetAdmin && (targetStatus === 'DEACTIVATED' || targetStatus === 'LOCKED')) {
+      showToast('Tài khoản Quản trị viên hệ thống (System Admin) không thể bị khóa.', 'error');
+      setIsDialogOpen(false);
+      setUserToUpdate(null);
+      return;
+    }
 
     try {
       await updateUserStatus(userToUpdate.user_id, targetStatus);
@@ -201,6 +235,17 @@ const UserManagementPage = () => {
     const statusUpper = (status || '').toUpperCase();
     if (isSelf && ['DEACTIVATED', 'LOCKED', 'VERIFYING', 'PENDING'].includes(statusUpper)) {
       showToast('Bạn không thể tự khóa hoặc đổi trạng thái tài khoản của chính mình.', 'error');
+      return;
+    }
+
+    // Không cho phép khóa tài khoản có vai trò System Admin (ADM)
+    const isTargetAdmin =
+      selectedUserForEdit.role_code === 'ADM' ||
+      selectedUserForEdit.role_code_name === 'ADM' ||
+      String(selectedUserForEdit.role_cd) === 'ADM';
+
+    if (isTargetAdmin && ['DEACTIVATED', 'LOCKED'].includes(statusUpper)) {
+      showToast('Tài khoản Quản trị viên hệ thống (System Admin) không thể bị khóa.', 'error');
       return;
     }
 

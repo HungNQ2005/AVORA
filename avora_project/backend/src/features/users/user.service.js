@@ -2,6 +2,7 @@
 
 const supabase = require('../../config/supabaseClient');
 const { codeNameParser } = require('../../utils/codeNameParser');
+const { matchesSearch } = require('../../utils/textSearchHelper');
 
 /**
  * Service to manage users, roles, statistics, and access control.
@@ -71,8 +72,7 @@ const getUsersList = async ({
   let query = supabase
     .from('m_user')
     .select(
-      'user_id, email, full_name, phone, role_cd, account_status, is_email_verified, avatar_url, created_at, updated_at',
-      { count: 'exact' }
+      'user_id, email, full_name, phone, role_cd, account_status, is_email_verified, avatar_url, created_at, updated_at'
     )
     .eq('is_deleted', false);
 
@@ -98,19 +98,10 @@ const getUsersList = async ({
     }
   }
 
-  // Search Filter (full_name, email, phone)
-  if (search && search.trim()) {
-    const term = search.trim();
-    query = query.or(`full_name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
-  }
-
   // Order by latest created
   query = query.order('created_at', { ascending: false });
 
-  // Pagination slice
-  query = query.range(offset, offset + limitNum - 1);
-
-  const { data: users, count, error } = await query;
+  const { data: users, error } = await query;
 
   if (error) {
     console.error('Error fetching users:', error);
@@ -142,7 +133,7 @@ const getUsersList = async ({
     const hotel = hotelByOwner.get(u.user_id) || null;
 
     // Generate formatted employee / member code (e.g. AVR-25K-001)
-    const codeSeq = String(offset + index + 1).padStart(3, '0');
+    const codeSeq = String(index + 1).padStart(3, '0');
     const employeeCode = `AVR-25K-${codeSeq}`;
 
     // Detect if account is recently registered (within 7 days)
@@ -176,12 +167,43 @@ const getUsersList = async ({
     };
   });
 
+  // Filter by hotel if specified
+  let filteredUsers = enrichedUsers;
+  if (hotel_id && hotel_id !== 'ALL') {
+    filteredUsers = filteredUsers.filter(
+      (u) => u.hotel && String(u.hotel.hotel_id) === String(hotel_id)
+    );
+  }
+
+  // Contains search filter (multi-field: name, email, phone, employee code, role, hotel)
+  if (search && search.trim()) {
+    filteredUsers = filteredUsers.filter((u) =>
+      matchesSearch(
+        [
+          u.full_name,
+          u.email,
+          u.phone,
+          u.employee_code,
+          u.role_label,
+          u.role_code,
+          u.role_code_name,
+          u.hotel?.name,
+          u.hotel?.address,
+        ],
+        search
+      )
+    );
+  }
+
+  const total = filteredUsers.length;
+  const paginatedUsers = filteredUsers.slice(offset, offset + limitNum);
+
   return {
-    users: enrichedUsers,
-    total: count || 0,
+    users: paginatedUsers,
+    total,
     page: pageNum,
     limit: limitNum,
-    totalPages: Math.ceil((count || 0) / limitNum),
+    totalPages: Math.ceil(total / limitNum) || 1,
   };
 };
 
@@ -264,6 +286,31 @@ const updateUserStatus = async (userId, newStatus) => {
   if (!resolvedStatus) {
     const err = new Error('Trạng thái không hợp lệ. Chọn ACTIVE, PENDING, hoặc LOCKED.');
     err.statusCode = 400;
+    throw err;
+  }
+
+  // Lấy thông tin user hiện tại để kiểm tra vai trò
+  const { data: existingUser, error: fetchErr } = await supabase
+    .from('m_user')
+    .select('user_id, role_cd, email, full_name')
+    .eq('user_id', userId)
+    .single();
+
+  if (fetchErr || !existingUser) {
+    const err = new Error('Không tìm thấy người dùng.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Lấy thông tin vai trò từ roleMap
+  const roleMap = await getRoleMap();
+  const roleInfo = roleMap.get(String(existingUser.role_cd));
+  const roleCode = (roleInfo?.code || existingUser.role_cd || '').toUpperCase();
+
+  // Không cho phép bất kỳ ai khóa tài khoản có vai trò Quản trị viên hệ thống (System Admin - ADM)
+  if (roleCode === 'ADM' && resolvedStatus === 'DEACTIVATED') {
+    const err = new Error('Tài khoản có vai trò Quản trị viên hệ thống (System Admin) không thể bị khóa.');
+    err.statusCode = 403;
     throw err;
   }
 

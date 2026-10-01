@@ -80,7 +80,7 @@ const UserFilterBar = ({
         <input
           type="text"
           className="user-filter-bar__input"
-          placeholder="Tìm kiếm theo họ tên, email, SĐT, CC..."
+          placeholder="Tìm theo tên, email, SĐT, mã NV, vai trò, khách sạn..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
         />

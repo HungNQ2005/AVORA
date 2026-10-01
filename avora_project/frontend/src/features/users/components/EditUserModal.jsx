@@ -22,6 +22,14 @@ const EditUserModal = ({
     )
   );
 
+  const isTargetAdmin = Boolean(
+    user && (
+      user.role_code === 'ADM' ||
+      user.role_code_name === 'ADM' ||
+      String(user.role_cd) === 'ADM'
+    )
+  );
+
   // Normalize status from DB (ACTIVE, VERIFYING, DEACTIVATED) to selection value
   const getNormalizedStatus = (accountStatus) => {
     if (!accountStatus) return 'ACTIVE';
@@ -43,7 +51,7 @@ const EditUserModal = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (saving || isSelf) return;
+    if (saving || isSelf || isTargetAdmin) return;
 
     // Send only status payload
     onSaveStatus?.({
@@ -78,6 +86,9 @@ const EditUserModal = ({
               <h2 className="user-modal-title">
                 Chỉnh sửa tài khoản: {user.full_name || 'Người dùng'}
                 {isSelf && <span className="user-modal-self-badge">Tài khoản của bạn</span>}
+                {!isSelf && isTargetAdmin && (
+                  <span className="user-modal-admin-badge">System Admin (Được bảo vệ)</span>
+                )}
               </h2>
               <span className="user-modal-subtitle">
                 #{user.employee_code || user.user_id}
@@ -170,6 +181,18 @@ const EditUserModal = ({
                     <span>Bạn đang đăng nhập bằng tài khoản này. Không thể tự khóa tài khoản của chính mình.</span>
                   </div>
                 </div>
+              ) : isTargetAdmin ? (
+                <div className="user-modal-self-lock-box user-modal-admin-protect-box">
+                  <div className="user-modal-self-lock-status">
+                    <span className="user-status-dot">●</span> Đang hoạt động (Active)
+                  </div>
+                  <div className="user-modal-self-lock-hint">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
+                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                    </svg>
+                    <span>Tài khoản Quản trị viên hệ thống (System Admin). Được bảo vệ toàn quyền – không ai có quyền khóa tài khoản này.</span>
+                  </div>
+                </div>
               ) : (
                 <select
                   className="user-modal-select"
@@ -209,9 +232,9 @@ const EditUserModal = ({
                 onClick={onClose}
                 disabled={saving}
               >
-                {isSelf ? 'Đóng' : 'Hủy'}
+                {isSelf || isTargetAdmin ? 'Đóng' : 'Hủy'}
               </button>
-              {!isSelf && (
+              {!isSelf && !isTargetAdmin && (
                 <button
                   type="submit"
                   className="user-modal-btn-save"

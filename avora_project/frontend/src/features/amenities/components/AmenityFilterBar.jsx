@@ -59,7 +59,7 @@ const AmenityFilterBar = ({
         <input
           type="text"
           className="amenity-filter-bar__input"
-          placeholder="Tìm theo tên tiện nghi, mã code (FAC-POOL, FAC-SPA, FAC-WIFI)..."
+          placeholder="Tìm theo tên tiện nghi, mã code, danh mục, loại dịch vụ (hồ bơi, wifi, spa...)..."
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
         />

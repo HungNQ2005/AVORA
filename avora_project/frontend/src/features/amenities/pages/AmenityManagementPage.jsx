@@ -13,7 +13,19 @@ import AmenityDetailModal from '../components/AmenityDetailModal';
 import AmenityDeleteModal from '../components/AmenityDeleteModal';
 import ExportExcelModal from '../components/ExportExcelModal';
 import { exportAmenitiesToExcel, getExportExcelFilename } from '../../../utils/exportToExcel';
+import { matchesSearch } from '../../../utils/textSearchHelper';
 import './AmenityManagementPage.css';
+
+const FACILITY_TYPE_LABELS = {
+  INTERNET: 'Internet / Wi-Fi',
+  POOL: 'Hồ bơi',
+  FOOD: 'Ẩm thực',
+  PARKING: 'Bãi đỗ xe',
+  SERVICE: 'Dịch vụ',
+  GYM: 'Thể hình / Gym',
+  RESTAURANT: 'Nhà hàng',
+  SPA: 'Spa & Chăm sóc',
+};
 
 const VISIBLE_COLUMNS = {
   id: true,
@@ -71,7 +83,6 @@ const AmenityManagementPage = () => {
     setError(null);
     try {
       const result = await fetchAmenities({
-        search: searchTerm,
         category: categoryFilter,
         status: statusFilter,
         sort: sortBy,
@@ -91,17 +102,38 @@ const AmenityManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, categoryFilter, statusFilter, sortBy]);
+  }, [categoryFilter, statusFilter, sortBy]);
 
   useEffect(() => {
     loadAmenities();
   }, [loadAmenities]);
 
-  // Derived filtered & paginated records
+  // Derived filtered & paginated records with instant contains search (Vietnamese diacritics support)
+  const filteredAmenities = useMemo(() => {
+    if (!searchTerm || !searchTerm.trim()) return amenities;
+    return amenities.filter((item) =>
+      matchesSearch(
+        [
+          item.facility_name,
+          item.name_vi,
+          item.name_en,
+          item.code,
+          item.category,
+          item.type,
+          FACILITY_TYPE_LABELS[item.type],
+          item.scope_label,
+          item.pricing_label,
+          item.applied_unit,
+        ],
+        searchTerm
+      )
+    );
+  }, [amenities, searchTerm]);
+
   const paginatedAmenities = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return amenities.slice(start, start + pageSize);
-  }, [amenities, page, pageSize]);
+    return filteredAmenities.slice(start, start + pageSize);
+  }, [filteredAmenities, page, pageSize]);
 
   // Handlers
   const handleOpenCreate = () => {
@@ -179,9 +211,10 @@ const AmenityManagementPage = () => {
 
     try {
       const exportFilename = getExportExcelFilename();
-      const result = await exportAmenitiesToExcel(amenities, exportFilename);
+      const exportList = filteredAmenities.length > 0 ? filteredAmenities : amenities;
+      const result = await exportAmenitiesToExcel(exportList, exportFilename);
       if (result && result.success) {
-        showToast(`Đã xuất thành công ${result.count || amenities.length} tiện nghi ra file Excel!`, 'success');
+        showToast(`Đã xuất thành công ${result.count || exportList.length} tiện nghi ra file Excel!`, 'success');
         setIsExportModalOpen(false);
       } else {
         showToast(result?.message || 'Không thể xuất file Excel.', 'error');
@@ -333,7 +366,7 @@ const AmenityManagementPage = () => {
           setPageSize(size);
           setPage(1);
         }}
-        totalItems={amenities.length}
+        totalItems={filteredAmenities.length}
         visibleColumns={VISIBLE_COLUMNS}
       />
 
@@ -369,7 +402,7 @@ const AmenityManagementPage = () => {
         isOpen={isExportModalOpen}
         onClose={() => !isExporting && setIsExportModalOpen(false)}
         onConfirm={handleConfirmExport}
-        totalRecords={amenities.length}
+        totalRecords={filteredAmenities.length}
         filename={getExportExcelFilename()}
         isExporting={isExporting}
       />

@@ -57,16 +57,25 @@ const UserTable = ({
 }) => {
   const [selectedIds, setSelectedIds] = useState(new Set());
 
-  // Checkbox handlers (exclude self from bulk actions)
+  // Checkbox handlers (exclude self and System Admin from bulk actions)
   const isUserSelf = (u) =>
     Boolean(
       (currentUserId && String(u.user_id) === String(currentUserId)) ||
       (currentUserEmail && u.email === currentUserEmail)
     );
 
+  const isProtectedAdmin = (u) =>
+    Boolean(
+      u && (
+        u.role_code === 'ADM' ||
+        u.role_code_name === 'ADM' ||
+        String(u.role_cd) === 'ADM'
+      )
+    );
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const selectable = users.filter((u) => !isUserSelf(u));
+      const selectable = users.filter((u) => !isUserSelf(u) && !isProtectedAdmin(u));
       setSelectedIds(new Set(selectable.map((u) => u.user_id)));
     } else {
       setSelectedIds(new Set());
@@ -82,7 +91,7 @@ const UserTable = ({
     });
   };
 
-  const selectableUsers = users.filter((u) => !isUserSelf(u));
+  const selectableUsers = users.filter((u) => !isUserSelf(u) && !isProtectedAdmin(u));
   const allSelected =
     selectableUsers.length > 0 && selectableUsers.every((u) => selectedIds.has(u.user_id));
 
@@ -225,9 +234,15 @@ const UserTable = ({
                         type="checkbox"
                         className="user-checkbox"
                         checked={isSelected}
-                        disabled={isSelf}
-                        title={isSelf ? 'Không thể chọn tài khoản của chính mình' : undefined}
-                        onChange={() => !isSelf && handleSelectOne(u.user_id)}
+                        disabled={isSelf || isProtectedAdmin(u)}
+                        title={
+                          isSelf
+                            ? 'Không thể chọn tài khoản của chính mình'
+                            : isProtectedAdmin(u)
+                            ? 'Tài khoản Quản trị viên hệ thống (Được bảo vệ toàn quyền - Không thể khóa)'
+                            : undefined
+                        }
+                        onChange={() => !isSelf && !isProtectedAdmin(u) && handleSelectOne(u.user_id)}
                       />
                     </td>
 
@@ -355,7 +370,7 @@ const UserTable = ({
                     {/* Thao tác */}
                     <td>
                       <div className="user-action-buttons">
-                        {!isSelf && (u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
+                        {!isSelf && !isProtectedAdmin(u) && (u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
                           <button
                             type="button"
                             className="user-btn-quick-unlock"
@@ -372,7 +387,13 @@ const UserTable = ({
                         <button
                           type="button"
                           className="user-action-btn"
-                          title={isSelf ? 'Xem thông tin tài khoản của bạn (Không thể tự khóa)' : 'Chỉnh sửa thông tin'}
+                          title={
+                            isSelf
+                              ? 'Xem thông tin tài khoản của bạn (Không thể tự khóa)'
+                              : isProtectedAdmin(u)
+                              ? 'Chỉnh sửa tài khoản (Vai trò System Admin không thể bị khóa)'
+                              : 'Chỉnh sửa thông tin'
+                          }
                           onClick={() => onEditUser?.(u)}
                         >
                           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -385,6 +406,16 @@ const UserTable = ({
                             className="user-status-lock-indicator user-status-lock-indicator--self"
                             title="Tài khoản hiện tại của bạn (Được bảo vệ - Không thể tự khóa)"
                             aria-label="Tài khoản đang đăng nhập"
+                          >
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="2.2">
+                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                          </span>
+                        ) : isProtectedAdmin(u) ? (
+                          <span
+                            className="user-status-lock-indicator user-status-lock-indicator--self"
+                            title="Tài khoản Quản trị viên hệ thống (Được bảo vệ toàn quyền - Không ai có quyền khóa)"
+                            aria-label="Tài khoản System Admin được bảo vệ"
                           >
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="2.2">
                               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
