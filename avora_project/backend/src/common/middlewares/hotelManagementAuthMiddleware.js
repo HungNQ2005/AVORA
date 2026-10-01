@@ -2,6 +2,7 @@
 
 const supabase = require('../../config/supabaseClient');
 const { sendError } = require('../../utils/responseHelper');
+const { codeNameParser } = require('../../utils/codeNameParser');
 
 const authorizeHotelManagement = async (req, res, next) => {
   if (!supabase) {
@@ -40,6 +41,7 @@ const authorizeHotelManagement = async (req, res, next) => {
       userId: user.user_id,
       email: user.email,
       roleName,
+      roleDisplayName: codeNameParser(roleName),
       isSystemAdmin,
       isBusinessManager,
       isVendor,

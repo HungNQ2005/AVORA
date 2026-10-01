@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { codeNameParser } from '../../../utils/codeNameParser';
 import Dialog from '../../../common/components/Dialog';
 import LocationSelect from '../components/locationSelect';
 import HotelThumb from '../components/hotelThumb';
@@ -184,7 +185,9 @@ const HotelDetailPage = () => {
 
   const isPending = hotel.status_cd === 'PENDING';
   const isInactive = hotel.status_cd === 'INACTIVE';
-  const status = hotel.is_deleted ? 'Lịch sử đã xóa' : (hotel.status_name || (isPending ? 'Chờ duyệt' : 'Đang hoạt động'));
+  const status = hotel.is_deleted
+    ? 'Lịch sử đã xóa'
+    : (hotel.status_name || ({ PENDING: 'Chờ duyệt', ACTIVE: 'Đang hoạt động', INACTIVE: 'Ngừng hoạt động' }[hotel.status_cd] || codeNameParser(hotel.status_cd)));
   const addressParts = [hotel.address, hotel.ward_name, hotel.district_name, hotel.city_name].filter(Boolean);
   const vendorCanDeactivate = isVendor && !hotel.is_deleted && !isInactive;
   const staffCanDeactivate = canApprove && !hotel.is_deleted && !isInactive;

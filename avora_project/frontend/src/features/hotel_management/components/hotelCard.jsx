@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { codeNameParser } from '../../../utils/codeNameParser';
 import HotelThumb from './hotelThumb';
 import './hotelThumb.css';
 import './hotelCard.css';
@@ -8,7 +9,9 @@ const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onReactivate, onSetStat
   const location = [hotel.city_name, hotel.ward_name].filter(Boolean).join(' · ') || hotel.address;
   const isPending = hotel.status_cd === 'PENDING';
   const isInactive = hotel.status_cd === 'INACTIVE';
-  const status = hotel.is_deleted ? 'Lịch sử đã xóa' : (hotel.status_name || (isPending ? 'Chờ duyệt' : 'Đang hoạt động'));
+  const status = hotel.is_deleted
+    ? 'Lịch sử đã xóa'
+    : (hotel.status_name || ({ PENDING: 'Chờ duyệt', ACTIVE: 'Đang hoạt động', INACTIVE: 'Ngừng hoạt động' }[hotel.status_cd] || codeNameParser(hotel.status_cd)));
   const statusClass = hotel.is_deleted ? 'deleted' : (isInactive ? 'inactive' : (isPending ? 'pending' : 'active'));
   const ownerName = hotel.owner?.full_name || hotel.owner_name || 'Chưa gán';
   const ownerPhone = hotel.owner?.phone || hotel.owner_phone || 'Chưa có số điện thoại';

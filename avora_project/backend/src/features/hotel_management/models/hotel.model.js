@@ -1,6 +1,7 @@
 'use strict';
 
 const supabase = require('../../../config/supabaseClient');
+const { codeNameParser } = require('../../../utils/codeNameParser');
 
 const HOTEL_SELECT = `
   hotel_id, owner_id, name, description, address,
@@ -48,7 +49,7 @@ const addStatusNames = async (hotels) => {
     return {
       ...hotel,
       status_cd: statusCd,
-      status_name: STATUS_LABELS[statusCd] || statusCd,
+      status_name: STATUS_LABELS[statusCd] || codeNameParser(statusCd),
       images,
       thumbnail_url: thumbnail?.image_url || null,
     };
