@@ -1,17 +1,52 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const { codeNameParser } = require('../../utils/codeNameParser');
 
 /**
  * Service to manage users, roles, statistics, and access control.
  */
 
-// Role mappings based on m_system_code
-const ROLE_MAP = {
-  '1': { code: 'ADM', label: 'System Admin' },
-  '2': { code: 'CUS', label: 'Customer' },
-  '3': { code: 'BMR', label: 'Business Manager' },
-  '4': { code: 'VEN', label: 'Hotel Manager' },
+/**
+ * Fetch and construct dynamic role mapping from m_system_code where business_cd = 'USER_ROLE'.
+ * Resolves role_cd (code_cd) -> code_name and uses codeNameParser for human-readable label.
+ */
+let cachedRoleMap = null;
+let lastRoleFetchTime = 0;
+const ROLE_CACHE_TTL_MS = 60 * 1000; // 1-minute cache to avoid repeated queries
+
+const getRoleMap = async () => {
+  const now = Date.now();
+  if (cachedRoleMap && now - lastRoleFetchTime < ROLE_CACHE_TTL_MS) {
+    return cachedRoleMap;
+  }
+
+  const { data: systemCodes, error } = await supabase
+    .from('m_system_code')
+    .select('code_cd, code_name')
+    .eq('business_cd', 'USER_ROLE')
+    .order('sort_no');
+
+  if (error) {
+    console.error('Error fetching role system codes:', error);
+    if (cachedRoleMap) return cachedRoleMap;
+    return new Map();
+  }
+
+  const roleMap = new Map();
+  (systemCodes || []).forEach((sc) => {
+    const codeName = sc.code_name ? sc.code_name.trim().toUpperCase() : '';
+    roleMap.set(String(sc.code_cd), {
+      code_cd: String(sc.code_cd),
+      code: codeName,
+      code_name: codeName,
+      label: codeNameParser(codeName),
+    });
+  });
+
+  cachedRoleMap = roleMap;
+  lastRoleFetchTime = now;
+  return roleMap;
 };
 
 /**
@@ -29,6 +64,9 @@ const getUsersList = async ({
   const limitNum = Math.max(1, Math.min(100, parseInt(limit, 10) || 10));
   const offset = (pageNum - 1) * limitNum;
 
+  // Fetch dynamic role mapping from m_system_code (business_cd = 'USER_ROLE')
+  const roleMap = await getRoleMap();
+
   // Build query for users
   let query = supabase
     .from('m_user')
@@ -43,13 +81,20 @@ const getUsersList = async ({
     query = query.eq('account_status', status.toUpperCase());
   }
 
-  // Role Filter
+  // Role Filter (resolved dynamically from m_system_code)
   if (role && role !== 'ALL') {
-    const matchedRoleEntry = Object.entries(ROLE_MAP).find(
-      ([cd, val]) => val.code === role.toUpperCase() || cd === role
-    );
-    if (matchedRoleEntry) {
-      query = query.eq('role_cd', matchedRoleEntry[0]);
+    const roleUpper = role.trim().toUpperCase();
+    let matchedCodeCd = null;
+    for (const [cd, val] of roleMap.entries()) {
+      if (val.code === roleUpper || cd === role) {
+        matchedCodeCd = cd;
+        break;
+      }
+    }
+    if (matchedCodeCd) {
+      query = query.eq('role_cd', matchedCodeCd);
+    } else {
+      query = query.eq('role_cd', role);
     }
   }
 
@@ -89,7 +134,11 @@ const getUsersList = async ({
 
   // Format and enrich each user record
   const enrichedUsers = (users || []).map((u, index) => {
-    const roleInfo = ROLE_MAP[u.role_cd] || { code: 'CUS', label: 'Customer' };
+    const roleInfo = roleMap.get(String(u.role_cd)) || {
+      code: u.role_cd || 'CUS',
+      code_name: u.role_cd || 'CUS',
+      label: codeNameParser(u.role_cd) || 'Customer',
+    };
     const hotel = hotelByOwner.get(u.user_id) || null;
 
     // Generate formatted employee / member code (e.g. AVR-25K-001)
@@ -108,6 +157,7 @@ const getUsersList = async ({
       phone: u.phone || 'Chưa có SĐT',
       role_cd: u.role_cd,
       role_code: roleInfo.code,
+      role_code_name: roleInfo.code_name,
       role_label: roleInfo.label,
       account_status: u.account_status || 'ACTIVE',
       is_email_verified: Boolean(u.is_email_verified),
@@ -139,10 +189,15 @@ const getUsersList = async ({
  * Fetch aggregated stats for dashboard KPI cards & role tabs.
  */
 const getUserStats = async () => {
-  const { data: users, error } = await supabase
-    .from('m_user')
-    .select('user_id, role_cd, account_status, created_at')
-    .eq('is_deleted', false);
+  const [usersResult, roleMap] = await Promise.all([
+    supabase
+      .from('m_user')
+      .select('user_id, role_cd, account_status, created_at')
+      .eq('is_deleted', false),
+    getRoleMap(),
+  ]);
+
+  const { data: users, error } = usersResult;
 
   if (error) {
     console.error('Error fetching user stats:', error);
@@ -173,10 +228,13 @@ const getUserStats = async () => {
       lockedUsers += 1;
     }
 
-    if (u.role_cd === '4') roleCounts.hotelManager += 1;
-    else if (u.role_cd === '3') roleCounts.businessManager += 1;
-    else if (u.role_cd === '2') roleCounts.customer += 1;
-    else if (u.role_cd === '1') roleCounts.systemAdmin += 1;
+    const roleInfo = roleMap.get(String(u.role_cd));
+    const roleCode = roleInfo?.code;
+
+    if (roleCode === 'VEN') roleCounts.hotelManager += 1;
+    else if (roleCode === 'BMR') roleCounts.businessManager += 1;
+    else if (roleCode === 'CUS') roleCounts.customer += 1;
+    else if (roleCode === 'ADM') roleCounts.systemAdmin += 1;
   });
 
   return {
