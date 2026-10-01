@@ -5,7 +5,7 @@ import HotelThumb from './hotelThumb';
 import './hotelThumb.css';
 import './hotelCard.css';
 
-const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onReactivate, onSetStatus, canApprove, canEdit, isVendor }) => {
+const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onReactivate, canApprove, canEdit, isVendor }) => {
   const location = [hotel.city_name, hotel.ward_name].filter(Boolean).join(' · ') || hotel.address;
   const isPending = hotel.status_cd === 'PENDING';
   const isInactive = hotel.status_cd === 'INACTIVE';
@@ -17,7 +17,6 @@ const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onReactivate, onSetStat
   const ownerPhone = hotel.owner?.phone || hotel.owner_phone || 'Chưa có số điện thoại';
   const ownerEmail = hotel.owner?.email || hotel.owner_email || 'Chưa có email';
   const vendorCanDeactivate = isVendor && !hotel.is_deleted && !isInactive;
-  const staffCanDeactivate = canApprove && !hotel.is_deleted && !isInactive;
   const detailHref = `/dashboard/hotel-management/${encodeURIComponent(hotel.hotel_id)}`;
 
   return (
@@ -59,8 +58,8 @@ const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onReactivate, onSetStat
         {canEdit && !hotel.is_deleted && (
           <button type="button" onClick={onEdit} aria-label={`Sửa ${hotel.name}`}>Sửa</button>
         )}
-        {(vendorCanDeactivate || staffCanDeactivate) && (
-          <button type="button" className="hotel-card__delete" onClick={isVendor ? onDelete : () => onSetStatus('INACTIVE')} aria-label={`Ngừng hoạt động ${hotel.name}`}>Ngừng hoạt động</button>
+        {vendorCanDeactivate && (
+          <button type="button" className="hotel-card__delete" onClick={onDelete} aria-label={`Ngừng hoạt động ${hotel.name}`}>Ngừng hoạt động</button>
         )}
       </div>
     </article>

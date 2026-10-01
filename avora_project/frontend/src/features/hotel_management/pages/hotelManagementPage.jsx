@@ -112,16 +112,6 @@ const HotelManagementPage = () => {
 		}
 	};
 
-	const handleSetStatus = async (hotel, hotelStatus) => {
-		try {
-			const updated = await updateHotel(hotel.hotel_id, { hotel_status: hotelStatus });
-			setHotels((current) => current.map((item) => item.hotel_id === updated.hotel_id ? updated : item));
-			setToast(`${hotel.name} đã cập nhật trạng thái.`);
-		} catch (err) {
-			setError(err.response?.data?.message || 'Không thể cập nhật trạng thái khách sạn.');
-		}
-	};
-
 	const handleUpdate = async (payload) => {
 		const result = await updateHotel(editingHotel.hotel_id, payload);
 		setHotels((current) => current.map((hotel) => hotel.hotel_id === result.hotel_id ? result : hotel));
@@ -199,7 +189,6 @@ const HotelManagementPage = () => {
 							onDelete={() => handleDeleteRequest(hotel)}
 							onApprove={() => handleApprove(hotel)}
 							onReactivate={() => handleReactivate(hotel)}
-							onSetStatus={(status) => handleSetStatus(hotel, status)}
 						/>
 					))}
 				</div>
@@ -229,6 +218,7 @@ const HotelManagementPage = () => {
 				title="Ngừng hoạt động khách sạn này?"
 				message={deleteError || `"${deleteTarget?.name || ''}" sẽ chuyển sang trạng thái Ngừng hoạt động. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
 				variant="confirm"
+				cancelLabel="Đóng"
 				confirmLabel="Ngừng hoạt động"
 			/>
 		</section>

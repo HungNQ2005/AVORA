@@ -143,20 +143,6 @@ const HotelDetailPage = () => {
     }
   };
 
-  const handleSetStatus = async (hotelStatus) => {
-    setActionLoading(true);
-    try {
-      const updated = await updateHotel(id, { hotel_status: hotelStatus });
-      setHotel(updated);
-      setForm(toHotelForm(updated));
-      setToast('Trạng thái khách sạn đã được cập nhật.');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Không thể cập nhật trạng thái khách sạn.');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
   const requestDelete = () => {
     setError('');
     setDeleteOpen(true);
@@ -190,7 +176,6 @@ const HotelDetailPage = () => {
     : (hotel.status_name || ({ PENDING: 'Chờ duyệt', ACTIVE: 'Đang hoạt động', INACTIVE: 'Ngừng hoạt động' }[hotel.status_cd] || codeNameParser(hotel.status_cd)));
   const addressParts = [hotel.address, hotel.ward_name, hotel.district_name, hotel.city_name].filter(Boolean);
   const vendorCanDeactivate = isVendor && !hotel.is_deleted && !isInactive;
-  const staffCanDeactivate = canApprove && !hotel.is_deleted && !isInactive;
 
   return (
     <section className="hotel-detail">
@@ -206,7 +191,6 @@ const HotelDetailPage = () => {
         <div className="hotel-detail__actions">
           {canApprove && !hotel.is_deleted && isPending && <button type="button" className="hotel-button hotel-button--primary" onClick={handleApprove} disabled={actionLoading}>{actionLoading ? 'Đang duyệt…' : 'Phê duyệt'}</button>}
           {isVendor && !hotel.is_deleted && isInactive && <button type="button" className="hotel-button hotel-button--primary" onClick={handleReactivate} disabled={actionLoading}>Yêu cầu mở lại</button>}
-          {staffCanDeactivate && <button type="button" className="hotel-button hotel-button--danger" onClick={() => handleSetStatus('INACTIVE')} disabled={actionLoading}>Ngừng hoạt động</button>}
           {vendorCanDeactivate && <button type="button" className="hotel-button hotel-button--danger" onClick={requestDelete} disabled={actionLoading}>Ngừng hoạt động</button>}
         </div>
       </header>
@@ -286,6 +270,7 @@ const HotelDetailPage = () => {
         title="Ngừng hoạt động khách sạn này?"
         message={error || `"${hotel.name}" sẽ chuyển sang trạng thái Ngừng hoạt động. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
         variant="confirm"
+        cancelLabel="Đóng"
         confirmLabel={actionLoading ? 'Đang cập nhật…' : 'Ngừng hoạt động'}
       />
     </section>

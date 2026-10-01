@@ -71,10 +71,22 @@ const listHotels = async ({ page, pageSize, keyword, search, city_id, district_i
   const searchTerm = String(keyword || search || '').trim().replace(/[\\%_,()"']/g, ' ');
   if (searchTerm) {
     const pattern = `*${searchTerm}*`;
+    const [cityResult, wardResult] = await Promise.all([
+      supabase.from('m_city').select('city_id').ilike('city_name', pattern),
+      supabase.from('m_ward').select('ward_id').ilike('ward_name', pattern),
+    ]);
+    checkQuery(cityResult.error);
+    checkQuery(wardResult.error);
+    const cityIds = (cityResult.data || []).map((city) => city.city_id);
+    const wardIds = (wardResult.data || []).map((ward) => ward.ward_id);
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(searchTerm);
     const isNumericId = /^\d+$/.test(searchTerm);
     const idFilter = isUuid || isNumericId ? `,hotel_id.eq.${searchTerm}` : '';
-    query = query.or(`name.ilike.${pattern},address.ilike.${pattern}${idFilter}`);
+    const locationFilter = [
+      cityIds.length ? `city_id.in.(${cityIds.join(',')})` : '',
+      wardIds.length ? `ward_id.in.(${wardIds.join(',')})` : '',
+    ].filter(Boolean).map((filter) => `,${filter}`).join('');
+    query = query.or(`name.ilike.${pattern},address.ilike.${pattern}${locationFilter}${idFilter}`);
   }
   if (city_id) query = query.eq('city_id', city_id);
   if (district_id) query = query.eq('district_id', district_id);

@@ -91,6 +91,9 @@ const updateHotel = async (hotelId, input, access) => {
 		throw createError('Nhân viên chỉ được phép cập nhật trạng thái khách sạn.', 403);
 	}
 	if (updates.hotel_status !== undefined) {
+		if (isStaff && updates.hotel_status === 'INACTIVE') {
+			throw createError('Quản trị viên hệ thống và Quản lý doanh nghiệp không được phép ngừng hoạt động khách sạn.', 403);
+		}
 		if (access.isVendor && (updates.hotel_status !== 'PENDING' || hotel.hotel_status !== 'INACTIVE')) {
 			throw createError('Nhà cung cấp chỉ có thể yêu cầu mở lại khách sạn đang ngừng hoạt động.', 403);
 		}
