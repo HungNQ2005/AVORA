@@ -48,8 +48,6 @@ const FilterSidebar = ({
   selectedCapacity = 'all',
   onCapacityChange,
   guestsPerRoom = 2,
-  selectedTypes = [],
-  onTypeToggle,
   onResetAll,
   onOpenMap,
 }) => {
@@ -57,7 +55,6 @@ const FilterSidebar = ({
   const starStats = filterStats.stars || {};
   const scoreStats = filterStats.ratings || {};
   const facilityStats = filterStats.popularFacilities || {};
-  const typeStats = filterStats.hotelTypes || {};
   const capacityStats = filterStats.capacities || {};
 
   return (
@@ -276,32 +273,6 @@ const FilterSidebar = ({
                   <span className="filter-option-name">{f.label}</span>
                 </div>
                 <span className="filter-option-count">{f.count}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="filter-divider" />
-
-        {/* 5. LOẠI HÌNH KHÁCH SẠN */}
-        <div className="filter-group">
-          <h3 className="filter-group__heading">LOẠI HÌNH KHÁCH SẠN</h3>
-          <div className="filter-options-list">
-            {[
-              { key: 'beachCenter', label: 'Khách sạn ven biển & trung tâm', count: typeStats.beachAndCenter ?? 0 },
-              { key: 'boutiqueOldQuarter', label: 'Khách sạn Boutique & Phố Cổ', count: typeStats.boutiqueOldQuarter ?? 0 },
-            ].map((t) => (
-              <label key={t.key} className="filter-option-row">
-                <div className="filter-option-left">
-                  <input
-                    type="checkbox"
-                    checked={selectedTypes.includes(t.key)}
-                    onChange={() => onTypeToggle(t.key)}
-                    className="filter-checkbox"
-                  />
-                  <span className="filter-option-name">{t.label}</span>
-                </div>
-                <span className="filter-option-count">{t.count}</span>
               </label>
             ))}
           </div>
