@@ -2,6 +2,18 @@
 
 const supabase = require('../../config/supabaseClient');
 const { facilityTypeIcons } = require('./facility.validation');
+const { matchesSearch } = require('../../utils/textSearchHelper');
+
+const FACILITY_TYPE_LABELS = {
+  INTERNET: 'Internet / Wi-Fi',
+  POOL: 'Hồ bơi',
+  FOOD: 'Ẩm thực',
+  PARKING: 'Bãi đỗ xe',
+  SERVICE: 'Dịch vụ',
+  GYM: 'Thể hình / Gym',
+  RESTAURANT: 'Nhà hàng',
+  SPA: 'Spa & Chăm sóc',
+};
 
 const getDatabaseError = (message, databaseError) => {
   const error = new Error(
@@ -213,14 +225,23 @@ const getFacilities = async (filters = {}) => {
 
   let filtered = [...enrichedFacilities];
 
-  if (filters.search) {
-    const s = filters.search.toLowerCase().trim();
+  if (filters.search && filters.search.trim()) {
     filtered = filtered.filter((f) =>
-      f.name_vi?.toLowerCase().includes(s) ||
-      f.name_en?.toLowerCase().includes(s) ||
-      f.code?.toLowerCase().includes(s) ||
-      f.category?.toLowerCase().includes(s) ||
-      f.type?.toLowerCase().includes(s)
+      matchesSearch(
+        [
+          f.facility_name,
+          f.name_vi,
+          f.name_en,
+          f.code,
+          f.category,
+          f.type,
+          FACILITY_TYPE_LABELS[f.type],
+          f.scope_label,
+          f.pricing_label,
+          f.applied_unit,
+        ],
+        filters.search
+      )
     );
   }
 

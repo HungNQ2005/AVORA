@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
 import MainLayout from './common/components/MainLayout';
-import AdminLayout from './common/components/AdminLayout';
 import HomePage from './features/home/HomePage';
 import TestConnectionPage from './features/connection_test/TestConnectionPage';
 import SignUpPage from './features/auth/pages/SignUpPage';
@@ -14,6 +13,9 @@ import CustomerHotelDetailPage from './features/hotels/HotelDetailPage';
 import RoomTypeManagementPage from './features/room_types/pages/RoomTypeManagementPage';
 import RoomTypeDetailPage from './features/room_types/pages/RoomTypeDetailPage';
 import AmenityManagementPage from './features/amenities/pages/AmenityManagementPage';
+import UserManagementPage from './features/users/pages/UserManagementPage';
+import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
+import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
 import DashboardPage from './features/dashboard/pages/dashboardPage';
@@ -43,6 +45,32 @@ const VenueManagerRoute = ({ children }) => {
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
   if (roleCd !== '1') return <Navigate to="/" replace />;
+
+  return children;
+};
+
+/**
+ * Guard route for system admins only.
+ */
+const AdminRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  if (user.role_code_name !== 'ADM') return <Navigate to="/" replace />;
+
+  return children;
+};
+
+/**
+ * Guard coupon management routes for Business Managers only.
+ */
+const BusinessManagerRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  if (user.role_code_name !== 'BMR') return <Navigate to="/" replace />;
 
   return children;
 };
@@ -131,6 +159,30 @@ function App() {
                 </VenueManagerRoute>
               }
             />
+            <Route
+              path="coupons"
+              element={
+                <BusinessManagerRoute>
+                  <CouponManagementPage />
+                </BusinessManagerRoute>
+              }
+            />
+            <Route
+              path="coupons/:id"
+              element={
+                <BusinessManagerRoute>
+                  <CouponDetailPage />
+                </BusinessManagerRoute>
+              }
+            />
+            <Route
+              path="users"
+              element={
+                <AdminRoute>
+                  <UserManagementPage />
+                </AdminRoute>
+              }
+            />
           </Route>
 
           {/* Friendly redirect aliases for the old /admin and top-level paths */}
@@ -141,11 +193,16 @@ function App() {
           <Route path="/admin/facilities" element={<Navigate to="/dashboard/facilities" replace />} />
           <Route path="/admin/hotel-management" element={<Navigate to="/dashboard/hotel-management" replace />} />
           <Route path="/admin/hotel-management/:id" element={<Navigate to="/dashboard/hotel-management" replace />} />
+          <Route path="/admin/coupons" element={<Navigate to="/dashboard/coupons" replace />} />
+          <Route path="/admin/coupons/:id" element={<Navigate to="/dashboard/coupons" replace />} />
+          <Route path="/admin/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/room-types" element={<Navigate to="/dashboard/room-types" replace />} />
           <Route path="/amenities" element={<Navigate to="/dashboard/amenities" replace />} />
           <Route path="/facilities" element={<Navigate to="/dashboard/facilities" replace />} />
           <Route path="/hotel-management" element={<Navigate to="/dashboard/hotel-management" replace />} />
           <Route path="/hotel-management/:id" element={<Navigate to="/dashboard/hotel-management" replace />} />
+          <Route path="/coupons" element={<Navigate to="/dashboard/coupons" replace />} />
+          <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -13,8 +13,9 @@ const hotelRoute = require('./features/hotels/hotel.route');
 const locationRoute = require('./features/locations/location.route');
 const roomTypeRoute = require('./features/room_types/room_type.route');
 const facilityRoute = require('./features/facilities/facility.route');
+const couponRoute = require('./features/coupons/coupon.route');
+const userRoute = require('./features/users/user.route');
 const env = require('./config/env');
-
 
 const app = express();
 
@@ -46,6 +47,8 @@ app.use('/api/v1', hotelManagementRoute);
 app.use('/api/v1', locationRoute);
 app.use("/api", roomTypeRoute);
 app.use("/api", facilityRoute);
+app.use("/api", couponRoute);
+app.use("/api", userRoute);
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
 
