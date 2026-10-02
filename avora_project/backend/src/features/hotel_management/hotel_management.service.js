@@ -8,6 +8,12 @@ const createError = (message, statusCode) => {
 	return err;
 };
 
+const assertVendorOwnsHotel = (hotel, access) => {
+	if (access.isVendor && hotel.owner_id !== access.userId) {
+		throw createError('Không tìm thấy khách sạn.', 404);
+	}
+};
+
 const getHotels = async (filters, access) => {
 	const page = Number(filters.page);
 	const result = await hotelModel.listHotels({
@@ -35,6 +41,7 @@ const getHotel = async (hotelId, access) => {
 		includeDeleted: Boolean(access.isSystemAdmin),
 	});
 	if (!hotel) throw createError('Không tìm thấy khách sạn.', 404);
+	assertVendorOwnsHotel(hotel, access);
 	return hotelModel.toHotelDto(hotel);
 };
 
@@ -85,6 +92,7 @@ const updateHotel = async (hotelId, input, access) => {
 		includeDeleted: Boolean(access.isSystemAdmin),
 	});
 	if (!hotel) throw createError('Không tìm thấy khách sạn.', 404);
+	assertVendorOwnsHotel(hotel, access);
 
 	const informationFields = ['name', 'description', 'address', 'city_id', 'district_id', 'ward_id', 'star_quality', 'lat', 'lng'];
 	if (isStaff && informationFields.some((field) => updates[field] !== undefined)) {
@@ -128,6 +136,10 @@ const updateHotel = async (hotelId, input, access) => {
 
 const deleteHotel = async (hotelId, access) => {
 	if (!access.isVendor) throw createError('Chỉ Nhà cung cấp mới có thể ngừng hoạt động khách sạn bằng thao tác này.', 403);
+	const existingHotel = await hotelModel.getHotelById(hotelId, { ownerId: access.userId, includeDeleted: false });
+	if (!existingHotel) throw createError('Không tìm thấy khách sạn hoặc bạn không được phân công quản lý khách sạn này.', 404);
+	assertVendorOwnsHotel(existingHotel, access);
+
 	const hotel = await hotelModel.deactivateHotel({
 		hotelId,
 		access,
@@ -138,6 +150,7 @@ const deleteHotel = async (hotelId, access) => {
 		throw createError('Không thể ngừng hoạt động khách sạn khi còn đặt phòng đang chờ, sắp diễn ra hoặc phòng đang được sử dụng.', 409);
 	}
 	const details = await hotelModel.getHotelById(hotelId, { ownerId: access.userId });
+	assertVendorOwnsHotel(details || hotel, access);
 	return hotelModel.toHotelDto(details || hotel);
 };
 
