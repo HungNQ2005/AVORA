@@ -11,8 +11,21 @@ import AmenityTable from '../components/AmenityTable';
 import AmenityFormModal from '../components/AmenityFormModal';
 import AmenityDetailModal from '../components/AmenityDetailModal';
 import AmenityDeleteModal from '../components/AmenityDeleteModal';
-import { exportAmenitiesToCSV } from '../../../utils/exportToExcel';
+import ExportExcelModal from '../components/ExportExcelModal';
+import { exportAmenitiesToExcel, getExportExcelFilename } from '../../../utils/exportToExcel';
+import { matchesSearch } from '../../../utils/textSearchHelper';
 import './AmenityManagementPage.css';
+
+const FACILITY_TYPE_LABELS = {
+  INTERNET: 'Internet / Wi-Fi',
+  POOL: 'Hồ bơi',
+  FOOD: 'Ẩm thực',
+  PARKING: 'Bãi đỗ xe',
+  SERVICE: 'Dịch vụ',
+  GYM: 'Thể hình / Gym',
+  RESTAURANT: 'Nhà hàng',
+  SPA: 'Spa & Chăm sóc',
+};
 
 const VISIBLE_COLUMNS = {
   id: true,
@@ -53,12 +66,14 @@ const AmenityManagementPage = () => {
   const [saveError, setSaveError] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
-  const [toastMessage, setToastMessage] = useState('');
+  const [toast, setToast] = useState({ message: '', type: 'success' });
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const showToast = (msg) => {
-    setToastMessage(msg);
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
     setTimeout(() => {
-      setToastMessage('');
+      setToast({ message: '', type: 'success' });
     }, 3500);
   };
 
@@ -68,7 +83,6 @@ const AmenityManagementPage = () => {
     setError(null);
     try {
       const result = await fetchAmenities({
-        search: searchTerm,
         category: categoryFilter,
         status: statusFilter,
         sort: sortBy,
@@ -88,17 +102,38 @@ const AmenityManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [searchTerm, categoryFilter, statusFilter, sortBy]);
+  }, [categoryFilter, statusFilter, sortBy]);
 
   useEffect(() => {
     loadAmenities();
   }, [loadAmenities]);
 
-  // Derived filtered & paginated records
+  // Derived filtered & paginated records with instant contains search (Vietnamese diacritics support)
+  const filteredAmenities = useMemo(() => {
+    if (!searchTerm || !searchTerm.trim()) return amenities;
+    return amenities.filter((item) =>
+      matchesSearch(
+        [
+          item.facility_name,
+          item.name_vi,
+          item.name_en,
+          item.code,
+          item.category,
+          item.type,
+          FACILITY_TYPE_LABELS[item.type],
+          item.scope_label,
+          item.pricing_label,
+          item.applied_unit,
+        ],
+        searchTerm
+      )
+    );
+  }, [amenities, searchTerm]);
+
   const paginatedAmenities = useMemo(() => {
     const start = (page - 1) * pageSize;
-    return amenities.slice(start, start + pageSize);
-  }, [amenities, page, pageSize]);
+    return filteredAmenities.slice(start, start + pageSize);
+  }, [filteredAmenities, page, pageSize]);
 
   // Handlers
   const handleOpenCreate = () => {
@@ -159,9 +194,37 @@ const AmenityManagementPage = () => {
     }
   };
 
-  const handleExportExcel = () => {
-    exportAmenitiesToCSV(amenities);
-    showToast('Đã xuất file Excel dữ liệu tiện ích thành công!');
+  const handleOpenExportModal = () => {
+    if (!amenities || amenities.length === 0) {
+      showToast('Không có dữ liệu tiện nghi để xuất file Excel.', 'warning');
+      return;
+    }
+    setIsExportModalOpen(true);
+  };
+
+  const handleConfirmExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+
+    // Subtle feedback delay for luxury feel
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    try {
+      const exportFilename = getExportExcelFilename();
+      const exportList = filteredAmenities.length > 0 ? filteredAmenities : amenities;
+      const result = await exportAmenitiesToExcel(exportList, exportFilename);
+      if (result && result.success) {
+        showToast(`Đã xuất thành công ${result.count || exportList.length} tiện nghi ra file Excel!`, 'success');
+        setIsExportModalOpen(false);
+      } else {
+        showToast(result?.message || 'Không thể xuất file Excel.', 'error');
+      }
+    } catch (err) {
+      console.error('Export Excel failed:', err);
+      showToast('Có lỗi xảy ra trong quá trình xuất file Excel.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleAuditClick = () => {
@@ -171,12 +234,28 @@ const AmenityManagementPage = () => {
   return (
     <div className="amenity-page">
       {/* Toast Notification */}
-      {toastMessage && (
-        <div className="amenity-toast">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-          <span>{toastMessage}</span>
+      {toast.message && (
+        <div className={`amenity-toast amenity-toast--${toast.type || 'success'}`}>
+          {toast.type === 'success' && (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          )}
+          {toast.type === 'warning' && (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          )}
+          {toast.type === 'error' && (
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="15" y1="9" x2="9" y2="15" />
+              <line x1="9" y1="9" x2="15" y2="15" />
+            </svg>
+          )}
+          <span>{toast.message}</span>
         </div>
       )}
 
@@ -195,20 +274,36 @@ const AmenityManagementPage = () => {
         </div>
 
         <div className="amenity-page-header__actions">
-          {/* Button: Xuất Excel */}
+          {/* Button: Xuất Excel (Luxury Hotel Style - Navy & Gold) */}
           <button
             type="button"
-            className="amenity-btn-outline amenity-btn-excel"
-            onClick={handleExportExcel}
+            className="amenity-btn-excel"
+            onClick={handleOpenExportModal}
+            disabled={loading || isExporting}
+            title="Xuất toàn bộ danh mục tiện nghi ra tệp Excel"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="8" y1="13" x2="16" y2="13" />
-              <line x1="8" y1="17" x2="16" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
-            <span>Xuất Excel</span>
+            {isExporting ? (
+              <>
+                <svg className="avora-btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="12" />
+                </svg>
+                <span>Đang xuất...</span>
+              </>
+            ) : (
+              <>
+                <svg className="amenity-excel-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                  <line x1="8" y1="17" x2="16" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <span>Xuất Excel</span>
+                {amenities.length > 0 && (
+                  <span className="amenity-excel-badge">{amenities.length}</span>
+                )}
+              </>
+            )}
           </button>
 
           {/* Button: Thêm tiện nghi mới */}
@@ -271,7 +366,7 @@ const AmenityManagementPage = () => {
           setPageSize(size);
           setPage(1);
         }}
-        totalItems={amenities.length}
+        totalItems={filteredAmenities.length}
         visibleColumns={VISIBLE_COLUMNS}
       />
 
@@ -300,6 +395,16 @@ const AmenityManagementPage = () => {
         amenity={selectedAmenityForDelete}
         deleting={deleting}
         error={deleteError}
+      />
+
+      {/* Export Excel Confirmation Modal */}
+      <ExportExcelModal
+        isOpen={isExportModalOpen}
+        onClose={() => !isExporting && setIsExportModalOpen(false)}
+        onConfirm={handleConfirmExport}
+        totalRecords={filteredAmenities.length}
+        filename={getExportExcelFilename()}
+        isExporting={isExporting}
       />
 
     </div>

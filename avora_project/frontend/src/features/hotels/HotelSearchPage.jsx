@@ -212,9 +212,6 @@ const HotelSearchPage = () => {
   const [selectedFacilities, setSelectedFacilities] = useState(
     searchParams.get('facilities') ? searchParams.get('facilities').split(',') : []
   );
-  const [selectedTypes, setSelectedTypes] = useState(
-    searchParams.get('types') ? searchParams.get('types').split(',') : []
-  );
   const [onlyAvailable, setOnlyAvailable] = useState(searchParams.get('onlyAvailable') === 'true');
 
   // Server state
@@ -382,10 +379,7 @@ const HotelSearchPage = () => {
     if (selectedScore !== null) queryParams.set('minScore', selectedScore);
     if (onlyAvailable) queryParams.set('onlyAvailable', 'true');
 
-    // Combine facilities & types for backend filter
-    const facilitiesParam = [...selectedFacilities];
-    if (selectedTypes.includes('beachCenter')) facilitiesParam.push('biển');
-    if (facilitiesParam.length > 0) queryParams.set('facilities', facilitiesParam.join(','));
+    if (selectedFacilities.length > 0) queryParams.set('facilities', selectedFacilities.join(','));
 
     try {
       const response = await fetch(`${API_ENDPOINTS.HOTELS}?${queryParams.toString()}`);
@@ -445,7 +439,6 @@ const HotelSearchPage = () => {
     selectedStars,
     selectedScore,
     selectedFacilities,
-    selectedTypes,
     onlyAvailable,
     getPriceBounds,
   ]);
@@ -505,19 +498,12 @@ const HotelSearchPage = () => {
     );
   };
 
-  const handleTypeToggle = (typeKey) => {
-    setSelectedTypes((prev) =>
-      prev.includes(typeKey) ? prev.filter((t) => t !== typeKey) : [...prev, typeKey]
-    );
-  };
-
   const handleResetAllFilters = () => {
     setDestination('');
     setSelectedPriceRange('all');
     setSelectedStars([]);
     setSelectedScore(null);
     setSelectedFacilities([]);
-    setSelectedTypes([]);
     setSelectedCapacity('all');
     setOnlyAvailable(false);
     setSortBy('popularity');
@@ -532,7 +518,6 @@ const HotelSearchPage = () => {
     selectedStars.length > 0 ||
     selectedScore !== null ||
     selectedFacilities.length > 0 ||
-    selectedTypes.length > 0 ||
     selectedCapacity !== 'all' ||
     onlyAvailable;
 
@@ -843,8 +828,6 @@ const HotelSearchPage = () => {
             guestsPerRoom={guestsPerRoom}
             onlyAvailable={onlyAvailable}
             onOnlyAvailableChange={setOnlyAvailable}
-            selectedTypes={selectedTypes}
-            onTypeToggle={handleTypeToggle}
             onResetAll={handleResetAllFilters}
             onOpenMap={() => setIsMapOpen(true)}
           />

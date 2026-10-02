@@ -1,0 +1,255 @@
+/* ============================================================
+   AVORA Luxury Export Excel Modal Styles
+   Color palette: Deep Navy (#081127, #0b1e3f) & Gold (#d4af37, #c5a880)
+   ============================================================ */
+
+.avora-export-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 25px 50px -12px rgba(11, 30, 63, 0.25), 0 0 0 1px rgba(212, 175, 55, 0.2);
+  overflow: hidden;
+  position: relative;
+  animation: avoraModalAppear 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes avoraModalAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Close Button */
+.avora-export-modal__close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.avora-export-modal__close:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.avora-export-modal__close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Header */
+.avora-export-modal__header {
+  padding: 28px 24px 18px 24px;
+  text-align: center;
+  background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+  border-bottom: 1px solid #f1f5f9;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.avora-export-modal__icon-badge {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #0b1e3f 0%, #162f5e 100%);
+  border: 1.5px solid rgba(212, 175, 55, 0.5);
+  box-shadow: 0 8px 16px -4px rgba(11, 30, 63, 0.2), 0 0 12px rgba(212, 175, 55, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.avora-export-modal__title {
+  margin: 0 0 6px 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0b1e3f;
+  letter-spacing: -0.015em;
+}
+
+.avora-export-modal__subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Body */
+.avora-export-modal__body {
+  padding: 20px 24px;
+}
+
+.avora-export-details {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.avora-export-detail-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.84rem;
+  gap: 10px;
+}
+
+.avora-export-detail-label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.avora-export-detail-val {
+  color: #0f172a;
+  font-weight: 600;
+  text-align: right;
+}
+
+.avora-export-filename {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.78rem;
+  color: #0b1e3f;
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avora-export-badge-count {
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+}
+
+.avora-export-badge-count strong {
+  color: #1e1b4b;
+  font-weight: 700;
+}
+
+.text-success {
+  color: #059669;
+  font-size: 0.8rem;
+}
+
+.avora-export-notice {
+  margin-top: 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 0.78rem;
+  color: #78350f;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  padding: 10px 12px;
+  border-radius: 8px;
+  line-height: 1.45;
+}
+
+.avora-export-notice svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* Footer Actions */
+.avora-export-modal__footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.avora-export-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+
+.avora-export-btn--cancel {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.avora-export-btn--cancel:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.avora-export-btn--confirm {
+  background: linear-gradient(135deg, #0b1e3f 0%, #152b54 100%);
+  border: 1px solid #d4af37;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(11, 30, 63, 0.2), inset 0 1px 0 rgba(212, 175, 55, 0.3);
+}
+
+.avora-export-btn--confirm:hover:not(:disabled) {
+  background: linear-gradient(135deg, #132a52 0%, #1d3b73 100%);
+  border-color: #f59e0b;
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.25), 0 2px 4px rgba(11, 30, 63, 0.15);
+  transform: translateY(-1px);
+}
+
+.avora-export-btn--confirm:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.avora-export-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Spinner Animation */
+.avora-btn-spinner {
+  animation: avoraRotate 0.8s linear infinite;
+}
+
+@keyframes avoraRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
