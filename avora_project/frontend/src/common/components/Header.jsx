@@ -183,6 +183,10 @@ const Header = ({
   const accountDropdownRef = useRef(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const role = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const canManageHotels = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER', 'VEN', 'VENDOR'].includes(role);
+  const displayName = user?.full_name || user?.email || '';
   const [internalTab, setInternalTab] = useState(null);
   const currentPath = location.pathname;
   const currentTab = internalTab !== null
@@ -193,9 +197,9 @@ const Header = ({
         ? 'favorites'
         : (currentPath === '/'
           ? 'home'
-          : (currentPath.startsWith('/admin/coupons')
+          : (currentPath.startsWith('/dashboard/coupons')
             ? 'bmr'
-            : (currentPath.startsWith('/admin') ? 'pms' : activeTab)))));
+            : (currentPath.startsWith('/dashboard') ? 'pms' : activeTab)))));
 
   const [internalSavedCount, setInternalSavedCount] = useState(() => {
     const list = getSavedFavorites();
@@ -229,7 +233,6 @@ const Header = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const displayName = user?.full_name || user?.email || '';
   const userRoleDisplayName = codeNameParser(user?.role_code_name);
   const isPartnerOrAdmin = user && ['ADM'].includes(user.role_code_name);
   const isBusinessManager = user && ['BMR'].includes(user.role_code_name);
@@ -330,16 +333,13 @@ const Header = ({
       navigate('/myaccount');
       return;
     } else if (tabKey === 'pms') {
-      if (!user) {
-        navigate('/signin');
-        return;
-      }
+      if (!user || !canManageHotels) return;
       if (!isPartnerOrAdmin) {
         alert('Tài khoản của bạn không có quyền truy cập hệ thống Quản lý Khách sạn (PMS).');
         return;
       }
       setInternalTab(tabKey);
-      navigate('/admin/room-types');
+      navigate('/dashboard/room-types');
       return;
     } else if (tabKey === 'bmr') {
       if (!user) {
@@ -351,7 +351,7 @@ const Header = ({
         return;
       }
       setInternalTab(tabKey);
-      navigate('/admin/coupons');
+      navigate('/dashboard/coupons');
       return;
     } else {
       setInternalTab(null);
@@ -435,20 +435,19 @@ const Header = ({
                 </span>
               </button>
 
-              {/* Action Button: Hotel Management PMS (only for partner/admin roles or guests) */}
-              {(isPartnerOrAdmin || !user) && (
-                <button
-                  type="button"
+              {canManageHotels && (
+                <Link
+                  to="/dashboard"
                   className={`avora-header__pill-btn avora-header__pill-btn--pms ${currentTab === 'pms' ? 'is-active' : ''}`}
-                  onClick={handleAction('pms')}
+                  onClick={() => { setInternalTab('pms'); onNavClick?.('pms'); }}
                 >
                   <BuildingIcon />
                   <span className="avora-header__two-line">
-                    <span>Quản lý</span>
-                    <span>Khách sạn</span>
+                    <span>Bảng điều</span>
+                    <span>khiển</span>
                   </span>
                   <span className="avora-header__pms-badge">PMS</span>
-                </button>
+                </Link>
               )}
 
               {/* Action Button: Business Management BMR (only for business manager role or guests) */}
@@ -857,7 +856,3 @@ const Header = ({
 };
 
 export default Header;
-
-
-
-

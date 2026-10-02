@@ -4,17 +4,18 @@ require("./config/env"); // Load & validate env vars first
 const express = require("express");
 const cors = require("cors");
 
-const errorHandler = require("./common/middlewares/errorHandler");
-const connectionRoute = require("./features/connection_test/connection.route");
-const authRoute = require("./features/auth/auth.route");
-const otpRoute = require("./features/otp/otp.route");
-
-const hotelRoute = require("./features/hotels/hotel.route");
-const roomTypeRoute = require("./features/room_types/room_type.route");
-const facilityRoute = require("./features/facilities/facility.route");
-const couponRoute = require("./features/coupons/coupon.route");
-const userRoute = require("./features/users/user.route");
-const env = require("./config/env");
+const errorHandler = require('./common/middlewares/errorHandler');
+const connectionRoute = require('./features/connection_test/connection.route');
+const authRoute = require('./features/auth/auth.route');
+const otpRoute = require('./features/otp/otp.route');
+const hotelManagementRoute = require('./features/hotel_management/hotel_management.route');
+const hotelRoute = require('./features/hotels/hotel.route');
+const locationRoute = require('./features/locations/location.route');
+const roomTypeRoute = require('./features/room_types/room_type.route');
+const facilityRoute = require('./features/facilities/facility.route');
+const couponRoute = require('./features/coupons/coupon.route');
+const userRoute = require('./features/users/user.route');
+const env = require('./config/env');
 
 const app = express();
 
@@ -38,15 +39,16 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "success", message: "AVORA Backend is running 🚀" });
 });
 
-app.use("/api", connectionRoute);
-app.use("/api", authRoute);
-app.use("/api", hotelRoute);
-app.use("/api", otpRoute);
+app.use('/api', connectionRoute);
+app.use('/api', authRoute);
+app.use('/api', hotelRoute);
+app.use('/api', otpRoute);
+app.use('/api/v1', hotelManagementRoute);
+app.use('/api/v1', locationRoute);
 app.use("/api", roomTypeRoute);
 app.use("/api", facilityRoute);
 app.use("/api", couponRoute);
 app.use("/api", userRoute);
-
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
 

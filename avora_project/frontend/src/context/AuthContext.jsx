@@ -14,26 +14,35 @@ export const AuthProvider = ({ children }) => {
 
   // Fetch user profile on mount if a token exists
   useEffect(() => {
+    let isCurrent = true;
     const bootstrap = async () => {
       if (token) {
         try {
           const res = await getProfile();
-          setUser(res.data);
+          if (isCurrent) setUser(res.data);
         } catch {
-          // Token invalid/expired — clear it
-          localStorage.removeItem('avora_token');
-          setToken(null);
+          if (isCurrent) {
+            localStorage.removeItem('avora_token');
+            setToken(null);
+            setUser(null);
+          }
         }
+      } else if (isCurrent) {
+        setUser(null);
       }
-      setLoading(false);
+      if (isCurrent) {
+        setLoading(false);
+      }
     };
     bootstrap();
+    return () => { isCurrent = false; };
   }, [token]);
 
   const login = useCallback((jwtToken, userData) => {
     localStorage.setItem('avora_token', jwtToken);
     setToken(jwtToken);
     setUser(userData);
+    setLoading(true);
   }, []);
 
   const logout = useCallback(() => {
