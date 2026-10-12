@@ -139,6 +139,14 @@ function App() {
               }
             />
             <Route
+              path="roles"
+              element={
+                <AdminRoute>
+                  <RoleManagementPage />
+                </AdminRoute>
+              }
+            />
+            <Route
               path="room-types"
               element={
                 <VenueManagerRoute>
