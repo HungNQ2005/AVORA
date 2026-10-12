@@ -98,9 +98,4 @@ export const confirmRoleChange = async (userId, newRole, otpCode) => {
   }
 
   return json.data;
-<<<<<<< HEAD
 };
-=======
-};
-
->>>>>>> origin/main
