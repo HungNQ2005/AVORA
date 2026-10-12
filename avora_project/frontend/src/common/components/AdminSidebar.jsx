@@ -1,5 +1,5 @@
 import React from 'react';
-import { NavLink, Link, useNavigate } from 'react-router-dom';
+import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { codeNameParser } from '../../utils/codeNameParser';
 import './AdminSidebar.css';
@@ -18,11 +18,14 @@ const getUserInitials = (name) => {
 const AdminSidebar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const canManageVenue = ['ADM'].includes(user?.role_code_name);
-  const canManageCoupons = user?.role_code_name === 'BMR';
-  const isSystemAdmin = user?.role_code_name === 'ADM';
+  const location = useLocation();
+
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const isSystemAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || String(user?.role_cd) === '1';
+  const canManageVenue = ['ADM', 'ADMIN', 'VEN', 'VENDOR'].includes(roleCode) || ['1', '4'].includes(String(user?.role_cd));
+  const canManageCoupons = ['BMR', 'BUSINESS_MANAGER', 'ADM', 'ADMIN'].includes(roleCode) || ['3', '1'].includes(String(user?.role_cd));
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
-  const roleCode = user?.role_code_name?.trim().toUpperCase();
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
 
   return (
@@ -60,44 +63,47 @@ const AdminSidebar = () => {
         </div>
 
         {/* NGƯỜI DÙNG & PHÂN QUYỀN */}
-        {isSystemAdmin && (
-          <div className="admin-sidebar__group">
-            <div className="admin-sidebar__group-title">NGƯỜI DÙNG & PHÂN QUYỀN</div>
-            <NavLink
-              to="/admin/users"
-              className={({ isActive }) =>
-                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-              }
-            >
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Quản lý người dùng</span>
-            </NavLink>
-            <div className="admin-sidebar__link disabled">
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Vai trò & Quyền hạn (RBAC)</span>
-            </div>
-            <div className="admin-sidebar__link disabled">
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Lịch sử truy cập</span>
-            </div>
+        <div className="admin-sidebar__group">
+          <div className="admin-sidebar__group-title">NGƯỜI DÙNG & PHÂN QUYỀN</div>
+          <NavLink
+            to="/admin/users"
+            className={({ isActive }) =>
+              `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/users') ? 'admin-sidebar__link--active' : ''}`
+            }
+          >
+            <span className="admin-sidebar__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
+            </span>
+            <span className="admin-sidebar__label">Quản lý người dùng</span>
+          </NavLink>
+          <NavLink
+            to="/admin/roles"
+            className={({ isActive }) =>
+              `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/roles') || location.pathname === '/roles' ? 'admin-sidebar__link--active' : ''}`
+            }
+          >
+            <span className="admin-sidebar__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+            </span>
+            <span className="admin-sidebar__label">Vai trò & Quyền hạn (RBAC)</span>
+          </NavLink>
+          <div className="admin-sidebar__link disabled">
+            <span className="admin-sidebar__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+            </span>
+            <span className="admin-sidebar__label">Lịch sử truy cập</span>
           </div>
-        )}
+        </div>
 
         {/* HỆ THỐNG KHÁCH SẠN */}
         <div className="admin-sidebar__group">
