@@ -216,7 +216,7 @@ const HotelManagementPage = () => {
 				onClose={() => { setDeleteTarget(null); setDeleteError(''); }}
 				onConfirm={handleDelete}
 				title="Ngừng hoạt động khách sạn này?"
-				message={deleteError || `"${deleteTarget?.name || ''}" sẽ chuyển sang trạng thái Ngừng hoạt động. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
+				message={deleteError || `"${deleteTarget?.name || ''}" sẽ chuyển sang trạng thái Ngừng hoạt động và toàn bộ đặt phòng đang chờ hoặc sắp diễn ra sẽ bị hủy. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
 				variant="confirm"
 				cancelLabel="Đóng"
 				confirmLabel="Ngừng hoạt động"

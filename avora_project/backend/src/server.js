@@ -49,6 +49,12 @@ app.use("/api", roomTypeRoute);
 app.use("/api", facilityRoute);
 app.use("/api", couponRoute);
 app.use("/api", userRoute);
+
+app.use((_req, _res, next) => {
+  const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');
+  err.statusCode = 404;
+  next(err);
+});
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
 

@@ -80,8 +80,7 @@ const listHotels = async ({ page, pageSize, keyword, search, city_id, district_i
     const cityIds = (cityResult.data || []).map((city) => city.city_id);
     const wardIds = (wardResult.data || []).map((ward) => ward.ward_id);
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(searchTerm);
-    const isNumericId = /^\d+$/.test(searchTerm);
-    const idFilter = isUuid || isNumericId ? `,hotel_id.eq.${searchTerm}` : '';
+    const idFilter = isUuid ? `,hotel_id.eq.${searchTerm}` : '';
     const locationFilter = [
       cityIds.length ? `city_id.in.(${cityIds.join(',')})` : '',
       wardIds.length ? `ward_id.in.(${wardIds.join(',')})` : '',
@@ -159,6 +158,44 @@ const approveHotel = async (hotelId) => {
   return (await addStatusNames([data]))[0];
 };
 
+const cancelOpenBookings = async (hotelId) => {
+  const { data: statuses, error: statusError } = await supabase
+    .from('m_system_code')
+    .select('code_cd, code_name')
+    .eq('business_cd', 'BOOKING_STS');
+  checkQuery(statusError);
+  const codeByName = new Map((statuses || []).map((status) => [String(status.code_name).toUpperCase(), String(status.code_cd)]));
+  const cancelledCd = codeByName.get('CAN');
+  if (!cancelledCd) {
+    const err = new Error('Thiếu mã trạng thái Đã hủy của đặt phòng trong hệ thống.');
+    err.statusCode = 500;
+    throw err;
+  }
+  const openCodes = ['PND', 'CFM'].map((name) => codeByName.get(name)).filter(Boolean);
+  if (!openCodes.length) return 0;
+
+  const { data: bookings, error: bookingError } = await supabase
+    .from('t_booking')
+    .select('booking_id, details:t_booking_detail(check_out_date)')
+    .eq('hotel_id', hotelId)
+    .in('booking_status_cd', openCodes);
+  checkQuery(bookingError);
+
+  // Stays that already ended are history and keep their status
+  const today = new Date().toISOString().slice(0, 10);
+  const bookingIds = (bookings || [])
+    .filter((booking) => !(booking.details || []).length || booking.details.some((detail) => String(detail.check_out_date) >= today))
+    .map((booking) => booking.booking_id);
+  if (!bookingIds.length) return 0;
+
+  const { error: cancelError } = await supabase
+    .from('t_booking')
+    .update({ booking_status_cd: cancelledCd, updated_at: new Date().toISOString() })
+    .in('booking_id', bookingIds);
+  checkQuery(cancelError);
+  return bookingIds.length;
+};
+
 const deactivateHotel = async ({ hotelId, access, options = {} }) => {
   ensureClient();
   let hotelQuery = supabase
@@ -172,51 +209,6 @@ const deactivateHotel = async ({ hotelId, access, options = {} }) => {
   checkQuery(hotelError);
   if (!hotel) return null;
 
-  const { data: bookings, error: bookingError } = await supabase
-    .from('t_booking')
-    .select('booking_id, booking_status_cd, details:t_booking_detail(check_in_date)')
-    .eq('hotel_id', hotelId);
-  checkQuery(bookingError);
-
-  const bookingCodes = [...new Set((bookings || []).map((booking) => String(booking.booking_status_cd)))];
-  const { data: bookingStatuses, error: bookingStatusError } = await supabase
-    .from('m_system_code')
-    .select('code_cd, code_name')
-    .eq('business_cd', 'BOOKING_STS')
-    .in('code_cd', bookingCodes.length ? bookingCodes : ['__none__']);
-  checkQuery(bookingStatusError);
-  const bookingNames = new Map((bookingStatuses || []).map((status) => [String(status.code_cd), String(status.code_name).toUpperCase()]));
-  const today = new Date().toISOString().slice(0, 10);
-  const hasActiveBooking = (bookings || []).some((booking) => {
-    const code = String(booking.booking_status_cd).toUpperCase();
-    const status = bookingNames.get(code) || code;
-    if (['PND', 'PENDING', 'UPCOMING'].includes(status)) return true;
-    return ['CFM', 'CONFIRMED'].includes(status)
-      && (booking.details || []).some((detail) => String(detail.check_in_date) >= today);
-  });
-  if (hasActiveBooking) return { status: 'active_bookings' };
-
-  const { data: rooms, error: roomError } = await supabase
-    .from('m_room')
-    .select('status_cd')
-    .eq('hotel_id', hotelId)
-    .eq('is_deleted', false);
-  checkQuery(roomError);
-  const roomCodes = [...new Set((rooms || []).map((room) => String(room.status_cd)))];
-  const { data: roomStatuses, error: roomStatusError } = await supabase
-    .from('m_system_code')
-    .select('code_cd, code_name')
-    .in('business_cd', ['ROOM_STS', 'ROOM_STATUS'])
-    .in('code_cd', roomCodes.length ? roomCodes : ['__none__']);
-  checkQuery(roomStatusError);
-  const roomNames = new Map((roomStatuses || []).map((status) => [String(status.code_cd), String(status.code_name).toUpperCase()]));
-  const hasOccupiedRoom = (rooms || []).some((room) => {
-    const code = String(room.status_cd).toUpperCase();
-    const status = roomNames.get(code) || code;
-    return ['OCCUPIED', 'RESERVED'].includes(status);
-  });
-  if (hasOccupiedRoom) return { status: 'active_bookings' };
-
   let updateQuery = supabase
     .from('m_hotel')
     .update({ hotel_status: 'INACTIVE', updated_at: new Date().toISOString() })
@@ -227,7 +219,19 @@ const deactivateHotel = async ({ hotelId, access, options = {} }) => {
   if (options.expectedStatus) updateQuery = updateQuery.eq('hotel_status', options.expectedStatus);
   const { data, error } = await updateQuery.select('*').maybeSingle();
   checkQuery(error);
-  return data ? (await addStatusNames([data]))[0] : null;
+  if (!data) return null;
+
+  try {
+    await cancelOpenBookings(hotelId);
+  } catch (cancelErr) {
+    // Keep hotel status and bookings consistent if cancellation fails
+    await supabase
+      .from('m_hotel')
+      .update({ hotel_status: hotel.hotel_status, updated_at: new Date().toISOString() })
+      .eq('hotel_id', hotelId);
+    throw cancelErr;
+  }
+  return (await addStatusNames([data]))[0];
 };
 
 const HOTEL_IMAGE_BUCKET = 'hotel-images';

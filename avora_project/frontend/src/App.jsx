@@ -18,6 +18,7 @@ import CouponManagementPage from './features/coupons/pages/CouponManagementPage'
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
+import NotFoundNotice from './common/components/NotFoundNotice';
 import DashboardPage from './features/dashboard/pages/dashboardPage';
 import HotelManagementPage from './features/hotel_management/pages/hotelManagementPage';
 import HotelManagementDetailPage from './features/hotel_management/pages/hotelDetailPage';
@@ -113,6 +114,7 @@ function App() {
             <Route path="/hotel-detail/:id" element={<CustomerHotelDetailPage />} />
             <Route path="/search" element={<HotelSearchPage />} />
             <Route path="/forbidden" element={<section style={{ padding: '3rem 1rem', textAlign: 'center' }}><h1>403 - Truy cập bị từ chối</h1><p>Tài khoản của bạn không có quyền truy cập trang quản lý này.</p></section>} />
+            <Route path="*" element={<NotFoundNotice />} />
           </Route>
 
           {/* Dashboard (dashboardPage.jsx: Header + dashboardNav.jsx + content). Vendor / System Admin / Business Manager only — Customer/guest get 403. */}

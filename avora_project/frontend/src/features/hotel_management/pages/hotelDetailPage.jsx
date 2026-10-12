@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import Dialog from '../../../common/components/Dialog';
+import NotFoundNotice from '../../../common/components/NotFoundNotice';
 import LocationSelect from '../components/locationSelect';
 import HotelThumb from '../components/hotelThumb';
 import HotelImageManager from '../components/hotelImageManager';
@@ -29,6 +30,7 @@ const HotelDetailPage = () => {
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [notFound, setNotFound] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState('');
@@ -46,7 +48,11 @@ const HotelDetailPage = () => {
         setForm(toHotelForm(result));
         setImages(result.images || []);
       })
-      .catch((err) => { if (active) setError(err.response?.data?.message || 'Không thể tải thông tin khách sạn này.'); })
+      .catch((err) => {
+        if (!active) return;
+        if (err.response?.status === 404) setNotFound(true);
+        else setError(err.response?.data?.message || 'Không thể tải thông tin khách sạn này.');
+      })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id]);
@@ -164,6 +170,14 @@ const HotelDetailPage = () => {
   };
 
   if (loading) return <div className="hotel-detail-state" role="status"><span className="hotel-spinner" />Đang tải thông tin khách sạn</div>;
+  if (notFound) {
+    return (
+      <NotFoundNotice
+        title="Không tìm thấy khách sạn"
+        reason="Khách sạn không tồn tại hoặc bạn không có quyền xem khách sạn này."
+      />
+    );
+  }
   if (error && !hotel) {
     return <section className="hotel-detail-state hotel-detail-state--error"><p role="alert">{error}</p><Link to="/dashboard/hotel-management">Quay lại danh sách khách sạn</Link></section>;
   }
@@ -268,7 +282,7 @@ const HotelDetailPage = () => {
         onClose={() => setDeleteOpen(false)}
         onConfirm={handleDelete}
         title="Ngừng hoạt động khách sạn này?"
-        message={error || `"${hotel.name}" sẽ chuyển sang trạng thái Ngừng hoạt động. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
+        message={error || `"${hotel.name}" sẽ chuyển sang trạng thái Ngừng hoạt động và toàn bộ đặt phòng đang chờ hoặc sắp diễn ra sẽ bị hủy. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
         variant="confirm"
         cancelLabel="Đóng"
         confirmLabel={actionLoading ? 'Đang cập nhật…' : 'Ngừng hoạt động'}

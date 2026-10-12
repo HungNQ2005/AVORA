@@ -126,9 +126,6 @@ const updateHotel = async (hotelId, input, access) => {
 	const updatedHotel = updates.hotel_status === 'INACTIVE'
 		? await hotelModel.deactivateHotel({ hotelId, access, options: updateOptions })
 		: await hotelModel.updateHotel(hotelId, updates, updateOptions);
-	if (updatedHotel?.status === 'active_bookings') {
-		throw createError('Không thể ngừng hoạt động khách sạn khi còn đặt phòng đang chờ, sắp diễn ra hoặc phòng đang được sử dụng.', 409);
-	}
 	if (!updatedHotel) throw createError('Không tìm thấy khách sạn hoặc trạng thái đã thay đổi. Vui lòng tải lại trang và thử lại.', 404);
 	const details = await hotelModel.getHotelById(hotelId, updateOptions);
 	return hotelModel.toHotelDto(details || updatedHotel);
@@ -146,9 +143,6 @@ const deleteHotel = async (hotelId, access) => {
 		options: { ownerId: access.userId, includeDeleted: false },
 	});
 	if (!hotel) throw createError('Không tìm thấy khách sạn hoặc bạn không được phân công quản lý khách sạn này.', 404);
-	if (hotel.status === 'active_bookings') {
-		throw createError('Không thể ngừng hoạt động khách sạn khi còn đặt phòng đang chờ, sắp diễn ra hoặc phòng đang được sử dụng.', 409);
-	}
 	const details = await hotelModel.getHotelById(hotelId, { ownerId: access.userId });
 	assertVendorOwnsHotel(details || hotel, access);
 	return hotelModel.toHotelDto(details || hotel);

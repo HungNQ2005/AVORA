@@ -175,10 +175,11 @@ const searchHotels = async (params = {}) => {
 
   // Filter by destination if provided (skip filter if searching all of Vietnam)
   if (destination && destination.trim() && !isAllVietnam) {
-    const term = destination.trim();
-    if (cityIds.length > 0) {
+    // Strip characters that would break the PostgREST or() filter syntax
+    const term = destination.trim().replace(/[\\%_,()"'*]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (term && cityIds.length > 0) {
       query = query.or(`city_id.in.(${cityIds.join(',')}),name.ilike.%${term}%,address.ilike.%${term}%`);
-    } else {
+    } else if (term) {
       query = query.or(`name.ilike.%${term}%,address.ilike.%${term}%`);
     }
   }
@@ -443,7 +444,6 @@ const searchHotels = async (params = {}) => {
       star_rating: reviewStats.score,
       reviews_count: reviewStats.count,
       score_label: scoreLabel,
-      hotel_status: hotel.hotel_status || 'ACTIVE',
       lat: hotel.lat,
       lng: hotel.lng,
       images: images.map((i) => i.image_url),
@@ -653,19 +653,7 @@ const getHotelById = async (hotelId, options = {}) => {
     if (data) hotel = data;
   }
 
-  // If specific hotel ID is not found, fallback to the first active hotel in DB
-  if (!hotel) {
-    const { data: firstHotel } = await supabase
-      .from('m_hotel')
-      .select('*')
-      .or('is_deleted.is.null,is_deleted.eq.false')
-      .or('hotel_status.is.null,hotel_status.eq.ACTIVE')
-      .limit(1)
-      .maybeSingle();
-
-    hotel = firstHotel;
-  }
-
+  // Only ACTIVE, non-deleted hotels are ever visible to guests and customers
   if (!hotel) {
     return null;
   }
@@ -872,7 +860,6 @@ const getHotelById = async (hotelId, options = {}) => {
     star_rating: finalScore,
     reviews_count: reviews.length,
     score_label: scoreLabel,
-    hotel_status: hotel.hotel_status || 'ACTIVE',
     lat: hotel.lat,
     lng: hotel.lng,
     facilities: facilities,
