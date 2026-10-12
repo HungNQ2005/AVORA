@@ -55,3 +55,47 @@ export const updateUserStatus = async (userId, status) => {
 
   return json.data;
 };
+
+/**
+ * Request role change for a user.
+ * Sensitive roles (ADMIN, BUSINESS_MANAGER) will trigger Step-up OTP email and return status: 'REQUIRES_OTP'.
+ * Non-sensitive roles (VENDOR, CUSTOMER) update directly and return status: 'SUCCESS'.
+ */
+export const requestRoleChange = async (userId, newRole) => {
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.USERS}/${encodeURIComponent(userId)}/request-role-change`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newRole }),
+    }
+  );
+  const json = await response.json();
+
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể yêu cầu thay đổi vai trò.');
+  }
+
+  return json.data;
+};
+
+/**
+ * Confirm sensitive role change with Step-up OTP.
+ */
+export const confirmRoleChange = async (userId, newRole, otpCode) => {
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.USERS}/${encodeURIComponent(userId)}/confirm-role-change`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ newRole, otpCode }),
+    }
+  );
+  const json = await response.json();
+
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Mã OTP không hợp lệ hoặc đã hết hạn.');
+  }
+
+  return json.data;
+};

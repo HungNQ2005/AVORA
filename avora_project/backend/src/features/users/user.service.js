@@ -3,6 +3,8 @@
 const supabase = require('../../config/supabaseClient');
 const { codeNameParser } = require('../../utils/codeNameParser');
 const { matchesSearch } = require('../../utils/textSearchHelper');
+const otpService = require('../otp/otp.service');
+
 
 /**
  * Service to manage users, roles, statistics, and access control.
@@ -332,8 +334,260 @@ const updateUserStatus = async (userId, newStatus) => {
   return user;
 };
 
+/**
+ * Helper to resolve and validate target role from input string ('ADMIN', 'BMR', 'VENDOR', etc.)
+ */
+const resolveTargetRole = async (inputRole) => {
+  if (!inputRole || typeof inputRole !== 'string') {
+    const err = new Error('Vui lòng chọn vai trò mới hợp lệ.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const roleMap = await getRoleMap();
+  const inputUpper = inputRole.trim().toUpperCase();
+
+  const ALIAS_MAP = {
+    ADMIN: 'ADM',
+    SYSTEM_ADMIN: 'ADM',
+    ADM: 'ADM',
+    BUSINESS_MANAGER: 'BMR',
+    BMR: 'BMR',
+    VENDOR: 'VEN',
+    HOTEL_MANAGER: 'VEN',
+    VEN: 'VEN',
+    CUSTOMER: 'CUS',
+    CUS: 'CUS',
+  };
+
+  const targetCodeName = ALIAS_MAP[inputUpper] || inputUpper;
+
+  for (const [cd, val] of roleMap.entries()) {
+    if (val.code === targetCodeName || cd === inputUpper) {
+      const isSensitive = ['ADM', 'BMR'].includes(val.code);
+      return {
+        code_cd: cd,
+        code_name: val.code,
+        label: val.label,
+        isSensitive,
+      };
+    }
+  }
+
+  const err = new Error(`Vai trò "${inputRole}" không tồn tại trong hệ thống.`);
+  err.statusCode = 400;
+  throw err;
+};
+
+/**
+ * Request role change for a target user with Step-up Authentication check.
+ * Security: Admin cannot change their own role.
+ * Sensitive roles (ADM, BMR) require 6-digit OTP sent to the acting Admin's email.
+ */
+const requestRoleChange = async ({ adminUser, targetUserId, newRole }) => {
+  const adminId = adminUser?.user_id || adminUser?.id;
+  if (!adminId) {
+    const err = new Error('Không xác định được phiên làm việc của Quản trị viên.');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  // Security Rule 1: Admin cannot change their own role
+  if (String(adminId) === String(targetUserId)) {
+    const err = new Error('Quản trị viên không được phép tự thay đổi vai trò của chính mình.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // Security Rule 2: Fetch target user and ensure they exist
+  const { data: targetUser, error: fetchErr } = await supabase
+    .from('m_user')
+    .select('user_id, email, full_name, role_cd, account_status')
+    .eq('user_id', targetUserId)
+    .eq('is_deleted', false)
+    .single();
+
+  if (fetchErr || !targetUser) {
+    const err = new Error('Không tìm thấy tài khoản người dùng mục tiêu.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Resolve target role
+  const resolvedRole = await resolveTargetRole(newRole);
+
+  // Check if user already possesses this role
+  if (String(targetUser.role_cd) === String(resolvedRole.code_cd)) {
+    const err = new Error(`Người dùng này hiện đã giữ vai trò "${resolvedRole.label}".`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Check if sensitive role (ADMIN or BUSINESS_MANAGER)
+  if (resolvedRole.isSensitive) {
+    // Resolve acting admin email
+    let adminEmail = adminUser.email;
+    if (!adminEmail) {
+      const { data: adminRecord } = await supabase
+        .from('m_user')
+        .select('email')
+        .eq('user_id', adminId)
+        .single();
+      adminEmail = adminRecord?.email;
+    }
+
+    if (!adminEmail) {
+      const err = new Error('Không thể tìm thấy địa chỉ email của Quản trị viên để gửi OTP.');
+      err.statusCode = 500;
+      throw err;
+    }
+
+    // Step-up Auth: Generate OTP and send security email to acting Admin
+    const purpose = `ROLE_CHANGE_${targetUserId}_${resolvedRole.code_name}`;
+    await otpService.sendOtp({
+      identifier: adminId,
+      email: adminEmail,
+      purpose,
+      expiryMinutes: 5,
+      subject: 'Cảnh báo Bảo mật: Xác nhận cấp quyền quản trị - Avora Booking',
+      templateName: 'adminRoleChangeOtp',
+      templateData: {
+        newRole: resolvedRole.label,
+        targetUserEmail: targetUser.email,
+      },
+    });
+
+    return {
+      status: 'REQUIRES_OTP',
+      message: 'Hành động nhạy cảm yêu cầu xác thực bảo mật cấp 2 (Step-up Auth). Vui lòng nhập mã OTP 6 số đã gửi tới email Quản trị viên.',
+      data: {
+        targetUserId,
+        targetUserEmail: targetUser.email,
+        targetUserName: targetUser.full_name,
+        newRole: resolvedRole.code_name,
+        newRoleLabel: resolvedRole.label,
+        adminEmail,
+        expiresInMinutes: 5,
+      },
+    };
+  }
+
+  // Non-sensitive roles (VENDOR, CUSTOMER): Update directly
+  const { data: updatedUser, error: updateErr } = await supabase
+    .from('m_user')
+    .update({
+      role_cd: resolvedRole.code_cd,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', targetUserId)
+    .select('user_id, email, full_name, role_cd, account_status')
+    .single();
+
+  if (updateErr) {
+    console.error('Error updating role:', updateErr);
+    const err = new Error('Không thể cập nhật quyền người dùng.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  return {
+    status: 'SUCCESS',
+    message: `Đã thay đổi quyền thành công cho "${targetUser.full_name}" sang vai trò "${resolvedRole.label}".`,
+    data: {
+      user: {
+        ...updatedUser,
+        role_code: resolvedRole.code_name,
+        role_label: resolvedRole.label,
+      },
+    },
+  };
+};
+
+/**
+ * Confirm role change using OTP verification for Step-up Authentication.
+ */
+const confirmRoleChange = async ({ adminUser, targetUserId, newRole, otpCode }) => {
+  const adminId = adminUser?.user_id || adminUser?.id;
+  if (!adminId) {
+    const err = new Error('Không xác định được phiên làm việc của Quản trị viên.');
+    err.statusCode = 401;
+    throw err;
+  }
+
+  // Security Rule 1: Admin cannot change their own role
+  if (String(adminId) === String(targetUserId)) {
+    const err = new Error('Quản trị viên không được phép tự thay đổi vai trò của chính mình.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  if (!otpCode || typeof otpCode !== 'string' || otpCode.trim().length !== 6) {
+    const err = new Error('Mã OTP xác thực phải gồm đúng 6 chữ số.');
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Security Rule 2: Fetch target user
+  const { data: targetUser, error: fetchErr } = await supabase
+    .from('m_user')
+    .select('user_id, email, full_name, role_cd')
+    .eq('user_id', targetUserId)
+    .eq('is_deleted', false)
+    .single();
+
+  if (fetchErr || !targetUser) {
+    const err = new Error('Không tìm thấy tài khoản người dùng mục tiêu.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const resolvedRole = await resolveTargetRole(newRole);
+
+  // Security Rule 3: Verify Step-up OTP with dedicated purpose
+  const purpose = `ROLE_CHANGE_${targetUserId}_${resolvedRole.code_name}`;
+  await otpService.verifyOtp({
+    identifier: adminId,
+    otp: otpCode.trim(),
+    purpose,
+  });
+
+  // Security Rule 4: Update DB after successful OTP verification
+  const { data: updatedUser, error: updateErr } = await supabase
+    .from('m_user')
+    .update({
+      role_cd: resolvedRole.code_cd,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', targetUserId)
+    .select('user_id, email, full_name, role_cd, account_status')
+    .single();
+
+  if (updateErr) {
+    console.error('Error applying role update:', updateErr);
+    const err = new Error('Không thể lưu cập nhật vai trò mới vào cơ sở dữ liệu.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  return {
+    status: 'SUCCESS',
+    message: `Xác thực OTP thành công! Đã cấp quyền "${resolvedRole.label}" cho tài khoản "${targetUser.email}".`,
+    data: {
+      user: {
+        ...updatedUser,
+        role_code: resolvedRole.code_name,
+        role_label: resolvedRole.label,
+      },
+    },
+  };
+};
+
 module.exports = {
   getUsersList,
   getUserStats,
   updateUserStatus,
+  requestRoleChange,
+  confirmRoleChange,
+  resolveTargetRole,
 };
+

@@ -14,6 +14,7 @@ import RoomTypeManagementPage from './features/room_types/pages/RoomTypeManageme
 import RoomTypeDetailPage from './features/room_types/pages/RoomTypeDetailPage';
 import AmenityManagementPage from './features/amenities/pages/AmenityManagementPage';
 import UserManagementPage from './features/users/pages/UserManagementPage';
+import RoleManagementPage from './features/users/pages/RoleManagementPage';
 import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -130,6 +131,14 @@ function App() {
             <Route path="hotel-management" element={<HotelManagementPage />} />
             <Route path="hotel-management/:id" element={<HotelManagementDetailPage />} />
             <Route
+              path="roles"
+              element={
+                <AdminRoute>
+                  <RoleManagementPage />
+                </AdminRoute>
+              }
+            />
+            <Route
               path="room-types"
               element={
                 <VenueManagerRoute>
@@ -185,6 +194,14 @@ function App() {
                 </AdminRoute>
               }
             />
+            <Route
+              path="roles"
+              element={
+                <AdminRoute>
+                  <RoleManagementPage />
+                </AdminRoute>
+              }
+            />
           </Route>
 
           {/* Friendly redirect aliases for the old /admin and top-level paths */}
@@ -205,6 +222,7 @@ function App() {
           <Route path="/hotel-management/:id" element={<Navigate to="/dashboard/hotel-management" replace />} />
           <Route path="/coupons" element={<Navigate to="/dashboard/coupons" replace />} />
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
+          <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

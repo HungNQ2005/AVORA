@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { fetchUsers, fetchUserStats, updateUserStatus } from '../../../services/userService';
 import { fetchHotels } from '../../../services/roomTypeApi';
@@ -9,11 +9,14 @@ import UserRoleTabs from '../components/UserRoleTabs';
 import UserFilterBar from '../components/UserFilterBar';
 import UserTable from '../components/UserTable';
 import EditUserModal from '../components/EditUserModal';
+import RoleChangeModal from '../components/RoleChangeModal';
 import Dialog from '../../../common/components/Dialog';
 import './UserManagementPage.css';
 
 const UserManagementPage = () => {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
+
 
   // Guard: Only System Admin (ADM) can access
   if (!authLoading && user && user.role_code_name !== 'ADM') {
@@ -57,6 +60,11 @@ const UserManagementPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedUserForEdit, setSelectedUserForEdit] = useState(null);
   const [isSavingStatus, setIsSavingStatus] = useState(false);
+
+  // Role Change Modal States (Step-up Auth)
+  const [isRoleModalOpen, setIsRoleModalOpen] = useState(false);
+  const [selectedUserForRole, setSelectedUserForRole] = useState(null);
+
 
   // Toast feedback
   const [toast, setToast] = useState({ message: '', type: 'success' });
@@ -353,8 +361,8 @@ const UserManagementPage = () => {
           <button
             type="button"
             className="user-btn user-btn--outline"
-            onClick={() => showToast('Hệ thống đang mở cấu hình phân quyền vai trò RBAC.', 'info')}
-            title="Cấu hình phân quyền vai trò (RBAC)"
+            onClick={() => navigate('/admin/roles')}
+            title="Quản lý vai trò & Phân quyền (RBAC)"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -425,6 +433,26 @@ const UserManagementPage = () => {
         onEditUser={(user) => {
           setSelectedUserForEdit(user);
           setIsEditModalOpen(true);
+        }}
+        onChangeRole={(user) => {
+          setSelectedUserForRole(user);
+          setIsRoleModalOpen(true);
+        }}
+      />
+
+      {/* Modal Phân quyền & Đổi vai trò (Step-up Auth) */}
+      <RoleChangeModal
+        isOpen={isRoleModalOpen}
+        onClose={() => {
+          setIsRoleModalOpen(false);
+          setSelectedUserForRole(null);
+        }}
+        user={selectedUserForRole}
+        currentAdmin={user}
+        onRoleChanged={(updated, msg) => {
+          showToast(msg || 'Cập nhật vai trò thành công!', 'success');
+          loadUsers();
+          loadStats();
         }}
       />
 
