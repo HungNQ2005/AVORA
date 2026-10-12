@@ -34,13 +34,6 @@ const LuggageIcon = () => (
   </svg>
 );
 
-const TrendingUpIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
-    <polyline points="17 6 23 6 23 12" />
-  </svg>
-);
-
 const BuildingIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18" />
@@ -197,9 +190,7 @@ const Header = ({
         ? 'favorites'
         : (currentPath === '/'
           ? 'home'
-          : (currentPath.startsWith('/dashboard/coupons')
-            ? 'bmr'
-            : (currentPath.startsWith('/dashboard') ? 'pms' : activeTab)))));
+          : (currentPath.startsWith('/dashboard') ? 'pms' : activeTab))));
 
   const [internalSavedCount, setInternalSavedCount] = useState(() => {
     const list = getSavedFavorites();
@@ -234,8 +225,6 @@ const Header = ({
   }, []);
 
   const userRoleDisplayName = codeNameParser(user?.role_code_name);
-  const isPartnerOrAdmin = user && ['ADM'].includes(user.role_code_name);
-  const isBusinessManager = user && ['BMR'].includes(user.role_code_name);
 
   useEffect(() => {
     const updateHeaderHeight = () => {
@@ -332,27 +321,6 @@ const Header = ({
       }
       navigate('/myaccount');
       return;
-    } else if (tabKey === 'pms') {
-      if (!user || !canManageHotels) return;
-      if (!isPartnerOrAdmin) {
-        alert('Tài khoản của bạn không có quyền truy cập hệ thống Quản lý Khách sạn (PMS).');
-        return;
-      }
-      setInternalTab(tabKey);
-      navigate('/dashboard/room-types');
-      return;
-    } else if (tabKey === 'bmr') {
-      if (!user) {
-        navigate('/signin');
-        return;
-      }
-      if (!isBusinessManager) {
-        alert('Tài khoản của bạn không có quyền truy cập hệ thống Quản lý Kinh doanh (BMR).');
-        return;
-      }
-      setInternalTab(tabKey);
-      navigate('/dashboard/coupons');
-      return;
     } else {
       setInternalTab(null);
     }
@@ -448,22 +416,6 @@ const Header = ({
                   </span>
                   <span className="avora-header__pms-badge">PMS</span>
                 </Link>
-              )}
-
-              {/* Action Button: Business Management BMR (only for business manager role or guests) */}
-              {(isBusinessManager || !user) && (
-                <button
-                  type="button"
-                  className={`avora-header__pill-btn avora-header__pill-btn--bmr ${currentTab === 'bmr' ? 'is-active' : ''}`}
-                  onClick={handleAction('bmr')}
-                >
-                  <TrendingUpIcon />
-                  <span className="avora-header__two-line">
-                    <span>Quản lý</span>
-                    <span>Kinh doanh</span>
-                  </span>
-                  <span className="avora-header__pms-badge avora-header__pms-badge--bmr">BMR</span>
-                </button>
               )}
 
               {/* Real Authentication State: User Profile Menu if logged in, else Sign In / Sign Up buttons */}
