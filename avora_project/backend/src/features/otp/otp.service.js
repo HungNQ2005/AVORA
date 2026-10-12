@@ -28,7 +28,15 @@ const generateOtp = (length = 6) => {
  * @param {number} [params.expiryMinutes=5] - Time to live in minutes
  * @returns {Promise<{ identifier: string, email: string, purpose: string, expiresInMinutes: number }>}
  */
-const sendOtp = async ({ identifier, email, purpose = 'GENERAL', expiryMinutes = 5 }) => {
+const sendOtp = async ({
+  identifier,
+  email,
+  purpose = 'GENERAL',
+  expiryMinutes = 5,
+  subject,
+  templateName = 'otp',
+  templateData = {},
+}) => {
   if (!identifier || !email) {
     const err = new Error('Identifier and email are required to send OTP.');
     err.statusCode = 400;
@@ -50,12 +58,14 @@ const sendOtp = async ({ identifier, email, purpose = 'GENERAL', expiryMinutes =
   // Send OTP email using centralized email service
   await sendMail({
     to: email,
-    subject: `Mã xác thực OTP - Avora Booking`,
-    templateName: 'otp',
+    subject: subject || 'Mã xác thực OTP - Avora Booking',
+    templateName,
     templateData: {
       otp,
+      otpCode: otp,
       purpose,
       expiryMinutes,
+      ...templateData,
     },
   });
 

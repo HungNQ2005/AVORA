@@ -54,6 +54,7 @@ const UserTable = ({
   onPageSizeChange,
   onToggleStatus,
   onEditUser,
+  onChangeRole,
 }) => {
   const [selectedIds, setSelectedIds] = useState(new Set());
 
@@ -401,6 +402,19 @@ const UserTable = ({
                             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
                           </svg>
                         </button>
+                        {!isSelf && (
+                          <button
+                            type="button"
+                            className="user-action-btn"
+                            title="Phân quyền & Đổi vai trò (Step-up Auth)"
+                            onClick={() => onChangeRole?.(u)}
+                            style={{ color: '#0284c7' }}
+                          >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            </svg>
+                          </button>
+                        )}
                         {isSelf ? (
                           <span
                             className="user-status-lock-indicator user-status-lock-indicator--self"

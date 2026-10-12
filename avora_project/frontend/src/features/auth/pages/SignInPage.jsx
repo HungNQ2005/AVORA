@@ -66,13 +66,12 @@ const SignInPage = () => {
   const activatedParam = searchParams.get('activated');
   const emailParam = searchParams.get('email');
 
-  // If already logged in, redirect through the screen flow
+  // If already logged in, redirect straight to home page
   useEffect(() => {
     if (user) {
-      const redirectPath = location.state?.from?.pathname || '/myaccount';
-      navigate(redirectPath, { replace: true });
+      navigate('/', { replace: true });
     }
-  }, [user, navigate, location]);
+  }, [user, navigate]);
 
   const initialEmail = emailParam || location.state?.email || localStorage.getItem('avora_remembered_email') || '';
   const [form, setForm] = useState({ email: initialEmail, password: '' });
@@ -124,8 +123,7 @@ const SignInPage = () => {
         localStorage.removeItem('avora_remembered_email');
       }
       login(res.data.token, res.data.user);
-      const destination = location.state?.from?.pathname || '/myaccount';
-      navigate(destination);
+      navigate('/', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || '';
 
