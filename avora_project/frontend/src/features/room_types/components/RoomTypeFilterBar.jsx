@@ -16,6 +16,7 @@ const RoomTypeFilterBar = ({
   counts,
   sortBy,
   onSortChange,
+  onReset,
 }) => {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortRef = useRef(null);
@@ -53,8 +54,12 @@ const RoomTypeFilterBar = ({
           type="text"
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') onSearchChange('');
+          }}
           placeholder="Tìm theo tên phòng, SKU hoặc tiện nghi..."
           className="rt-filter-bar__search-input"
+          aria-label="Tìm theo tên phòng, SKU hoặc tiện nghi"
         />
         {searchTerm && (
           <button
@@ -169,6 +174,20 @@ const RoomTypeFilterBar = ({
             <line x1="12" y1="15" x2="12" y2="3"></line>
           </svg>
         </button>
+
+        {onReset && (
+          <button
+            type="button"
+            className="rt-reset-btn"
+            onClick={onReset}
+            title="Đặt lại bộ lọc"
+            aria-label="Đặt lại bộ lọc"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );

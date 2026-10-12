@@ -237,3 +237,23 @@
   background: #f8fafc;
   color: #1e293b;
 }
+
+.rt-reset-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rt-reset-btn:hover {
+  background: #f1f5f9;
+  color: #0b1e3f;
+  border-color: #94a3b8;
+}

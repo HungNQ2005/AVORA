@@ -45,9 +45,19 @@ const AmenityManagementPage = () => {
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [sortBy, setSortBy] = useState('POPULAR');
+
+  // Debounce search query (250ms) to synchronize with backend queries
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -77,12 +87,22 @@ const AmenityManagementPage = () => {
     }, 3500);
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setCategoryFilter('ALL');
+    setStatusFilter('ALL');
+    setSortBy('POPULAR');
+    setPage(1);
+    showToast('Đã đặt lại tất cả bộ lọc.', 'info');
+  };
+
   // Fetch data
   const loadAmenities = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const result = await fetchAmenities({
+        search: debouncedSearch,
         category: categoryFilter,
         status: statusFilter,
         sort: sortBy,
@@ -102,7 +122,7 @@ const AmenityManagementPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [categoryFilter, statusFilter, sortBy]);
+  }, [debouncedSearch, categoryFilter, statusFilter, sortBy]);
 
   useEffect(() => {
     loadAmenities();
@@ -111,23 +131,44 @@ const AmenityManagementPage = () => {
   // Derived filtered & paginated records with instant contains search (Vietnamese diacritics support)
   const filteredAmenities = useMemo(() => {
     if (!searchTerm || !searchTerm.trim()) return amenities;
-    return amenities.filter((item) =>
-      matchesSearch(
+    return amenities.filter((item) => {
+      const typeKey = String(item.type || '').toUpperCase().trim();
+      const typeLabel = FACILITY_TYPE_LABELS[typeKey] || item.type || '';
+      const typeSynonyms = {
+        INTERNET: 'wifi wi-fi mạng internet không dây',
+        POOL: 'hồ bơi bể bơi pool bơi lội vô cực',
+        FOOD: 'ẩm thực bữa sáng food breakfast đồ ăn đồ uống cafe',
+        PARKING: 'bãi đỗ xe đậu xe parking trông xe gửi xe',
+        SERVICE: 'dịch vụ lễ tân 24/7 reception service hỗ trợ buồng phòng',
+        GYM: 'thể hình gym fitness thể thao phòng tập',
+        RESTAURANT: 'nhà hàng restaurant ẩm thực buffet dining quán ăn',
+        SPA: 'spa chăm sóc sức khỏe massage thư giãn trị liệu',
+      }[typeKey] || '';
+
+      return matchesSearch(
         [
+          item.facility_id,
           item.facility_name,
           item.name_vi,
           item.name_en,
           item.code,
           item.category,
           item.type,
-          FACILITY_TYPE_LABELS[item.type],
+          typeLabel,
+          typeSynonyms,
+          item.scope_type,
           item.scope_label,
           item.pricing_label,
           item.applied_unit,
+          item.icon,
+          item.icon_key,
+          item.is_highlight ? 'highlight nổi bật' : '',
+          item.is_active ? 'kích hoạt active đang hoạt động' : 'tạm dừng inactive',
+          item.is_paid ? 'có phụ phí trả phí paid' : 'miễn phí free',
         ],
         searchTerm
-      )
-    );
+      );
+    });
   }, [amenities, searchTerm]);
 
   const paginatedAmenities = useMemo(() => {
@@ -348,6 +389,7 @@ const AmenityManagementPage = () => {
           setPage(1);
         }}
         categories={stats?.categories || []}
+        onReset={handleResetFilters}
       />
 
       {/* Main Amenities Data Table */}

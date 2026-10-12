@@ -226,23 +226,44 @@ const getFacilities = async (filters = {}) => {
   let filtered = [...enrichedFacilities];
 
   if (filters.search && filters.search.trim()) {
-    filtered = filtered.filter((f) =>
-      matchesSearch(
+    filtered = filtered.filter((f) => {
+      const typeKey = String(f.type || '').toUpperCase().trim();
+      const typeLabel = FACILITY_TYPE_LABELS[typeKey] || f.type || '';
+      const typeSynonyms = {
+        INTERNET: 'wifi wi-fi mạng internet không dây',
+        POOL: 'hồ bơi bể bơi pool bơi lội vô cực',
+        FOOD: 'ẩm thực bữa sáng food breakfast đồ ăn đồ uống cafe',
+        PARKING: 'bãi đỗ xe đậu xe parking trông xe gửi xe',
+        SERVICE: 'dịch vụ lễ tân 24/7 reception service hỗ trợ buồng phòng',
+        GYM: 'thể hình gym fitness thể thao phòng tập',
+        RESTAURANT: 'nhà hàng restaurant ẩm thực buffet dining quán ăn',
+        SPA: 'spa chăm sóc sức khỏe massage thư giãn trị liệu',
+      }[typeKey] || '';
+
+      return matchesSearch(
         [
+          f.facility_id,
           f.facility_name,
           f.name_vi,
           f.name_en,
           f.code,
           f.category,
           f.type,
-          FACILITY_TYPE_LABELS[f.type],
+          typeLabel,
+          typeSynonyms,
+          f.scope_type,
           f.scope_label,
           f.pricing_label,
           f.applied_unit,
+          f.icon,
+          f.icon_key,
+          f.is_highlight ? 'highlight nổi bật' : '',
+          f.is_active ? 'kích hoạt active đang hoạt động' : 'tạm dừng inactive',
+          f.is_paid ? 'có phụ phí trả phí paid' : 'miễn phí free',
         ],
         filters.search
-      )
-    );
+      );
+    });
   }
 
   if (filters.category && filters.category !== 'ALL') {

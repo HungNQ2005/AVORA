@@ -173,7 +173,7 @@ const AmenityTable = ({
                       <td className="col-type">
                         <div className="amenity-cell-type">
                           <span className={`amenity-type-badge amenity-type-badge--${(item.type || 'other').toLowerCase()}`}>
-                            {FACILITY_TYPE_LABELS[item.type] || item.type || 'Chưa phân loại'}
+                            {FACILITY_TYPE_LABELS[String(item.type || '').toUpperCase().trim()] || item.type || 'Chưa phân loại'}
                           </span>
                         </div>
                       </td>

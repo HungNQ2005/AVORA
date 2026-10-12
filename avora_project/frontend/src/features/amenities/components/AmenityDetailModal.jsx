@@ -69,7 +69,7 @@ const AmenityDetailModal = ({ isOpen, onClose, amenity, onEdit }) => {
                   <h4 className="amenity-detail-name">{displayName}</h4>
                   <div className="amenity-detail-tags">
                     <span className="amenity-type-badge">
-                      {FACILITY_TYPE_LABELS[amenity.type] || amenity.type || 'Chưa phân loại'}
+                      {FACILITY_TYPE_LABELS[String(amenity.type || '').toUpperCase().trim()] || amenity.type || 'Chưa phân loại'}
                     </span>
                     <span className="amenity-icon-badge">
                       Icon: {amenity.icon || 'wifi-icon'}

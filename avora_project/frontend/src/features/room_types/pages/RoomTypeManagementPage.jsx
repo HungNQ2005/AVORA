@@ -12,6 +12,7 @@ import RoomTypeFilterBar from '../components/RoomTypeFilterBar';
 import RoomTypeTable from '../components/RoomTypeTable';
 import RoomTypeFormModal from '../components/RoomTypeFormModal';
 import RoomTypeDeleteModal from '../components/RoomTypeDeleteModal';
+import { matchesSearch } from '../../../utils/textSearchHelper';
 import './RoomTypeManagementPage.css';
 
 const RoomTypeManagementPage = () => {
@@ -21,10 +22,20 @@ const RoomTypeManagementPage = () => {
   const [facilitiesLoading, setFacilitiesLoading] = useState(true);
   const [selectedHotelId, setSelectedHotelId] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL'); // ALL | ACTIVE | INACTIVE
   const [sortBy, setSortBy] = useState('PRICE_DESC');
   const [page, setPage] = useState(1);
   const pageSize = 5;
+
+  // Debounce search query (250ms) to synchronize with backend queries
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -122,12 +133,15 @@ const RoomTypeManagementPage = () => {
   const loadData = useCallback((isRefresh = false) => {
     if (isRefresh) {
       setRefreshing(true);
+    } else {
+      setLoading(true);
     }
     setError(null);
 
     let active = true;
     fetchRoomTypes({
       hotel_id: selectedHotelId,
+      search: debouncedSearch,
       include_deleted: true,
     })
       .then((res) => {
@@ -151,7 +165,7 @@ const RoomTypeManagementPage = () => {
     return () => {
       active = false;
     };
-  }, [selectedHotelId]);
+  }, [selectedHotelId, debouncedSearch]);
 
   useEffect(() => {
     const cancel = loadData();
@@ -165,22 +179,38 @@ const RoomTypeManagementPage = () => {
     setTimeout(() => setToastMessage(''), 3500);
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setActiveFilter('ALL');
+    setSortBy('PRICE_DESC');
+    setSelectedHotelId('ALL');
+    setPage(1);
+    showToast('Đã đặt lại tất cả bộ lọc.');
+  };
+
   // Filter & Search logic
   const filteredRoomTypes = useMemo(() => {
     let result = [...roomTypes];
 
-    // Search filter
+    // Search filter with Vietnamese diacritics support & punctuation tolerance
     if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
       result = result.filter((rt) => {
-        const matchName = rt.type_name?.toLowerCase().includes(term);
-        const matchSku = rt.sku?.toLowerCase().includes(term);
-        const matchBed = rt.bed_type?.toLowerCase().includes(term);
-        const matchHotel = rt.m_hotel?.name?.toLowerCase().includes(term);
-        const matchFac = rt.facilities?.some((f) =>
-          f.facility_name?.toLowerCase().includes(term)
+        const facNames = (rt.facilities || []).map((f) => f.facility_name);
+        return matchesSearch(
+          [
+            rt.room_type_id,
+            rt.type_name,
+            rt.sku,
+            rt.bed_type,
+            rt.room_size,
+            rt.default_price,
+            rt.m_hotel?.name,
+            rt.m_hotel?.address,
+            rt.status_label,
+            ...facNames,
+          ],
+          searchTerm
         );
-        return matchName || matchSku || matchBed || matchHotel || matchFac;
       });
     }
 
@@ -448,13 +478,14 @@ const RoomTypeManagementPage = () => {
         counts={counts}
         sortBy={sortBy}
         onSortChange={(val) => setSortBy(val)}
+        onReset={handleResetFilters}
       />
 
       {/* Table Section */}
       {loading ? (
         <div className="rt-loading-box">
           <div className="rt-loading-spinner"></div>
-          <p className="rt-loading-text">Đang tải dữ liệu hạng phòng từ hệ thống...</p>
+          <p className="rt-loading-text">Đang tải danh sách hạng phòng từ hệ thống cơ sở dữ liệu Cloud...</p>
         </div>
       ) : (
         <RoomTypeTable

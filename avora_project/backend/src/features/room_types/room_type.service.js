@@ -1,6 +1,7 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const { matchesSearch } = require('../../utils/textSearchHelper');
 
 const roomTypeFields = `
   room_type_id,
@@ -223,17 +224,26 @@ const getRoomTypes = async (filters = {}) => {
     };
   });
 
-  // Client-side search filtering if provided
+  // Search filtering with Vietnamese accent & punctuation tolerance
   let filtered = enrichedRoomTypes;
   if (filters.search && filters.search.trim()) {
-    const term = filters.search.trim().toLowerCase();
     filtered = enrichedRoomTypes.filter((rt) => {
-      const matchName = rt.type_name?.toLowerCase().includes(term);
-      const matchBed = rt.bed_type?.toLowerCase().includes(term);
-      const matchHotel = rt.m_hotel?.name?.toLowerCase().includes(term);
-      const matchSku = rt.sku?.toLowerCase().includes(term);
-      const matchFac = rt.facilities?.some((f) => f.facility_name?.toLowerCase().includes(term));
-      return matchName || matchBed || matchHotel || matchSku || matchFac;
+      const facNames = (rt.facilities || []).map((f) => f.facility_name);
+      return matchesSearch(
+        [
+          rt.room_type_id,
+          rt.type_name,
+          rt.sku,
+          rt.bed_type,
+          rt.room_size,
+          rt.default_price,
+          rt.m_hotel?.name,
+          rt.m_hotel?.address,
+          rt.status_label,
+          ...facNames,
+        ],
+        filters.search
+      );
     });
   }
 

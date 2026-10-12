@@ -69,7 +69,7 @@ const RoomTypeDetailPage = () => {
     return (
       <div className="rtd-state-container">
         <div className="rtd-spinner"></div>
-        <p className="rtd-state-text">Đang tải chi tiết hạng phòng từ hệ thống...</p>
+        <p className="rtd-state-text">Đang tải thông tin chi tiết hạng phòng từ hệ thống cơ sở dữ liệu Cloud...</p>
       </div>
     );
   }
