@@ -6,6 +6,8 @@ import NotFoundNotice from '../../../common/components/NotFoundNotice';
 import LocationSelect from '../components/locationSelect';
 import HotelThumb from '../components/hotelThumb';
 import HotelImageManager from '../components/hotelImageManager';
+import HotelMap from '../components/hotelMap';
+import CoordinatePickerModal from '../components/coordinatePickerModal';
 import { useAuth } from '../../../context/AuthContext';
 import { approveHotel, deleteHotel, getHotel, updateHotel } from '../../../services/hotelManagementService';
 import '../components/hotelThumb.css';
@@ -32,6 +34,7 @@ const HotelDetailPage = () => {
   const [error, setError] = useState('');
   const [notFound, setNotFound] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
   const [toast, setToast] = useState('');
   const role = String(user?.role_code_name || '').trim().toUpperCase();
@@ -154,6 +157,12 @@ const HotelDetailPage = () => {
     setDeleteOpen(true);
   };
 
+  const applySelectedCoordinates = ({ lat, lng }) => {
+    setForm((current) => ({ ...current, lat: String(lat), lng: String(lng) }));
+    setCoordinatePickerOpen(false);
+    setError('');
+  };
+
   const handleDelete = async () => {
     setActionLoading(true);
     try {
@@ -253,11 +262,21 @@ const HotelDetailPage = () => {
                 <span>Kinh độ</span>
                 <input name="lng" type="number" min="-180" max="180" step="any" value={form?.lng ?? ''} onChange={updateField} readOnly={!isVendor} required={isVendor} />
               </label>
-              <label className="hotel-detail__field hotel-detail__field--wide">
+            </div>
+            {form?.lat !== '' && form?.lng !== '' && (
+              <HotelMap lat={form.lat} lng={form.lng} height={220} />
+            )}
+            {isVendor && (
+              <div className="hotel-detail__coordinates-actions">
+                <button type="button" className="hotel-button hotel-button--quiet" onClick={() => setCoordinatePickerOpen(true)}>
+                  Chọn trên bản đồ
+                </button>
+              </div>
+            )}
+            <label className="hotel-detail__field hotel-detail__field--wide">
                 <span>Chủ sở hữu</span>
                 <input value={hotel.owner?.full_name || hotel.owner_name || 'Chưa gán'} readOnly />
               </label>
-            </div>
             {canApprove && hotel.owner && <p className="hotel-detail__owner-contact">Chủ sở hữu hiện tại: {hotel.owner.full_name} · {hotel.owner.phone || 'Chưa có số điện thoại'} · {hotel.owner.email}</p>}
             <p className="hotel-detail__room-total"><strong>{hotel.total_rooms ?? hotel.room_count ?? 0}</strong> phòng thực tế · <strong>{hotel.total_room_types ?? 0}</strong> loại phòng</p>
             <a href={`https://www.google.com/maps?q=${encodeURIComponent(`${form?.lat},${form?.lng}`)}`} target="_blank" rel="noreferrer">Xem tọa độ trên bản đồ ↗</a>
@@ -277,6 +296,14 @@ const HotelDetailPage = () => {
       <HotelImageManager hotelId={hotel.hotel_id} images={images} onImagesChange={setImages} canManage={isVendor} />
 
       {toast && <div className="hotel-toast" role="status">{toast}</div>}
+      {coordinatePickerOpen && (
+        <CoordinatePickerModal
+          initialLat={form?.lat}
+          initialLng={form?.lng}
+          onConfirm={applySelectedCoordinates}
+          onClose={() => setCoordinatePickerOpen(false)}
+        />
+      )}
       <Dialog
         isOpen={deleteOpen}
         onClose={() => setDeleteOpen(false)}

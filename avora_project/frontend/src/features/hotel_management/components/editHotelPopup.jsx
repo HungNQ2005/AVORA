@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import LocationSelect from './locationSelect';
-import { getDefaultCoordsForCity } from '../../../utils/vnCityCoords';
+import CoordinatePickerModal from './coordinatePickerModal';
 import './editHotelPopup.css';
 
 const emptyForm = {
@@ -24,6 +24,7 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
   const [form, setForm] = useState(() => initialForm(hotel));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
   const isEdit = mode === 'edit';
 
   if (!isOpen) return null;
@@ -34,25 +35,29 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
   };
 
   const updateLocation = (patch) => {
-    setForm((current) => {
-      const next = { ...current, city_id: patch.city_id, district_id: patch.district_id, ward_id: patch.ward_id };
-      // Auto-assign a sensible default lat/lng once a City is chosen, if not set yet.
-      if (patch.city_name && (current.lat === '' || current.lng === '')) {
-        const defaults = getDefaultCoordsForCity(patch.city_name);
-        if (defaults) {
-          next.lat = defaults.lat;
-          next.lng = defaults.lng;
-        }
-      }
-      return next;
-    });
+    setForm((current) => ({
+      ...current,
+      city_id: patch.city_id,
+      district_id: patch.district_id,
+      ward_id: patch.ward_id,
+    }));
     setError('');
+  };
+
+  const handleCoordinateSelection = ({ lat, lng }) => {
+    setForm((current) => ({ ...current, lat: String(lat), lng: String(lng) }));
+    setError('');
+    setPickerOpen(false);
   };
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!form.name.trim() || !form.address.trim() || !form.city_id || form.star_quality === '') {
       setError('Vui lòng nhập tên, địa chỉ, tỉnh/thành phố và hạng sao.');
+      return;
+    }
+    if (!isEdit && (form.lat === '' || form.lng === '')) {
+      setError('Vui lòng chọn hoặc nhập tọa độ khách sạn trước khi tạo khách sạn.');
       return;
     }
     const latitude = Number(form.lat);
@@ -120,14 +125,22 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
               {[1, 2, 3, 4, 5].map((stars) => <option value={stars} key={stars}>{stars} sao</option>)}
             </select>
           </label>
-          <label className="hotel-modal__field">
-            <span>Vĩ độ <b>*</b></span>
-            <input name="lat" type="number" min="-90" max="90" step="any" value={form.lat} onChange={updateField} required />
-          </label>
-          <label className="hotel-modal__field">
-            <span>Kinh độ <b>*</b></span>
-            <input name="lng" type="number" min="-180" max="180" step="any" value={form.lng} onChange={updateField} required />
-          </label>
+          <div className="hotel-modal__field hotel-modal__field--full-row">
+            <span>Vị trí khách sạn <b>*</b></span>
+            <div className="hotel-modal__map-picker-row">
+              <label className="hotel-modal__coord-field">
+                <span>Vĩ độ</span>
+                <input name="lat" type="number" min="-90" max="90" step="any" value={form.lat} onChange={updateField} required />
+              </label>
+              <label className="hotel-modal__coord-field">
+                <span>Kinh độ</span>
+                <input name="lng" type="number" min="-180" max="180" step="any" value={form.lng} onChange={updateField} required />
+              </label>
+              <button type="button" className="hotel-button hotel-button--quiet hotel-modal__map-btn" onClick={() => setPickerOpen(true)}>
+                Chọn trên bản đồ
+              </button>
+            </div>
+          </div>
           {error && <p className="hotel-modal__error" role="alert">{error}</p>}
           <footer className="hotel-modal__actions">
             <button type="button" className="hotel-button hotel-button--quiet" onClick={onClose} disabled={loading}>Hủy</button>
@@ -136,6 +149,14 @@ const EditHotelPopup = ({ isOpen, mode, hotel, onClose, onSubmit, submitLabel })
             </button>
           </footer>
         </form>
+        {pickerOpen && (
+          <CoordinatePickerModal
+            initialLat={form.lat}
+            initialLng={form.lng}
+            onConfirm={handleCoordinateSelection}
+            onClose={() => setPickerOpen(false)}
+          />
+        )}
       </section>
     </div>
   );
