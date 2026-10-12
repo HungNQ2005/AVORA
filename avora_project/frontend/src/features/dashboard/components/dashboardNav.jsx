@@ -20,11 +20,13 @@ const getUserInitials = (name) => {
 const DashboardNav = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const canManageVenue = roleCd === '1';
-  const canManageHotels = canManageVenue || roleCd === '3';
-  const canManageCoupons = roleCd === '3';
   const roleCode = user?.role_code_name?.trim().toUpperCase();
+  const isAdmin = roleCode === 'ADM';
+  const isBmr = roleCode === 'BMR';
+  const isVendor = roleCode === 'VEN';
+  const canManageVenue = isAdmin || isBmr;
+  const canManageHotels = isAdmin || isBmr || isVendor;
+  const canManageCoupons = isAdmin || isBmr;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
 

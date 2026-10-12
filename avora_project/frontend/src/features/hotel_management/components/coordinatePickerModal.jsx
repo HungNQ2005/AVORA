@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
-import { TILE_ATTRIBUTION, TILE_URL, toCoordinate } from './leafletSetup';
+import { TILE_ATTRIBUTION, TILE_URL, toCoordinate } from '../../../utils/leafletSetup';
 import './coordinatePickerModal.css';
 
 const VIETNAM_CENTER = [16.0, 106.0];

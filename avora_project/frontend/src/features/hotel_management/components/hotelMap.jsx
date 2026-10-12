@@ -1,6 +1,6 @@
 import React from 'react';
 import { MapContainer, Marker, TileLayer } from 'react-leaflet';
-import { TILE_ATTRIBUTION, TILE_URL, toCoordinate } from './leafletSetup';
+import { TILE_ATTRIBUTION, TILE_URL, toCoordinate } from '../../../utils/leafletSetup';
 import './hotelMap.css';
 
 /** Read-only mini-map showing a single hotel location. */
