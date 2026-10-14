@@ -23,7 +23,7 @@ import NotFoundNotice from './common/components/NotFoundNotice';
 import DashboardPage from './features/dashboard/pages/dashboardPage';
 import HotelManagementPage from './features/hotel_management/pages/hotelManagementPage';
 import HotelManagementDetailPage from './features/hotel_management/pages/hotelDetailPage';
-
+import AIChatWidget from './features/chatbot/AIChatWidget';
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
  */
@@ -84,6 +84,7 @@ function CustomerLayout() {
   return (
     <MainLayout>
       <Outlet />
+      <AIChatWidget />
     </MainLayout>
   );
 }
