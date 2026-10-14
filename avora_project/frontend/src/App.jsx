@@ -19,6 +19,7 @@ import RoleManagementPage from './features/users/pages/RoleManagementPage';
 import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import AIChatWidget from './features/chatbot/AIChatWidget';
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -93,6 +94,7 @@ function CustomerLayout() {
   return (
     <MainLayout>
       <Outlet />
+      <AIChatWidget />
     </MainLayout>
   );
 }
