@@ -5,9 +5,9 @@ import { authenticatedFetch } from "./authenticatedFetch";
  * Fetch rooms with query filters and statistics.
  * @param {{ hotel_id?: string, room_type_id?: string, floor?: string, status_cd?: string, search?: string, include_deleted?: boolean }} params
  */
-export const fetchRooms = async (params = {}) => {
+export const fetchRooms = async (params = {}) => { 
   const query = new URLSearchParams();
-  if (params.hotel_id && params.hotel_id !== "ALL") {
+  if (params.hotel_id && params.hotel_id !== "ALL") { 
     query.append("hotel_id", params.hotel_id);
   }
   if (params.room_type_id && params.room_type_id !== "ALL") {

@@ -98,7 +98,7 @@ const getRoomTypesForHotel = async (hotelId, access) => {
 /**
  * Fetch rooms with filter, pagination, stats, and relations.
  */
-const getRooms = async (filters = {}, access) => {
+const getRooms = async (filters = {}, access) => {  
   if (!supabase) throw createError('Database client is not initialized.', 503);
 
   const hotels = await getAccessibleHotels(access);

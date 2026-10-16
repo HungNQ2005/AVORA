@@ -13,7 +13,7 @@ const getAccess = (req) => {
   };
 };
 
-/**
+/** 
  * GET /api/rooms
  */
 const handleGetRooms = async (req, res, next) => {

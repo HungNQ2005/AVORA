@@ -187,7 +187,7 @@ const RoomManagementPage = () => {
     return { total, available, locked };
   }, [rooms]);
 
-  // Filter & Search & Sort logic
+  // Filter & Search & Sort logic 
   const filteredRooms = useMemo(() => {
     let result = [...rooms];
 

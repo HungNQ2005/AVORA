@@ -40,8 +40,8 @@ const RoomFilterBar = ({
     (h.name || '').toLowerCase().includes(hotelFilterTerm.trim().toLowerCase())
   );
 
-  return (
-    <div className="room-filter-bar">
+  return (  
+    <div className="room-filter-bar"> 
       {/* Search Input */}
       <div className="room-search-box">
         <svg className="room-search-box__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

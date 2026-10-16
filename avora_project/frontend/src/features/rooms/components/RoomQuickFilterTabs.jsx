@@ -4,7 +4,7 @@ import './RoomQuickFilterTabs.css';
 const RoomQuickFilterTabs = ({
   activeTab = 'ALL',
   onTabChange,
-  counts = {},
+  counts = {}, 
   roomTypeCategories = [],
 }) => {
   return (

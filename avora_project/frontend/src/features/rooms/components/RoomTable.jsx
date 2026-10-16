@@ -1,7 +1,7 @@
 import React from 'react';
 import './RoomTable.css';
 
-const getBadgeForRoomType = (typeName = '') => {
+const getBadgeForRoomType = (typeName = '') => { 
   const lower = typeName.toLowerCase();
   if (lower.includes('villa') || lower.includes('biệt thự')) {
     return { label: 'VILLA SUITE', class: 'room-tag--villa' };
