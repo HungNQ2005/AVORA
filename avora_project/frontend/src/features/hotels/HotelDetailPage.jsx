@@ -718,7 +718,7 @@ const HotelDetailPage = () => {
 
                 return (
                   <article
-                    key={room.room_type_id}
+                    key={room.room_id || room.room_type_id}
                     className={`room-card ${isCapacityExceeded ? 'room-card--capacity-exceeded' : ''}`}
                   >
                     {/* Column 1: Info & Photo */}
@@ -745,6 +745,15 @@ const HotelDetailPage = () => {
                       </div>
 
                       <ul className="room-specs-list">
+                        {room.room_number && (
+                          <li className="room-spec-item">
+                            <span className="room-spec-icon">🚪</span>
+                            <span>
+                              Phòng: <strong>{room.room_number}</strong>
+                              {room.floor ? ` (${room.floor})` : ''}
+                            </span>
+                          </li>
+                        )}
                         {room.room_size && (
                           <li className="room-spec-item">
                             <span className="room-spec-icon">📐</span>

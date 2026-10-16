@@ -104,14 +104,26 @@ const getHotelById = async (hotelId, { ownerId = null, includeDeleted = false } 
   ensureClient();
   let query = supabase
     .from('m_hotel')
-    .select(`${HOTEL_SELECT}, room_types:m_room_type(room_type_id, type_name, max_adults, max_children, bed_type, room_size, default_price, rooms:m_room(count))`)
-    .eq('hotel_id', hotelId);
+    .select(`${HOTEL_SELECT}, active_rooms:m_room(room_id, room_type_id, is_deleted, m_room_type(room_type_id, type_name, max_adults, max_children, bed_type, room_size, default_price, is_deleted))`)
+    .eq('hotel_id', hotelId)
+    .eq('rooms.is_deleted', false)
+    .eq('active_rooms.is_deleted', false);
   if (!includeDeleted) query = query.eq('is_deleted', false);
   if (ownerId) query = query.eq('owner_id', ownerId);
 
   const { data, error } = await query.maybeSingle();
   checkQuery(error);
   if (!data) return null;
+
+  const roomTypesMap = new Map();
+  (data.active_rooms || []).forEach((r) => {
+    if (r.m_room_type && !r.m_room_type.is_deleted && !roomTypesMap.has(r.room_type_id)) {
+      roomTypesMap.set(r.room_type_id, r.m_room_type);
+    }
+  });
+  data.room_types = Array.from(roomTypesMap.values());
+  data.room_type_summary = [{ count: data.room_types.length }];
+
   return (await addStatusNames([data]))[0];
 };
 

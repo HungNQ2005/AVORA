@@ -12,6 +12,7 @@ const hotelManagementRoute = require('./features/hotel_management/hotel_manageme
 const hotelRoute = require('./features/hotels/hotel.route');
 const locationRoute = require('./features/locations/location.route');
 const roomTypeRoute = require('./features/room_types/room_type.route');
+const roomRoute = require('./features/rooms/room.route');
 const facilityRoute = require('./features/facilities/facility.route');
 const couponRoute = require('./features/coupons/coupon.route');
 const userRoute = require('./features/users/user.route');
@@ -47,6 +48,7 @@ app.use('/api', otpRoute);
 app.use('/api/v1', hotelManagementRoute);
 app.use('/api/v1', locationRoute);
 app.use("/api", roomTypeRoute);
+app.use("/api", roomRoute);
 app.use("/api", facilityRoute);
 app.use("/api", couponRoute);
 app.use("/api", userRoute);

@@ -204,10 +204,10 @@ const searchHotels = async (params = {}) => {
 
   const hotelIds = rawHotels.map((h) => h.hotel_id);
 
-  // 3. Fetch auxiliary data in parallel: images, room types, facility maps, policies, reviews, cities
+  // 3. Fetch auxiliary data in parallel: images, rooms (m_room joined with m_room_type), facility maps, policies, reviews, cities
   const [
     imagesRes,
-    roomTypesRes,
+    roomsRes,
     facilitiesMapRes,
     allFacilitiesRes,
     policiesRes,
@@ -221,10 +221,32 @@ const searchHotels = async (params = {}) => {
       .order('sort_order', { ascending: true }),
 
     supabase
-      .from('m_room_type')
-      .select('room_type_id, hotel_id, type_name, max_adults, max_children, bed_type, room_size, default_price, is_deleted')
+      .from('m_room')
+      .select(`
+        room_id,
+        hotel_id,
+        room_type_id,
+        room_number,
+        floor,
+        status_cd,
+        is_deleted,
+        created_at,
+        updated_at,
+        m_room_type (
+          room_type_id,
+          hotel_id,
+          type_name,
+          max_adults,
+          max_children,
+          bed_type,
+          room_size,
+          default_price,
+          is_deleted
+        )
+      `)
       .in('hotel_id', hotelIds)
-      .or('is_deleted.is.null,is_deleted.eq.false'),
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false }),
 
     supabase
       .from('m_hotel_facility_map')
@@ -274,17 +296,40 @@ const searchHotels = async (params = {}) => {
     });
   }
 
-  // Group room types by hotel_id
+  // Group rooms from m_room by hotel_id
   const roomTypesByHotel = {};
-  const allRoomTypeIds = [];
-  if (roomTypesRes.data) {
-    roomTypesRes.data.forEach((rt) => {
-      if (!roomTypesByHotel[rt.hotel_id]) roomTypesByHotel[rt.hotel_id] = [];
-      roomTypesByHotel[rt.hotel_id].push(rt);
-      allRoomTypeIds.push(rt.room_type_id);
+  const physicalRoomsByHotelAndType = {};
+  const latestRoomAtByHotel = {};
+  const allRoomTypeIdsSet = new Set();
+
+  if (roomsRes.data) {
+    roomsRes.data.forEach((room) => {
+      const hId = room.hotel_id;
+      const rt = room.m_room_type;
+      if (!hId || !rt || rt.is_deleted) return;
+
+      const ts = new Date(room.updated_at || room.created_at || 0).getTime() || 0;
+      if (!latestRoomAtByHotel[hId] || ts > latestRoomAtByHotel[hId]) {
+        latestRoomAtByHotel[hId] = ts;
+      }
+
+      if (!physicalRoomsByHotelAndType[hId]) {
+        physicalRoomsByHotelAndType[hId] = {};
+      }
+      if (!physicalRoomsByHotelAndType[hId][rt.room_type_id]) {
+        physicalRoomsByHotelAndType[hId][rt.room_type_id] = [];
+      }
+      physicalRoomsByHotelAndType[hId][rt.room_type_id].push(room);
+
+      if (!roomTypesByHotel[hId]) roomTypesByHotel[hId] = [];
+      if (!roomTypesByHotel[hId].some((item) => item.room_type_id === rt.room_type_id)) {
+        roomTypesByHotel[hId].push(rt);
+      }
+      allRoomTypeIdsSet.add(rt.room_type_id);
     });
   }
 
+  const allRoomTypeIds = Array.from(allRoomTypeIdsSet);
   // 4. Fetch inventory for rooms if room types exist
   let inventoryByRoomType = {};
   if (allRoomTypeIds.length > 0) {
@@ -336,7 +381,7 @@ const searchHotels = async (params = {}) => {
   const reviewsStatsByHotel = {};
   // For each hotel, calculate or fall back to m_hotel.star_rating
   rawHotels.forEach((h) => {
-    let baseScore = Number(h.star_rating) || 8.8;
+    let baseScore = Number(h.star_rating) || Number(h.star_quality) || 8.8;
     if (baseScore <= 5) {
       baseScore = Number((baseScore * 1.8 + 0.4).toFixed(1));
     }
@@ -386,14 +431,19 @@ const searchHotels = async (params = {}) => {
     let originalPriceForHotel = null;
     let bestRoom = roomTypes[0] || null;
     let totalAvailableRooms = 0;
+    const hotelPhysicalByType = physicalRoomsByHotelAndType[hotel.hotel_id] || {};
 
     roomTypes.forEach((rt) => {
       const invList = inventoryByRoomType[rt.room_type_id] || [];
+      const physRooms = hotelPhysicalByType[rt.room_type_id] || [];
       let price = Number(rt.default_price) || 1500000;
-      let avail = 5;
+      let avail = 0;
 
-      if (invList.length > 0) {
-        // Average current_price or minimum current_price
+      if (physRooms.length > 0) {
+        avail = physRooms.filter(
+          (r) => !r.status_cd || String(r.status_cd).toUpperCase() === 'AVAILABLE'
+        ).length;
+      } else if (invList.length > 0) {
         const sumPrice = invList.reduce((acc, curr) => acc + (Number(curr.current_price) || price), 0);
         price = Math.round(sumPrice / invList.length);
         avail = Math.min(...invList.map((i) => Math.max(0, (i.available_rooms || 0) - (i.locked_rooms || 0))));
@@ -404,7 +454,6 @@ const searchHotels = async (params = {}) => {
       if (price < minPriceForHotel) {
         minPriceForHotel = price;
         bestRoom = rt;
-        // Default original price slightly higher to reflect promotions
         originalPriceForHotel = Math.round(price * 1.25);
       }
     });
@@ -414,6 +463,9 @@ const searchHotels = async (params = {}) => {
       originalPriceForHotel = 2300000;
     }
 
+    const bestPhysRooms = bestRoom ? (hotelPhysicalByType[bestRoom.room_type_id] || []) : [];
+    const bestRoomNumbers = bestPhysRooms.map((r) => r.room_number).filter(Boolean);
+    const bestRoomFloors = [...new Set(bestPhysRooms.map((r) => r.floor).filter(Boolean))];
     // Determine score label
     let scoreLabel = 'Rất tốt';
     if (reviewStats.score >= 9.0) scoreLabel = 'Tuyệt hảo';
@@ -460,6 +512,8 @@ const searchHotels = async (params = {}) => {
         name: bestRoom.type_name,
         bed_type: bestRoom.bed_type || '1 giường đôi cực lớn',
         room_size: bestRoom.room_size || '38 m²',
+        room_numbers: bestRoomNumbers,
+        floors: bestRoomFloors,
         standard_beds: bestRoomCap ? bestRoomCap.standardBeds : 1,
         standard_capacity: bestRoomCap ? bestRoomCap.standardCapacity : 2,
         has_extra_bed: bestRoomCap ? bestRoomCap.hasExtraBed : true,
@@ -468,7 +522,8 @@ const searchHotels = async (params = {}) => {
       } : null,
       price: minPriceForHotel,
       original_price: originalPriceForHotel,
-      available_rooms: totalAvailableRooms > 0 ? totalAvailableRooms : 3,
+      available_rooms: totalAvailableRooms,
+      latest_room_at: latestRoomAtByHotel[hotel.hotel_id] || 0,
       cancellation_policy: {
         free_before_hours: policy.free_cancel_before_hours || 48,
         description: policy.description || 'Miễn phí hủy phòng trước 48h (hoàn tiền 100%)',
@@ -524,8 +579,13 @@ const searchHotels = async (params = {}) => {
       break;
     case 'popularity':
     default:
-      // Sort by rating score * reviews_count descending
-      enrichedHotels.sort((a, b) => (b.star_rating * 100 + b.reviews_count / 100) - (a.star_rating * 100 + a.reviews_count / 100));
+      // Prioritize hotels with newly added/updated rooms in m_room, then rating score * reviews_count
+      enrichedHotels.sort((a, b) => {
+        if ((b.latest_room_at || 0) !== (a.latest_room_at || 0)) {
+          return (b.latest_room_at || 0) - (a.latest_room_at || 0);
+        }
+        return (b.star_rating * 100 + b.reviews_count / 100) - (a.star_rating * 100 + a.reviews_count / 100);
+      });
       break;
   }
 
@@ -723,14 +783,37 @@ const getHotelById = async (hotelId, options = {}) => {
     .limit(1)
     .maybeSingle();
 
-  // 6. Query room types from m_room_type & inventory from t_inventory
+  // 6. Query physical rooms from m_room (joined with m_room_type) & inventory from t_inventory
   const { data: dbRooms } = await supabase
-    .from('m_room_type')
-    .select('*')
+    .from('m_room')
+    .select(`
+      room_id,
+      hotel_id,
+      room_type_id,
+      room_number,
+      floor,
+      status_cd,
+      is_deleted,
+      created_at,
+      updated_at,
+      m_room_type (
+        room_type_id,
+        hotel_id,
+        type_name,
+        max_adults,
+        max_children,
+        bed_type,
+        room_size,
+        default_price,
+        is_deleted
+      )
+    `)
     .eq('hotel_id', activeHotelId)
-    .or('is_deleted.is.null,is_deleted.eq.false');
+    .eq('is_deleted', false)
+    .order('room_number', { ascending: true });
 
-  const roomTypeIds = (dbRooms || []).map((r) => r.room_type_id);
+  const activeRoomsList = (dbRooms || []).filter((r) => r.m_room_type && !r.m_room_type.is_deleted);
+  const roomTypeIds = [...new Set(activeRoomsList.map((r) => r.room_type_id).filter(Boolean))];
   let inventoryByRoom = {};
   if (roomTypeIds.length > 0) {
     let invQuery = supabase
@@ -748,45 +831,43 @@ const getHotelById = async (hotelId, options = {}) => {
         if (!inventoryByRoom[inv.room_type_id]) inventoryByRoom[inv.room_type_id] = [];
         inventoryByRoom[inv.room_type_id].push(inv);
       });
-    } else {
-      // If no inventory in specified date range, query any inventory to know base available rooms
-      const { data: anyInv } = await supabase
-        .from('t_inventory')
-        .select('*')
-        .in('room_type_id', roomTypeIds);
-      if (anyInv) {
-        anyInv.forEach((inv) => {
-          if (!inventoryByRoom[inv.room_type_id]) inventoryByRoom[inv.room_type_id] = [];
-          inventoryByRoom[inv.room_type_id].push(inv);
-        });
-      }
     }
   }
 
-  const rooms = (dbRooms || []).map((rt, idx) => {
-    const invList = inventoryByRoom[rt.room_type_id] || [];
+  const rooms = activeRoomsList.map((roomRecord, idx) => {
+    const rt = roomRecord.m_room_type || {};
+    const invList = inventoryByRoom[roomRecord.room_type_id] || [];
     let price = Number(rt.default_price) || 0;
-    let available = 0;
 
     if (invList.length > 0) {
       const sumPrice = invList.reduce((acc, curr) => acc + (Number(curr.current_price) || price), 0);
       price = Math.round(sumPrice / invList.length);
-      available = Math.min(...invList.map((i) => Math.max(0, (i.available_rooms || 0) - (i.locked_rooms || 0))));
-    } else {
-      available = 1;
     }
+
+    const isRoomAvailable =
+      !roomRecord.status_cd || String(roomRecord.status_cd).toUpperCase() === 'AVAILABLE';
+    const available = isRoomAvailable ? 1 : 0;
 
     const origPrice = Math.round(price * 1.2);
     const cap = getRoomTypeCapacity(rt);
     const isExceeded = guestsPerRoom > cap.maxCapacity;
 
     return {
-      room_type_id: rt.room_type_id,
-      name: rt.type_name,
+      room_id: roomRecord.room_id,
+      room_type_id: rt.room_type_id || roomRecord.room_type_id,
+      room_number: roomRecord.room_number,
+      floor: roomRecord.floor || 'Tầng 1',
+      status_cd: roomRecord.status_cd || 'AVAILABLE',
+      name: rt.type_name
+        ? `${rt.type_name} - Phòng ${roomRecord.room_number}`
+        : `Phòng ${roomRecord.room_number}`,
+      type_name: rt.type_name,
       room_size: rt.room_size,
       bed_type: rt.bed_type,
       max_adults: rt.max_adults,
       max_children: rt.max_children,
+      room_numbers: roomRecord.room_number ? [roomRecord.room_number] : [],
+      floors: roomRecord.floor ? [roomRecord.floor] : [],
       standard_beds: cap.standardBeds,
       standard_capacity: cap.standardCapacity,
       has_extra_bed: cap.hasExtraBed,
@@ -797,7 +878,7 @@ const getHotelById = async (hotelId, options = {}) => {
       capacity_warning: isExceeded
         ? `Không được cho phép booking ${guestsPerRoom} người vào phòng này! Phòng này tối đa ${cap.maxCapacity} người (${cap.standardBeds} giường tiêu chuẩn × 2 người = ${cap.standardCapacity} người + 1 giường phụ = 1 người).`
         : null,
-      default_price: Number(rt.default_price),
+      default_price: Number(rt.default_price) || 0,
       price: price,
       original_price: origPrice,
       available_rooms: available,

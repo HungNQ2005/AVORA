@@ -27,6 +27,7 @@ const DashboardNav = () => {
   const canManageVenue = isAdmin || isBmr;
   const canManageHotels = isAdmin || isBmr || isVendor;
   const canManageCoupons = isAdmin || isBmr;
+  const canManageRooms = isVendor || isAdmin;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
 
@@ -162,16 +163,34 @@ const DashboardNav = () => {
               <span className="admin-sidebar__label">Quản lý loại phòng</span>
             </NavLink>
           )}
-          <div className="admin-sidebar__link disabled">
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="3" y1="9" x2="21" y2="9"></line>
-                <line x1="9" y1="21" x2="9" y2="9"></line>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Sơ đồ buồng phòng & Trạng thái</span>
-          </div>
+          {canManageRooms ? (
+            <NavLink
+              to="/dashboard/rooms"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="9" y1="21" x2="9" y2="9"></line>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý buồng phòng</span>
+            </NavLink>
+          ) : (
+            <div className="admin-sidebar__link disabled">
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="3" y1="9" x2="21" y2="9"></line>
+                  <line x1="9" y1="21" x2="9" y2="9"></line>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý buồng phòng</span>
+            </div>
+          )}
           {canManageVenue && (
             <NavLink
               to="/dashboard/amenities"
