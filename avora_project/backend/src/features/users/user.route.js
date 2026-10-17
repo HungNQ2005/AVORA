@@ -7,10 +7,15 @@ const {
   handleUpdateUserStatus,
   handleRequestRoleChange,
   handleConfirmRoleChange,
+  handleUpdateAvatar,
 } = require('./user.controller');
 const { authenticate, requireRole } = require('../../common/middlewares/authMiddleware');
 
 const router = Router();
+
+// PUT /api/users/avatar - Any authenticated user updates / removes their own avatar.
+// NOTE: must be declared BEFORE the ADM-only guard below.
+router.put('/users/avatar', authenticate, handleUpdateAvatar);
 
 // Guard all user management routes for System Admin (ADM) only
 router.use('/users', authenticate, requireRole('ADM'));

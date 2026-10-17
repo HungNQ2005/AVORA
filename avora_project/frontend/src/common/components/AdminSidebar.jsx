@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { codeNameParser } from '../../utils/codeNameParser';
+import AvatarContent from './AvatarContent';
 import './AdminSidebar.css';
 
 const ROLE_LABELS = {
@@ -242,7 +243,7 @@ const AdminSidebar = () => {
       <div className="admin-sidebar__footer">
         <div className="admin-sidebar__profile">
           <div className="admin-sidebar__avatar" aria-hidden="true">
-            {getUserInitials(userName)}
+            <AvatarContent src={user?.avatar_url} fallback={getUserInitials(userName)} alt={userName} />
           </div>
           <div className="admin-sidebar__user-info">
             <span className="admin-sidebar__user-name" title={userName}>{userName}</span>

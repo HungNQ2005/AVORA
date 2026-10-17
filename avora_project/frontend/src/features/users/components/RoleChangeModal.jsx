@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { requestRoleChange, confirmRoleChange } from '../../../services/userService';
+import AvatarContent from '../../../common/components/AvatarContent';
 import './RoleChangeModal.css';
 
 /**
@@ -237,7 +238,7 @@ const RoleChangeModal = ({
           {/* Target User Info Summary */}
           <div className="role-modal-user-card">
             <div className="role-modal-user-avatar" aria-hidden="true">
-              {getInitials(user.full_name)}
+              <AvatarContent src={user.avatar_url} fallback={getInitials(user.full_name)} alt={user.full_name} />
             </div>
             <div className="role-modal-user-info">
               <div className="role-modal-user-name-row">
