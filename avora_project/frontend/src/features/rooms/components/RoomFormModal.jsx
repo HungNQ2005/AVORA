@@ -31,11 +31,11 @@ const RoomFormModal = ({
   const resolvedDefaultHotelId =
     defaultHotelId && defaultHotelId !== 'ALL' ? defaultHotelId : '';
 
+  const isOccupiedOrBooked = isEdit && ['OCCUPIED', 'BOOKED'].includes(initialData?.status_cd);
+
   const initialStatus = initialData?.is_deleted
     ? 'LOCKED'
-    : initialData?.status_cd === 'BOOKED'
-      ? 'OCCUPIED'
-      : (initialData?.status_cd || 'AVAILABLE');
+    : (initialData?.status_cd || 'AVAILABLE');
 
   const [hotelId, setHotelId] = useState(
     initialData?.hotel_id || resolvedDefaultHotelId || (hotels[0]?.hotel_id || '')
@@ -129,8 +129,11 @@ const RoomFormModal = ({
       room_type_id: selectedRoomTypeId,
       room_number: String(roomNumber).trim(),
       floor: String(floor).trim() || 'Tầng 1',
-      status_cd: statusCd,
     };
+
+    if (!isEdit || (statusCd && statusCd !== initialData?.status_cd)) {
+      payload.status_cd = statusCd;
+    }
 
     if (isEdit) {
       payload.is_deleted = false;
@@ -219,8 +222,8 @@ const RoomFormModal = ({
                 Giá: {Number(selectedRoomTypeObj.default_price || 0).toLocaleString('vi-VN')} đ/đêm
                 {selectedRoomTypeObj.bed_type ? ` • Giường: ${selectedRoomTypeObj.bed_type}` : ''}
                 {selectedRoomTypeObj.room_size ? ` • Diện tích: ${selectedRoomTypeObj.room_size}` : ''}
-                {selectedRoomTypeObj.max_adults
-                  ? ` • Sức chứa: ${selectedRoomTypeObj.max_adults} người lớn, ${selectedRoomTypeObj.max_children || 0} trẻ em`
+                {selectedRoomTypeObj.max_adults !== undefined && selectedRoomTypeObj.max_adults !== null
+                  ? ` • Sức chứa: ${selectedRoomTypeObj.max_adults} người lớn, ${selectedRoomTypeObj.max_children ?? 0} trẻ em`
                   : ''}
               </span>
             )}
@@ -264,13 +267,32 @@ const RoomFormModal = ({
               Trạng thái vận hành <span className="room-form-req">*</span>
             </label>
             <div className="room-status-radios">
-              <label className="room-radio-card">
+              {/* Option BOOKED if existing room is BOOKED */}
+              {(statusCd === 'BOOKED' || initialData?.status_cd === 'BOOKED') && (
+                <label className={`room-radio-card ${isOccupiedOrBooked ? 'room-radio-card--disabled' : ''}`}>
+                  <input
+                    type="radio"
+                    name="status_cd"
+                    value="BOOKED"
+                    checked={statusCd === 'BOOKED'}
+                    onChange={(e) => setStatusCd(e.target.value)}
+                    disabled={isOccupiedOrBooked}
+                  />
+                  <span className="room-radio-card__body">
+                    <span className="room-radio-card__title">Đã đặt trước</span>
+                    <span className="room-radio-card__desc">Phòng đã có đơn đặt trước qua hệ thống</span>
+                  </span>
+                </label>
+              )}
+
+              <label className={`room-radio-card ${isOccupiedOrBooked ? 'room-radio-card--disabled' : ''}`}>
                 <input
                   type="radio"
                   name="status_cd"
                   value="AVAILABLE"
                   checked={statusCd === 'AVAILABLE'}
                   onChange={(e) => setStatusCd(e.target.value)}
+                  disabled={isOccupiedOrBooked}
                 />
                 <span className="room-radio-card__body">
                   <span className="room-radio-card__title">Đang mở bán</span>
@@ -278,13 +300,14 @@ const RoomFormModal = ({
                 </span>
               </label>
 
-              <label className="room-radio-card">
+              <label className={`room-radio-card ${isOccupiedOrBooked ? 'room-radio-card--disabled' : ''}`}>
                 <input
                   type="radio"
                   name="status_cd"
                   value="OCCUPIED"
                   checked={statusCd === 'OCCUPIED'}
                   onChange={(e) => setStatusCd(e.target.value)}
+                  disabled={isOccupiedOrBooked}
                 />
                 <span className="room-radio-card__body">
                   <span className="room-radio-card__title">Đang có khách</span>
@@ -292,13 +315,14 @@ const RoomFormModal = ({
                 </span>
               </label>
 
-              <label className="room-radio-card">
+              <label className={`room-radio-card ${isOccupiedOrBooked ? 'room-radio-card--disabled' : ''}`}>
                 <input
                   type="radio"
                   name="status_cd"
                   value="MAINTENANCE"
                   checked={statusCd === 'MAINTENANCE'}
                   onChange={(e) => setStatusCd(e.target.value)}
+                  disabled={isOccupiedOrBooked}
                 />
                 <span className="room-radio-card__body">
                   <span className="room-radio-card__title">Bảo trì kỹ thuật</span>
@@ -306,13 +330,14 @@ const RoomFormModal = ({
                 </span>
               </label>
 
-              <label className="room-radio-card">
+              <label className={`room-radio-card ${isOccupiedOrBooked ? 'room-radio-card--disabled' : ''}`}>
                 <input
                   type="radio"
                   name="status_cd"
                   value="LOCKED"
                   checked={statusCd === 'LOCKED'}
                   onChange={(e) => setStatusCd(e.target.value)}
+                  disabled={isOccupiedOrBooked}
                 />
                 <span className="room-radio-card__body">
                   <span className="room-radio-card__title">Tạm khóa</span>
@@ -320,6 +345,11 @@ const RoomFormModal = ({
                 </span>
               </label>
             </div>
+            {isOccupiedOrBooked && (
+              <span className="room-form-hint room-form-hint--warning">
+                * Buồng phòng {initialData?.status_cd === 'OCCUPIED' ? 'đang có khách lưu trú' : 'đã được đặt trước'}. Trạng thái vận hành được đồng bộ tự động theo đơn đặt phòng, không thể thay đổi trực tiếp tại đây.
+              </span>
+            )}
           </div>
 
           {/* Footer Actions */}

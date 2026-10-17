@@ -181,6 +181,91 @@
   border-color: #b45309;
 }
 
+/* Luxury Hotel Style - Navy & Gold Excel Button (Synchronized with Amenities) */
+.room-btn-excel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1.5px solid #d4af37;
+  color: #0b1e3f;
+  padding: 0.52rem 1.05rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(11, 30, 63, 0.06), 0 0 0 1px rgba(212, 175, 55, 0.15);
+  user-select: none;
+  white-space: nowrap;
+}
+
+.room-btn-excel:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffffff 0%, #fdfbf7 100%);
+  border-color: #b38e46;
+  color: #002244;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.25), 0 1px 3px rgba(11, 30, 63, 0.08);
+  transform: translateY(-1px);
+}
+
+.room-btn-excel:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: 0 1px 3px rgba(11, 30, 63, 0.1);
+}
+
+.room-btn-excel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: none;
+  transform: none;
+  pointer-events: none;
+}
+
+.room-excel-icon {
+  color: #d4af37;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.room-btn-excel:hover:not(:disabled) .room-excel-icon {
+  transform: translateY(-0.5px);
+  color: #b38e46;
+}
+
+.room-excel-badge {
+  background: #f1f5f9;
+  color: #0b1e3f;
+  border: 1px solid #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 10px;
+  line-height: 1.2;
+}
+
+.room-btn-excel:hover:not(:disabled) .room-excel-badge {
+  background: #fef9ee;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.avora-btn-spinner {
+  animation: avoraRotate 0.8s linear infinite;
+  color: #d4af37;
+}
+
+@keyframes avoraRotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 /* Alert */
 .room-alert {
   padding: 12px 18px;

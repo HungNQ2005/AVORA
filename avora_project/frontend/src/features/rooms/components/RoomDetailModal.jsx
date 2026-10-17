@@ -38,7 +38,7 @@ const RoomDetailModal = ({
           <div className="room-detail-modal__title-group">
             <span className="room-detail-modal__badge">CHI TIẾT BUỒNG PHÒNG</span>
             <h3 className="room-detail-modal__title">
-              Phòng {room.room_number} • {rt.type_name || 'Phòng tiêu chuẩn'}
+              Phòng {room.room_number} • {rt.type_name || 'Chưa cập nhật'}
             </h3>
             <span className="room-detail-modal__sku">{room.sku || `SKU-${room.room_number}`}</span>
           </div>
@@ -86,19 +86,27 @@ const RoomDetailModal = ({
 
             <div className="room-detail-item">
               <span className="room-detail-label">Diện tích không gian</span>
-              <span className="room-detail-val">{rt.room_size || '35 m²'}</span>
+              <span className="room-detail-val">
+                {rt.room_size
+                  ? (rt.room_size.replace(/(?:\s*m(?:²|2))+\s*$/gi, '').trim()
+                      ? `${rt.room_size.replace(/(?:\s*m(?:²|2))+\s*$/gi, '').trim()} m²`
+                      : rt.room_size)
+                  : 'Chưa cập nhật'}
+              </span>
             </div>
 
             <div className="room-detail-item">
               <span className="room-detail-label">Sức chứa tối đa</span>
               <span className="room-detail-val">
-                {rt.max_adults || 2} Người lớn • {rt.max_children || 0} Trẻ em
+                {(rt.max_adults !== undefined && rt.max_adults !== null)
+                  ? `${rt.max_adults} Người lớn • ${rt.max_children ?? 0} Trẻ em`
+                  : 'Chưa cập nhật'}
               </span>
             </div>
 
             <div className="room-detail-item room-detail-item--full">
               <span className="room-detail-label">Quy cách giường ngủ</span>
-              <span className="room-detail-val">{rt.bed_type || '1 x King Size Bed'}</span>
+              <span className="room-detail-val">{rt.bed_type || 'Chưa cập nhật'}</span>
               <span className="room-detail-hint">Hỗ trợ kê thêm tối đa 01 Extra-bed theo quy chuẩn khách sạn</span>
             </div>
           </div>

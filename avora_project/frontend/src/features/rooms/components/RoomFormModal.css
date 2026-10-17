@@ -184,6 +184,27 @@
   border-color: #cbd5e1;
 }
 
+.room-radio-card--disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: #f1f5f9;
+}
+
+.room-radio-card--disabled:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.room-radio-card--disabled input {
+  cursor: not-allowed;
+}
+
+.room-form-hint--warning {
+  color: #b45309;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
 .room-radio-card input {
   margin-top: 3px;
   accent-color: #2563eb;
