@@ -190,6 +190,13 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
               {hotel.room_highlight.name}
             </div>
             <div className="hotel-card__room-details">
+              {hotel.room_highlight.room_numbers?.length > 0
+                ? `Phòng ${hotel.room_highlight.room_numbers.join(', ')}${
+                    hotel.room_highlight.floors?.length > 0
+                      ? ` (${hotel.room_highlight.floors.join(', ')})`
+                      : ''
+                  } · `
+                : ''}
               {hotel.room_highlight.bed_type} · {hotel.room_highlight.room_size}
             </div>
           </div>

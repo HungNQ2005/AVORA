@@ -5,7 +5,9 @@ import { codeNameParser } from '../../utils/codeNameParser';
 import './AdminSidebar.css';
 
 const ROLE_LABELS = {
-  VEN: 'Hotel Manager',
+  ADM: 'Quản trị viên hệ thống',
+  BMR: 'Quản lý doanh nghiệp',
+  VEN: 'Quản lý khách sạn',
 };
 
 const getUserInitials = (name) => {

@@ -1,0 +1,279 @@
+.matrix-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.matrix-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 980px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: matrixIn 0.25s ease-out;
+}
+
+@keyframes matrixIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.matrix-modal__header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: #f8fafc;
+}
+
+.matrix-modal__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  color: #2563eb;
+  background: #eff6ff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.matrix-modal__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2563eb;
+}
+
+.matrix-modal__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.matrix-modal__sub {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.matrix-modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.matrix-legend {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+  color: #475569;
+  flex-wrap: wrap;
+}
+
+.matrix-legend__item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.matrix-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.matrix-legend__dot--green { background: #10b981; }
+.matrix-legend__dot--orange { background: #f59e0b; }
+.matrix-legend__dot--red { background: #ef4444; }
+.matrix-legend__dot--gray { background: #94a3b8; }
+
+.matrix-modal__close-btn {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #64748b;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.matrix-modal__close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.matrix-modal__body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.matrix-empty {
+  padding: 40px;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 14px;
+}
+
+.matrix-floor-row {
+  display: flex;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+@media (max-width: 640px) {
+  .matrix-floor-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+}
+
+.matrix-floor-info {
+  width: 90px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.matrix-floor-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.matrix-floor-summary {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.matrix-room-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex: 1;
+}
+
+.matrix-room-card {
+  width: 140px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.matrix-room-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.matrix-room--available {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.matrix-room--available:hover {
+  border-color: #86efac;
+}
+
+.matrix-room--occupied {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.matrix-room--maintenance {
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.matrix-room--locked {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  opacity: 0.75;
+}
+
+.matrix-room-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.matrix-room-card__num {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.matrix-room-card__status {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+.matrix-room--available .matrix-room-card__status {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.matrix-room--occupied .matrix-room-card__status {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.matrix-room--maintenance .matrix-room-card__status {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.matrix-room--locked .matrix-room-card__status {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.matrix-room-card__type {
+  font-size: 11px;
+  font-weight: 600;
+  color: #475569;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.matrix-room-card__price {
+  font-size: 12px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-top: 2px;
+}

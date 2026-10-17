@@ -1,0 +1,273 @@
+.room-form-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.room-form-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: roomFormIn 0.2s ease-out;
+}
+
+@keyframes roomFormIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.room-form-modal__header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  background: #f8fafc;
+}
+
+.room-form-modal__title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.room-form-modal__sub {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.room-form-modal__close {
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #64748b;
+  cursor: pointer;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.room-form-modal__close:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.room-form-modal__body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.room-form-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.room-form-alert--error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.room-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.room-form-row {
+  display: flex;
+  gap: 14px;
+}
+
+@media (max-width: 500px) {
+  .room-form-row {
+    flex-direction: column;
+  }
+}
+
+.room-form-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.room-form-req {
+  color: #dc2626;
+}
+
+.room-form-hint {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.room-form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background: #ffffff;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.room-form-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.room-form-input:disabled {
+  background: #f1f5f9;
+  cursor: not-allowed;
+  color: #64748b;
+}
+
+.room-status-radios {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 500px) {
+  .room-status-radios {
+    grid-template-columns: 1fr;
+  }
+}
+
+.room-radio-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  transition: all 0.2s ease;
+  background: #f8fafc;
+}
+
+.room-radio-card:hover {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+}
+
+.room-radio-card--disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background: #f1f5f9;
+}
+
+.room-radio-card--disabled:hover {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+}
+
+.room-radio-card--disabled input {
+  cursor: not-allowed;
+}
+
+.room-form-hint--warning {
+  color: #b45309;
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.room-radio-card input {
+  margin-top: 3px;
+  accent-color: #2563eb;
+}
+
+.room-radio-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.room-radio-card__title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.room-radio-card__desc {
+  font-size: 10px;
+  color: #64748b;
+  line-height: 1.3;
+}
+
+.room-form-modal__footer {
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.room-form-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.room-form-btn--cancel {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.room-form-btn--cancel:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.room-form-btn--submit {
+  background: #d97706;
+  border: 1px solid #d97706;
+  color: #ffffff;
+}
+
+.room-form-btn--submit:hover {
+  background: #b45309;
+}
+
+.room-form-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

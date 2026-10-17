@@ -36,7 +36,7 @@ router.patch('/room-types/:id', handleUpdateRoomType);
 router.delete('/room-types/:id', handleSoftDeleteRoomType);
 
 // GET /api/hotels
-router.get('/hotels', handleGetHotels);
+router.get('/hotels', authenticate, requireVenueManager, handleGetHotels);
 
 // GET /api/facilities
 router.get('/facilities', authenticate, requireVenueManager, handleGetFacilities);

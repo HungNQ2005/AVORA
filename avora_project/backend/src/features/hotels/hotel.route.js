@@ -5,7 +5,6 @@ const {
   handleSearchHotels,
   handleGetHotelById,
 } = require("./hotel.controller");
-const { protect, isUser } = require("../../common/middlewares/authMiddleware");
 const router = Router();
 
 // GET /api/hotels

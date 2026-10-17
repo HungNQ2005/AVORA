@@ -1,4 +1,22 @@
 import ExcelJS from 'exceljs';
+import avoraLogoUrl from '../assets/avora_logo.png';
+
+let cachedLogoBase64 = null;
+
+const getAvoraLogoBase64 = async () => {
+  if (cachedLogoBase64) return cachedLogoBase64;
+  try {
+    const response = await fetch(avoraLogoUrl);
+    if (!response.ok) return null;
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    cachedLogoBase64 = `data:image/png;base64,${btoa(binary)}`;
+    return cachedLogoBase64;
+  } catch {
+    return null;
+  }
+};
 
 /**
  * Generate a standard filename with current timestamp (YYYYMMDD).
@@ -14,7 +32,7 @@ export const getExportExcelFilename = () => {
 
 /**
  * Export facilities/amenities data to a luxury, executive-grade Excel (.xlsx) report.
- * Designed for AVORA Hotel Management with full branding, KPI summary, and visual hierarchy.
+ * Designed for AVORA Hotel Management with full branding and smooth vertical scrolling.
  *
  * @param {Array} amenities - List of amenity objects from database
  * @param {string} [customFilename] - Optional override filename
@@ -40,23 +58,15 @@ export const exportAmenitiesToExcel = async (amenities, customFilename) => {
         tabColor: { argb: 'FF003580' },
         defaultRowHeight: 22,
       },
-      views: [
-        {
-          state: 'frozen',
-          xSplit: 0,
-          ySplit: 10,
-          topLeftCell: 'A11',
-          activeCell: 'A11',
-        },
-      ],
+      views: [{ state: 'normal' }],
     });
 
     // ─── 1. Columns Configuration ───────────────────────────────────────────
     worksheet.columns = [
       { key: 'stt', width: 8 },           // A: STT
-      { key: 'name', width: 34 },          // B: Tên tiện nghi
+      { key: 'name', width: 36 },          // B: Tên tiện nghi
       { key: 'type', width: 22 },          // C: Loại tiện ích
-      { key: 'applied_count', width: 20 }, // D: Số lượng đang áp dụng
+      { key: 'applied_count', width: 22 }, // D: Số lượng đang áp dụng
       { key: 'applied_unit', width: 16 },  // E: Đơn vị áp dụng
       { key: 'pricing', width: 18 },       // F: Biểu phí
       { key: 'highlight', width: 14 },     // G: Nổi bật
@@ -72,97 +82,49 @@ export const exportAmenitiesToExcel = async (amenities, customFilename) => {
     };
 
     // ─── 2. Report Header / Branding ─────────────────────────────────────────
-    worksheet.getRow(1).height = 10;
+    // Row 1: Logo & Enterprise Badge
+    worksheet.getRow(1).height = 40;
+    const logoBase64 = await getAvoraLogoBase64();
+    if (logoBase64) {
+      const logoId = workbook.addImage({
+        base64: logoBase64,
+        extension: 'png',
+      });
+      worksheet.addImage(logoId, {
+        tl: { col: 0.1, row: 0.1 },
+        ext: { width: 135, height: 36 },
+      });
+    }
 
-    // A2: Brand Tagline
+    worksheet.mergeCells('D1:H1');
+    const brandCell = worksheet.getCell('D1');
+    brandCell.value = 'HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP • AVORA ENTERPRISE';
+    brandCell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFC9A227' } };
+    brandCell.alignment = { horizontal: 'right', vertical: 'middle' };
+
+    // Row 2: Report Title
     worksheet.mergeCells('A2:H2');
-    const brandCell = worksheet.getCell('A2');
-    brandCell.value = 'AVORA HOTELS & RESORTS';
-    brandCell.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FFC9A227' } };
-    brandCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-    worksheet.getRow(2).height = 18;
-
-    // A3: Report Title
-    worksheet.mergeCells('A3:H3');
-    const titleCell = worksheet.getCell('A3');
+    const titleCell = worksheet.getCell('A2');
     titleCell.value = 'DANH MỤC TIỆN NGHI KHÁCH SẠN';
-    titleCell.font = { name: 'Segoe UI', size: 16, bold: true, color: { argb: 'FF003580' } };
+    titleCell.font = { name: 'Segoe UI', size: 15, bold: true, color: { argb: 'FF003580' } };
     titleCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-    worksheet.getRow(3).height = 26;
+    worksheet.getRow(2).height = 26;
 
-    // A4: Subtitle / System
-    worksheet.mergeCells('A4:H4');
-    const subCell = worksheet.getCell('A4');
-    subCell.value = 'Hotel Management System • Báo cáo quản trị lưu trú nội bộ';
-    subCell.font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FF64748B' } };
-    subCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-    worksheet.getRow(4).height = 18;
-
-    // A5: Export Date
+    // Row 3: Subtitle & Export Date
     const now = new Date();
     const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-    worksheet.mergeCells('A5:H5');
-    const dateCell = worksheet.getCell('A5');
-    dateCell.value = `Thời gian xuất báo cáo: ${formattedDate}`;
-    dateCell.font = { name: 'Segoe UI', size: 9, color: { argb: 'FF475569' } };
-    dateCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-    worksheet.getRow(5).height = 18;
+    worksheet.mergeCells('A3:H3');
+    const subCell = worksheet.getCell('A3');
+    subCell.value = `Hotel Management System • Báo cáo quản trị lưu trú nội bộ  |  Thời gian xuất: ${formattedDate}`;
+    subCell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
+    subCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    worksheet.getRow(3).height = 18;
 
-    worksheet.getRow(6).height = 8;
+    // Row 4: Small spacing row
+    worksheet.getRow(4).height = 6;
 
-    // ─── 3. Report Summary KPI Cards (Row 7 & 8) ─────────────────────────────
-    const totalCount = amenities.length;
-    const activeCount = amenities.filter((a) => Boolean(a.is_active)).length;
-    const inactiveCount = totalCount - activeCount;
-
-    worksheet.getRow(7).height = 18;
-    worksheet.getRow(8).height = 24;
-
-    const setCard = (col1, col2, title, val, titleBg, titleColor, valBg, valColor, borderColor) => {
-      worksheet.mergeCells(`${col1}7:${col2}7`);
-      worksheet.mergeCells(`${col1}8:${col2}8`);
-
-      const tCell = worksheet.getCell(`${col1}7`);
-      tCell.value = title;
-      tCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: titleBg } };
-      tCell.font = { name: 'Segoe UI', size: 9, bold: true, color: { argb: titleColor } };
-      tCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-      const vCell = worksheet.getCell(`${col1}8`);
-      vCell.value = val;
-      vCell.numFmt = '#,##0';
-      vCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: valBg } };
-      vCell.font = { name: 'Segoe UI', size: 14, bold: true, color: { argb: valColor } };
-      vCell.alignment = { horizontal: 'center', vertical: 'middle' };
-
-      // Apply borders to merged area
-      [col1, col2].forEach((c) => {
-        worksheet.getCell(`${c}7`).border = {
-          top: { style: 'thin', color: { argb: borderColor } },
-          left: c === col1 ? { style: 'thin', color: { argb: borderColor } } : undefined,
-          right: c === col2 ? { style: 'thin', color: { argb: borderColor } } : undefined,
-        };
-        worksheet.getCell(`${c}8`).border = {
-          bottom: { style: 'thin', color: { argb: borderColor } },
-          left: c === col1 ? { style: 'thin', color: { argb: borderColor } } : undefined,
-          right: c === col2 ? { style: 'thin', color: { argb: borderColor } } : undefined,
-        };
-      });
-    };
-
-    // Card 1: Tổng tiện nghi (B7:C8)
-    setCard('B', 'C', 'TỔNG TIỆN NGHI', totalCount, 'FFF1F5F9', 'FF475569', 'FFF8FAFC', 'FF003580', 'FFCBD5E1');
-
-    // Card 2: Đang kích hoạt (D7:E8)
-    setCard('D', 'E', 'ĐANG KÍCH HOẠT', activeCount, 'FFECFDF5', 'FF065F46', 'FFF0FDF4', 'FF047857', 'FFA7F3D0');
-
-    // Card 3: Tạm dừng (F7:G8)
-    setCard('F', 'G', 'TẠM DỪNG', inactiveCount, 'FFFEF2F2', 'FF991B1B', 'FFFFF5F5', 'FFB91C1C', 'FFFECACA');
-
-    worksheet.getRow(9).height = 12;
-
-    // ─── 4. Table Header (Row 10) ────────────────────────────────────────────
-    const headerRow = worksheet.getRow(10);
+    // ─── 3. Table Header (Row 5) ─────────────────────────────────────────────
+    const headerRow = worksheet.getRow(5);
     headerRow.height = 28;
 
     const headers = [
@@ -203,11 +165,11 @@ export const exportAmenitiesToExcel = async (amenities, customFilename) => {
       };
     });
 
-    // ─── 5. Data Rows (Row 11+) ──────────────────────────────────────────────
+    // ─── 4. Data Rows (Row 6+) ───────────────────────────────────────────────
     amenities.forEach((item, index) => {
-      const rowIndex = 11 + index;
+      const rowIndex = 6 + index;
       const row = worksheet.getRow(rowIndex);
-      row.height = 22;
+      row.height = 24;
 
       const isEven = index % 2 === 0;
       const baseBg = isEven ? 'FFFFFFFF' : 'FFF8FAFC'; // Alternating zebra stripe
@@ -293,7 +255,7 @@ export const exportAmenitiesToExcel = async (amenities, customFilename) => {
         type: 'pattern',
         pattern: 'solid',
         fgColor: { argb: isHighlight ? 'FFFEF9C3' : baseBg }, // Subtle Gold Accent
-      };
+        };
       c7.border = thinBorder;
 
       // Cell 8: Trạng thái
@@ -314,8 +276,8 @@ export const exportAmenitiesToExcel = async (amenities, customFilename) => {
       c8.border = thinBorder;
     });
 
-    // ─── 6. Table Total Footer Row ───────────────────────────────────────────
-    const lastDataRow = 10 + amenities.length;
+    // ─── 5. Table Total Footer Row ───────────────────────────────────────────
+    const lastDataRow = 5 + amenities.length;
     const footerRowIndex = lastDataRow + 1;
     const footerRow = worksheet.getRow(footerRowIndex);
     footerRow.height = 24;
@@ -327,7 +289,7 @@ export const exportAmenitiesToExcel = async (amenities, customFilename) => {
     fTitle.alignment = { horizontal: 'center', vertical: 'middle' };
 
     const fCount = worksheet.getCell(`D${footerRowIndex}`);
-    fCount.value = { formula: `SUM(D11:D${lastDataRow})` };
+    fCount.value = { formula: `SUM(D6:D${lastDataRow})` };
     fCount.numFmt = '#,##0';
     fCount.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003580' } };
     fCount.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -343,11 +305,89 @@ export const exportAmenitiesToExcel = async (amenities, customFilename) => {
       };
     }
 
-    // ─── 7. Excel Advanced Features ──────────────────────────────────────────
     // AutoFilter for data columns
-    worksheet.autoFilter = `A10:H${lastDataRow}`;
+    worksheet.autoFilter = `A5:H${lastDataRow}`;
 
-    // Page Setup for Printing (Landscape, fit to page width, A4)
+    // ─── 6. Corporate Signature & Approval Block ────────────────────────────
+    const nowSign = new Date();
+    const signYear = nowSign.getFullYear();
+    const signMonth = String(nowSign.getMonth() + 1).padStart(2, '0');
+    const signDay = String(nowSign.getDate()).padStart(2, '0');
+
+    const sigDateRowIndex = footerRowIndex + 2;
+
+    worksheet.mergeCells(`E${sigDateRowIndex}:H${sigDateRowIndex}`);
+    const sigDateCell = worksheet.getCell(`E${sigDateRowIndex}`);
+    sigDateCell.value = `..., ngày ${signDay} tháng ${signMonth} năm ${signYear}`;
+    sigDateCell.font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FF334155' } };
+    sigDateCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(sigDateRowIndex).height = 20;
+
+    const sigTitleRowIndex = sigDateRowIndex + 1;
+    worksheet.mergeCells(`A${sigTitleRowIndex}:C${sigTitleRowIndex}`);
+    worksheet.getCell(`A${sigTitleRowIndex}`).value = 'NGƯỜI LẬP BIỂU';
+    worksheet.getCell(`A${sigTitleRowIndex}`).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003580' } };
+    worksheet.getCell(`A${sigTitleRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`D${sigTitleRowIndex}:E${sigTitleRowIndex}`);
+    worksheet.getCell(`D${sigTitleRowIndex}`).value = 'NGƯỜI KIỂM SOÁT';
+    worksheet.getCell(`D${sigTitleRowIndex}`).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003580' } };
+    worksheet.getCell(`D${sigTitleRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`F${sigTitleRowIndex}:H${sigTitleRowIndex}`);
+    worksheet.getCell(`F${sigTitleRowIndex}`).value = 'GIÁM ĐỐC / ĐẠI DIỆN VẬN HÀNH';
+    worksheet.getCell(`F${sigTitleRowIndex}`).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003580' } };
+    worksheet.getCell(`F${sigTitleRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(sigTitleRowIndex).height = 24;
+
+    const sigNoteRowIndex = sigTitleRowIndex + 1;
+    worksheet.mergeCells(`A${sigNoteRowIndex}:C${sigNoteRowIndex}`);
+    worksheet.getCell(`A${sigNoteRowIndex}`).value = '(Ký, ghi rõ họ tên)';
+    worksheet.getCell(`A${sigNoteRowIndex}`).font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
+    worksheet.getCell(`A${sigNoteRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`D${sigNoteRowIndex}:E${sigNoteRowIndex}`);
+    worksheet.getCell(`D${sigNoteRowIndex}`).value = '(Ký, ghi rõ họ tên)';
+    worksheet.getCell(`D${sigNoteRowIndex}`).font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
+    worksheet.getCell(`D${sigNoteRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`F${sigNoteRowIndex}:H${sigNoteRowIndex}`);
+    worksheet.getCell(`F${sigNoteRowIndex}`).value = '(Ký, đóng dấu, ghi rõ họ tên)';
+    worksheet.getCell(`F${sigNoteRowIndex}`).font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
+    worksheet.getCell(`F${sigNoteRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(sigNoteRowIndex).height = 18;
+
+    worksheet.getRow(sigNoteRowIndex + 1).height = 18;
+    worksheet.getRow(sigNoteRowIndex + 2).height = 18;
+    worksheet.getRow(sigNoteRowIndex + 3).height = 18;
+
+    const sigNameRowIndex = sigNoteRowIndex + 4;
+    worksheet.mergeCells(`A${sigNameRowIndex}:C${sigNameRowIndex}`);
+    worksheet.getCell(`A${sigNameRowIndex}`).value = 'Hệ thống AVORA ERP';
+    worksheet.getCell(`A${sigNameRowIndex}`).font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+    worksheet.getCell(`A${sigNameRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`D${sigNameRowIndex}:E${sigNameRowIndex}`);
+    worksheet.getCell(`D${sigNameRowIndex}`).value = 'Phòng Quản lý Dịch vụ Lưu trú';
+    worksheet.getCell(`D${sigNameRowIndex}`).font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+    worksheet.getCell(`D${sigNameRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`F${sigNameRowIndex}:H${sigNameRowIndex}`);
+    worksheet.getCell(`F${sigNameRowIndex}`).value = 'Ban Quản lý AVORA Hotels';
+    worksheet.getCell(`F${sigNameRowIndex}`).font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+    worksheet.getCell(`F${sigNameRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(sigNameRowIndex).height = 22;
+
+    worksheet.getRow(sigNameRowIndex + 1).height = 8;
+    const authRowIndex = sigNameRowIndex + 2;
+    worksheet.mergeCells(`A${authRowIndex}:H${authRowIndex}`);
+    const authCell = worksheet.getCell(`A${authRowIndex}`);
+    authCell.value = '✓ Báo cáo trích xuất tự động từ Hệ thống Quản trị Doanh nghiệp AVORA Enterprise • Bảo mật nội bộ';
+    authCell.font = { name: 'Segoe UI', size: 8.5, italic: true, color: { argb: 'FF94A3B8' } };
+    authCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(authRowIndex).height = 18;
+
+    // ─── 7. Print Layout Setup ───────────────────────────────────────────────
     worksheet.pageSetup = {
       orientation: 'landscape',
       paperSize: 9, // A4
@@ -419,46 +459,337 @@ export const exportUsersToExcel = async (users = [], customFilename) => {
   try {
     const workbook = new ExcelJS.Workbook();
     workbook.creator = 'AVORA System Management';
-    const worksheet = workbook.addWorksheet('Danh sách người dùng', {
-      properties: { defaultRowHeight: 22 },
+    workbook.lastModifiedBy = 'AVORA Executive CMS';
+    workbook.created = new Date();
+    workbook.modified = new Date();
+
+    const sheetName = 'Danh sách người dùng';
+    const worksheet = workbook.addWorksheet(sheetName, {
+      properties: {
+        tabColor: { argb: 'FF003580' },
+        defaultRowHeight: 22,
+      },
+      views: [{ state: 'normal' }],
     });
 
+    // ─── 1. Columns Configuration ───────────────────────────────────────────
     worksheet.columns = [
-      { header: 'STT', key: 'stt', width: 8 },
-      { header: 'Mã NV', key: 'code', width: 16 },
-      { header: 'Họ và tên', key: 'name', width: 26 },
-      { header: 'Email', key: 'email', width: 32 },
-      { header: 'Số điện thoại', key: 'phone', width: 18 },
-      { header: 'Vai trò', key: 'role', width: 20 },
-      { header: 'Cơ sở trực thuộc', key: 'hotel', width: 28 },
-      { header: 'Trạng thái', key: 'status', width: 18 },
-      { header: 'Ngày tạo', key: 'created_at', width: 20 },
+      { key: 'stt', width: 8 },          // A: STT
+      { key: 'code', width: 16 },         // B: Mã NV
+      { key: 'name', width: 28 },         // C: Họ và tên
+      { key: 'email', width: 32 },        // D: Email
+      { key: 'phone', width: 18 },        // E: Số điện thoại
+      { key: 'role', width: 22 },         // F: Vai trò
+      { key: 'hotel', width: 30 },        // G: Cơ sở trực thuộc
+      { key: 'status', width: 20 },       // H: Trạng thái
+      { key: 'created_at', width: 18 },   // I: Ngày tạo
     ];
 
-    // Style Header Row
-    const headerRow = worksheet.getRow(1);
-    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
-    headerRow.fill = {
-      type: 'pattern',
-      pattern: 'solid',
-      fgColor: { argb: 'FF0B1E3F' },
+    // Common border styles
+    const thinBorder = {
+      top: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      left: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      bottom: { style: 'thin', color: { argb: 'FFE2E8F0' } },
+      right: { style: 'thin', color: { argb: 'FFE2E8F0' } },
     };
-    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
 
-    users.forEach((u, idx) => {
-      worksheet.addRow({
-        stt: idx + 1,
-        code: u.employee_code || '-',
-        name: u.full_name || 'Chưa cập nhật',
-        email: u.email || '-',
-        phone: u.phone || '-',
-        role: u.role_label || u.role_code || '-',
-        hotel: u.hotel?.name || 'Toàn hệ thống',
-        status: u.account_status === 'ACTIVE' ? 'Đang hoạt động' : u.account_status === 'VERIFYING' ? 'Chờ kích hoạt' : 'Đang khóa',
-        created_at: u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '-',
+    // ─── 2. Report Header / Branding ─────────────────────────────────────────
+    // Row 1: Logo & Enterprise Badge
+    worksheet.getRow(1).height = 40;
+    const logoBase64 = await getAvoraLogoBase64();
+    if (logoBase64) {
+      const logoId = workbook.addImage({
+        base64: logoBase64,
+        extension: 'png',
       });
+      worksheet.addImage(logoId, {
+        tl: { col: 0.1, row: 0.1 },
+        ext: { width: 135, height: 36 },
+      });
+    }
+
+    worksheet.mergeCells('E1:I1');
+    const brandCell = worksheet.getCell('E1');
+    brandCell.value = 'HỆ THỐNG QUẢN TRỊ DOANH NGHIỆP • AVORA ENTERPRISE';
+    brandCell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FFC9A227' } };
+    brandCell.alignment = { horizontal: 'right', vertical: 'middle' };
+
+    // Row 2: Report Title
+    worksheet.mergeCells('A2:I2');
+    const titleCell = worksheet.getCell('A2');
+    titleCell.value = 'DANH SÁCH NGƯỜI DÙNG HỆ THỐNG';
+    titleCell.font = { name: 'Segoe UI', size: 15, bold: true, color: { argb: 'FF003580' } };
+    titleCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    worksheet.getRow(2).height = 26;
+
+    // Row 3: Subtitle & Export Date
+    const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    worksheet.mergeCells('A3:I3');
+    const subCell = worksheet.getCell('A3');
+    subCell.value = `Hotel Management System • Báo cáo quản trị tài khoản & phân quyền  |  Thời gian xuất: ${formattedDate}`;
+    subCell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
+    subCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
+    worksheet.getRow(3).height = 18;
+
+    // Row 4: Small spacing row
+    worksheet.getRow(4).height = 6;
+
+    // ─── 3. Table Header (Row 5) ─────────────────────────────────────────────
+    const headerRow = worksheet.getRow(5);
+    headerRow.height = 28;
+
+    const headers = [
+      'STT',
+      'Mã NV',
+      'Họ và tên',
+      'Email',
+      'Số điện thoại',
+      'Vai trò',
+      'Cơ sở trực thuộc',
+      'Trạng thái',
+      'Ngày tạo',
+    ];
+
+    headers.forEach((hdr, idx) => {
+      const cell = headerRow.getCell(idx + 1);
+      cell.value = hdr;
+      cell.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FF003580' }, // AVORA Deep Navy
+      };
+      cell.font = {
+        name: 'Segoe UI',
+        size: 10,
+        bold: true,
+        color: { argb: 'FFFFFFFF' },
+      };
+      cell.alignment = {
+        horizontal: 'center',
+        vertical: 'middle',
+        wrapText: true,
+      };
+      cell.border = {
+        top: { style: 'thin', color: { argb: 'FF002866' } },
+        left: { style: 'thin', color: { argb: 'FF0A4799' } },
+        right: { style: 'thin', color: { argb: 'FF0A4799' } },
+        bottom: { style: 'medium', color: { argb: 'FFC9A227' } }, // Elegant Gold Divider
+      };
     });
 
+    // ─── 4. Data Rows (Row 6+) ───────────────────────────────────────────────
+    users.forEach((u, idx) => {
+      const rowIndex = 6 + idx;
+      const row = worksheet.getRow(rowIndex);
+      row.height = 24;
+
+      const isEven = idx % 2 === 0;
+      const baseBg = isEven ? 'FFFFFFFF' : 'FFF8FAFC'; // Alternating zebra stripe
+
+      const stt = idx + 1;
+      const code = u.employee_code || '-';
+      const name = u.full_name || 'Chưa cập nhật';
+      const email = u.email || '-';
+      const phone = u.phone || '-';
+      const role = u.role_label || u.role_code || '-';
+      const hotel = u.hotel?.name || 'Toàn hệ thống';
+      const status =
+        u.account_status === 'ACTIVE'
+          ? 'Đang hoạt động'
+          : u.account_status === 'VERIFYING'
+          ? 'Chờ kích hoạt'
+          : 'Đang khóa';
+      const createdAt = u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : '-';
+
+      // Cell 1: STT
+      const c1 = row.getCell(1);
+      c1.value = stt;
+      c1.alignment = { horizontal: 'center', vertical: 'middle' };
+      c1.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF64748B' } };
+      c1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
+      c1.border = thinBorder;
+
+      // Cell 2: Mã NV
+      const c2 = row.getCell(2);
+      c2.value = code;
+      c2.alignment = { horizontal: 'center', vertical: 'middle' };
+      c2.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF334155' } };
+      c2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
+      c2.border = thinBorder;
+
+      // Cell 3: Họ và tên
+      const c3 = row.getCell(3);
+      c3.value = name;
+      c3.alignment = { horizontal: 'left', vertical: 'middle', indent: 1, wrapText: true };
+      c3.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+      c3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
+      c3.border = thinBorder;
+
+      // Cell 4: Email
+      const c4 = row.getCell(4);
+      c4.value = email;
+      c4.alignment = { horizontal: 'left', vertical: 'middle', indent: 1, wrapText: true };
+      c4.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF334155' } };
+      c4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
+      c4.border = thinBorder;
+
+      // Cell 5: Số điện thoại
+      const c5 = row.getCell(5);
+      c5.value = phone;
+      c5.alignment = { horizontal: 'center', vertical: 'middle' };
+      c5.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF334155' } };
+      c5.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
+      c5.border = thinBorder;
+
+      // Cell 6: Vai trò
+      const c6 = row.getCell(6);
+      c6.value = role;
+      c6.alignment = { horizontal: 'center', vertical: 'middle' };
+      c6.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF003580' } };
+      c6.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
+      c6.border = thinBorder;
+
+      // Cell 7: Cơ sở trực thuộc
+      const c7 = row.getCell(7);
+      c7.value = hotel;
+      c7.alignment = { horizontal: 'left', vertical: 'middle', indent: 1, wrapText: true };
+      c7.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF334155' } };
+      c7.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
+      c7.border = thinBorder;
+
+      // Cell 8: Trạng thái
+      const c8 = row.getCell(8);
+      c8.value = status;
+      c8.alignment = { horizontal: 'center', vertical: 'middle' };
+      const isAct = u.account_status === 'ACTIVE';
+      const isVer = u.account_status === 'VERIFYING';
+      c8.font = {
+        name: 'Segoe UI',
+        size: 9.5,
+        bold: true,
+        color: { argb: isAct ? 'FF065F46' : isVer ? 'FF9A3412' : 'FF991B1B' },
+      };
+      c8.fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: isAct ? 'FFECFDF5' : isVer ? 'FFFFEDD5' : 'FFFEF2F2' },
+      };
+      c8.border = thinBorder;
+
+      // Cell 9: Ngày tạo
+      const c9 = row.getCell(9);
+      c9.value = createdAt;
+      c9.alignment = { horizontal: 'center', vertical: 'middle' };
+      c9.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF64748B' } };
+      c9.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
+      c9.border = thinBorder;
+    });
+
+    const lastDataRow = 5 + users.length;
+    worksheet.autoFilter = `A5:I${lastDataRow}`;
+
+    // ─── 5. Corporate Signature & Approval Block ────────────────────────────
+    const nowSign = new Date();
+    const signYear = nowSign.getFullYear();
+    const signMonth = String(nowSign.getMonth() + 1).padStart(2, '0');
+    const signDay = String(nowSign.getDate()).padStart(2, '0');
+
+    const sigDateRowIndex = lastDataRow + 2;
+
+    worksheet.mergeCells(`G${sigDateRowIndex}:I${sigDateRowIndex}`);
+    const sigDateCell = worksheet.getCell(`G${sigDateRowIndex}`);
+    sigDateCell.value = `..., ngày ${signDay} tháng ${signMonth} năm ${signYear}`;
+    sigDateCell.font = { name: 'Segoe UI', size: 9.5, italic: true, color: { argb: 'FF334155' } };
+    sigDateCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(sigDateRowIndex).height = 20;
+
+    const sigTitleRowIndex = sigDateRowIndex + 1;
+    worksheet.mergeCells(`A${sigTitleRowIndex}:C${sigTitleRowIndex}`);
+    worksheet.getCell(`A${sigTitleRowIndex}`).value = 'NGƯỜI LẬP BÁO CÁO';
+    worksheet.getCell(`A${sigTitleRowIndex}`).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003580' } };
+    worksheet.getCell(`A${sigTitleRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`D${sigTitleRowIndex}:F${sigTitleRowIndex}`);
+    worksheet.getCell(`D${sigTitleRowIndex}`).value = 'TRƯỞNG PHÒNG NHÂN SỰ & IT';
+    worksheet.getCell(`D${sigTitleRowIndex}`).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003580' } };
+    worksheet.getCell(`D${sigTitleRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`G${sigTitleRowIndex}:I${sigTitleRowIndex}`);
+    worksheet.getCell(`G${sigTitleRowIndex}`).value = 'BAN GIÁM ĐỐC HỆ THỐNG';
+    worksheet.getCell(`G${sigTitleRowIndex}`).font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003580' } };
+    worksheet.getCell(`G${sigTitleRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(sigTitleRowIndex).height = 24;
+
+    const sigNoteRowIndex = sigTitleRowIndex + 1;
+    worksheet.mergeCells(`A${sigNoteRowIndex}:C${sigNoteRowIndex}`);
+    worksheet.getCell(`A${sigNoteRowIndex}`).value = '(Ký, ghi rõ họ tên)';
+    worksheet.getCell(`A${sigNoteRowIndex}`).font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
+    worksheet.getCell(`A${sigNoteRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`D${sigNoteRowIndex}:F${sigNoteRowIndex}`);
+    worksheet.getCell(`D${sigNoteRowIndex}`).value = '(Ký, ghi rõ họ tên)';
+    worksheet.getCell(`D${sigNoteRowIndex}`).font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
+    worksheet.getCell(`D${sigNoteRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`G${sigNoteRowIndex}:I${sigNoteRowIndex}`);
+    worksheet.getCell(`G${sigNoteRowIndex}`).value = '(Ký, đóng dấu, ghi rõ họ tên)';
+    worksheet.getCell(`G${sigNoteRowIndex}`).font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
+    worksheet.getCell(`G${sigNoteRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(sigNoteRowIndex).height = 18;
+
+    worksheet.getRow(sigNoteRowIndex + 1).height = 18;
+    worksheet.getRow(sigNoteRowIndex + 2).height = 18;
+    worksheet.getRow(sigNoteRowIndex + 3).height = 18;
+
+    const sigNameRowIndex = sigNoteRowIndex + 4;
+    worksheet.mergeCells(`A${sigNameRowIndex}:C${sigNameRowIndex}`);
+    worksheet.getCell(`A${sigNameRowIndex}`).value = 'Quản trị viên Hệ thống (System Admin)';
+    worksheet.getCell(`A${sigNameRowIndex}`).font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+    worksheet.getCell(`A${sigNameRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`D${sigNameRowIndex}:F${sigNameRowIndex}`);
+    worksheet.getCell(`D${sigNameRowIndex}`).value = 'Phòng Quản trị & Vận hành Nhân sự';
+    worksheet.getCell(`D${sigNameRowIndex}`).font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+    worksheet.getCell(`D${sigNameRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+
+    worksheet.mergeCells(`G${sigNameRowIndex}:I${sigNameRowIndex}`);
+    worksheet.getCell(`G${sigNameRowIndex}`).value = 'Ban Điều Hành AVORA Enterprise';
+    worksheet.getCell(`G${sigNameRowIndex}`).font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+    worksheet.getCell(`G${sigNameRowIndex}`).alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(sigNameRowIndex).height = 22;
+
+    worksheet.getRow(sigNameRowIndex + 1).height = 8;
+    const authRowIndex = sigNameRowIndex + 2;
+    worksheet.mergeCells(`A${authRowIndex}:I${authRowIndex}`);
+    const authCell = worksheet.getCell(`A${authRowIndex}`);
+    authCell.value = '✓ Báo cáo trích xuất tự động từ Hệ thống Quản trị Doanh nghiệp AVORA Enterprise • Bảo mật nội bộ';
+    authCell.font = { name: 'Segoe UI', size: 8.5, italic: true, color: { argb: 'FF94A3B8' } };
+    authCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    worksheet.getRow(authRowIndex).height = 18;
+
+    // ─── 6. Print Layout Setup ───────────────────────────────────────────────
+    worksheet.pageSetup = {
+      orientation: 'landscape',
+      paperSize: 9, // A4
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: {
+        left: 0.5,
+        right: 0.5,
+        top: 0.6,
+        bottom: 0.6,
+        header: 0.3,
+        footer: 0.3,
+      },
+    };
+
+    worksheet.headerFooter = {
+      oddHeader: '&L&B&"Segoe UI"AVORA HOTELS & RESORTS&R&"Segoe UI"Báo cáo Quản trị Người dùng',
+      oddFooter: '&L&"Segoe UI"Tài liệu nội bộ AVORA • Bảo mật&R&"Segoe UI"Trang &P / &N',
+    };
+
+    // ─── 7. Write and Trigger Browser Download ───────────────────────────────
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
@@ -476,4 +807,3 @@ export const exportUsersToExcel = async (users = [], customFilename) => {
     return { success: false, message: error.message || 'Lỗi khi xuất file Excel.' };
   }
 };
-
