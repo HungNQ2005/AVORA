@@ -6,6 +6,7 @@ import { exportUsersToExcel } from '../../../utils/exportToExcel';
 import UserStatsCards from '../components/UserStatsCards';
 import UserRoleTabs from '../components/UserRoleTabs';
 import RoleChangeModal from '../components/RoleChangeModal';
+import AvatarContent from '../../../common/components/AvatarContent';
 import './RoleManagementPage.css';
 
 /**
@@ -348,9 +349,10 @@ const RoleManagementPage = () => {
                               fontWeight: 700,
                               fontSize: '13.5px',
                               flexShrink: 0,
+                              overflow: 'hidden',
                             }}
                           >
-                            {getInitials(u.full_name)}
+                            <AvatarContent src={u.avatar_url} fallback={getInitials(u.full_name)} alt={u.full_name} />
                           </div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

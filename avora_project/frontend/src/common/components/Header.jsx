@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { codeNameParser } from '../../utils/codeNameParser';
+import AvatarContent from './AvatarContent';
 import { getSavedFavorites } from '../../utils/favoritesStorage';
 import './Header.css';
 
@@ -429,7 +430,11 @@ const Header = ({
                     aria-haspopup="true"
                   >
                     <div className="avora-header__user-avatar">
-                      {(displayName.charAt(0) || 'U').toUpperCase()}
+                      <AvatarContent
+                        src={user.avatar_url}
+                        fallback={(displayName.charAt(0) || 'U').toUpperCase()}
+                        alt={displayName}
+                      />
                     </div>
                     <span className="avora-header__user-name">{displayName}</span>
                     <ChevronDownIcon />
@@ -439,7 +444,11 @@ const Header = ({
                     <div className="avora-header__user-dropdown">
                       <div className="avora-header__dropdown-user-info">
                         <div className="avora-header__dropdown-avatar">
-                          {(displayName.charAt(0) || 'U').toUpperCase()}
+                          <AvatarContent
+                            src={user.avatar_url}
+                            fallback={(displayName.charAt(0) || 'U').toUpperCase()}
+                            alt={displayName}
+                          />
                         </div>
                         <div className="avora-header__dropdown-details">
                           <span className="avora-header__dropdown-name">{displayName}</span>

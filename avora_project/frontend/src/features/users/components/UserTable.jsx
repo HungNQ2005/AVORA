@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import AvatarContent from '../../../common/components/AvatarContent';
 import './UserTable.css';
 
 /**
@@ -251,7 +252,7 @@ const UserTable = ({
                     <td>
                       <div className="user-cell-profile">
                         <div className="user-avatar" aria-hidden="true">
-                          {getInitials(u.full_name)}
+                          <AvatarContent src={u.avatar_url} fallback={getInitials(u.full_name)} alt={u.full_name} />
                         </div>
                         <div className="user-info-col">
                           <div className="user-name-row">
