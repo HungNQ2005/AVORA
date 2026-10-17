@@ -51,6 +51,11 @@ app.use("/api", chatbotRoute);
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
 
+// ─── Process-level guard (lỗi mạng/promise không được bắt không làm sập server) ───
+process.on("unhandledRejection", (reason) => {
+  console.error("[Process] Unhandled promise rejection:", reason);
+});
+
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(env.PORT, () => {
   console.log(`\n🚀 AVORA Backend running on http://localhost:${env.PORT}`);

@@ -1,0 +1,213 @@
+.avatar-modal__overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 10050;
+  animation: avatarModalFade 0.18s ease-out;
+}
+
+@keyframes avatarModalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.avatar-modal__card {
+  width: 100%;
+  max-width: 420px;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.3);
+  overflow: hidden;
+  animation: avatarModalPop 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes avatarModalPop {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+.avatar-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.avatar-modal__title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.avatar-modal__close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+}
+
+.avatar-modal__close:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.avatar-modal__body {
+  padding: 22px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar-modal__preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: #002244;
+  color: #ffffff;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 34, 68, 0.25);
+  border: 3px solid #ffffff;
+  outline: 2px solid #e2e8f0;
+}
+
+.avatar-modal__dropzone {
+  width: 100%;
+  box-sizing: border-box;
+  border: 2px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 16px;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.avatar-modal__dropzone.is-dragging {
+  border-color: #006ce4;
+  background: #eff6ff;
+}
+
+.avatar-modal__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.avatar-modal__choose-btn {
+  display: inline-block;
+  padding: 9px 18px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #003580;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  border: 1px solid #bfdbfe;
+  transition: background 0.15s;
+}
+
+.avatar-modal__choose-btn:hover {
+  background: #dbeafe;
+}
+
+.avatar-modal__hint {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.avatar-modal__file-name {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  color: #0f172a;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.avatar-modal__error {
+  width: 100%;
+  box-sizing: border-box;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.avatar-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px 20px;
+}
+
+.avatar-modal__footer-right {
+  display: flex;
+  gap: 10px;
+}
+
+.avatar-modal__btn {
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+}
+
+.avatar-modal__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.avatar-modal__btn--primary {
+  background: #006ce4;
+  color: #ffffff;
+}
+
+.avatar-modal__btn--primary:hover:not(:disabled) {
+  background: #0057b8;
+}
+
+.avatar-modal__btn--ghost {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.avatar-modal__btn--ghost:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.avatar-modal__btn--danger {
+  background: #ffffff;
+  border-color: #fecaca;
+  color: #dc2626;
+}
+
+.avatar-modal__btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+}

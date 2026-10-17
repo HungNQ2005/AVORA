@@ -1,0 +1,16 @@
+/* Ảnh avatar lấp đầy container; container cần cắt phần thừa theo bo góc. */
+.avora-avatar__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avora-header__user-avatar,
+.avora-header__dropdown-avatar,
+.admin-sidebar__avatar,
+.user-avatar,
+.role-modal-user-avatar,
+.profile-hero-avatar {
+  overflow: hidden;
+}

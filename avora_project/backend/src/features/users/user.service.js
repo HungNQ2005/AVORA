@@ -1,6 +1,7 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const env = require('../../config/env');
 const { codeNameParser } = require('../../utils/codeNameParser');
 const { matchesSearch } = require('../../utils/textSearchHelper');
 const otpService = require('../otp/otp.service');
@@ -582,6 +583,107 @@ const confirmRoleChange = async ({ adminUser, targetUserId, newRole, otpCode }) 
   };
 };
 
+// ─── Avatar (Supabase Storage bucket `pfp`) ──────────────────────────────────
+const AVATAR_BUCKET = 'pfp';
+const AVATAR_MAX_URL_LENGTH = 1000;
+
+/** Prefix công khai của file avatar thuộc về một user: <SUPABASE_URL>/storage/v1/object/public/pfp/<userId>/ */
+const buildAvatarPublicPrefix = (userId) =>
+  `${String(env.SUPABASE_URL || '').replace(/\/+$/, '')}/storage/v1/object/public/${AVATAR_BUCKET}/${userId}/`;
+
+/** Lấy đường dẫn object trong bucket từ public URL; trả null nếu URL không thuộc bucket pfp. */
+const extractAvatarObjectPath = (publicUrl) => {
+  if (typeof publicUrl !== 'string') return null;
+  const marker = `/storage/v1/object/public/${AVATAR_BUCKET}/`;
+  const idx = publicUrl.indexOf(marker);
+  if (idx === -1) return null;
+  const rawPath = publicUrl.slice(idx + marker.length).split('?')[0];
+  try {
+    return decodeURIComponent(rawPath) || null;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Cập nhật (hoặc xóa) ảnh đại diện của user.
+ * @param {string} userId
+ * @param {string|null} avatarUrl - public URL từ Supabase Storage; null/'' để xóa avatar
+ * @returns {Promise<{ user_id: string, avatar_url: string|null }>}
+ */
+const updateAvatar = async (userId, avatarUrl) => {
+  const newUrl = typeof avatarUrl === 'string' ? avatarUrl.trim() : avatarUrl;
+  const isRemoving = newUrl === null || newUrl === undefined || newUrl === '';
+
+  if (!isRemoving) {
+    if (typeof newUrl !== 'string' || newUrl.length > AVATAR_MAX_URL_LENGTH) {
+      const err = new Error('Đường dẫn ảnh đại diện không hợp lệ.');
+      err.statusCode = 400;
+      throw err;
+    }
+    if (!newUrl.startsWith(buildAvatarPublicPrefix(userId))) {
+      const err = new Error('Ảnh đại diện phải được tải lên kho lưu trữ AVORA (thư mục của chính bạn).');
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
+  const { data: current, error: findError } = await supabase
+    .from('m_user')
+    .select('user_id, avatar_url, account_status')
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .maybeSingle();
+
+  if (findError) {
+    console.error('[Avatar] Lỗi truy vấn người dùng:', findError);
+    const err = new Error('Không thể truy xuất thông tin người dùng.');
+    err.statusCode = 500;
+    throw err;
+  }
+  if (!current) {
+    const err = new Error('Không tìm thấy người dùng.');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Token còn hạn nhưng tài khoản đã bị khóa/vô hiệu hóa thì không được phép thay đổi dữ liệu
+  if (['DEACTIVATED', 'LOCKED'].includes(String(current.account_status || '').toUpperCase())) {
+    const err = new Error('Tài khoản của bạn không còn hoạt động.');
+    err.statusCode = 403;
+    throw err;
+  }
+
+  // Phạm vi UPDATE bị ép ở tầng DB: chỉ đúng dòng của chủ token (userId đến từ JWT, không từ client)
+  const { data: updated, error: updateError } = await supabase
+    .from('m_user')
+    .update({ avatar_url: isRemoving ? null : newUrl, updated_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .eq('is_deleted', false)
+    .select('user_id, avatar_url')
+    .single();
+
+  if (updateError || !updated) {
+    console.error('[Avatar] Lỗi cập nhật avatar_url:', updateError);
+    const err = new Error('Không thể lưu ảnh đại diện. Vui lòng thử lại.');
+    err.statusCode = 500;
+    throw err;
+  }
+
+  // Dọn file cũ trong Storage (không làm hỏng luồng chính nếu lỗi)
+  const oldPath = extractAvatarObjectPath(current.avatar_url);
+  if (oldPath && oldPath.startsWith(`${userId}/`) && current.avatar_url !== updated.avatar_url) {
+    try {
+      const { error: removeError } = await supabase.storage.from(AVATAR_BUCKET).remove([oldPath]);
+      if (removeError) console.warn('[Avatar] Không xóa được file cũ:', removeError.message);
+    } catch (removeErr) {
+      console.warn('[Avatar] Lỗi khi xóa file cũ:', removeErr.message);
+    }
+  }
+
+  return updated;
+};
+
 module.exports = {
   getUsersList,
   getUserStats,
@@ -589,5 +691,6 @@ module.exports = {
   requestRoleChange,
   confirmRoleChange,
   resolveTargetRole,
+  updateAvatar,
 };
 
