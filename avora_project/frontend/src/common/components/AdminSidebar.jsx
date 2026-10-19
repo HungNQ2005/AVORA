@@ -55,9 +55,9 @@ const AdminSidebar = () => {
           <div className="admin-sidebar__group">
             <div className="admin-sidebar__group-title">TỔNG QUAN</div>
             <NavLink
-              to="/admin/statistics"
+              to="/dashboard/statistics"
               className={({ isActive }) =>
-                `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/statistics') ? 'admin-sidebar__link--active' : ''}`
+                `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/statistics') ? 'admin-sidebar__link--active' : ''}`
               }
               end
             >

@@ -35,6 +35,13 @@ const LuggageIcon = () => (
   </svg>
 );
 
+const TrendingUpIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
+    <polyline points="17 6 23 6 23 12" />
+  </svg>
+);
+
 const BuildingIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18" />
@@ -432,7 +439,7 @@ const Header = ({
 
               {canManageHotels && (
                 <Link
-                  to="/dashboard"
+                  to={user?.role_code_name === 'VEN' ? '/dashboard/statistics' : '/dashboard'}
                   className={`avora-header__pill-btn avora-header__pill-btn--pms ${currentTab === 'pms' ? 'is-active' : ''}`}
                   onClick={() => { setInternalTab('pms'); onNavClick?.('pms'); }}
                 >
@@ -498,18 +505,18 @@ const Header = ({
 
                       {isPartnerOrAdmin && (
                         <Link
-                          to={user?.role_code_name === 'VEN' ? '/admin/statistics' : '/admin'}
+                          to={user?.role_code_name === 'VEN' ? '/dashboard/statistics' : '/dashboard'}
                           className="avora-header__dropdown-item"
                           onClick={() => setIsUserMenuOpen(false)}
                         >
                           <BuildingIcon />
-                          <span>{user?.role_code_name === 'VEN' ? 'Quản lý Khách sạn (Vendor)' : 'Cổng Quản trị (Admin)'}</span>
+                          <span>{user?.role_code_name === 'VEN' ? 'Bảng thống kê (Vendor)' : 'Cổng Quản trị (Admin)'}</span>
                         </Link>
                       )}
 
                       {isBusinessManager && (
                         <Link
-                          to="/admin/coupons"
+                          to="/dashboard/coupons"
                           className="avora-header__dropdown-item"
                           onClick={() => setIsUserMenuOpen(false)}
                         >

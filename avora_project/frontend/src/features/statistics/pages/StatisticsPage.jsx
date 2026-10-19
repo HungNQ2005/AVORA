@@ -178,7 +178,7 @@ const StatisticsPage = () => {
 
       {/* Breadcrumb */}
       <nav className="st-page__breadcrumb">
-        <span>Quản lý phòng & Lưu trú</span>
+        <span>Doanh thu & Booking</span>
         <span className="st-page__breadcrumb-sep">&gt;</span>
         <span className="st-page__breadcrumb-active">Bảng thống kê</span>
       </nav>
