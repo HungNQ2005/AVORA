@@ -1009,6 +1009,105 @@
   line-height: 1.55;
   color: #475569;
   margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.review-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.review-action-button {
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #334155;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.review-action-button:hover:not(:disabled) {
+  border-color: #006ce4;
+  background: #eff6ff;
+  color: #003580;
+}
+
+.review-action-button--primary {
+  border-color: #003580;
+  background: #003580;
+  color: #fff;
+}
+
+.review-action-button--primary:hover:not(:disabled) {
+  background: #0052a4;
+  color: #fff;
+}
+
+.review-action-button--danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.review-action-button--danger:hover:not(:disabled) {
+  border-color: #dc2626;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.review-action-button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+
+.review-edit-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.review-edit-form label {
+  display: grid;
+  gap: 5px;
+  color: #334155;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.review-edit-form select,
+.review-edit-form textarea {
+  width: 100%;
+  min-height: 36px;
+  padding: 7px 9px;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  background: #fff;
+  color: #1e293b;
+  font: inherit;
+  font-size: 13px;
+}
+
+.review-edit-form textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
+.review-edit-form select:focus,
+.review-edit-form textarea:focus {
+  outline: 2px solid rgba(0, 108, 228, .2);
+  border-color: #006ce4;
+}
+
+.review-card-error {
+  margin: 8px 0 0;
+  color: #b91c1c;
+  font-size: 12px;
 }
 
 /* ─── 7. LIGHTBOX GALLERY MODAL ─────────────────────────────────────────── */

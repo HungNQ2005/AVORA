@@ -16,6 +16,7 @@ const facilityRoute = require('./features/facilities/facility.route');
 const couponRoute = require('./features/coupons/coupon.route');
 const userRoute = require('./features/users/user.route');
 const chatbotRoute = require("./features/chatbot/chatbot.route");
+const reviewRoute = require('./features/review/review.route');
 const env = require('./config/env');
 
 const app = express();
@@ -51,6 +52,7 @@ app.use("/api", facilityRoute);
 app.use("/api", couponRoute);
 app.use("/api", userRoute);
 app.use("/api", chatbotRoute);
+app.use('/api', reviewRoute);
 
 app.use((_req, _res, next) => {
   const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');
