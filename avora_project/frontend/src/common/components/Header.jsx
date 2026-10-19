@@ -316,13 +316,10 @@ const Header = ({
       navigate('/favorites');
       return;
     } else if (tabKey === 'my-bookings') {
-      if (!user) {
-        navigate('/signin');
-        return;
-      }
-      navigate('/myaccount');
+      navigate('/my-bookings');
       return;
     } else {
+
       setInternalTab(null);
     }
     if (onNavClick) {
@@ -469,6 +466,16 @@ const Header = ({
                         <UserIcon />
                         <span>Tài khoản của tôi</span>
                       </Link>
+
+                      <Link
+                        to="/my-bookings"
+                        className="avora-header__dropdown-item"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <LuggageIcon />
+                        <span>Đặt chỗ của tôi</span>
+                      </Link>
+
 
                       <div className="avora-header__dropdown-divider" />
 

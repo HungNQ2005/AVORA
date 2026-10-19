@@ -19,11 +19,16 @@ import CouponManagementPage from './features/coupons/pages/CouponManagementPage'
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
+import HotelManagerRoute from './common/components/HotelManagerRoute';
 import NotFoundNotice from './common/components/NotFoundNotice';
 import DashboardPage from './features/dashboard/pages/dashboardPage';
 import HotelManagementPage from './features/hotel_management/pages/hotelManagementPage';
 import HotelManagementDetailPage from './features/hotel_management/pages/hotelDetailPage';
+import RoomManagementPage from './features/rooms/pages/RoomManagementPage';
 import AIChatWidget from './features/chatbot/AIChatWidget';
+import BookingPage from './features/bookings/pages/BookingPage';
+import MyBookingsPage from './features/bookings/pages/MyBookingsPage';
+
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
  */
@@ -114,7 +119,12 @@ function App() {
             <Route path="/hotel/:id" element={<CustomerHotelDetailPage />} />
             <Route path="/hotel-detail" element={<CustomerHotelDetailPage />} />
             <Route path="/hotel-detail/:id" element={<CustomerHotelDetailPage />} />
+            <Route path="/booking" element={<BookingPage />} />
+            <Route path="/booking/:id" element={<BookingPage />} />
+            <Route path="/my-bookings" element={<MyBookingsPage />} />
+            <Route path="/myaccount/bookings" element={<MyBookingsPage />} />
             <Route path="/search" element={<HotelSearchPage />} />
+
             <Route path="/forbidden" element={<section style={{ padding: '3rem 1rem', textAlign: 'center' }}><h1>403 - Truy cập bị từ chối</h1><p>Tài khoản của bạn không có quyền truy cập trang quản lý này.</p></section>} />
             <Route path="*" element={<NotFoundNotice />} />
           </Route>
@@ -145,6 +155,14 @@ function App() {
                 <AdminRoute>
                   <RoleManagementPage />
                 </AdminRoute>
+              }
+            />
+            <Route
+              path="rooms"
+              element={
+                <HotelManagerRoute>
+                  <RoomManagementPage />
+                </HotelManagerRoute>
               }
             />
             <Route
@@ -215,6 +233,8 @@ function App() {
 
           {/* Friendly redirect aliases for the old /admin and top-level paths */}
           <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/admin/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
+          <Route path="/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
           <Route path="/admin/room-types" element={<Navigate to="/dashboard/room-types" replace />} />
           <Route path="/admin/room-types/:id" element={<Navigate to="/dashboard/room-types" replace />} />
           <Route path="/admin/amenities" element={<Navigate to="/dashboard/amenities" replace />} />
