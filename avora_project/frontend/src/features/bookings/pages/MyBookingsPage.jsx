@@ -9,6 +9,7 @@ import {
   fetchBookingVoucher,
   fetchBookingInvoice,
 } from '../../../services/bookingApi';
+import ReviewModal from '../components/ReviewModal';
 import './MyBookingsPage.css';
 
 /**
@@ -292,6 +293,8 @@ const formatVnStayDate = (dateStr) => {
   return `${dd}/${mm}/${yyyy} (${dayName})`;
 };
 
+const isConfirmedBooking = (statusCode) => ['2', 'CFM'].includes(String(statusCode ?? '').trim().toUpperCase());
+
 /**
  * Main "Quản lý Đặt Chỗ & Lịch Sử Kỳ Nghỉ" Page Component
  */
@@ -336,6 +339,8 @@ const MyBookingsPage = () => {
 
   const [invoiceModalBooking, setInvoiceModalBooking] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
+
+  const [reviewModalBooking, setReviewModalBooking] = useState(null);
 
   const [refundModalData, setRefundModalData] = useState(null);
   const [galleryModalImages, setGalleryModalImages] = useState(null);
@@ -497,6 +502,10 @@ const MyBookingsPage = () => {
     }
   };
 
+  const handleOpenReview = (booking) => {
+    if (isConfirmedBooking(booking.booking_status_cd)) setReviewModalBooking(booking);
+  };
+
   // Close all modals on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -506,6 +515,7 @@ const MyBookingsPage = () => {
         setDateChangeModalBooking(null);
         setCancelModalBooking(null);
         setInvoiceModalBooking(null);
+        setReviewModalBooking(null);
         setRefundModalData(null);
         setGalleryModalImages(null);
       }
@@ -918,6 +928,17 @@ const MyBookingsPage = () => {
                           <span>Đổi ngày nhận/trả phòng</span>
                         </button>
 
+                        {isConfirmedBooking(booking.booking_status_cd) && (
+                          <button
+                            type="button"
+                            className="my-bookings-btn-secondary my-bookings-review-button"
+                            onClick={() => handleOpenReview(booking)}
+                          >
+                            <StarIcon width="14" height="14" />
+                            <span>Đánh giá</span>
+                          </button>
+                        )}
+
                         <button
                           type="button"
                           className="my-bookings-btn-danger"
@@ -1027,6 +1048,17 @@ const MyBookingsPage = () => {
                         <FolioInvoiceIcon width="13" height="13" />
                         <span>Xem hóa đơn VAT</span>
                       </button>
+
+                      {isConfirmedBooking(booking.booking_status_cd) && (
+                        <button
+                          type="button"
+                          className="my-bookings-compact-btn-secondary my-bookings-review-button"
+                          onClick={() => handleOpenReview(booking)}
+                        >
+                          <StarIcon width="13" height="13" />
+                          <span>Đánh giá</span>
+                        </button>
+                      )}
 
                       <span
                         className="my-bookings-compact-link"
@@ -1986,6 +2018,18 @@ const MyBookingsPage = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {reviewModalBooking && (
+        <ReviewModal
+          booking={reviewModalBooking}
+          onClose={() => setReviewModalBooking(null)}
+          onSaved={() => loadBookings()}
+          onDeleted={() => {
+            setReviewModalBooking(null);
+            loadBookings();
+          }}
+        />
       )}
     </div>
   );

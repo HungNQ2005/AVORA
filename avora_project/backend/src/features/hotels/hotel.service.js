@@ -400,16 +400,13 @@ const searchHotels = async (params = {}) => {
   // Review data is associated through bookings; never synthesize customer ratings.
   const reviewsStatsByHotel = {};
   rawHotels.forEach((h) => {
-<<<<<<< HEAD
     const stats = hotelReviewStats[h.hotel_id];
-=======
     let baseScore = Number(h.star_rating) || Number(h.star_quality) || 8.8;
     if (baseScore <= 5) {
       baseScore = Number((baseScore * 1.8 + 0.4).toFixed(1));
     }
     const idHash = (String(h.hotel_id) || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const count = 450 + (idHash * 37) % 3600;
->>>>>>> origin/FEAT_BOOKING_YENVTP
     reviewsStatsByHotel[h.hotel_id] = {
       score: stats?.count ? Number((stats.total / stats.count).toFixed(1)) : Number(h.star_rating) || 0,
       count: stats?.count || 0,

@@ -16,6 +16,13 @@ const requestReview = async (url, options = {}) => {
   return result.data;
 };
 
+export const getBookingReview = (bookingId) => requestReview(API_ENDPOINTS.BOOKING_REVIEWS(bookingId));
+
+export const createReview = (bookingId, payload) => requestReview(API_ENDPOINTS.BOOKING_REVIEWS(bookingId), {
+  method: 'POST',
+  body: JSON.stringify(payload),
+});
+
 export const updateReview = (reviewId, payload) => requestReview(API_ENDPOINTS.REVIEW(reviewId), {
   method: 'PUT',
   body: JSON.stringify(payload),

@@ -728,6 +728,18 @@
   border-color: #94a3b8;
 }
 
+.my-bookings-review-button {
+  border-color: #f3d18a;
+  background: #fffbeb;
+  color: #784800;
+}
+
+.my-bookings-review-button:hover {
+  border-color: #e7b34f;
+  background: #fff4cf;
+  color: #633b00;
+}
+
 .my-bookings-btn-danger {
   background: #ffffff;
   border: 1px solid #fca5a5;

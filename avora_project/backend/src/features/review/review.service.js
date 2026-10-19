@@ -3,6 +3,7 @@
 const supabase = require('../../config/supabaseClient');
 
 const EDIT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const isConfirmedBooking = (statusCode) => ['2', 'CFM'].includes(String(statusCode ?? '').trim().toUpperCase());
 
 const httpError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
 
@@ -82,10 +83,11 @@ const refreshHotelRating = async (hotelId) => {
   const average = reviews.length
     ? Number((reviews.reduce((total, review) => total + Number(review.rating_score), 0) / reviews.length).toFixed(1))
     : null;
+  const storedAverage = average === null ? null : Math.min(average, 9.9);
 
   const { error } = await supabase
     .from('m_hotel')
-    .update({ star_rating: average, updated_at: new Date().toISOString() })
+    .update({ star_rating: storedAverage, updated_at: new Date().toISOString() })
     .eq('hotel_id', hotelId);
   if (error) throw error;
 
@@ -95,12 +97,15 @@ const refreshHotelRating = async (hotelId) => {
 const createReview = async (userId, bookingId, payload) => {
   const { data: booking, error: bookingError } = await supabase
     .from('t_booking')
-    .select('booking_id, hotel_id')
+    .select('booking_id, hotel_id, booking_status_cd')
     .eq('booking_id', bookingId)
     .eq('user_id', userId)
     .maybeSingle();
   if (bookingError) throw bookingError;
   if (!booking) throw httpError(404, 'Không tìm thấy đặt phòng thuộc tài khoản của bạn.');
+  if (!isConfirmedBooking(booking.booking_status_cd)) {
+    throw httpError(403, 'Chỉ có thể đánh giá đặt phòng đã xác nhận.');
+  }
 
   const { data: hotel, error: hotelError } = await supabase
     .from('m_hotel')
@@ -138,6 +143,53 @@ const createReview = async (userId, bookingId, payload) => {
   return { review: result.reviews.find((item) => item.review_id === review.review_id), ...rating };
 };
 
+const getBookingReview = async (userId, bookingId) => {
+  const { data: booking, error: bookingError } = await supabase
+    .from('t_booking')
+    .select('booking_id, hotel_id, booking_status_cd')
+    .eq('booking_id', bookingId)
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (bookingError) throw bookingError;
+  if (!booking) throw httpError(404, 'Không tìm thấy đặt phòng thuộc tài khoản của bạn.');
+
+  const { data: hotel, error: hotelError } = await supabase
+    .from('m_hotel')
+    .select('hotel_status, is_deleted')
+    .eq('hotel_id', booking.hotel_id)
+    .maybeSingle();
+  if (hotelError) throw hotelError;
+  if (!hotel || hotel.hotel_status !== 'ACTIVE' || hotel.is_deleted === true) {
+    return { review: null, can_create: false, unavailable: true };
+  }
+  if (!isConfirmedBooking(booking.booking_status_cd)) {
+    return { review: null, can_create: false, unavailable: false };
+  }
+
+  const { data: review, error: reviewError } = await supabase
+    .from('t_review')
+    .select('review_id, rating_score, comment, created_at')
+    .eq('booking_id', bookingId)
+    .or('is_deleted.is.null,is_deleted.eq.false')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (reviewError) throw reviewError;
+
+  if (!review) return { review: null, can_create: true, unavailable: false };
+  return {
+    review: {
+      review_id: review.review_id,
+      rating_score: Number(review.rating_score),
+      comment: review.comment || '',
+      created_at: review.created_at,
+      can_edit: isWithinEditWindow(review.created_at),
+    },
+    can_create: false,
+    unavailable: false,
+  };
+};
+
 const getOwnedReview = async (userId, reviewId) => {
   const { data: review, error: reviewError } = await supabase
     .from('t_review')
@@ -149,12 +201,24 @@ const getOwnedReview = async (userId, reviewId) => {
 
   const { data: booking, error: bookingError } = await supabase
     .from('t_booking')
-    .select('booking_id, hotel_id')
+    .select('booking_id, hotel_id, booking_status_cd')
     .eq('booking_id', review.booking_id)
     .eq('user_id', userId)
     .maybeSingle();
   if (bookingError) throw bookingError;
   if (!booking) throw httpError(404, 'Không tìm thấy đánh giá thuộc tài khoản của bạn.');
+  if (!isConfirmedBooking(booking.booking_status_cd)) {
+    throw httpError(403, 'Chỉ có thể quản lý đánh giá cho đặt phòng đã xác nhận.');
+  }
+  const { data: hotel, error: hotelError } = await supabase
+    .from('m_hotel')
+    .select('hotel_status, is_deleted')
+    .eq('hotel_id', booking.hotel_id)
+    .maybeSingle();
+  if (hotelError) throw hotelError;
+  if (!hotel || hotel.hotel_status !== 'ACTIVE' || hotel.is_deleted === true) {
+    throw httpError(403, 'Không thể quản lý đánh giá khi khách sạn không hoạt động.');
+  }
   if (!isWithinEditWindow(review.created_at)) {
     throw httpError(403, 'Bạn chỉ có thể chỉnh sửa hoặc xóa đánh giá trong vòng 30 ngày.');
   }
@@ -189,4 +253,4 @@ const deleteReview = async (userId, reviewId) => {
   return rating;
 };
 
-module.exports = { getHotelReviews, createReview, updateReview, deleteReview };
+module.exports = { getHotelReviews, getBookingReview, createReview, updateReview, deleteReview };

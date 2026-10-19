@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { deleteReview, updateReview } from '../../../services/reviewApi';
 
-const EDIT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
-
 const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [ratingScore, setRatingScore] = useState(review.rating_score);
@@ -10,9 +8,7 @@ const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 	const [isSaving, setIsSaving] = useState(false);
 	const [error, setError] = useState('');
 
-	const reviewAge = Date.now() - Date.parse(review.created_at);
-	const canManage = review.can_manage && Number.isFinite(reviewAge)
-		&& reviewAge >= 0 && reviewAge <= EDIT_WINDOW_MS;
+	const canManage = Boolean(review.can_manage);
 
 	const handleUpdate = async (event) => {
 		event.preventDefault();
@@ -64,14 +60,25 @@ const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 
 			{isEditing ? (
 				<form className="review-edit-form" onSubmit={handleUpdate}>
-					<label>
-						Điểm đánh giá
-						<select value={ratingScore} onChange={(event) => setRatingScore(event.target.value)}>
-							{Array.from({ length: 10 }, (_, index) => index + 1).map((score) => (
-								<option key={score} value={score}>{score} / 10</option>
-							))}
-						</select>
-					</label>
+					<div className="review-card-rating-heading">
+						<label htmlFor={`review-card-rating-${review.review_id}`}>Mức độ hài lòng</label>
+						<output htmlFor={`review-card-rating-${review.review_id}`} className="review-card-rating-value">
+							{ratingScore}<span>/10</span>
+						</output>
+					</div>
+					<input
+						id={`review-card-rating-${review.review_id}`}
+						className="review-card-rating-slider"
+						type="range"
+						min="1"
+						max="10"
+						step="1"
+						value={ratingScore}
+						onChange={(event) => setRatingScore(Number(event.target.value))}
+						disabled={isSaving}
+						style={{ '--review-progress': `${((Number(ratingScore) - 1) / 9) * 100}%` }}
+					/>
+					<div className="review-card-rating-labels"><span>Chưa hài lòng</span><span>Rất hài lòng</span></div>
 					<label>
 						Nhận xét
 						<textarea value={comment} maxLength={2000} onChange={(event) => setComment(event.target.value)} />
