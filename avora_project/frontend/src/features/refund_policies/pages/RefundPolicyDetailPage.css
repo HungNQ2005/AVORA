@@ -1,0 +1,271 @@
+/* ─── Refund Policy Detail Page ─────────────────────────────────────────── */
+.rpd-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Breadcrumb */
+.rpd-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.rpd-breadcrumb a {
+  color: #64748b;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.rpd-breadcrumb a:hover {
+  color: #003580;
+}
+
+.rpd-breadcrumb__sep {
+  color: #94a3b8;
+  font-size: 0.75rem;
+}
+
+.rpd-breadcrumb__active {
+  color: #003580;
+  font-weight: 600;
+}
+
+/* Header */
+.rpd-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.rpd-header__left {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.rpd-header__icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: #003580;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 53, 128, 0.25);
+}
+
+.rpd-header__info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rpd-header__title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.rpd-header__title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.rpd-header__code {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-family: monospace;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.rpd-header__meta {
+  font-size: 0.84rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rpd-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Detail Grid Layout */
+.rpd-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .rpd-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rpd-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 22px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rpd-card__title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+/* Key Metrics Box */
+.rpd-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 600px) {
+  .rpd-metrics-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rpd-metric-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rpd-metric-box__val {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #003580;
+}
+
+.rpd-metric-box__label {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+/* Rule Callout Banner */
+.rpd-callout {
+  background: #eff6ff;
+  border-left: 4px solid #003580;
+  border-radius: 0 8px 8px 0;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rpd-callout__title {
+  font-weight: 700;
+  color: #003580;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rpd-callout__text {
+  font-size: 0.88rem;
+  color: #1e3a8a;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Info List */
+.rpd-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rpd-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.88rem;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.rpd-info-item__label {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.rpd-info-item__val {
+  color: #0f172a;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* Loading & Error States */
+.rpd-state-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 60px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+}
+
+.rpd-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #003580;
+  border-radius: 50%;
+  animation: rpdSpin 0.8s linear infinite;
+}
+
+@keyframes rpdSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

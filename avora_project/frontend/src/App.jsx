@@ -18,6 +18,8 @@ import UserManagementPage from './features/users/pages/UserManagementPage';
 import RoleManagementPage from './features/users/pages/RoleManagementPage';
 import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
+import RefundPolicyManagementPage from './features/refund_policies/pages/RefundPolicyManagementPage';
+import RefundPolicyDetailPage from './features/refund_policies/pages/RefundPolicyDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AIChatWidget from './features/chatbot/AIChatWidget';
 
@@ -195,6 +197,22 @@ function App() {
               }
             />
             <Route
+              path="refund-policies"
+              element={
+                <BusinessManagerRoute>
+                  <RefundPolicyManagementPage />
+                </BusinessManagerRoute>
+              }
+            />
+            <Route
+              path="refund-policies/:id"
+              element={
+                <BusinessManagerRoute>
+                  <RefundPolicyDetailPage />
+                </BusinessManagerRoute>
+              }
+            />
+            <Route
               path="users"
               element={
                 <AdminRoute>
@@ -217,6 +235,7 @@ function App() {
           <Route path="/amenities" element={<Navigate to="/admin/amenities" replace />} />
           <Route path="/facilities" element={<Navigate to="/admin/facilities" replace />} />
           <Route path="/coupons" element={<Navigate to="/admin/coupons" replace />} />
+          <Route path="/refund-policies" element={<Navigate to="/admin/refund-policies" replace />} />
           <Route path="/users" element={<Navigate to="/admin/users" replace />} />
           <Route path="/roles" element={<Navigate to="/admin/roles" replace />} />
         </Routes>

@@ -477,3 +477,85 @@ export const exportUsersToExcel = async (users = [], customFilename) => {
   }
 };
 
+/**
+ * Export refund policies list to Excel (.xlsx) file.
+ * Follows the exact same style and layout as exportUsersToExcel.
+ */
+export const exportRefundPoliciesToExcel = async (policies = [], customFilename) => {
+  if (!policies || policies.length === 0) {
+    return { success: false, message: 'Không có dữ liệu chính sách hoàn tiền để xuất file.' };
+  }
+
+  const now = new Date();
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+  const filename = customFilename || `AVORA_Chinh_sach_hoan_tien_${dateStr}.xlsx`;
+
+  try {
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'AVORA System Management';
+    const worksheet = workbook.addWorksheet('Danh sách chính sách hoàn tiền', {
+      properties: { defaultRowHeight: 22 },
+    });
+
+    worksheet.columns = [
+      { header: 'STT', key: 'stt', width: 8 },
+      { header: 'Mã chính sách', key: 'code', width: 18 },
+      { header: 'Tên chính sách', key: 'name', width: 34 },
+      { header: 'Cơ sở áp dụng', key: 'hotel', width: 28 },
+      { header: 'Tỷ lệ hoàn (%)', key: 'refund_rate', width: 16 },
+      { header: 'Hủy trước check-in', key: 'min_hours', width: 20 },
+      { header: 'Điều kiện hoàn tiền', key: 'conditions', width: 42 },
+      { header: 'Thời gian hiệu lực', key: 'validity', width: 24 },
+      { header: 'Đơn áp dụng', key: 'bookings', width: 16 },
+      { header: 'Trạng thái', key: 'status', width: 18 },
+      { header: 'Ngày tạo', key: 'created_at', width: 18 },
+    ];
+
+    // Style Header Row (Row 1 matching exportUsersToExcel)
+    const headerRow = worksheet.getRow(1);
+    headerRow.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    headerRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF0B1E3F' }, // AVORA Midnight Blue
+    };
+    headerRow.alignment = { vertical: 'middle', horizontal: 'center' };
+
+    policies.forEach((p, idx) => {
+      const fromStr = p.effective_from ? new Date(p.effective_from).toLocaleDateString('vi-VN') : 'Từ khi tạo';
+      const toStr = p.effective_to ? new Date(p.effective_to).toLocaleDateString('vi-VN') : 'Vô thời hạn';
+      const hours = Number(p.minimum_cancellation_hours || p.free_cancel_before_hours || 0);
+
+      worksheet.addRow({
+        stt: idx + 1,
+        code: p.policy_code || `RP-${(p.policy_id || '').substring(0, 8).toUpperCase()}`,
+        name: p.policy_name || 'Chính sách tiêu chuẩn',
+        hotel: p.hotel_name || p.hotel?.name || 'Toàn hệ thống',
+        refund_rate: `${p.refund_percentage || 0}%`,
+        min_hours: hours > 0 ? `${hours} giờ trước check-in` : 'Trước nhận phòng',
+        conditions: p.refund_conditions || p.description || '-',
+        validity: `${fromStr} - ${toStr}`,
+        bookings: p.associated_bookings_count || 0,
+        status: p.status === 'ACTIVE' ? 'Đang áp dụng' : 'Tạm dừng',
+        created_at: p.created_at ? new Date(p.created_at).toLocaleDateString('vi-VN') : '-',
+      });
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    return { success: true, count: policies.length, filename };
+  } catch (error) {
+    console.error('Error exporting refund policies to Excel:', error);
+    return { success: false, message: error.message || 'Lỗi khi xuất file Excel.' };
+  }
+};
+
