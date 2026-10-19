@@ -73,6 +73,10 @@
   margin-bottom: 1.25rem;
 }
 
+.admin-sidebar__group:not(:has(.admin-sidebar__link:not(.disabled))) {
+  display: none;
+}
+
 .admin-sidebar__group-title {
   font-size: 0.68rem;
   font-weight: 700;
@@ -110,8 +114,7 @@
 }
 
 .admin-sidebar__link.disabled {
-  opacity: 0.65;
-  cursor: default;
+  display: none;
 }
 
 .admin-sidebar__link.disabled:hover {

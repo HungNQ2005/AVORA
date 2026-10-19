@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
+import NotFoundNotice from '../../common/components/NotFoundNotice';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import MapModal from './components/MapModal';
 import { useAuth } from '../../context/AuthContext';
@@ -240,6 +241,7 @@ const HotelDetailPage = () => {
   const [hotel, setHotel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [isFavorited, setIsFavorited] = useState(() => isHotelSaved(id));
   const [toastMsg, setToastMsg] = useState(null);
 
@@ -264,12 +266,18 @@ const HotelDetailPage = () => {
     let isMounted = true;
     setIsLoading(true);
     setErrorMsg(null);
+    setNotFound(false);
 
     const fetchDetails = async () => {
       try {
         const url = `${API_ENDPOINTS.HOTEL_DETAIL(id || 1)}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&children=${children}&rooms=${roomsCount}`;
         const res = await fetch(url);
         const json = await res.json();
+
+        if (res.status === 404) {
+          if (isMounted) setNotFound(true);
+          return;
+        }
 
         if (!res.ok || json.status === 'error') {
           throw new Error(json.message || 'Không thể tải thông tin khách sạn');
@@ -368,6 +376,15 @@ const HotelDetailPage = () => {
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (notFound) {
+    return (
+      <NotFoundNotice
+        title="Không tìm thấy khách sạn"
+        reason="Khách sạn không tồn tại, chưa được duyệt hoặc đã ngừng hoạt động."
+      />
     );
   }
 
@@ -701,7 +718,7 @@ const HotelDetailPage = () => {
 
                 return (
                   <article
-                    key={room.room_type_id}
+                    key={room.room_id || room.room_type_id}
                     className={`room-card ${isCapacityExceeded ? 'room-card--capacity-exceeded' : ''}`}
                   >
                     {/* Column 1: Info & Photo */}
@@ -728,6 +745,15 @@ const HotelDetailPage = () => {
                       </div>
 
                       <ul className="room-specs-list">
+                        {room.room_number && (
+                          <li className="room-spec-item">
+                            <span className="room-spec-icon">🚪</span>
+                            <span>
+                              Phòng: <strong>{room.room_number}</strong>
+                              {room.floor ? ` (${room.floor})` : ''}
+                            </span>
+                          </li>
+                        )}
                         {room.room_size && (
                           <li className="room-spec-item">
                             <span className="room-spec-icon">📐</span>

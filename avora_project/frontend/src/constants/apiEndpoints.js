@@ -19,4 +19,7 @@ export const API_ENDPOINTS = {
   USER_STATS: `${API_BASE_URL}/api/users/stats`,
   REFUND_POLICIES: `${API_BASE_URL}/api/refund-policies`,
   REFUND_POLICY_HOTELS: `${API_BASE_URL}/api/refund-policies/hotels`,
+  ROOMS: `${API_BASE_URL}/api/rooms`,
+  ROOMS_HOTELS: `${API_BASE_URL}/api/rooms/hotels`,
+  ROOMS_ROOM_TYPES: `${API_BASE_URL}/api/rooms/room-types`,
 };
