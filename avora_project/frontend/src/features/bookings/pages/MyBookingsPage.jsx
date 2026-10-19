@@ -10,6 +10,9 @@ import {
   fetchBookingInvoice,
 } from '../../../services/bookingApi';
 import ReviewModal from '../components/ReviewModal';
+import UpComingBooking from '../components/UpComingBooking';
+import CompleteBooking from '../components/CompleteBooking';
+import CanceledBooking from '../components/CanceledBooking';
 import './MyBookingsPage.css';
 
 /**
@@ -295,6 +298,29 @@ const formatVnStayDate = (dateStr) => {
 
 const isConfirmedBooking = (statusCode) => ['2', 'CFM'].includes(String(statusCode ?? '').trim().toUpperCase());
 
+const BOOKING_ICONS = {
+  HotelBuildingIcon,
+  ClockIcon,
+  KeyCardIcon,
+  StarIcon,
+  MapPinIcon,
+  CalendarDaysIcon,
+  TagDiscountIcon,
+  BedDoubleIcon,
+  RoomSizeIcon,
+  GuestsIcon,
+  CheckIcon,
+  VoucherIcon,
+  GuestEditIcon,
+  CalendarEditIcon,
+  CalendarCancelIcon,
+  CheckCircleIcon,
+  FolioInvoiceIcon,
+  XCircleIcon,
+  SearchIcon,
+  ReceiptRefundIcon,
+};
+
 /**
  * Main "Quản lý Đặt Chỗ & Lịch Sử Kỳ Nghỉ" Page Component
  */
@@ -548,6 +574,9 @@ const MyBookingsPage = () => {
             <p className="my-bookings-subtitle">
               Tra cứu vé điện tử, thay đổi ngày lưu trú, xuất hóa đơn VAT điện tử và quản trị hoàn hủy theo thời gian thực.
             </p>
+            <button type="button" className="my-bookings-history-link" onClick={() => navigate('/my-reviews')}>
+              Xem lịch sử đánh giá
+            </button>
           </div>
 
           <div className="my-bookings-guarantee-card">
@@ -691,501 +720,46 @@ const MyBookingsPage = () => {
           <>
             {/* ════ SECTION 1: CHUYẾN ĐI SẮP TỚI CỦA BẠN ════ */}
             {(activeTab === 'all' || activeTab === 'upcoming') && upcomingBookings.length > 0 && (
-              <section className="my-bookings-section">
-                <div className="my-bookings-section-header">
-                  <h2 className="my-bookings-section-title">
-                    <span className="my-bookings-dot-green" />
-                    Chuyến Đi Sắp Tới Của Bạn
-                  </h2>
-                  <span className="my-bookings-section-badge-right">
-                    Hỗ trợ nhận phòng 24/7 trực tuyến
-                  </span>
-                </div>
-
-                {upcomingBookings.map((booking) => (
-                  <div key={booking.booking_id} className="my-bookings-hero-card">
-                    {/* Media Left */}
-                    <div className="my-bookings-hero-media">
-                      {booking.hotel.thumbnail_url ? (
-                        <img
-                          src={booking.hotel.thumbnail_url}
-                          alt={booking.hotel.name}
-                          className="my-bookings-hero-img"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const fb = e.target.parentElement?.querySelector('.my-bookings-img-fallback');
-                            if (fb) fb.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div
-                        className="my-bookings-img-fallback"
-                        style={{ display: booking.hotel.thumbnail_url ? 'none' : 'flex' }}
-                      >
-                        <div className="my-bookings-fallback-icon-wrap">
-                          <HotelBuildingIcon width="34" height="34" />
-                        </div>
-                        <span className="my-bookings-fallback-main">Hình ảnh chỗ nghỉ</span>
-                        <span className="my-bookings-fallback-sub">Đang đồng bộ từ hệ thống lưu trú</span>
-                      </div>
-
-                      <div className="my-bookings-hero-badges-top">
-                        <span className="my-bookings-badge-time">
-                          <ClockIcon width="13" height="13" />
-                          <span>{booking.stay.days_left_text}</span>
-                        </span>
-                        <span className="my-bookings-badge-checkin">
-                          <KeyCardIcon width="13" height="13" />
-                          <span>Check-in trực tuyến mở trước 24h</span>
-                        </span>
-                      </div>
-                    </div>
-
-
-                    {/* Details Right */}
-                    <div className="my-bookings-hero-body">
-                      <div>
-                        {/* Top stars & Rating */}
-                        {/* Top stars & Rating from DB */}
-                        <div className="my-bookings-hero-top-meta">
-                          <div className="my-bookings-hotel-stars">
-                            {booking.hotel.star_quality > 0 && (
-                              <>
-                                <span className="my-bookings-stars-icons" aria-label={`Khách sạn ${booking.hotel.star_quality} sao`}>
-                                  {Array.from({ length: booking.hotel.star_quality }).map((_, i) => (
-                                    <StarIcon key={i} width="13" height="13" />
-                                  ))}
-                                </span>
-                                <span className="my-bookings-badge-hotel-class">
-                                  Khách Sạn {booking.hotel.star_quality} Sao
-                                </span>
-                              </>
-                            )}
-
-                          </div>
-
-                          {booking.hotel.rating_score != null && (
-                            <div className="my-bookings-rating-score-box">
-                              <div className="my-bookings-rating-text">
-                                <div className="my-bookings-rating-text-label">
-                                  {booking.hotel.rating_score >= 9
-                                    ? 'Xuất sắc'
-                                    : booking.hotel.rating_score >= 8
-                                      ? 'Tuyệt vời'
-                                      : 'Đánh giá tốt'}
-                                </div>
-                                <div className="my-bookings-rating-text-count">
-                                  {booking.hotel.review_count > 0
-                                    ? `${booking.hotel.review_count} đánh giá (t_review)`
-                                    : ' '}
-                                </div>
-                              </div>
-                              <div className="my-bookings-rating-number">
-                                {booking.hotel.rating_score}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Hotel Name */}
-                        <h3 className="my-bookings-hero-hotel-name">
-                          <span>{booking.hotel.name}</span>
-                          <span
-                            className="my-bookings-view-map-link"
-                            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(booking.hotel.name + ' ' + booking.hotel.address)}`, '_blank')}
-                            style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}
-                          >
-                            <span>Xem trên bản đồ</span>
-                            <MapPinIcon width="12" height="12" />
-                          </span>
-                        </h3>
-
-                        {/* Address */}
-                        <p className="my-bookings-hero-address">
-                          <MapPinIcon width="14" height="14" />
-                          <span>{booking.hotel.address}</span>
-                        </p>
-
-                        {/* Real booking date from database and Coupon info */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '6px 0 14px 0', fontSize: 13, color: '#475569' }}>
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                            <CalendarDaysIcon width="14" height="14" />
-                            <span>Ngày đặt phòng: <strong>{booking.booking_date_formatted || new Date(booking.created_at).toLocaleDateString('vi-VN')}</strong></span>
-                          </span>
-                          {booking.coupon?.code && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: 4, fontWeight: 700, fontSize: 12 }}>
-                              <TagDiscountIcon width="13" height="13" />
-                              <span>Voucher/Coupon: {booking.coupon.code} ({booking.coupon.discount_text})</span>
-                            </span>
-                          )}
-                        </div>
-
-                        {/* 3-Column Stay Dates & Pricing Grid */}
-                        <div className="my-bookings-stay-grid">
-                          <div className="my-bookings-stay-col">
-                            <span className="my-bookings-stay-label">NHẬN PHÒNG (CHECK-IN)</span>
-                            <span className="my-bookings-stay-time">
-                              {formatVnStayDate(booking.stay.check_in_date)}
-                            </span>
-                          </div>
-
-                          <div className="my-bookings-stay-col">
-                            <span className="my-bookings-stay-label">TRẢ PHÒNG (CHECK-OUT)</span>
-                            <span className="my-bookings-stay-time">
-                              {formatVnStayDate(booking.stay.check_out_date)} ({booking.stay.nights} đêm)
-                            </span>
-                          </div>
-
-                          <div className="my-bookings-stay-col">
-                            <span className="my-bookings-stay-label">TỔNG CHI PHÍ ĐƠN</span>
-                            <span className="my-bookings-stay-price">
-                              {formatVnd(booking.total_amount)}
-                            </span>
-                            <span className="my-bookings-stay-price-sub">
-                              {booking.discount_amount > 0
-                                ? `Đã giảm ${formatVnd(booking.discount_amount)}`
-                                : `${booking.stay.quantity} phòng × ${booking.stay.nights} đêm`}
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Room specs & facilities from DB */}
-                        <div className="my-bookings-room-amenities-line">
-                          <span className="my-bookings-room-bullet-item">
-                            <BedDoubleIcon width="15" height="15" />
-                            <span>
-                              {booking.stay.room_type_name || 'Hạng phòng tiêu chuẩn'}
-                              {booking.stay.quantity > 1 ? ` (×${booking.stay.quantity})` : ''}
-                            </span>
-                          </span>
-                          {booking.stay.bed_type && (
-                            <>
-                              <span className="my-bookings-bullet-divider">•</span>
-                              <span className="my-bookings-room-bullet-item">
-                                <BedDoubleIcon width="14" height="14" />
-                                <span>{booking.stay.bed_type}</span>
-                              </span>
-                            </>
-                          )}
-                          {booking.stay.room_size && (
-                            <>
-                              <span className="my-bookings-bullet-divider">•</span>
-                              <span className="my-bookings-room-bullet-item">
-                                <RoomSizeIcon width="14" height="14" />
-                                <span>{booking.stay.room_size}</span>
-                              </span>
-                            </>
-                          )}
-                          <span className="my-bookings-bullet-divider">•</span>
-                          <span className="my-bookings-room-bullet-item">
-                            <GuestsIcon width="14" height="14" />
-                            <span>Sức chứa: {booking.stay.guests_summary}</span>
-                          </span>
-                          {(booking.stay.facilities || []).map((fac) => (
-                            <React.Fragment key={fac.facility_id || fac.facility_name}>
-                              <span className="my-bookings-bullet-divider">•</span>
-                              <span className="my-bookings-room-bullet-item my-bookings-room-bullet-item--green">
-                                <CheckIcon width="12" height="12" />
-                                <span>{fac.facility_name}</span>
-                              </span>
-                            </React.Fragment>
-                          ))}
-                        </div>
-
-                        {booking.special_request && (
-                          <div style={{ fontSize: 12.5, color: '#475569', marginBottom: 10 }}>
-                            <strong>Ghi chú / Yêu cầu đặc biệt:</strong> {booking.special_request}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Action Buttons Bar */}
-                      <div className="my-bookings-hero-actions">
-                        <button
-                          type="button"
-                          className="my-bookings-btn-primary"
-                          onClick={() => handleOpenVoucher(booking)}
-                        >
-                          <VoucherIcon width="15" height="15" />
-                          <span>Xem chi tiết &amp; Voucher</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="my-bookings-btn-secondary"
-                          onClick={() => handleOpenEditGuest(booking)}
-                        >
-                          <GuestEditIcon width="15" height="15" />
-                          <span>Cập nhật thông tin booking</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          className="my-bookings-btn-secondary"
-                          onClick={() => handleOpenDateChange(booking)}
-                        >
-                          <CalendarEditIcon width="15" height="15" />
-                          <span>Đổi ngày nhận/trả phòng</span>
-                        </button>
-
-                        {isConfirmedBooking(booking.booking_status_cd) && (
-                          <button
-                            type="button"
-                            className="my-bookings-btn-secondary my-bookings-review-button"
-                            onClick={() => handleOpenReview(booking)}
-                          >
-                            <StarIcon width="14" height="14" />
-                            <span>Đánh giá</span>
-                          </button>
-                        )}
-
-                        <button
-                          type="button"
-                          className="my-bookings-btn-danger"
-                          onClick={() => handleOpenCancel(booking)}
-                        >
-                          <CalendarCancelIcon width="15" height="15" />
-                          <span>Hủy đặt phòng</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </section>
+              <UpComingBooking
+                bookings={upcomingBookings}
+                icons={BOOKING_ICONS}
+                formatVnd={formatVnd}
+                formatStayDate={formatVnStayDate}
+                isConfirmedBooking={isConfirmedBooking}
+                actions={{
+                  openVoucher: handleOpenVoucher,
+                  openEditGuest: handleOpenEditGuest,
+                  openDateChange: handleOpenDateChange,
+                  openReview: handleOpenReview,
+                  openCancel: handleOpenCancel,
+                }}
+              />
             )}
 
-            {/* ════ SECTION 2: KỲ NGHỈ ĐÃ HOÀN THÀNH ════ */}
             {(activeTab === 'all' || activeTab === 'completed') && completedBookings.length > 0 && (
-              <section className="my-bookings-section">
-                <div className="my-bookings-section-header">
-                  <h2 className="my-bookings-section-title">
-                    <span className="my-bookings-dot-blue" />
-                    Kỳ Nghỉ Đã Hoàn Thành
-                  </h2>
-                  <span className="my-bookings-section-count-right">
-                    {completedBookings.length} kỳ nghỉ lưu trú tuyệt vời cùng Avora
-                  </span>
-                </div>
-
-                {completedBookings.map((booking) => (
-                  <div key={booking.booking_id} className="my-bookings-compact-card">
-                    {/* Thumbnail */}
-                    <div className="my-bookings-compact-thumb-wrap">
-                      {booking.hotel.thumbnail_url ? (
-                        <img
-                          src={booking.hotel.thumbnail_url}
-                          alt={booking.hotel.name}
-                          className="my-bookings-compact-thumb"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const fb = e.target.parentElement?.querySelector('.my-bookings-compact-fallback');
-                            if (fb) fb.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div
-                        className="my-bookings-compact-fallback"
-                        style={{ display: booking.hotel.thumbnail_url ? 'none' : 'flex' }}
-                      >
-                        <HotelBuildingIcon width="24" height="24" />
-                        <span>Avora Stay</span>
-                      </div>
-                    </div>
-
-                    {/* Body */}
-                    <div className="my-bookings-compact-body">
-                      <div className="my-bookings-compact-tag-row">
-                        <span className="my-bookings-compact-stay-time" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                          <CalendarDaysIcon width="13" height="13" />
-                          <span>Đã lưu trú Tháng {new Date(booking.stay.check_in_date).getMonth() + 1}/{new Date(booking.stay.check_in_date).getFullYear()}</span>
-                        </span>
-                        <span className="my-bookings-compact-status-badge my-bookings-compact-status-badge--success" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <CheckCircleIcon width="12" height="12" />
-                          <span>{booking.status_name}</span>
-                        </span>
-                      </div>
-
-
-                      <h4 className="my-bookings-compact-name">{booking.hotel.name}</h4>
-                      <p className="my-bookings-compact-address" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <MapPinIcon width="13" height="13" />
-                        <span>{booking.hotel.address}</span>
-                      </p>
-
-                      <p className="my-bookings-compact-stay-details">
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <CalendarDaysIcon width="12" height="12" />
-                          <span>Ngày đặt: {new Date(booking.created_at).toLocaleDateString('vi-VN')}</span>
-                        </span> • Lưu trú: {booking.stay.check_in_date} – {booking.stay.check_out_date} ({booking.stay.nights} đêm) • {booking.stay.room_type_name}
-                      </p>
-
-                      <div className="my-bookings-compact-payment-line">
-                        <span>Tổng cộng: <strong>{formatVnd(booking.total_amount)}</strong></span>
-                        <span>•</span>
-                        <span className="my-bookings-compact-payment-method">
-                          Trạng thái: {booking.status_name}
-                          {booking.payment?.is_paid ? ` • ${booking.payment.payment_method}` : ''}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Right Actions */}
-                    <div className="my-bookings-compact-actions">
-                      <button
-                        type="button"
-                        className="my-bookings-compact-btn-primary"
-                        onClick={() => navigate(`/hotels/${booking.hotel.hotel_id}`)}
-                      >
-                        <CalendarDaysIcon width="13" height="13" />
-                        <span>Đặt lại phòng này</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="my-bookings-compact-btn-secondary"
-                        onClick={() => handleOpenInvoice(booking)}
-                      >
-                        <FolioInvoiceIcon width="13" height="13" />
-                        <span>Xem hóa đơn VAT</span>
-                      </button>
-
-                      {isConfirmedBooking(booking.booking_status_cd) && (
-                        <button
-                          type="button"
-                          className="my-bookings-compact-btn-secondary my-bookings-review-button"
-                          onClick={() => handleOpenReview(booking)}
-                        >
-                          <StarIcon width="13" height="13" />
-                          <span>Đánh giá</span>
-                        </button>
-                      )}
-
-                      <span
-                        className="my-bookings-compact-link"
-                        onClick={() => handleOpenVoucher(booking)}
-                      >
-                        <VoucherIcon width="12" height="12" />
-                        <span>Xem lại hóa đơn &amp; voucher</span>
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </section>
+              <CompleteBooking
+                bookings={completedBookings}
+                icons={BOOKING_ICONS}
+                formatVnd={formatVnd}
+                navigate={navigate}
+                isConfirmedBooking={isConfirmedBooking}
+                actions={{ openInvoice: handleOpenInvoice, openReview: handleOpenReview, openVoucher: handleOpenVoucher }}
+              />
             )}
 
-            {/* ════ SECTION 3: ĐƠN ĐẶT PHÒNG ĐÃ HỦY ════ */}
             {(activeTab === 'all' || activeTab === 'cancelled') && cancelledBookings.length > 0 && (
-              <section className="my-bookings-section">
-                <div className="my-bookings-section-header">
-                  <h2 className="my-bookings-section-title">
-                    <span className="my-bookings-dot-gray" />
-                    Đơn Đặt Phòng Đã Hủy
-                  </h2>
-                  <span className="my-bookings-section-count-right">
-                    {cancelledBookings.length} đơn đã hoàn tất hoàn tiền
-                  </span>
-                </div>
-
-                {cancelledBookings.map((booking) => (
-                  <div key={booking.booking_id} className="my-bookings-compact-card my-bookings-compact-card--cancelled">
-                    {/* Thumbnail */}
-                    <div className="my-bookings-compact-thumb-wrap">
-                      {booking.hotel.thumbnail_url ? (
-                        <img
-                          src={booking.hotel.thumbnail_url}
-                          alt={booking.hotel.name}
-                          className="my-bookings-compact-thumb"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            const fb = e.target.parentElement?.querySelector('.my-bookings-compact-fallback');
-                            if (fb) fb.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-                      <div
-                        className="my-bookings-compact-fallback"
-                        style={{ display: booking.hotel.thumbnail_url ? 'none' : 'flex' }}
-                      >
-                        <HotelBuildingIcon width="24" height="24" />
-                        <span>Đã hủy</span>
-                      </div>
-                    </div>
-
-                    {/* Body */}
-                    <div className="my-bookings-compact-body">
-                      <div className="my-bookings-compact-tag-row">
-                        <span className="my-bookings-compact-stay-time" style={{ color: '#dc2626', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                          <CalendarCancelIcon width="13" height="13" />
-                          <span>Đã hủy ngày {new Date(booking.refund?.created_at || booking.updated_at || booking.created_at).toLocaleDateString('vi-VN')}</span>
-                        </span>
-                        <span className="my-bookings-compact-status-badge my-bookings-compact-status-badge--cancelled" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <XCircleIcon width="12" height="12" />
-                          <span>{booking.status_name}{booking.refund?.refund_status_label ? ` • ${booking.refund.refund_status_label}` : ''}</span>
-                        </span>
-                      </div>
-
-                      <h4 className="my-bookings-compact-name">{booking.hotel.name}</h4>
-                      <p className="my-bookings-compact-address" style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                        <MapPinIcon width="13" height="13" />
-                        <span>{booking.hotel.address}</span>
-                      </p>
-
-                      <p className="my-bookings-compact-stay-details">
-                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                          <CalendarDaysIcon width="12" height="12" />
-                          <span>Ngày đặt: {new Date(booking.created_at).toLocaleDateString('vi-VN')}</span>
-                        </span> • Dự kiến: {booking.stay.check_in_date} – {booking.stay.check_out_date} ({booking.stay.nights} đêm) • {booking.stay.room_type_name}
-                      </p>
-
-                      {/* Refund detail box from t_refund_request */}
-                      {booking.refund ? (
-                        <div className="my-bookings-compact-refund-box">
-                          <span>
-                            Số tiền hoàn lại:{' '}
-                            <strong className="my-bookings-compact-refund-amount">
-                              {formatVnd(booking.refund.refund_amount)}
-                            </strong>
-                          </span>
-                          <div>
-                            (Mã tham chiếu: {booking.refund.gateway_refund_ref || 'Chưa có'} • Trạng thái:{' '}
-                            {booking.refund.refund_status_label || booking.refund.refund_status_cd}
-                            {booking.refund.reason ? ` • ${booking.refund.reason}` : ''})
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="my-bookings-compact-refund-box">
-                          <span>Đơn đặt phòng đã hủy</span>
-                        </div>
-                      )}
-                    </div>
-                    {/* Right Actions */}
-                    <div className="my-bookings-compact-actions">
-                      <button
-                        type="button"
-                        className="my-bookings-compact-btn-primary"
-                        onClick={() => navigate(`/hotels/${booking.hotel.hotel_id}`)}
-                      >
-                        <SearchIcon width="13" height="13" />
-                        <span>Tìm lại chỗ nghỉ</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        className="my-bookings-compact-btn-secondary"
-                        onClick={() => handleOpenRefundReceipt(booking)}
-                      >
-                        <ReceiptRefundIcon width="13" height="13" />
-                        <span>Biên lai hoàn tiền</span>
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </section>
+              <CanceledBooking
+                bookings={cancelledBookings}
+                icons={BOOKING_ICONS}
+                formatVnd={formatVnd}
+                navigate={navigate}
+                actions={{ openRefundReceipt: handleOpenRefundReceipt }}
+              />
             )}
           </>
         )}
 
-        {/* ─── 4. BOTTOM 24/7 SUPPORT BANNER ────────────────────────────── */}
+        {/* 24/7 support banner */}
         <div className="my-bookings-support-banner">
           <div className="my-bookings-support-left">
             <div className="my-bookings-support-icon-wrap">

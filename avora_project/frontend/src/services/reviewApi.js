@@ -18,6 +18,8 @@ const requestReview = async (url, options = {}) => {
 
 export const getBookingReview = (bookingId) => requestReview(API_ENDPOINTS.BOOKING_REVIEWS(bookingId));
 
+export const getMyReviews = () => requestReview(API_ENDPOINTS.REVIEWS_MY);
+
 export const createReview = (bookingId, payload) => requestReview(API_ENDPOINTS.BOOKING_REVIEWS(bookingId), {
   method: 'POST',
   body: JSON.stringify(payload),

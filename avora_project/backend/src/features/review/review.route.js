@@ -13,6 +13,7 @@ const {
 } = require('./review.validation');
 
 const router = Router();
+router.get('/reviews/my', authenticate, controller.getMyReviews);
 router.get('/reviews/hotels/:hotelId', optionalAuthenticate, validateRequest({ params: hotelParamsSchema }), controller.getHotelReviews);
 router.get('/reviews/bookings/:bookingId', authenticate, validateRequest({ params: bookingParamsSchema }), controller.getBookingReview);
 router.post('/reviews/bookings/:bookingId', authenticate, validateRequest({ params: bookingParamsSchema, body: createReviewSchema }), controller.createReview);

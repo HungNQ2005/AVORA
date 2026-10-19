@@ -12,6 +12,15 @@ const getHotelReviews = async (req, res, next) => {
   }
 };
 
+const getMyReviews = async (req, res, next) => {
+  try {
+    const reviews = await reviewService.getMyReviews(req.user.user_id);
+    return sendSuccess(res, 200, 'Lấy lịch sử đánh giá thành công.', reviews);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const createReview = async (req, res, next) => {
   try {
     const data = await reviewService.createReview(req.user.user_id, req.params.bookingId, req.body);
@@ -48,4 +57,4 @@ const deleteReview = async (req, res, next) => {
   }
 };
 
-module.exports = { getHotelReviews, getBookingReview, createReview, updateReview, deleteReview };
+module.exports = { getHotelReviews, getMyReviews, getBookingReview, createReview, updateReview, deleteReview };

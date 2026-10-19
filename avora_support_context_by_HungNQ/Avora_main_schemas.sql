@@ -67,7 +67,7 @@ CREATE TABLE m_hotel (
     ward_id VARCHAR(50) REFERENCES m_ward(ward_id),
     star_rating NUMERIC(2,1),
     star_quality INT,
-    lat NUMERIC(10, 7),
+    lat NUMERIC(10, 7),c  
     lng NUMERIC(10, 7),
     hotel_status TEXT,
     is_deleted BOOLEAN DEFAULT FALSE,

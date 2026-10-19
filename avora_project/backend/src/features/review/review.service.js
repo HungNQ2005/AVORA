@@ -78,6 +78,69 @@ const getHotelReviews = async (hotelId, viewerId = null) => {
   };
 };
 
+const getMyReviews = async (userId) => {
+  const { data: bookings, error: bookingError } = await supabase
+    .from('t_booking')
+    .select('booking_id, hotel_id')
+    .eq('user_id', userId);
+  if (bookingError) throw bookingError;
+  if (!bookings?.length) return [];
+
+  const bookingById = new Map(bookings.map((booking) => [booking.booking_id, booking]));
+  const hotelIds = [...new Set(bookings.map((booking) => booking.hotel_id).filter(Boolean))];
+  const [{ data: reviews, error: reviewError }, { data: hotels, error: hotelError }] = await Promise.all([
+    supabase
+      .from('t_review')
+      .select('review_id, booking_id, rating_score, comment, created_at')
+      .in('booking_id', bookings.map((booking) => booking.booking_id))
+      .or('is_deleted.is.null,is_deleted.eq.false')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('m_hotel')
+      .select('hotel_id, name, address')
+      .in('hotel_id', hotelIds)
+      .eq('hotel_status', 'ACTIVE')
+      .or('is_deleted.is.null,is_deleted.eq.false'),
+  ]);
+  if (reviewError) throw reviewError;
+  if (hotelError) throw hotelError;
+  if (!reviews?.length || !hotels?.length) return [];
+
+  const hotelById = new Map(hotels.map((hotel) => [hotel.hotel_id, hotel]));
+  const visibleReviews = reviews.filter((review) => hotelById.has(bookingById.get(review.booking_id)?.hotel_id));
+  const visibleHotelIds = [...new Set(visibleReviews.map((review) => bookingById.get(review.booking_id)?.hotel_id).filter(Boolean))];
+  const { data: images, error: imageError } = visibleHotelIds.length
+    ? await supabase
+      .from('m_hotel_image')
+      .select('hotel_id, image_url, is_thumbnail, sort_order')
+      .in('hotel_id', visibleHotelIds)
+      .order('sort_order', { ascending: true })
+    : { data: [], error: null };
+  if (imageError) throw imageError;
+
+  const thumbnailByHotel = new Map();
+  (images || []).forEach((image) => {
+    if (!thumbnailByHotel.has(image.hotel_id) || image.is_thumbnail) {
+      thumbnailByHotel.set(image.hotel_id, image.image_url);
+    }
+  });
+
+  return visibleReviews.map((review) => {
+    const hotelId = bookingById.get(review.booking_id).hotel_id;
+    const hotel = hotelById.get(hotelId);
+    return {
+      review_id: review.review_id,
+      hotel_id: hotel.hotel_id,
+      hotel_name: hotel.name,
+      hotel_address: hotel.address,
+      hotel_thumbnail: thumbnailByHotel.get(hotelId) || null,
+      rating_score: Number(review.rating_score),
+      comment: review.comment || '',
+      created_at: review.created_at,
+    };
+  });
+};
+
 const refreshHotelRating = async (hotelId) => {
   const { bookings, reviews } = await getHotelReviewRows(hotelId);
   const average = reviews.length
@@ -253,4 +316,4 @@ const deleteReview = async (userId, reviewId) => {
   return rating;
 };
 
-module.exports = { getHotelReviews, getBookingReview, createReview, updateReview, deleteReview };
+module.exports = { getHotelReviews, getMyReviews, getBookingReview, createReview, updateReview, deleteReview };
