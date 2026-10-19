@@ -232,7 +232,7 @@ const Header = ({
 
   const displayName = user?.full_name || user?.email || '';
   const userRoleDisplayName = codeNameParser(user?.role_code_name);
-  const isPartnerOrAdmin = user && ['ADM'].includes(user.role_code_name);
+  const isPartnerOrAdmin = user && ['ADM', 'VEN'].includes(user.role_code_name);
   const isBusinessManager = user && ['BMR'].includes(user.role_code_name);
 
   useEffect(() => {
@@ -340,7 +340,7 @@ const Header = ({
         return;
       }
       setInternalTab(tabKey);
-      navigate('/admin/room-types');
+      navigate(user.role_code_name === 'VEN' ? '/admin/statistics' : '/admin/room-types');
       return;
     } else if (tabKey === 'bmr') {
       if (!user) {
@@ -518,6 +518,28 @@ const Header = ({
                         <UserIcon />
                         <span>Tài khoản của tôi</span>
                       </Link>
+
+                      {isPartnerOrAdmin && (
+                        <Link
+                          to={user?.role_code_name === 'VEN' ? '/admin/statistics' : '/admin'}
+                          className="avora-header__dropdown-item"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <BuildingIcon />
+                          <span>{user?.role_code_name === 'VEN' ? 'Quản lý Khách sạn (Vendor)' : 'Cổng Quản trị (Admin)'}</span>
+                        </Link>
+                      )}
+
+                      {isBusinessManager && (
+                        <Link
+                          to="/admin/coupons"
+                          className="avora-header__dropdown-item"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <TrendingUpIcon />
+                          <span>Quản lý Khuyến mãi (BMR)</span>
+                        </Link>
+                      )}
 
                       <div className="avora-header__dropdown-divider" />
 

@@ -104,7 +104,7 @@ const Footer = ({ onLinkClick }) => {
             <h4 className="avora-footer__col-title">Dành cho đối tác</h4>
             <ul className="avora-footer__links">
               <li className="avora-footer__pms-item">
-                <Link to="/admin/room-types" className="avora-footer__pms-link">
+                <Link to="/admin" className="avora-footer__pms-link">
                   <BuildingPmsIcon />
                   <span>Cổng Quản lý khách sạn (PMS)</span>
                 </Link>

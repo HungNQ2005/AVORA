@@ -66,10 +66,17 @@ const SignInPage = () => {
   const activatedParam = searchParams.get('activated');
   const emailParam = searchParams.get('email');
 
-  // If already logged in, redirect straight to home page
+  const getRoleLandingPath = (roleCode) => {
+    if (roleCode === 'VEN') return '/admin/statistics';
+    if (roleCode === 'ADM') return '/admin/users';
+    if (roleCode === 'BMR') return '/admin/coupons';
+    return '/';
+  };
+
+  // If already logged in, redirect to the appropriate portal
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate(getRoleLandingPath(user.role_code_name), { replace: true });
     }
   }, [user, navigate]);
 
@@ -123,7 +130,7 @@ const SignInPage = () => {
         localStorage.removeItem('avora_remembered_email');
       }
       login(res.data.token, res.data.user);
-      navigate('/', { replace: true });
+      navigate(getRoleLandingPath(res.data.user?.role_code_name), { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || '';
 

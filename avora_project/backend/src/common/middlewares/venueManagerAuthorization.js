@@ -47,7 +47,7 @@ const requireVenueManager = async (req, res, next) => {
       return next(roleError);
     }
 
-    if (!["ADM"].includes(role?.code_name)) {
+    if (!["ADM", "VEN"].includes(role?.code_name)) {
       return sendError(
         res,
         403,

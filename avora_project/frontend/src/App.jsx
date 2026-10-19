@@ -18,6 +18,7 @@ import UserManagementPage from './features/users/pages/UserManagementPage';
 import RoleManagementPage from './features/users/pages/RoleManagementPage';
 import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
+import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import AIChatWidget from './features/chatbot/AIChatWidget';
 
@@ -74,6 +75,19 @@ const BusinessManagerRoute = ({ children }) => {
 };
 
 /**
+ * Guard route for Vendors only (role_code_name === 'VEN').
+ */
+const VendorRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  if (user.role_code_name !== 'VEN') return <Navigate to="/admin" replace />;
+
+  return children;
+};
+
+/**
  * Redirect /admin to the appropriate dashboard based on the logged-in role.
  */
 const AdminDashboardRedirect = () => {
@@ -82,7 +96,8 @@ const AdminDashboardRedirect = () => {
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
   if (user.role_code_name === 'BMR') return <Navigate to="/admin/coupons" replace />;
-  if (['VEN', 'ADM'].includes(user.role_code_name)) return <Navigate to="/admin/room-types" replace />;
+  if (user.role_code_name === 'VEN') return <Navigate to="/admin/statistics" replace />;
+  if (user.role_code_name === 'ADM') return <Navigate to="/admin/room-types" replace />;
 
   return <Navigate to="/" replace />;
 };
@@ -176,6 +191,14 @@ function App() {
                 <VenueManagerRoute>
                   <AmenityManagementPage />
                 </VenueManagerRoute>
+              }
+            />
+            <Route
+              path="statistics"
+              element={
+                <VendorRoute>
+                  <StatisticsPage />
+                </VendorRoute>
               }
             />
             <Route

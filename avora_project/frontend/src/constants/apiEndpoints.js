@@ -17,4 +17,6 @@ export const API_ENDPOINTS = {
   COUPONS: `${API_BASE_URL}/api/coupons`,
   USERS: `${API_BASE_URL}/api/users`,
   USER_STATS: `${API_BASE_URL}/api/users/stats`,
+  STATISTICS_HOTELS: `${API_BASE_URL}/api/statistics/hotels`,
+  STATISTICS_OVERVIEW: `${API_BASE_URL}/api/statistics/overview`,
 };
