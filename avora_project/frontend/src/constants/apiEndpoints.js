@@ -19,4 +19,7 @@ export const API_ENDPOINTS = {
   USER_STATS: `${API_BASE_URL}/api/users/stats`,
   STATISTICS_HOTELS: `${API_BASE_URL}/api/statistics/hotels`,
   STATISTICS_OVERVIEW: `${API_BASE_URL}/api/statistics/overview`,
+  ROOMS: `${API_BASE_URL}/api/rooms`,
+  ROOMS_HOTELS: `${API_BASE_URL}/api/rooms/hotels`,
+  ROOMS_ROOM_TYPES: `${API_BASE_URL}/api/rooms/room-types`,
 };

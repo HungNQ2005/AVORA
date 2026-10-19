@@ -12,7 +12,7 @@ const authenticate = (req, res, next) => {
   const authHeader = req.headers['authorization'];
 
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return sendError(res, 401, 'Authentication required. Please sign in.');
+    return sendError(res, 401, 'Vui lòng đăng nhập để tiếp tục.');
   }
 
   const token = authHeader.split(' ')[1];
@@ -22,7 +22,7 @@ const authenticate = (req, res, next) => {
     req.user = decoded;
     next();
   } catch {
-    return sendError(res, 401, 'Invalid or expired token. Please sign in again.');
+    return sendError(res, 401, 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.');
   }
 };
 

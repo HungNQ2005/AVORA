@@ -1,0 +1,10 @@
+.hotel-image-manager__header { display: flex; align-items: center; justify-content: space-between; gap: .8rem; margin-bottom: .9rem; }
+.hotel-image-manager__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .8rem; }
+.hotel-image-manager__item { position: relative; margin: 0; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; background: #f8fafc; }
+.hotel-image-manager__thumb { width: 100%; height: 110px; }
+.hotel-image-manager__badge { position: absolute; top: .4rem; left: .4rem; padding: .2rem .5rem; border-radius: 999px; background: rgba(37, 99, 235, .92); color: #fff; font-size: .65rem; font-weight: 700; }
+.hotel-image-manager__item-actions { display: flex; flex-direction: column; gap: .3rem; padding: .5rem; }
+.hotel-image-manager__item-actions button { padding: .3rem .5rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #334155; font-size: .72rem; cursor: pointer; }
+.hotel-image-manager__item-actions button:hover:not(:disabled) { border-color: #93c5fd; color: #1d4ed8; }
+.hotel-image-manager__delete { color: #b91c1c !important; }
+.hotel-image-manager__empty { color: #64748b; font-size: .85rem; }
