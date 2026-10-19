@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import GeniusBanner from '../components/GeniusBanner';
 import ContactInfoCard from '../components/ContactInfoCard';
@@ -274,11 +274,15 @@ const BookingPage = () => {
   const activeRoom = pricing.rooms?.[0] || stateData.room || null;
   const nights = pricing.nights || 1;
 
-  // Submit Booking State
+  // Submit Booking State with double-click guard
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [createdBookingResult, setCreatedBookingResult] = useState(null);
 
   const handleConfirmBooking = async () => {
+    // Chặn triệt để double-click ngay lập tức
+    if (isSubmittingRef.current || isSubmitting) return;
+
     setErrorMessage(null);
 
     if (!contactForm.lastName.trim() && !contactForm.firstName.trim()) {
@@ -303,12 +307,19 @@ const BookingPage = () => {
       setErrorMessage('Ngày trả phòng phải sau ngày nhận phòng ít nhất 1 đêm.');
       return;
     }
+
+    // Khóa cờ ngay lập tức trước khi thực hiện bất kỳ tác vụ bất đồng bộ nào
+    isSubmittingRef.current = true;
     setIsSubmitting(true);
     const fullName = [contactForm.lastName.trim(), contactForm.firstName.trim()]
       .filter(Boolean)
       .join(' ');
-    const rawDigits = contactForm.phone.replace(/[^\d]/g, '');
-    const fullPhone = `${contactForm.countryCode}${rawDigits}`.slice(0, 20);
+    let rawDigits = contactForm.phone.replace(/[^\d]/g, '');
+    if (rawDigits.startsWith('84') && rawDigits.length > 9) {
+      rawDigits = rawDigits.slice(2);
+    }
+    rawDigits = rawDigits.replace(/^0+/, '');
+    const fullPhone = rawDigits ? `0${rawDigits}` : contactForm.phone.trim();
 
     const combinedSpecialRequest = [
       ...selectedRequests,
@@ -337,6 +348,7 @@ const BookingPage = () => {
     } catch (err) {
       setErrorMessage(err.message || 'Không thể lưu đơn đặt phòng vào cơ sở dữ liệu.');
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };

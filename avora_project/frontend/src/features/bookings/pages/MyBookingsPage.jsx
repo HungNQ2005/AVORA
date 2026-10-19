@@ -429,7 +429,17 @@ const MyBookingsPage = () => {
     if (!editGuestModalBooking) return;
     setIsUpdatingGuest(true);
     try {
-      await updateBookingGuestInfo(editGuestModalBooking.booking_id, editGuestForm);
+      let rawDigits = String(editGuestForm.guest_phone || '').replace(/[^\d]/g, '');
+      if (rawDigits.startsWith('84') && rawDigits.length > 9) {
+        rawDigits = rawDigits.slice(2);
+      }
+      rawDigits = rawDigits.replace(/^0+/, '');
+      const finalPhone = rawDigits ? `0${rawDigits}` : editGuestForm.guest_phone;
+
+      await updateBookingGuestInfo(editGuestModalBooking.booking_id, {
+        ...editGuestForm,
+        guest_phone: finalPhone,
+      });
       setEditGuestModalBooking(null);
       await loadBookings();
     } catch (err) {
@@ -796,16 +806,34 @@ const MyBookingsPage = () => {
                           <span>{booking.hotel.address}</span>
                         </p>
 
-                        {/* Real booking date from database and Coupon info */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', margin: '6px 0 14px 0', fontSize: 13, color: '#475569' }}>
+                        {/* Real booking date from database, Status Badge, Booking Code and Coupon info */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', margin: '6px 0 14px 0', fontSize: 13, color: '#475569' }}>
+                          {/* Status Badge */}
+                          <span className={`my-bookings-hero-status-badge my-bookings-hero-status-badge--${booking.status_badge_variant || 'confirmed'}`}>
+                            {booking.status_badge_variant === 'cancelled' ? (
+                              <XCircleIcon width="13" height="13" />
+                            ) : booking.status_badge_variant === 'amber' || booking.status_badge_variant === 'pending' ? (
+                              <ClockIcon width="13" height="13" />
+                            ) : (
+                              <CheckCircleIcon width="13" height="13" />
+                            )}
+                            <span>{booking.status_name}</span>
+                          </span>
+
+                          {booking.booking_code && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: '#f1f5f9', color: '#334155', padding: '3px 8px', borderRadius: 6, fontWeight: 700, fontSize: 12, fontFamily: 'monospace' }}>
+                              <span>Mã: #{booking.booking_code}</span>
+                            </span>
+                          )}
+
                           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                             <CalendarDaysIcon width="14" height="14" />
-                            <span>Ngày đặt phòng: <strong>{booking.booking_date_formatted || new Date(booking.created_at).toLocaleDateString('vi-VN')}</strong></span>
+                            <span>Ngày đặt: <strong>{booking.booking_date_formatted || new Date(booking.created_at).toLocaleDateString('vi-VN')}</strong></span>
                           </span>
                           {booking.coupon?.code && (
                             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: 4, fontWeight: 700, fontSize: 12 }}>
                               <TagDiscountIcon width="13" height="13" />
-                              <span>Voucher/Coupon: {booking.coupon.code} ({booking.coupon.discount_text})</span>
+                              <span>Voucher: {booking.coupon.code} ({booking.coupon.discount_text})</span>
                             </span>
                           )}
                         </div>

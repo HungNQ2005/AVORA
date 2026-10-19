@@ -65,7 +65,7 @@ const BookingSuccessModal = ({ bookingData, onClose, onViewMyBookings }) => {
             className="booking-modal-btn-primary"
             onClick={onViewMyBookings}
           >
-            🧳 Xem đơn đặt chỗ của tôi →
+            Xem đơn đặt chỗ của tôi
           </button>
         </div>
       </div>

@@ -833,20 +833,71 @@
 .my-bookings-compact-status-badge {
   font-size: 11px;
   font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
+  padding: 3px 10px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  letter-spacing: 0.2px;
 }
 
 .my-bookings-compact-status-badge--success {
   background: #dcfce7;
   color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.my-bookings-compact-status-badge--confirmed {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.my-bookings-compact-status-badge--pending,
+.my-bookings-compact-status-badge--amber {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
 }
 
 .my-bookings-compact-status-badge--cancelled {
   background: #fee2e2;
   color: #b91c1c;
+  border: 1px solid #fecaca;
 }
 
+/* Hero Card Status Badges */
+.my-bookings-hero-status-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.my-bookings-hero-status-badge--confirmed,
+.my-bookings-hero-status-badge--success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.my-bookings-hero-status-badge--pending,
+.my-bookings-hero-status-badge--amber {
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.my-bookings-hero-status-badge--cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
 .my-bookings-compact-name {
   font-size: 16px;
   font-weight: 700;

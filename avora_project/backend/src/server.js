@@ -19,6 +19,7 @@ const userRoute = require('./features/users/user.route');
 const chatbotRoute = require("./features/chatbot/chatbot.route");
 const bookingRoute = require('./features/bookings/booking.route');
 const env = require('./config/env');
+const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
 
 const app = express();
 
@@ -71,6 +72,7 @@ process.on("unhandledRejection", (reason) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(env.PORT, () => {
+  startBookingExpiryCron();
   console.log(`\n🚀 AVORA Backend running on http://localhost:${env.PORT}`);
   console.log(`   ENV: ${env.NODE_ENV}`);
   console.log(`   API: http://localhost:${env.PORT}/api/system-codes\n`);
