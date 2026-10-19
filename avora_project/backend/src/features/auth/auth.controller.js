@@ -24,7 +24,8 @@ const handleSignUp = async (req, res, next) => {
     const { activationToken, user } = await authService.registerUser(email, password, full_name);
 
     // Send activation link using centralized email service
-    const activationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify/${activationToken}`;
+    const baseUrl = process.env.APP_URL || `${req.protocol}://${(req.get('host') || 'localhost:5000').replace('10.0.2.2', 'localhost')}`;
+    const activationUrl = `${baseUrl}/api/auth/verify/${activationToken}`;
     await sendMail({
       to: user.email,
       subject: 'Kích hoạt tài khoản Avora Booking',

@@ -146,11 +146,44 @@ const handleConfirmRoleChange = async (req, res, next) => {
   }
 };
 
+/**
+ * PUT /api/users/avatar
+ * Cập nhật ảnh đại diện của người dùng đang đăng nhập.
+ * Body: { avatar_url: string | null }  (null hoặc rỗng = xóa ảnh đại diện)
+ */
+const handleUpdateAvatar = async (req, res, next) => {
+  try {
+    // BẢO MẬT: userId CHỈ lấy từ JWT đã được middleware `authenticate` xác thực.
+    // Tuyệt đối không đọc user_id/id từ req.body hay req.params.
+    const userId = req.user?.user_id;
+    if (!userId || typeof userId !== 'string') {
+      return sendError(res, 401, 'Vui lòng đăng nhập để thực hiện thao tác này.');
+    }
+
+    const body = req.body || {};
+    if (!Object.prototype.hasOwnProperty.call(body, 'avatar_url')) {
+      return sendError(res, 400, 'Thiếu trường avatar_url trong yêu cầu.');
+    }
+
+    const result = await userService.updateAvatar(userId, body.avatar_url);
+    const message = result.avatar_url
+      ? 'Cập nhật ảnh đại diện thành công.'
+      : 'Đã xóa ảnh đại diện.';
+    return sendSuccess(res, 200, message, { avatar_url: result.avatar_url });
+  } catch (err) {
+    if (err.statusCode) {
+      return sendError(res, err.statusCode, err.message);
+    }
+    next(err);
+  }
+};
+
 module.exports = {
   handleGetUsers,
   handleGetUserStats,
   handleUpdateUserStatus,
   handleRequestRoleChange,
   handleConfirmRoleChange,
+  handleUpdateAvatar,
 };
 
