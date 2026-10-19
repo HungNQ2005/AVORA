@@ -1,271 +1,392 @@
 /* ─── Refund Policy Detail Page ─────────────────────────────────────────── */
-.rpd-page {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
 
-/* Breadcrumb */
-.rpd-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
-  color: #64748b;
-  font-weight: 500;
-}
-
-.rpd-breadcrumb a {
-  color: #64748b;
-  text-decoration: none;
-  transition: color 0.15s;
-}
-
-.rpd-breadcrumb a:hover {
-  color: #003580;
-}
-
-.rpd-breadcrumb__sep {
-  color: #94a3b8;
-  font-size: 0.75rem;
-}
-
-.rpd-breadcrumb__active {
-  color: #003580;
-  font-weight: 600;
-}
-
-/* Header */
-.rpd-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1.5rem;
-  flex-wrap: wrap;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.rpd-header__left {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-}
-
-.rpd-header__icon {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  background: #003580;
-  color: #ffffff;
-  display: flex;
+/* Back Arrow Button */
+.rpd-back-arrow-btn {
+  padding: 0.45rem 0.65rem;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 10px rgba(0, 53, 128, 0.25);
-}
-
-.rpd-header__info {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rpd-header__title-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.rpd-header__title {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-  letter-spacing: -0.02em;
-}
-
-.rpd-header__code {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  font-family: monospace;
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 2px 8px;
-  border-radius: 4px;
-}
-
-.rpd-header__meta {
-  font-size: 0.84rem;
+  border-radius: 8px;
   color: #64748b;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  margin-right: 0.25rem;
 }
 
-.rpd-header__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.rpd-back-arrow-btn:hover {
+  color: #0b1e3f;
+  background: #f1f5f9;
 }
 
-/* Detail Grid Layout */
+/* Policy Code Badge */
+.rpd-code-badge {
+  display: inline-flex;
+  align-items: center;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #003580;
+  background: #e8f0fe;
+  border: 1px solid #bfdbfe;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  letter-spacing: 0.04em;
+}
+
+/* Danger Button */
+.rp-btn--danger {
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  box-shadow: 0 1px 2px rgba(185, 28, 28, 0.05);
+}
+
+.rp-btn--danger:hover:not(:disabled) {
+  background: #dc2626;
+  border-color: #b91c1c;
+  color: #ffffff;
+}
+
+/* 2-Column Detail Grid */
 .rpd-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 1.5rem;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 1.25rem;
+  align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .rpd-grid {
     grid-template-columns: 1fr;
   }
 }
 
+.rpd-col-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.rpd-col-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Detail Card */
 .rpd-card {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 22px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  padding: 1.4rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 1.15rem;
+}
+
+.rpd-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 0.85rem;
+}
+
+.rpd-card__title-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .rpd-card__title {
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 700;
-  color: #0f172a;
+  color: #0b1e3f;
   margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* Badges in Cards */
+.rpd-badge-gold {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+}
+
+.rpd-badge-blue {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+/* Callout Box */
+.rpd-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.95rem;
+  background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #003580;
+  border-radius: 8px;
+  padding: 1.1rem 1.25rem;
+}
+
+.rpd-callout__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #e0f2fe;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #f1f5f9;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-/* Key Metrics Box */
-.rpd-metrics-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
+.rpd-callout__content {
+  flex: 1;
 }
 
-@media (max-width: 600px) {
-  .rpd-metrics-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-.rpd-metric-box {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.rpd-metric-box__val {
-  font-size: 1.45rem;
-  font-weight: 800;
-  color: #003580;
-}
-
-.rpd-metric-box__label {
-  font-size: 0.78rem;
-  color: #64748b;
-  font-weight: 600;
-}
-
-/* Rule Callout Banner */
-.rpd-callout {
-  background: #eff6ff;
-  border-left: 4px solid #003580;
-  border-radius: 0 8px 8px 0;
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.rpd-callout__title {
+.rpd-callout__headline {
+  font-size: 0.92rem;
   font-weight: 700;
   color: #003580;
-  font-size: 0.95rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  margin-bottom: 0.35rem;
 }
 
 .rpd-callout__text {
-  font-size: 0.88rem;
-  color: #1e3a8a;
-  line-height: 1.5;
+  font-size: 0.86rem;
+  color: #334155;
+  line-height: 1.6;
   margin: 0;
 }
 
-/* Info List */
+.rpd-callout__text strong {
+  color: #0b1e3f;
+  font-weight: 700;
+}
+
+/* Section Text Blocks */
+.rpd-section-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.rpd-section-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.rpd-text-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  font-size: 0.88rem;
+  color: #1e293b;
+  line-height: 1.65;
+}
+
+/* SOP Steps */
+.rpd-sop-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.rpd-sop-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  background: #f8fafc;
+  border: 1px solid #f1f5f9;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  transition: all 0.15s ease;
+}
+
+.rpd-sop-step:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.rpd-sop-step__number {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #003580;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rpd-sop-step__content {
+  flex: 1;
+}
+
+.rpd-sop-step__title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 0.2rem;
+}
+
+.rpd-sop-step__desc {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* Info Lists (Right Column) */
 .rpd-info-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 0.85rem;
 }
 
 .rpd-info-item {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-  font-size: 0.88rem;
-  padding-bottom: 10px;
+  flex-direction: column;
+  gap: 0.25rem;
   border-bottom: 1px solid #f8fafc;
+  padding-bottom: 0.65rem;
+}
+
+.rpd-info-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .rpd-info-item__label {
-  color: #64748b;
-  font-weight: 500;
+  font-size: 0.74rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
 }
 
 .rpd-info-item__val {
-  color: #0f172a;
-  font-weight: 600;
-  text-align: right;
+  font-size: 0.88rem;
+  color: #1e293b;
+  line-height: 1.45;
 }
 
-/* Loading & Error States */
+.rpd-info-item__val.font-bold {
+  font-weight: 700;
+  color: #0b1e3f;
+}
+
+.rpd-info-item__val.font-navy-bold {
+  font-weight: 800;
+  color: #003580;
+}
+
+.rpd-info-item__val.font-gold {
+  font-weight: 700;
+  color: #d97706;
+}
+
+/* Scope Pill */
+.rpd-scope-pill {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+}
+
+.rpd-scope-pill--chain {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.rpd-scope-pill--branch {
+  background: #fdf4ff;
+  color: #9333ea;
+  border: 1px solid #f0abfc;
+}
+
+/* UUID Code Box */
+.rpd-uuid-box {
+  display: block;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.74rem;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  word-break: break-all;
+}
+
+/* State Containers (Loading & Error) */
 .rpd-state-container {
   background: #ffffff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 60px 24px;
+  padding: 4rem 2rem;
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 14px;
+  gap: 0.85rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .rpd-spinner {
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   border: 3px solid #e2e8f0;
   border-top-color: #003580;
   border-radius: 50%;
-  animation: rpdSpin 0.8s linear infinite;
+  animation: rpd-spin 0.8s linear infinite;
 }
 
-@keyframes rpdSpin {
+@keyframes rpd-spin {
   to {
     transform: rotate(360deg);
   }
+}
+
+.rpd-state-text {
+  font-size: 0.9rem;
+  color: #64748b;
+  margin: 0;
+}
+
+.rpd-state-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
+}
+
+.rpd-state-desc {
+  font-size: 0.88rem;
+  color: #64748b;
+  margin: 0 0 0.5rem 0;
+  max-width: 420px;
 }

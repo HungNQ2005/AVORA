@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet, useParams } from 'react-router-dom';
 import MainLayout from './common/components/MainLayout';
 import HomePage from './features/home/HomePage';
 import TestConnectionPage from './features/connection_test/TestConnectionPage';
@@ -151,6 +151,14 @@ function CustomerLayout() {
 }
 
 /**
+ * Helper to preserve :id parameter when redirecting from alias routes
+ */
+function DynamicParamRedirect({ toPrefix }) {
+  const { id } = useParams();
+  return <Navigate to={`${toPrefix}/${id || ''}`} replace />;
+}
+
+/**
  * Root application component.
  * Configures routing for customer-facing views and the Dashboard (Vendor / System Admin / Business Manager).
  */
@@ -295,25 +303,28 @@ function App() {
           <Route path="/admin/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
           <Route path="/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
           <Route path="/admin/room-types" element={<Navigate to="/dashboard/room-types" replace />} />
-          <Route path="/admin/room-types/:id" element={<Navigate to="/dashboard/room-types" replace />} />
+          <Route path="/admin/room-types/:id" element={<DynamicParamRedirect toPrefix="/dashboard/room-types" />} />
           <Route path="/admin/amenities" element={<Navigate to="/dashboard/amenities" replace />} />
           <Route path="/admin/facilities" element={<Navigate to="/dashboard/facilities" replace />} />
           <Route path="/admin/hotel-management" element={<Navigate to="/dashboard/hotel-management" replace />} />
-          <Route path="/admin/hotel-management/:id" element={<Navigate to="/dashboard/hotel-management" replace />} />
+          <Route path="/admin/hotel-management/:id" element={<DynamicParamRedirect toPrefix="/dashboard/hotel-management" />} />
           <Route path="/admin/coupons" element={<Navigate to="/dashboard/coupons" replace />} />
-          <Route path="/admin/coupons/:id" element={<Navigate to="/dashboard/coupons" replace />} />
+          <Route path="/admin/coupons/:id" element={<DynamicParamRedirect toPrefix="/dashboard/coupons" />} />
           <Route path="/admin/refund-policies" element={<Navigate to="/dashboard/refund-policies" replace />} />
-          <Route path="/admin/refund-policies/:id" element={<Navigate to="/dashboard/refund-policies" replace />} />
+          <Route path="/admin/refund-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/refund-policies" />} />
           <Route path="/admin/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/admin/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/room-types" element={<Navigate to="/dashboard/room-types" replace />} />
+          <Route path="/room-types/:id" element={<DynamicParamRedirect toPrefix="/dashboard/room-types" />} />
           <Route path="/amenities" element={<Navigate to="/dashboard/amenities" replace />} />
           <Route path="/facilities" element={<Navigate to="/dashboard/facilities" replace />} />
           <Route path="/hotel-management" element={<Navigate to="/dashboard/hotel-management" replace />} />
-          <Route path="/hotel-management/:id" element={<Navigate to="/dashboard/hotel-management" replace />} />
+          <Route path="/hotel-management/:id" element={<DynamicParamRedirect toPrefix="/dashboard/hotel-management" />} />
           <Route path="/coupons" element={<Navigate to="/dashboard/coupons" replace />} />
+          <Route path="/coupons/:id" element={<DynamicParamRedirect toPrefix="/dashboard/coupons" />} />
           <Route path="/refund-policies" element={<Navigate to="/dashboard/refund-policies" replace />} />
+          <Route path="/refund-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/refund-policies" />} />
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
 

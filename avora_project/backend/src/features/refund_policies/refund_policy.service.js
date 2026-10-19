@@ -378,13 +378,37 @@ const getRefundPolicyById = async (id) => {
     return data;
   }
 
-  const { data: record, error } = await supabase
-    .from("m_cancellation_policy")
-    .select("*, m_hotel(hotel_id, name, address, star_rating)")
-    .eq("cancellation_policy_id", cleanId)
-    .maybeSingle();
+  let record = null;
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
+  if (isUuid) {
+    const { data, error } = await supabase
+      .from("m_cancellation_policy")
+      .select("*, m_hotel(hotel_id, name, address, star_rating)")
+      .eq("cancellation_policy_id", cleanId)
+      .maybeSingle();
 
-  if (error) throwDatabaseError("Lỗi khi tải chi tiết chính sách.", error);
+    if (error) throwDatabaseError("Lỗi khi tải chi tiết chính sách.", error);
+    record = data;
+  }
+
+  if (!record) {
+    const { data: allRecords, error: listErr } = await supabase
+      .from("m_cancellation_policy")
+      .select("*, m_hotel(hotel_id, name, address, star_rating)");
+
+    if (listErr) throwDatabaseError("Lỗi khi tải chi tiết chính sách.", listErr);
+    if (allRecords) {
+      record = allRecords.find((r) => {
+        const parsed = parseCancellationPolicyRecord(r);
+        return (
+          parsed.policy_code.toLowerCase() === cleanId.toLowerCase() ||
+          parsed.policy_id.toLowerCase() === cleanId.toLowerCase() ||
+          parsed.policy_id.toLowerCase().startsWith(cleanId.toLowerCase())
+        );
+      });
+    }
+  }
+
   if (!record) {
     const notFound = new Error("Không tìm thấy chính sách hoàn tiền yêu cầu.");
     notFound.statusCode = 404;

@@ -55,11 +55,21 @@ const RefundPolicyManagementPage = () => {
 
   // Filters & Search & Sorting (Note: "Newest First" removed per UC requirement)
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL'); // ALL | ACTIVE | INACTIVE
   const [hotelFilter, setHotelFilter] = useState('ALL'); // ALL | SYSTEM | <hotel_id>
   const [sortBy, setSortBy] = useState('PERCENT_DESC'); // Default: highest refund rate
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(6);
+
+  // Debounce search query to avoid jitter and excessive recalculation (matching UserManagementPage)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setPage(1);
+    }, 250);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
 
   // Fetch hotels list for filter dropdown and form modal
   useEffect(() => {
@@ -98,13 +108,13 @@ const RefundPolicyManagementPage = () => {
     };
   }, [policies]);
 
-  // Filter & Sort Logic (Client-side for instant responsive responsiveness)
+  // Filter & Sort Logic (Client-side for instant responsiveness)
   const filtered = useMemo(() => {
     let result = [...policies];
 
-    // Search filter
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
+    // Search filter using debouncedSearch (matches all fields like Admin User Management)
+    if (debouncedSearch.trim()) {
+      const term = debouncedSearch.trim().toLowerCase();
       result = result.filter(
         (p) =>
           p.policy_name?.toLowerCase().includes(term) ||
@@ -112,7 +122,9 @@ const RefundPolicyManagementPage = () => {
           p.policy_id?.toLowerCase().includes(term) ||
           p.hotel_name?.toLowerCase().includes(term) ||
           p.description?.toLowerCase().includes(term) ||
-          p.refund_conditions?.toLowerCase().includes(term)
+          p.refund_conditions?.toLowerCase().includes(term) ||
+          String(p.refund_percentage || '').includes(term) ||
+          String(p.minimum_cancellation_hours || '').includes(term)
       );
     }
 
@@ -142,12 +154,11 @@ const RefundPolicyManagementPage = () => {
     });
 
     return result;
-  }, [policies, searchTerm, statusFilter, hotelFilter, sortBy]);
+  }, [policies, debouncedSearch, statusFilter, hotelFilter, sortBy]);
 
   // Reset to page 1 on search or filter change
   const handleSearchChange = (val) => {
     setSearchTerm(val);
-    setPage(1);
   };
 
   const handleStatusFilterChange = (status) => {
@@ -162,6 +173,7 @@ const RefundPolicyManagementPage = () => {
 
   const handleResetFilters = () => {
     setSearchTerm('');
+    setDebouncedSearch('');
     setStatusFilter('ALL');
     setHotelFilter('ALL');
     setSortBy('PERCENT_DESC');
@@ -179,7 +191,7 @@ const RefundPolicyManagementPage = () => {
 
   // Navigate to policy detail page
   const handleViewDetail = (policyId) => {
-    navigate(`/admin/refund-policies/${policyId}`);
+    navigate(`/dashboard/refund-policies/${policyId}`);
   };
 
   // Open Create Modal

@@ -52,11 +52,12 @@ const getHotels = async (req, res, next) => {
 const getRefundPolicyById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    if (!id || !isValidUuid(id)) {
-      return sendError(res, 400, "Mã chính sách hoàn tiền không hợp lệ.");
+    const cleanId = String(id || "").trim();
+    if (!cleanId) {
+      return sendError(res, 400, "Mã chính sách hoàn tiền không được để trống.");
     }
 
-    const policy = await refundPolicyService.getRefundPolicyById(id);
+    const policy = await refundPolicyService.getRefundPolicyById(cleanId);
     return sendSuccess(res, 200, "Lấy chi tiết chính sách hoàn tiền thành công.", policy);
   } catch (err) {
     next(err);
