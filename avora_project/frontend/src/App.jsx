@@ -19,6 +19,7 @@ import CouponManagementPage from './features/coupons/pages/CouponManagementPage'
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import RefundPolicyManagementPage from './features/refund_policies/pages/RefundPolicyManagementPage';
 import RefundPolicyDetailPage from './features/refund_policies/pages/RefundPolicyDetailPage';
+import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
 import HotelManagerRoute from './common/components/HotelManagerRoute';
@@ -42,15 +43,19 @@ function ScrollToTop() {
 }
 
 /**
- * Guard route for Venue Managers (role_code_name === 'VEN').
+ * Guard route for Venue Managers (role_code_name === 'VEN' or role_cd === '4')
+ * and System Admins (role_code_name === 'ADM' or role_cd === '1').
  */
 const VenueManagerRoute = ({ children }) => {
   const { user, loading } = useAuth();
-  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  if (roleCd !== '1') return <Navigate to="/" replace />;
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const isVenueManager = roleCode === 'VEN' || roleCd === '4' || roleCode === 'ADM' || roleCd === '1';
+
+  if (!isVenueManager) return <Navigate to="/forbidden" replace />;
 
   return children;
 };
@@ -63,7 +68,9 @@ const AdminRoute = ({ children }) => {
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  if (user.role_code_name !== 'ADM') return <Navigate to="/" replace />;
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  if (roleCode !== 'ADM' && roleCd !== '1') return <Navigate to="/forbidden" replace />;
 
   return children;
 };
@@ -76,9 +83,59 @@ const BusinessManagerRoute = ({ children }) => {
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  if (user.role_code_name !== 'BMR') return <Navigate to="/" replace />;
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const isBmr = roleCode === 'BMR' || roleCd === '3' || roleCode === 'ADM' || roleCd === '1';
+  if (!isBmr) return <Navigate to="/forbidden" replace />;
 
   return children;
+};
+
+/**
+ * Guard route for Vendors (role_code_name === 'VEN' or role_cd === '4')
+ * and System Admins (role_code_name === 'ADM' or role_cd === '1') for hotel statistics.
+ */
+const VendorRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const isVendor = roleCode === 'VEN' || roleCd === '4' || roleCode === 'ADM' || roleCd === '1';
+  if (!isVendor) return <Navigate to="/forbidden" replace />;
+
+  return children;
+};
+
+/**
+ * Redirect /admin to the appropriate dashboard based on the logged-in role.
+ */
+const AdminDashboardRedirect = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  if (roleCode === 'BMR') return <Navigate to="/dashboard/coupons" replace />;
+  if (roleCode === 'VEN') return <Navigate to="/dashboard/statistics" replace />;
+  if (roleCode === 'ADM') return <Navigate to="/dashboard/statistics" replace />;
+
+  return <Navigate to="/dashboard/statistics" replace />;
+};
+
+/**
+ * Redirect /dashboard index to the appropriate initial dashboard page based on role.
+ * Vendors and Admins land directly on the Statistics dashboard (Bảng thống kê).
+ */
+const DashboardIndexRedirect = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  if (roleCode === 'BMR') return <Navigate to="/dashboard/coupons" replace />;
+  return <Navigate to="/dashboard/statistics" replace />;
 };
 
 /**
@@ -132,25 +189,9 @@ function App() {
               </HotelManagementGuard>
             }
           >
-            <Route index element={<Navigate to="/dashboard/hotel-management" replace />} />
+            <Route index element={<DashboardIndexRedirect />} />
             <Route path="hotel-management" element={<HotelManagementPage />} />
             <Route path="hotel-management/:id" element={<HotelManagementDetailPage />} />
-            <Route
-              path="roles"
-              element={
-                <AdminRoute>
-                  <RoleManagementPage />
-                </AdminRoute>
-              }
-            />
-            <Route
-              path="roles"
-              element={
-                <AdminRoute>
-                  <RoleManagementPage />
-                </AdminRoute>
-              }
-            />
             <Route
               path="rooms"
               element={
@@ -189,6 +230,14 @@ function App() {
                 <VenueManagerRoute>
                   <AmenityManagementPage />
                 </VenueManagerRoute>
+              }
+            />
+            <Route
+              path="statistics"
+              element={
+                <VendorRoute>
+                  <StatisticsPage />
+                </VendorRoute>
               }
             />
             <Route
@@ -241,14 +290,6 @@ function App() {
             />
           </Route>
 
-          {/* Friendly redirect aliases for admin paths */}
-          <Route path="/room-types" element={<Navigate to="/admin/room-types" replace />} />
-          <Route path="/amenities" element={<Navigate to="/admin/amenities" replace />} />
-          <Route path="/facilities" element={<Navigate to="/admin/facilities" replace />} />
-          <Route path="/coupons" element={<Navigate to="/admin/coupons" replace />} />
-          <Route path="/refund-policies" element={<Navigate to="/admin/refund-policies" replace />} />
-          <Route path="/users" element={<Navigate to="/admin/users" replace />} />
-          <Route path="/roles" element={<Navigate to="/admin/roles" replace />} />
           {/* Friendly redirect aliases for the old /admin and top-level paths */}
           <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
           <Route path="/admin/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
@@ -259,12 +300,22 @@ function App() {
           <Route path="/admin/facilities" element={<Navigate to="/dashboard/facilities" replace />} />
           <Route path="/admin/hotel-management" element={<Navigate to="/dashboard/hotel-management" replace />} />
           <Route path="/admin/hotel-management/:id" element={<Navigate to="/dashboard/hotel-management" replace />} />
+          <Route path="/admin/coupons" element={<Navigate to="/dashboard/coupons" replace />} />
           <Route path="/admin/coupons/:id" element={<Navigate to="/dashboard/coupons" replace />} />
+          <Route path="/admin/refund-policies" element={<Navigate to="/dashboard/refund-policies" replace />} />
+          <Route path="/admin/refund-policies/:id" element={<Navigate to="/dashboard/refund-policies" replace />} />
+          <Route path="/admin/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
+          <Route path="/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/admin/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/room-types" element={<Navigate to="/dashboard/room-types" replace />} />
+          <Route path="/amenities" element={<Navigate to="/dashboard/amenities" replace />} />
+          <Route path="/facilities" element={<Navigate to="/dashboard/facilities" replace />} />
           <Route path="/hotel-management" element={<Navigate to="/dashboard/hotel-management" replace />} />
           <Route path="/hotel-management/:id" element={<Navigate to="/dashboard/hotel-management" replace />} />
           <Route path="/coupons" element={<Navigate to="/dashboard/coupons" replace />} />
+          <Route path="/refund-policies" element={<Navigate to="/dashboard/refund-policies" replace />} />
+          <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
+          <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
 
         </Routes>
       </BrowserRouter>

@@ -53,7 +53,7 @@ const AdminSidebar = () => {
         {/* TỔNG QUAN */}
         <div className="admin-sidebar__group">
           <div className="admin-sidebar__group-title">TỔNG QUAN</div>
-          <NavLink to="/admin" className="admin-sidebar__link" end>
+          <NavLink to="/dashboard/statistics" className="admin-sidebar__link">
             <span className="admin-sidebar__icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="3" width="7" height="7"></rect>
@@ -62,7 +62,7 @@ const AdminSidebar = () => {
                 <rect x="3" y="14" width="7" height="7"></rect>
               </svg>
             </span>
-            <span className="admin-sidebar__label">Bảng điều khiển</span>
+            <span className="admin-sidebar__label">Bảng thống kê</span>
           </NavLink>
         </div>
 

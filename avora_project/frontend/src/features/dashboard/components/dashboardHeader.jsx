@@ -22,7 +22,7 @@ const DashboardHeader = () => {
 
   return (
     <header className="dashboard-header">
-      <h1 className="dashboard-header__title">Bảng điều khiển</h1>
+      <h1 className="dashboard-header__title">Bảng thống kê</h1>
       <div className="dashboard-header__actions">
         <span className="dashboard-header__role-badge">{roleLabel}</span>
         <button

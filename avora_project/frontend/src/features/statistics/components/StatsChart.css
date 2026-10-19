@@ -1,0 +1,52 @@
+.st-chart {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.st-chart svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.st-chart--empty {
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  color: #64748b;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.st-chart__grid {
+  stroke: #e2e8f0;
+  stroke-width: 1;
+}
+
+.st-chart__tick {
+  font-size: 11px;
+  fill: #64748b;
+}
+
+.st-chart__center-value {
+  font-size: 18px;
+  font-weight: 800;
+  fill: #0f172a;
+}
+
+.st-chart__center-label {
+  font-size: 11px;
+  fill: #64748b;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.st-chart__readout {
+  min-height: 1.2rem;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+}
