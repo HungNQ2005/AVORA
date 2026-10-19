@@ -61,7 +61,7 @@ const cancelExpiredPendingBookings = async () => {
       return;
     }
 
-    console.log(`[BookingExpiryCron] Phát hiện ${expiredBookings.length} đơn quá hạn 10 phút chưa thanh toán. Đang xử lý hủy tự động...`);
+
 
     for (const booking of expiredBookings) {
       // Nếu đã có giao dịch thanh toán thành công (amount_paid > 0) thì bỏ qua
@@ -82,8 +82,7 @@ const cancelExpiredPendingBookings = async () => {
         .eq('booking_id', booking.booking_id);
 
       if (updateErr) {
-        console.error(`[BookingExpiryCron] Lỗi khi cập nhật hủy booking ${booking.booking_id}:`, updateErr.message);
-        continue;
+
       }
 
       // 4. Hoàn trả lại phòng trong t_inventory nếu có thông tin đặt
@@ -100,10 +99,10 @@ const cancelExpiredPendingBookings = async () => {
         }
       }
 
-      console.log(`[BookingExpiryCron] ✅ Đã tự động hủy đơn ${booking.booking_id} thành công (quá hạn 10 phút).`);
+
     }
   } catch (error) {
-    console.error('[BookingExpiryCron] Ngoại lệ không mong muốn trong worker hủy đơn:', error.message);
+
   }
 };
 
@@ -111,7 +110,7 @@ let timer = null;
 
 const startBookingExpiryCron = () => {
   if (timer) return;
-  console.log('[BookingExpiryCron] ⏱️ Dịch vụ tự động hủy phòng quá hạn 10 phút đã kích hoạt (chu kỳ 60s).');
+
   // Chạy ngay 1 lần kiểm tra khi khởi động
   cancelExpiredPendingBookings();
   // Lặp lại sau mỗi 60s
