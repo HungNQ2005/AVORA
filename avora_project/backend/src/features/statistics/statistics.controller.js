@@ -10,7 +10,8 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{1
  */
 const handleGetStatisticsHotels = async (req, res, next) => {
   try {
-    const vendorId = req.user?.user_id;
+    const isVendor = req.user?.role_code_name === 'VEN';
+    const vendorId = isVendor ? req.user?.user_id : null;
     const data = await getStatisticsHotels(vendorId);
     return sendSuccess(res, 200, 'Lấy danh sách khách sạn thành công', data);
   } catch (error) {
@@ -23,7 +24,8 @@ const handleGetStatisticsHotels = async (req, res, next) => {
  */
 const handleGetOverview = async (req, res, next) => {
   const { hotel_id: hotelId, from, to } = req.query;
-  const vendorId = req.user?.user_id;
+  const isVendor = req.user?.role_code_name === 'VEN';
+  const vendorId = isVendor ? req.user?.user_id : null;
 
   if (typeof hotelId !== 'string' || !uuidPattern.test(hotelId)) {
     return sendError(res, 400, 'Mã khách sạn không hợp lệ.');

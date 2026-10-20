@@ -37,9 +37,13 @@ const defaultRange = (days = 30) => {
 const StatisticsPage = () => {
   const { user, loading: authLoading } = useAuth();
 
-  // Guard: Chỉ tài khoản Vendor (VEN) mới có quyền truy cập Bảng thống kê
-  if (!authLoading && user && user.role_code_name !== 'VEN') {
-    return <Navigate to="/admin" replace />;
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const canAccess = roleCode === 'VEN' || roleCd === '4' || roleCode === 'ADM' || roleCd === '1';
+
+  // Guard: Chỉ tài khoản Vendor (VEN) hoặc Quản trị viên (ADM) mới có quyền truy cập Bảng thống kê
+  if (!authLoading && user && !canAccess) {
+    return <Navigate to="/forbidden" replace />;
   }
 
   const initialRange = useMemo(() => defaultRange(30), []);
