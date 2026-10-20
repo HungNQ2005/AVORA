@@ -12,6 +12,8 @@ import RoomTypeFilterBar from '../components/RoomTypeFilterBar';
 import RoomTypeTable from '../components/RoomTypeTable';
 import RoomTypeFormModal from '../components/RoomTypeFormModal';
 import RoomTypeDeleteModal from '../components/RoomTypeDeleteModal';
+import ExportExcelModal from '../../amenities/components/ExportExcelModal';
+import { exportRoomTypesToExcel, getRoomTypeExportExcelFilename } from '../../../utils/exportToExcel';
 import './RoomTypeManagementPage.css';
 
 const RoomTypeManagementPage = () => {
@@ -44,6 +46,8 @@ const RoomTypeManagementPage = () => {
   const [deleting, setDeleting] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [deleteError, setDeleteError] = useState('');
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Close facility dropdown when clicking outside
   useEffect(() => {
@@ -300,6 +304,40 @@ const RoomTypeManagementPage = () => {
     }
   };
 
+  // Excel Export Handler
+  const handleOpenExportModal = () => {
+    if (!filteredRoomTypes || filteredRoomTypes.length === 0) {
+      showToast('Không có dữ liệu hạng phòng để xuất file Excel.');
+      return;
+    }
+    setIsExportModalOpen(true);
+  };
+
+  const handleConfirmExport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    try {
+      const exportFilename = getRoomTypeExportExcelFilename();
+      const activeHotelName =
+        selectedHotelId === 'ALL'
+          ? 'Tất cả cơ sở lưu trú'
+          : hotels.find((h) => h.hotel_id === selectedHotelId)?.name || 'Cơ sở lưu trú';
+      const exportList = filteredRoomTypes.length > 0 ? filteredRoomTypes : roomTypes;
+      const result = await exportRoomTypesToExcel(exportList, activeHotelName, exportFilename);
+      if (result && result.success) {
+        showToast(`Đã xuất thành công ${result.count || exportList.length} hạng phòng ra file Excel!`);
+        setIsExportModalOpen(false);
+      } else {
+        showToast(result?.message || 'Không thể xuất file Excel.');
+      }
+    } catch (err) {
+      showToast(err.message || 'Có lỗi xảy ra khi xuất file Excel.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="rt-page">
       {toastMessage && <div className="rt-toast">{toastMessage}</div>}
@@ -399,6 +437,21 @@ const RoomTypeManagementPage = () => {
               </div>
             )}
           </div>
+          {/* Export Excel button */}
+          <button
+            type="button"
+            className="rt-btn-action rt-btn-action--outline"
+            onClick={handleOpenExportModal}
+            title="Xuất danh mục hạng phòng ra file Excel (.xlsx)"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Xuất dữ liệu (Excel)</span>
+          </button>
+
           {/* Add new room type button */}
           <button
             className="rt-btn-action rt-btn-action--primary"
@@ -538,6 +591,17 @@ const RoomTypeManagementPage = () => {
         roomTypeName={selectedRoomType?.type_name}
         deleting={deleting}
         error={deleteError}
+      />
+
+      <ExportExcelModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onConfirm={handleConfirmExport}
+        totalRecords={filteredRoomTypes?.length || roomTypes?.length || 0}
+        filename={getRoomTypeExportExcelFilename()}
+        isExporting={isExporting}
+        title="Xuất Danh Mục Hạng Phòng"
+        unitLabel="hạng phòng"
       />
 
     </div>
