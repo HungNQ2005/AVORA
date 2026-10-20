@@ -64,10 +64,22 @@ const loadSystemCodes = async (businessCds = ['BOOKING_STS', 'REFUND_STS', 'PAYM
 };
 
 /**
+ * Ensure database timestamps without timezone offsets are treated as UTC ISO strings with trailing Z
+ */
+const ensureUtcIsoString = (val) => {
+  if (!val) return val;
+  const s = String(val).trim();
+  if (s.includes('T') && !s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
+    return `${s}Z`;
+  }
+  return s;
+};
+
+/**
  * Format short booking reference code from booking_id and created_at.
  */
 const formatBookingCode = (bookingId, createdAt) => {
-  const d = createdAt ? new Date(createdAt) : new Date();
+  const d = createdAt ? new Date(ensureUtcIsoString(createdAt)) : new Date();
   const bYear = d.getFullYear() % 100;
   const bMonth = String(d.getMonth() + 1).padStart(2, '0');
   const bCodeSuffix = String(bookingId || '').substring(0, 4).toUpperCase();
@@ -773,8 +785,12 @@ const createBooking = async (payload, currentUser = null) => {
     throw createError('Vui lòng đăng nhập để tiếp tục.', 401);
   }
 
-  // Khóa chống thao tác song song / double-click theo user và thông tin đặt phòng
-  const lockKey = `${userId}_${payload.hotel_id}_${payload.check_in_date}_${payload.check_out_date}`;
+  // Khóa chống thao tác song song / double-click theo user, khách sạn, ngày và các phòng đã chọn
+  const roomKeySummary = (Array.isArray(payload.rooms) && payload.rooms.length > 0 ? payload.rooms : [{ room_type_id: payload.room_type_id, quantity: payload.quantity }])
+    .map((r) => `${r.room_type_id}:${r.quantity || 1}`)
+    .sort()
+    .join(';');
+  const lockKey = `${userId}_${payload.hotel_id}_${payload.check_in_date}_${payload.check_out_date}_${roomKeySummary}`;
   if (activeBookingLocks.has(lockKey)) {
     throw createError(
       'Yêu cầu đặt phòng của bạn đang được xử lý, vui lòng không gửi yêu cầu liên tục.',
@@ -836,7 +852,15 @@ const createBooking = async (payload, currentUser = null) => {
       const duplicate = recentBookings.find((b) => {
         const details = b.t_booking_detail || [];
         if (details.length !== pricing.rooms.length) return false;
-        return details.every((d) => {
+
+        const sortedDetails = [...details].sort((x, y) => String(x.room_type_id).localeCompare(String(y.room_type_id)));
+        const sortedPricingRooms = [...pricing.rooms].sort((x, y) => String(x.room_type_id).localeCompare(String(y.room_type_id)));
+
+        return sortedDetails.every((d, idx) => {
+          const pr = sortedPricingRooms[idx];
+          if (!pr || String(d.room_type_id) !== String(pr.room_type_id)) return false;
+          if (Number(d.quantity) !== Number(pr.quantity)) return false;
+
           const dIn = String(d.check_in_date).substring(0, 10);
           const dOut = String(d.check_out_date).substring(0, 10);
           const pIn = String(pricing.check_in_date).substring(0, 10);
@@ -859,7 +883,7 @@ const createBooking = async (payload, currentUser = null) => {
           coupon_applied: pricing.coupon?.code || null,
           pricing,
           details: duplicate.t_booking_detail || [],
-          created_at: duplicate.created_at,
+          created_at: ensureUtcIsoString(duplicate.created_at),
           is_duplicate_prevented: true,
         };
       }
@@ -986,7 +1010,7 @@ const createBooking = async (payload, currentUser = null) => {
       coupon_applied: pricing.coupon?.code || null,
       pricing,
       details: createdDetails || [],
-      created_at: createdBooking.created_at,
+      created_at: ensureUtcIsoString(createdBooking.created_at),
     };
   } finally {
     activeBookingLocks.delete(lockKey);
@@ -1498,9 +1522,9 @@ const getMyBookings = async ({
       status_badge_variant: statusInfo.badge_variant,
       total_amount: Number(b.total_amount || 0),
       discount_amount: Number(b.discount_amount || 0),
-      created_at: b.created_at,
+      created_at: ensureUtcIsoString(b.created_at),
       booking_date_formatted: b.created_at
-        ? new Date(b.created_at).toLocaleDateString('vi-VN', {
+        ? new Date(ensureUtcIsoString(b.created_at)).toLocaleDateString('vi-VN', {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',

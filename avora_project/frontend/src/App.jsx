@@ -27,7 +27,7 @@ import HotelManagementDetailPage from './features/hotel_management/pages/hotelDe
 import RoomManagementPage from './features/rooms/pages/RoomManagementPage';
 import AIChatWidget from './features/chatbot/AIChatWidget';
 import BookingPage from './features/bookings/pages/BookingPage';
-import MyBookingsPage from './features/bookings/pages/MyBookingsPage';
+import MyBookingsPage from './features/mybookings/screens/MyBookingsPage';
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.

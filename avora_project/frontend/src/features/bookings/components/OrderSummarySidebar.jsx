@@ -32,6 +32,8 @@ const OrderSummarySidebar = ({
   onCheckOutChange,
   minCheckIn = '',
   minCheckOut = '',
+  maxCheckIn = '',
+  maxCheckOut = '',
   nights = 1,
   couponCode = '',
   onCouponChange,
@@ -146,6 +148,7 @@ const OrderSummarySidebar = ({
                 className="summary-date-input"
                 value={checkInDate || ''}
                 min={minCheckIn}
+                max={maxCheckIn || undefined}
                 onChange={(e) => onCheckInChange && onCheckInChange(e.target.value)}
               />
               <div className="summary-date-item-val">
@@ -162,6 +165,7 @@ const OrderSummarySidebar = ({
                 className="summary-date-input"
                 value={checkOutDate || ''}
                 min={minCheckOut}
+                max={maxCheckOut || undefined}
                 onChange={(e) => onCheckOutChange && onCheckOutChange(e.target.value)}
               />
               <div className="summary-date-item-val">

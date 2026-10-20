@@ -2,6 +2,17 @@ import React, { useEffect, useState } from 'react';
 
 const PAYMENT_HOLD_MS = 10 * 60 * 1000;
 
+const parseIsoToDate = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  let s = String(dateStr).trim();
+  if (s.includes('T') && !s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
+    s += 'Z';
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+};
+
 /**
  * Handover Modal shown after booking creation succeeds in DB.
  */
@@ -16,7 +27,10 @@ const BookingSuccessModal = ({ bookingData, onClose, onViewMyBookings }) => {
   const countdown = (() => {
     if (!bookingData?.created_at) return null;
 
-    const deadline = new Date(new Date(bookingData.created_at).getTime() + PAYMENT_HOLD_MS);
+    const createdAt = parseIsoToDate(bookingData.created_at);
+    if (!createdAt) return null;
+
+    const deadline = new Date(createdAt.getTime() + PAYMENT_HOLD_MS);
     const remainingMs = Math.max(0, deadline.getTime() - now);
     const totalSeconds = Math.ceil(remainingMs / 1000);
     const minutes = Math.floor(totalSeconds / 60);
