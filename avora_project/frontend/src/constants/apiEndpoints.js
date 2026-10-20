@@ -12,6 +12,8 @@ export const API_ENDPOINTS = {
   HOTEL_DETAIL: (id) => `${API_BASE_URL}/api/hotels/${id}`,
   HOTEL_REVIEWS: (id) => `${API_BASE_URL}/api/reviews/hotels/${id}`,
   REVIEWS_MY: `${API_BASE_URL}/api/reviews/my`,
+  REVIEWS_ADMIN: `${API_BASE_URL}/api/reviews/admin`,
+  ADMIN_REVIEW: (reviewId) => `${API_BASE_URL}/api/reviews/admin/${reviewId}`,
   BOOKING_REVIEWS: (bookingId) => `${API_BASE_URL}/api/reviews/bookings/${bookingId}`,
   REVIEW: (reviewId) => `${API_BASE_URL}/api/reviews/${reviewId}`,
   ROOM_TYPES: `${API_BASE_URL}/api/room-types`,

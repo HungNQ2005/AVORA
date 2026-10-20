@@ -29,6 +29,7 @@ import AIChatWidget from './features/chatbot/AIChatWidget';
 import BookingPage from './features/bookings/pages/BookingPage';
 import MyBookingsPage from './features/bookings/pages/MyBookingsPage';
 import ReviewPage from './features/reviews/pages/ReviewPage';
+import AdminReviewManagementPage from './features/reviews/pages/AdminReviewManagementPage';
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -143,6 +144,14 @@ function App() {
             <Route index element={<Navigate to="/dashboard/hotel-management" replace />} />
             <Route path="hotel-management" element={<HotelManagementPage />} />
             <Route path="hotel-management/:id" element={<HotelManagementDetailPage />} />
+            <Route
+              path="reviews"
+              element={
+                <AdminRoute>
+                  <AdminReviewManagementPage />
+                </AdminRoute>
+              }
+            />
             <Route
               path="roles"
               element={

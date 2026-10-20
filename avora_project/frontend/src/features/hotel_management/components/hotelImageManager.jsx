@@ -1,6 +1,11 @@
 import React, { useRef, useState } from 'react';
 import HotelThumb from './hotelThumb';
-import { deleteHotelImage, setHotelImageThumbnail, uploadHotelImage } from '../../../services/hotelManagementService';
+import {
+  deleteHotelImage,
+  HOTEL_IMAGE_ACCEPTED_TYPES,
+  setHotelImageThumbnail,
+  uploadHotelImage,
+} from '../../../services/hotelManagementService';
 import './hotelImageManager.css';
 
 /**
@@ -25,7 +30,7 @@ const HotelImageManager = ({ hotelId, images, onImagesChange, canManage }) => {
       const image = await uploadHotelImage(hotelId, file);
       onImagesChange([...images, image]);
     } catch (err) {
-      setError(err.response?.data?.message || 'Không thể tải ảnh lên.');
+      setError(err.response?.data?.message || err.message || 'Không thể tải ảnh lên.');
     } finally {
       setUploading(false);
     }
@@ -66,7 +71,7 @@ const HotelImageManager = ({ hotelId, images, onImagesChange, canManage }) => {
             {uploading ? 'Đang tải lên…' : '+ Tải ảnh lên'}
           </button>
         )}
-        <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handleFileChange} />
+          <input ref={fileInputRef} type="file" accept={HOTEL_IMAGE_ACCEPTED_TYPES.join(',')} hidden onChange={handleFileChange} />
       </div>
       {error && <p className="hotel-detail__inline-error" role="alert">{error}</p>}
       {images.length ? (
@@ -91,7 +96,7 @@ const HotelImageManager = ({ hotelId, images, onImagesChange, canManage }) => {
           ))}
         </div>
       ) : (
-        <p className="hotel-image-manager__empty">Chưa có hình ảnh nào. Tải ảnh lên để hiển thị cho khách hàng.</p>
+        <p className="hotel-image-manager__empty">Chưa có hình ảnh nào. Tải JPG, PNG, WEBP hoặc GIF (tối đa 5 MB) để hiển thị cho khách hàng.</p>
       )}
     </section>
   );

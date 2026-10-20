@@ -20,6 +20,12 @@ export const getBookingReview = (bookingId) => requestReview(API_ENDPOINTS.BOOKI
 
 export const getMyReviews = () => requestReview(API_ENDPOINTS.REVIEWS_MY);
 
+export const getAdminReviews = () => requestReview(API_ENDPOINTS.REVIEWS_ADMIN);
+
+export const adminSoftDeleteReview = (reviewId) => requestReview(API_ENDPOINTS.ADMIN_REVIEW(reviewId), {
+  method: 'DELETE',
+});
+
 export const createReview = (bookingId, payload) => requestReview(API_ENDPOINTS.BOOKING_REVIEWS(bookingId), {
   method: 'POST',
   body: JSON.stringify(payload),

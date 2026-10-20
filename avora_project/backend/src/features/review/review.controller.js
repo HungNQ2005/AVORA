@@ -21,6 +21,24 @@ const getMyReviews = async (req, res, next) => {
   }
 };
 
+const getAdminReviews = async (_req, res, next) => {
+  try {
+    const reviews = await reviewService.getAdminReviews();
+    return sendSuccess(res, 200, 'Lấy danh sách đánh giá hệ thống thành công.', reviews);
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const adminSoftDeleteReview = async (req, res, next) => {
+  try {
+    const result = await reviewService.adminSoftDeleteReview(req.params.reviewId);
+    return sendSuccess(res, 200, 'Đánh giá đã được ẩn khỏi hệ thống.', result);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const createReview = async (req, res, next) => {
   try {
     const data = await reviewService.createReview(req.user.user_id, req.params.bookingId, req.body);
@@ -57,4 +75,13 @@ const deleteReview = async (req, res, next) => {
   }
 };
 
-module.exports = { getHotelReviews, getMyReviews, getBookingReview, createReview, updateReview, deleteReview };
+module.exports = {
+  getHotelReviews,
+  getMyReviews,
+  getAdminReviews,
+  adminSoftDeleteReview,
+  getBookingReview,
+  createReview,
+  updateReview,
+  deleteReview,
+};

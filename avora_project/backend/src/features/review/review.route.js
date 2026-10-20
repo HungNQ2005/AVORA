@@ -1,7 +1,7 @@
 'use strict';
 
 const { Router } = require('express');
-const { authenticate, optionalAuthenticate } = require('../../common/middlewares/authMiddleware');
+const { authenticate, optionalAuthenticate, requireRole } = require('../../common/middlewares/authMiddleware');
 const { validateRequest } = require('../../common/middlewares/validationMiddleware');
 const controller = require('./review.controller');
 const {
@@ -13,6 +13,8 @@ const {
 } = require('./review.validation');
 
 const router = Router();
+router.get('/reviews/admin', authenticate, requireRole('ADM'), controller.getAdminReviews);
+router.delete('/reviews/admin/:reviewId', authenticate, requireRole('ADM'), validateRequest({ params: reviewParamsSchema }), controller.adminSoftDeleteReview);
 router.get('/reviews/my', authenticate, controller.getMyReviews);
 router.get('/reviews/hotels/:hotelId', optionalAuthenticate, validateRequest({ params: hotelParamsSchema }), controller.getHotelReviews);
 router.get('/reviews/bookings/:bookingId', authenticate, validateRequest({ params: bookingParamsSchema }), controller.getBookingReview);

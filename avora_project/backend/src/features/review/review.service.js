@@ -13,6 +13,20 @@ const isWithinEditWindow = (createdAt) => {
   return Number.isFinite(createdTime) && age >= 0 && age <= EDIT_WINDOW_MS;
 };
 
+const selectRowsByIds = async (table, columns, key, ids) => {
+  const rows = [];
+  const batchSize = 500;
+  for (let offset = 0; offset < ids.length; offset += batchSize) {
+    const { data, error } = await supabase
+      .from(table)
+      .select(columns)
+      .in(key, ids.slice(offset, offset + batchSize));
+    if (error) throw error;
+    rows.push(...(data || []));
+  }
+  return rows;
+};
+
 const getHotelReviewRows = async (hotelId) => {
   const { data: bookings, error: bookingError } = await supabase
     .from('t_booking')
@@ -137,6 +151,55 @@ const getMyReviews = async (userId) => {
       rating_score: Number(review.rating_score),
       comment: review.comment || '',
       created_at: review.created_at,
+    };
+  });
+};
+
+const getAdminReviews = async () => {
+  const reviews = [];
+  const batchSize = 1000;
+  for (let offset = 0; ; offset += batchSize) {
+    const { data, error } = await supabase
+      .from('t_review')
+      .select('review_id, booking_id, rating_score, comment, is_deleted, created_at, updated_at')
+      .order('created_at', { ascending: false })
+      .order('review_id', { ascending: true })
+      .range(offset, offset + batchSize - 1);
+    if (error) throw error;
+    reviews.push(...(data || []));
+    if (!data || data.length < batchSize) break;
+  }
+  if (!reviews.length) return [];
+
+  const bookingIds = [...new Set(reviews.map((review) => review.booking_id).filter(Boolean))];
+  const bookings = await selectRowsByIds('t_booking', 'booking_id, hotel_id, user_id, guest_name', 'booking_id', bookingIds);
+
+  const bookingById = new Map(bookings.map((booking) => [booking.booking_id, booking]));
+  const hotelIds = [...new Set(bookings.map((booking) => booking.hotel_id).filter(Boolean))];
+  const userIds = [...new Set(bookings.map((booking) => booking.user_id).filter(Boolean))];
+  const [hotels, users] = await Promise.all([
+    selectRowsByIds('m_hotel', 'hotel_id, name, hotel_status, is_deleted', 'hotel_id', hotelIds),
+    selectRowsByIds('m_user', 'user_id, full_name', 'user_id', userIds),
+  ]);
+
+  const hotelById = new Map(hotels.map((hotel) => [hotel.hotel_id, hotel]));
+  const userById = new Map(users.map((user) => [user.user_id, user]));
+  return reviews.map((review) => {
+    const booking = bookingById.get(review.booking_id);
+    const hotel = hotelById.get(booking?.hotel_id);
+    const author = userById.get(booking?.user_id);
+    return {
+      review_id: review.review_id,
+      hotel_id: hotel?.hotel_id || booking?.hotel_id || null,
+      hotel_name: hotel?.name || 'Khách sạn không còn tồn tại',
+      hotel_status: hotel?.hotel_status || 'UNKNOWN',
+      hotel_is_deleted: Boolean(hotel?.is_deleted),
+      author_name: author?.full_name || booking?.guest_name || 'Khách không xác định',
+      rating_score: Number(review.rating_score),
+      comment: review.comment || '',
+      is_deleted: Boolean(review.is_deleted),
+      created_at: review.created_at,
+      updated_at: review.updated_at,
     };
   });
 };
@@ -316,4 +379,39 @@ const deleteReview = async (userId, reviewId) => {
   return rating;
 };
 
-module.exports = { getHotelReviews, getMyReviews, getBookingReview, createReview, updateReview, deleteReview };
+const adminSoftDeleteReview = async (reviewId) => {
+  const { data: review, error: reviewError } = await supabase
+    .from('t_review')
+    .select('review_id, booking_id, is_deleted')
+    .eq('review_id', reviewId)
+    .maybeSingle();
+  if (reviewError) throw reviewError;
+  if (!review) throw httpError(404, 'Không tìm thấy đánh giá.');
+  if (review.is_deleted) return { review_id: reviewId, is_deleted: true };
+
+  const { error: updateError } = await supabase
+    .from('t_review')
+    .update({ is_deleted: true, updated_at: new Date().toISOString() })
+    .eq('review_id', reviewId);
+  if (updateError) throw updateError;
+
+  const { data: booking, error: bookingError } = await supabase
+    .from('t_booking')
+    .select('hotel_id')
+    .eq('booking_id', review.booking_id)
+    .maybeSingle();
+  if (bookingError) throw bookingError;
+  if (booking?.hotel_id) await refreshHotelRating(booking.hotel_id);
+  return { review_id: reviewId, is_deleted: true };
+};
+
+module.exports = {
+  getHotelReviews,
+  getMyReviews,
+  getAdminReviews,
+  adminSoftDeleteReview,
+  getBookingReview,
+  createReview,
+  updateReview,
+  deleteReview,
+};
