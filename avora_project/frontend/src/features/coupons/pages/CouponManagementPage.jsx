@@ -8,8 +8,6 @@ import {
 } from '../../../services/couponApi';
 import CouponFormModal from '../components/CouponFormModal';
 import DeleteConfirmModal from '../components/DeleteConfirmModal';
-import ExportExcelModal from '../../amenities/components/ExportExcelModal';
-import { exportCouponsToExcel, getCouponExportExcelFilename } from '../../../utils/exportToExcel';
 import './CouponManagementPage.css';
 
 /* ─── Helpers ─────────────────────────────────────────────── */
@@ -67,8 +65,6 @@ const CouponManagementPage = () => {
   const [deletingCoupon, setDeletingCoupon] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -216,36 +212,6 @@ const CouponManagementPage = () => {
     }
   };
 
-  /* ── Excel Export Handlers ── */
-  const handleOpenExportModal = () => {
-    if (!filtered || filtered.length === 0) {
-      showToast('Không có dữ liệu mã khuyến mãi để xuất file Excel.');
-      return;
-    }
-    setIsExportModalOpen(true);
-  };
-
-  const handleConfirmExport = async () => {
-    if (isExporting) return;
-    setIsExporting(true);
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    try {
-      const exportFilename = getCouponExportExcelFilename();
-      const exportList = filtered.length > 0 ? filtered : coupons;
-      const result = await exportCouponsToExcel(exportList, exportFilename);
-      if (result && result.success) {
-        showToast(`Đã xuất thành công ${result.count || exportList.length} mã khuyến mãi ra file Excel!`);
-        setIsExportModalOpen(false);
-      } else {
-        showToast(result?.message || 'Không thể xuất file Excel.');
-      }
-    } catch (err) {
-      showToast(err.message || 'Có lỗi xảy ra khi xuất file Excel.');
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
   /* ── Render ── */
   return (
     <div className="promo-page">
@@ -270,19 +236,6 @@ const CouponManagementPage = () => {
         </div>
 
         <div className="promo-page__top-actions">
-          <button
-            type="button"
-            className="promo-btn promo-btn--outline"
-            onClick={handleOpenExportModal}
-            title="Xuất danh sách mã khuyến mãi ra file Excel (.xlsx)"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
-            <span>Xuất dữ liệu (Excel)</span>
-          </button>
           <button
             className="promo-btn promo-btn--outline"
             onClick={() => loadData(true)}
@@ -647,17 +600,6 @@ const CouponManagementPage = () => {
         onConfirm={handleDeleteConfirm}
         couponCode={deletingCoupon?.code}
         loading={deleteLoading}
-      />
-
-      <ExportExcelModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        onConfirm={handleConfirmExport}
-        totalRecords={filtered?.length || coupons?.length || 0}
-        filename={getCouponExportExcelFilename()}
-        isExporting={isExporting}
-        title="Xuất Danh Mục Mã Khuyến Mãi"
-        unitLabel="mã khuyến mãi"
       />
     </div>
   );
