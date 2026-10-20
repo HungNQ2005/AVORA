@@ -522,7 +522,7 @@ const MyAccountPage = () => {
             <button
               type="button"
               className="hero-action-btn hero-action-btn--primary"
-              onClick={() => navigate('/hotels')}
+              onClick={() => navigate('/my-bookings')}
             >
               <LuggageIcon />
               <span>Đặt chỗ của tôi</span>
@@ -583,6 +583,18 @@ const MyAccountPage = () => {
             <nav className="profile-nav-menu" aria-label="Menu hồ sơ">
               <button
                 type="button"
+                className="profile-nav-item"
+                onClick={() => navigate('/my-bookings')}
+              >
+                <div className="profile-nav-item__left">
+                  <LuggageIcon />
+                  <span>Đặt chỗ của tôi</span>
+                </div>
+                <ChevronRightIcon />
+              </button>
+
+              <button
+                type="button"
                 className={`profile-nav-item ${activeTab === 'info' ? 'is-active' : ''}`}
                 onClick={() => switchTab('info')}
               >
@@ -592,6 +604,7 @@ const MyAccountPage = () => {
                 </div>
                 <ChevronRightIcon />
               </button>
+
 
               <button
                 type="button"

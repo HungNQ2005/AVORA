@@ -26,4 +26,13 @@ export const API_ENDPOINTS = {
   ROOMS_ROOM_TYPES: `${API_BASE_URL}/api/rooms/room-types`,
   COMMISSION_POLICIES: `${API_BASE_URL}/api/commission-policies`,
   COMMISSION_POLICY_HOTELS: `${API_BASE_URL}/api/commission-policies/hotels`,
+  BOOKINGS: `${API_BASE_URL}/api/bookings`,
+  BOOKINGS_MY: `${API_BASE_URL}/api/bookings/my`,
+  BOOKING_CALCULATE: `${API_BASE_URL}/api/bookings/calculate`,
+  BOOKING_DETAIL: (id) => `${API_BASE_URL}/api/bookings/${id}`,
+  BOOKING_VOUCHER: (id) => `${API_BASE_URL}/api/bookings/${id}/voucher`,
+  BOOKING_INVOICE: (id) => `${API_BASE_URL}/api/bookings/${id}/invoice`,
+  BOOKING_CANCEL: (id) => `${API_BASE_URL}/api/bookings/${id}/cancel`,
+  BOOKING_DATES: (id) => `${API_BASE_URL}/api/bookings/${id}/dates`,
 };
+

@@ -21,7 +21,8 @@ const statisticsRoute = require("./features/statistics/statistics.route");
 const refundPolicyRoute = require("./features/refund_policies/refund_policy.route");
 const commissionPolicyRoute = require("./features/commission_policies/commission_policy.route");
 const env = require("./config/env");
-
+const bookingRoute = require('./features/bookings/booking.route');
+const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
 
 const app = express();
 
@@ -60,6 +61,8 @@ app.use("/api", chatbotRoute);
 app.use("/api", statisticsRoute);
 app.use("/api", refundPolicyRoute);
 app.use("/api", commissionPolicyRoute);
+app.use("/api", bookingRoute);
+
 app.use((_req, _res, next) => {
   const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');
   err.statusCode = 404;
@@ -76,6 +79,7 @@ process.on("unhandledRejection", (reason) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(env.PORT, () => {
+  startBookingExpiryCron();
   console.log(`\n🚀 AVORA Backend running on http://localhost:${env.PORT}`);
   console.log(`   ENV: ${env.NODE_ENV}`);
   console.log(`   API: http://localhost:${env.PORT}/api/system-codes\n`);
