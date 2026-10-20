@@ -32,6 +32,14 @@ const formatDateTime = (dateStr) => {
   });
 };
 
+const stripInternalMeta = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/<!--META:.*?-->/g, '')
+    .replace(/^\[.*?\]\s*/g, '')
+    .trim();
+};
+
 /* ─── Main Detail Component ─────────────────────────────────────────── */
 const RefundPolicyDetailPage = () => {
   const { id } = useParams();
@@ -382,7 +390,7 @@ const RefundPolicyDetailPage = () => {
             <div className="rpd-section-block">
               <div className="rpd-section-label">Điều kiện chi tiết áp dụng:</div>
               <div className="rpd-text-box">
-                {policy.refund_conditions || 'Theo quy chế tiêu chuẩn hủy đặt phòng và bảo đảm quyền lợi khách hàng của AVORA.'}
+                {stripInternalMeta(policy.refund_conditions) || 'Theo quy chế tiêu chuẩn hủy đặt phòng và bảo đảm quyền lợi khách hàng của AVORA.'}
               </div>
             </div>
 
@@ -390,7 +398,7 @@ const RefundPolicyDetailPage = () => {
             <div className="rpd-section-block">
               <div className="rpd-section-label">Mô tả nghiệp vụ &amp; Ghi chú:</div>
               <div className="rpd-text-box">
-                {policy.description || 'Chính sách tiêu chuẩn áp dụng cho các đơn đặt phòng thuộc phân khúc được cấu hình.'}
+                {stripInternalMeta(policy.description) || 'Chính sách tiêu chuẩn áp dụng cho các đơn đặt phòng thuộc phân khúc được cấu hình.'}
               </div>
             </div>
           </div>

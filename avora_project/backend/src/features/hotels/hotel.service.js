@@ -23,6 +23,51 @@ const supabase = require('../../config/supabaseClient');
  * @param {string[]} [params.facilities] - Array of facility IDs or names
  * @param {boolean} [params.onlyAvailable] - If true, only include hotels with available rooms
 /**
+ * Helper to sanitize policy description from m_cancellation_policy.
+ * Strips internal <!--META:...--> and brackets so clients get clean, friendly text.
+ */
+const cleanCancellationDescription = (rawDesc, freeBeforeHours = 48, penaltyRate = 0) => {
+  const hours = freeBeforeHours !== undefined && freeBeforeHours !== null ? Number(freeBeforeHours) : 48;
+  const pRate = penaltyRate !== undefined && penaltyRate !== null ? Number(penaltyRate) : 0;
+  const refundRate = Math.max(0, 100 - pRate);
+  const defaultText = hours > 0
+    ? `Miễn phí hủy phòng trước ${hours}h (hoàn tiền ${refundRate}%)`
+    : `Miễn phí hủy phòng trước thời điểm nhận phòng (hoàn tiền ${refundRate}%)`;
+
+  if (!rawDesc || typeof rawDesc !== 'string') {
+    return defaultText;
+  }
+
+  // Remove <!--META:...--> tags
+  let clean = rawDesc.replace(/<!--META:.*?-->/g, '').trim();
+
+  const condMatch = clean.match(/Điều kiện:\s*(.*)$/i);
+  const nameMatch = clean.match(/^\[(.*?)\]\s*/);
+
+  let descText = clean;
+  if (nameMatch) {
+    descText = descText.replace(/^\[(.*?)\]\s*/, '').trim();
+  }
+  if (condMatch) {
+    descText = descText.replace(/Điều kiện:\s*.*$/i, '').trim();
+  }
+
+  if (condMatch && condMatch[1] && condMatch[1].trim()) {
+    return condMatch[1].trim();
+  }
+
+  if (descText) {
+    return descText;
+  }
+
+  if (nameMatch && nameMatch[1] && nameMatch[1].trim()) {
+    return `${nameMatch[1].trim()} - ${defaultText}`;
+  }
+
+  return clean || defaultText;
+};
+
+/**
  * Room capacity rule:
  * - 2 giường tiêu chuẩn * 2 người = 4 người
  * - Có thêm 1 giường phụ * 1 người = tối đa 5 người
@@ -526,7 +571,11 @@ const searchHotels = async (params = {}) => {
       latest_room_at: latestRoomAtByHotel[hotel.hotel_id] || 0,
       cancellation_policy: {
         free_before_hours: policy.free_cancel_before_hours || 48,
-        description: policy.description || 'Miễn phí hủy phòng trước 48h (hoàn tiền 100%)',
+        description: cleanCancellationDescription(
+          policy.description,
+          policy.free_cancel_before_hours,
+          policy.penalty_rate
+        ),
       },
       tag: hotel.star_quality === 5 ? 'Ưu đãi mùa hè - Giảm 20%' : (minPriceForHotel < 2000000 ? 'Giá tốt nhất cho kỳ nghỉ này' : 'Ưu đãi chớp nhoáng'),
       is_genius: hotel.star_quality >= 4,
@@ -949,7 +998,11 @@ const getHotelById = async (hotelId, options = {}) => {
     cancellation_policy: policy ? {
       free_cancel_before_hours: policy.free_cancel_before_hours,
       penalty_rate: policy.penalty_rate,
-      description: policy.description,
+      description: cleanCancellationDescription(
+        policy.description,
+        policy.free_cancel_before_hours,
+        policy.penalty_rate
+      ),
     } : null,
     rooms: rooms,
     reviews: reviews,

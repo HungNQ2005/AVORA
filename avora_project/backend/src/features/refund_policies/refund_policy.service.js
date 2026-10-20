@@ -52,9 +52,29 @@ const encodePolicyDescription = ({
   effective_to = null,
 }) => {
   const parts = [];
-  if (policy_name) parts.push(`[${policy_name.trim()}]`);
-  if (description) parts.push(description.trim());
-  if (refund_conditions) parts.push(`Điều kiện: ${refund_conditions.trim()}`);
+
+  // Sanitize policy_name: strip brackets and META
+  const cleanName = (policy_name || "")
+    .replace(/<!--META:.*?-->/g, "")
+    .replace(/^\[(.*?)\]$/, "$1")
+    .trim();
+
+  // Sanitize description: strip META, brackets, conditions
+  const cleanDesc = (description || "")
+    .replace(/<!--META:.*?-->/g, "")
+    .replace(/^\[.*?\]\s*/g, "")
+    .replace(/Điều kiện:\s*.*$/i, "")
+    .trim();
+
+  // Sanitize refund_conditions: strip META and leading label
+  const cleanCond = (refund_conditions || "")
+    .replace(/<!--META:.*?-->/g, "")
+    .replace(/^Điều kiện:\s*/i, "")
+    .trim();
+
+  if (cleanName) parts.push(`[${cleanName}]`);
+  if (cleanDesc) parts.push(cleanDesc);
+  if (cleanCond) parts.push(`Điều kiện: ${cleanCond}`);
 
   const metaObj = {
     policy_code: policy_code || null,
@@ -79,10 +99,11 @@ const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = 
   let effective_from = record.created_at || null;
   let effective_to = null;
   let storedPolicyCode = null;
-  let cleanDesc = rawDesc;
 
-  const metaMatch = rawDesc.match(/<!--META:(.*?)-->/);
-  if (metaMatch) {
+  // Extract all <!--META:...--> tags (supporting multiple/malformed if any)
+  const metaRegex = /<!--META:(.*?)-->/g;
+  let metaMatch;
+  while ((metaMatch = metaRegex.exec(rawDesc)) !== null) {
     try {
       const parsedMeta = JSON.parse(metaMatch[1]);
       if (parsedMeta.status) status = parsedMeta.status;
@@ -92,19 +113,27 @@ const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = 
     } catch {
       // ignore JSON parse error
     }
-    cleanDesc = rawDesc.replace(/<!--META:.*?-->/, "").trim();
   }
+
+  // Strip all <!--META:...-->
+  let cleanDesc = rawDesc.replace(/<!--META:.*?-->/g, "").trim();
 
   // Extract policy name from [brackets] if present
   let policyName = "";
-  const nameMatch = cleanDesc.match(/^\[(.*?)\]\s*/);
-  if (nameMatch) {
-    policyName = nameMatch[1].trim();
+  while (/^\[(.*?)\]\s*/.test(cleanDesc)) {
+    const nameMatch = cleanDesc.match(/^\[(.*?)\]\s*/);
+    if (!policyName && nameMatch) {
+      policyName = nameMatch[1].trim();
+    }
     cleanDesc = cleanDesc.replace(/^\[(.*?)\]\s*/, "").trim();
-  } else if (hotel?.name) {
-    policyName = `Chính sách hoàn tiền - ${hotel.name}`;
-  } else {
-    policyName = `Chính sách hoàn tiền chuẩn AVORA (${record.free_cancel_before_hours}h)`;
+  }
+
+  if (!policyName) {
+    if (hotel?.name) {
+      policyName = `Chính sách hoàn tiền - ${hotel.name}`;
+    } else {
+      policyName = `Chính sách hoàn tiền chuẩn AVORA (${record.free_cancel_before_hours}h)`;
+    }
   }
 
   // Extract refund conditions
@@ -119,6 +148,12 @@ const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = 
     refundConditions = `Miễn phí hủy phòng trước ${record.free_cancel_before_hours} giờ (hoàn 100%). Hủy sau thời hạn áp dụng phí phạt ${penaltyRate}% (hoàn ${refundRate}%).`;
   }
 
+  // Final cleanup on cleanDesc to ensure no leftover brackets or metadata
+  cleanDesc = cleanDesc
+    .replace(/<!--META:.*?-->/g, "")
+    .replace(/^\[.*?\]\s*/g, "")
+    .trim();
+
   const penaltyRate = Number(record.penalty_rate || 0);
   const refundPercentage = Math.max(0, 100 - penaltyRate);
   const minHours = Number(record.free_cancel_before_hours || 0);
@@ -130,7 +165,7 @@ const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = 
     cancellation_policy_id: record.cancellation_policy_id,
     policy_code: storedPolicyCode || generatedCode,
     policy_name: policyName,
-    description: cleanDesc || rawDesc,
+    description: cleanDesc,
     refund_conditions: refundConditions,
     refund_percentage: refundPercentage,
     penalty_rate: penaltyRate,

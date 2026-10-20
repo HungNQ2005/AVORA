@@ -13,6 +13,14 @@ const EMPTY_FORM = {
   status: 'ACTIVE',
 };
 
+const stripMeta = (text) => {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/<!--META:.*?-->/g, '')
+    .replace(/^\[.*?\]\s*/g, '')
+    .trim();
+};
+
 const RefundPolicyFormModal = ({
   isOpen,
   onClose,
@@ -30,7 +38,7 @@ const RefundPolicyFormModal = ({
     if (isOpen) {
       if (initialData) {
         setForm({
-          policy_name: initialData.policy_name || '',
+          policy_name: stripMeta(initialData.policy_name) || initialData.policy_name || '',
           hotel_id: initialData.hotel_id || '',
           refund_percentage: initialData.refund_percentage !== undefined ? initialData.refund_percentage : 100,
           minimum_cancellation_hours:
@@ -39,8 +47,8 @@ const RefundPolicyFormModal = ({
               : initialData.free_cancel_before_hours !== undefined
               ? initialData.free_cancel_before_hours
               : 24,
-          refund_conditions: initialData.refund_conditions || '',
-          description: initialData.description || '',
+          refund_conditions: stripMeta(initialData.refund_conditions),
+          description: stripMeta(initialData.description),
           effective_from: initialData.effective_from ? initialData.effective_from.substring(0, 10) : '',
           effective_to: initialData.effective_to ? initialData.effective_to.substring(0, 10) : '',
           status: initialData.status || 'ACTIVE',

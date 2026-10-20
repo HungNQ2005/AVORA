@@ -19,6 +19,7 @@ const userRoute = require('./features/users/user.route');
 const chatbotRoute = require("./features/chatbot/chatbot.route");
 const statisticsRoute = require("./features/statistics/statistics.route");
 const refundPolicyRoute = require("./features/refund_policies/refund_policy.route");
+const commissionPolicyRoute = require("./features/commission_policies/commission_policy.route");
 const env = require("./config/env");
 
 
@@ -58,6 +59,7 @@ app.use("/api", userRoute);
 app.use("/api", chatbotRoute);
 app.use("/api", statisticsRoute);
 app.use("/api", refundPolicyRoute);
+app.use("/api", commissionPolicyRoute);
 app.use((_req, _res, next) => {
   const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');
   err.statusCode = 404;

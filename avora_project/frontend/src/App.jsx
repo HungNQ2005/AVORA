@@ -19,6 +19,8 @@ import CouponManagementPage from './features/coupons/pages/CouponManagementPage'
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import RefundPolicyManagementPage from './features/refund_policies/pages/RefundPolicyManagementPage';
 import RefundPolicyDetailPage from './features/refund_policies/pages/RefundPolicyDetailPage';
+import CommissionPolicyManagementPage from './features/commission_policies/pages/CommissionPolicyManagementPage';
+import CommissionPolicyDetailPage from './features/commission_policies/pages/CommissionPolicyDetailPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
@@ -281,6 +283,22 @@ function App() {
               }
             />
             <Route
+              path="commission-policies"
+              element={
+                <BusinessManagerRoute>
+                  <CommissionPolicyManagementPage />
+                </BusinessManagerRoute>
+              }
+            />
+            <Route
+              path="commission-policies/:id"
+              element={
+                <BusinessManagerRoute>
+                  <CommissionPolicyDetailPage />
+                </BusinessManagerRoute>
+              }
+            />
+            <Route
               path="users"
               element={
                 <AdminRoute>
@@ -312,6 +330,8 @@ function App() {
           <Route path="/admin/coupons/:id" element={<DynamicParamRedirect toPrefix="/dashboard/coupons" />} />
           <Route path="/admin/refund-policies" element={<Navigate to="/dashboard/refund-policies" replace />} />
           <Route path="/admin/refund-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/refund-policies" />} />
+          <Route path="/admin/commission-policies" element={<Navigate to="/dashboard/commission-policies" replace />} />
+          <Route path="/admin/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
           <Route path="/admin/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/admin/users" element={<Navigate to="/dashboard/users" replace />} />
@@ -325,6 +345,8 @@ function App() {
           <Route path="/coupons/:id" element={<DynamicParamRedirect toPrefix="/dashboard/coupons" />} />
           <Route path="/refund-policies" element={<Navigate to="/dashboard/refund-policies" replace />} />
           <Route path="/refund-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/refund-policies" />} />
+          <Route path="/commission-policies" element={<Navigate to="/dashboard/commission-policies" replace />} />
+          <Route path="/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
 

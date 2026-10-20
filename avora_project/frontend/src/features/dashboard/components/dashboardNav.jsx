@@ -29,6 +29,7 @@ const DashboardNav = () => {
   const canManageHotels = isAdmin || isBmr || isVendor;
   const canManageCoupons = isAdmin || isBmr;
   const canManageRefundPolicies = isAdmin || isBmr;
+  const canManageCommissionPolicies = isAdmin || isBmr;
   const canManageRooms = isVendor || isAdmin;
   const canViewStatistics = isVendor || isAdmin;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
@@ -269,7 +270,32 @@ const DashboardNav = () => {
                   <path d="M3 10h18M3 14h18M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
                 </svg>
               </span>
-              <span className="admin-sidebar__label">Chính sách hoàn tiền</span>
+            </div>
+          )}
+          {canManageCommissionPolicies ? (
+            <NavLink
+              to="/dashboard/commission-policies"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Chính sách phí hoa hồng</span>
+            </NavLink>
+          ) : (
+            <div className="admin-sidebar__link disabled">
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <line x1="12" y1="1" x2="12" y2="23"></line>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Chính sách phí hoa hồng</span>
             </div>
           )}
           {canViewStatistics ? (

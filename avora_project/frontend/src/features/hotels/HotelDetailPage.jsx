@@ -685,7 +685,14 @@ const HotelDetailPage = () => {
                 <span className="shuttle-callout-icon">
                   <ShieldCheckIcon />
                 </span>
-                <span>{cancellation_policy.description}</span>
+                <span>
+                  {cancellation_policy.description
+                    ? String(cancellation_policy.description)
+                        .replace(/<!--META:.*?-->/g, '')
+                        .replace(/^\[.*?\]\s*/g, '')
+                        .trim()
+                    : ''}
+                </span>
               </div>
             )}
           </section>

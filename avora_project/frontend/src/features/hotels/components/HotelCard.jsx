@@ -215,7 +215,14 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
           {hotel.cancellation_policy && (
             <li className="hotel-card__amenity-item hotel-card__amenity-item--policy">
               <CalendarCheckIcon />
-              <span>{hotel.cancellation_policy.description}</span>
+              <span>
+                {hotel.cancellation_policy.description
+                  ? String(hotel.cancellation_policy.description)
+                      .replace(/<!--META:.*?-->/g, '')
+                      .replace(/^\[.*?\]\s*/g, '')
+                      .trim()
+                  : ''}
+              </span>
             </li>
           )}
 
