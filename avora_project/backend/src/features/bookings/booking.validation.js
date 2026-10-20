@@ -1,64 +1,229 @@
 'use strict';
 
-/**
- * Validation schema and helpers for Booking requests.
- */
+const MAX_GUEST_NAME_LENGTH = 100;
+const MAX_SPECIAL_REQUEST_LENGTH = 1000;
+const MAX_SPECIAL_REQUEST_OPTION_LENGTH = 100;
+const MAX_SPECIAL_REQUEST_OPTIONS = 10;
 
-const validateBookingPayload = (body) => {
+const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const isIdentifier = (value) => (
+  (typeof value === 'string' && value.trim().length > 0) ||
+  (typeof value === 'number' && Number.isFinite(value) && value > 0)
+);
+
+const parseDateOnly = (value) => {
+  if (typeof value !== 'string') return null;
+
+  const normalized = value.trim();
+  const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+
+  const [, yearText, monthText, dayText] = match;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return normalized;
+};
+
+const getTodayInVietnam = () => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+
+  return `${part('year')}-${part('month')}-${part('day')}`;
+};
+
+const normalizeGuestPhone = (value) => {
+  if (typeof value !== 'string') return '';
+
+  let digits = value.trim().replace(/\D/g, '');
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('84')) digits = digits.slice(2);
+  digits = digits.replace(/^0+/, '');
+
+  return digits ? `0${digits}` : '';
+};
+
+const isValidGuestPhone = (value) => /^0\d{9,10}$/.test(normalizeGuestPhone(value));
+
+const validateStayDates = (checkInValue, checkOutValue, { allowPast = false } = {}) => {
   const errors = [];
+  const checkIn = parseDateOnly(checkInValue);
+  const checkOut = parseDateOnly(checkOutValue);
 
-  if (!body.hotel_id) {
+  if (!checkIn) {
+    errors.push('Ngày nhận phòng phải đúng định dạng YYYY-MM-DD và là ngày hợp lệ.');
+  }
+  if (!checkOut) {
+    errors.push('Ngày trả phòng phải đúng định dạng YYYY-MM-DD và là ngày hợp lệ.');
+  }
+
+  if (checkIn && checkOut && checkOut <= checkIn) {
+    errors.push('Ngày trả phòng phải sau ngày nhận phòng.');
+  }
+  if (!allowPast && checkIn && checkIn < getTodayInVietnam()) {
+    errors.push('Không được đặt phòng với ngày nhận phòng ở quá khứ.');
+  }
+
+  return errors;
+};
+
+const getRequestedRooms = (body) => {
+  if (Array.isArray(body.rooms) && body.rooms.length > 0) return body.rooms;
+  if (isIdentifier(body.room_type_id)) {
+    return [{ room_type_id: body.room_type_id, quantity: body.quantity ?? 1 }];
+  }
+  return [];
+};
+
+const validateRoomSelection = (body, errors) => {
+  const rooms = getRequestedRooms(body);
+  if (rooms.length === 0) {
+    errors.push('Vui lòng chọn ít nhất 1 hạng phòng để đặt.');
+    return;
+  }
+
+  rooms.forEach((room, index) => {
+    if (!isObject(room) || !isIdentifier(room.room_type_id)) {
+      errors.push(`Hạng phòng thứ ${index + 1} không hợp lệ.`);
+      return;
+    }
+
+    const quantity = typeof room.quantity === 'number'
+      ? room.quantity
+      : typeof room.quantity === 'string' && /^\d+$/.test(room.quantity.trim())
+        ? Number(room.quantity)
+        : NaN;
+    if (!Number.isSafeInteger(quantity) || quantity < 1) {
+      errors.push(`Số lượng phòng thứ ${index + 1} phải là số nguyên dương.`);
+    }
+  });
+};
+
+const validateBookingSelection = (body) => {
+  const errors = [];
+  if (!isObject(body)) {
+    return { isValid: false, errors: ['Dữ liệu đặt phòng không hợp lệ.'] };
+  }
+
+  if (!isIdentifier(body.hotel_id)) {
     errors.push('hotel_id là bắt buộc.');
   }
 
-  if (!body.check_in_date) {
-    errors.push('check_in_date là bắt buộc (định dạng YYYY-MM-DD).');
+  errors.push(...validateStayDates(body.check_in_date, body.check_out_date));
+  validateRoomSelection(body, errors);
+
+  return { isValid: errors.length === 0, errors };
+};
+
+const validateBookingPayload = (body) => {
+  const { errors } = validateBookingSelection(body);
+
+  if (!isObject(body)) {
+    return { isValid: false, errors };
   }
 
-  if (!body.check_out_date) {
-    errors.push('check_out_date là bắt buộc (định dạng YYYY-MM-DD).');
-  }
-
-  if (body.check_in_date && body.check_out_date) {
-    const checkIn = new Date(body.check_in_date);
-    const checkOut = new Date(body.check_out_date);
-    if (isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
-      errors.push('Ngày nhận phòng hoặc trả phòng không đúng định dạng.');
-    } else if (checkOut <= checkIn) {
-      errors.push('Ngày trả phòng phải sau ngày nhận phòng.');
-    } else {
-      const now = new Date();
-      const todayYear = now.getFullYear();
-      const todayMonth = String(now.getMonth() + 1).padStart(2, '0');
-      const todayDay = String(now.getDate()).padStart(2, '0');
-      const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
-      if (String(body.check_in_date).trim() < todayStr) {
-        errors.push('Không được đặt phòng với ngày nhận phòng ở quá khứ.');
-      }
-    }
-  }
-
-  if (!body.guest_name || !body.guest_name.trim()) {
+  if (typeof body.guest_name !== 'string' || !body.guest_name.trim()) {
     errors.push('Họ và tên người nhận phòng là bắt buộc.');
+  } else if (body.guest_name.trim().length > MAX_GUEST_NAME_LENGTH) {
+    errors.push(`Họ và tên không được vượt quá ${MAX_GUEST_NAME_LENGTH} ký tự.`);
   }
 
-  if (!body.guest_phone || !body.guest_phone.trim()) {
-    errors.push('Số điện thoại liên hệ là bắt buộc.');
+  if (!isValidGuestPhone(body.guest_phone)) {
+    errors.push('Số điện thoại liên hệ không hợp lệ.');
   }
 
-  if (!Array.isArray(body.rooms) || body.rooms.length === 0) {
-    // If room_type_id is provided directly in root, allow fallback
-    if (!body.room_type_id) {
-      errors.push('Vui lòng chọn ít nhất 1 phòng để đặt.');
+  if (
+    body.special_request !== undefined &&
+    body.special_request !== null &&
+    (typeof body.special_request !== 'string' || body.special_request.length > MAX_SPECIAL_REQUEST_LENGTH)
+  ) {
+    errors.push(`Yêu cầu đặc biệt phải là văn bản tối đa ${MAX_SPECIAL_REQUEST_LENGTH} ký tự.`);
+  }
+  if (
+    body.special_request_options !== undefined &&
+    (!Array.isArray(body.special_request_options) ||
+      body.special_request_options.length > MAX_SPECIAL_REQUEST_OPTIONS ||
+      body.special_request_options.some((option) => (
+        typeof option !== 'string' ||
+        !option.trim() ||
+        option.length > MAX_SPECIAL_REQUEST_OPTION_LENGTH
+      )))
+  ) {
+    errors.push('Các yêu cầu đặc biệt đã chọn không hợp lệ.');
+  }
+  if (
+    body.estimated_arrival_time !== undefined &&
+    (typeof body.estimated_arrival_time !== 'string' ||
+      body.estimated_arrival_time.trim().length > 50)
+  ) {
+    errors.push('Thời gian đến dự kiến không hợp lệ.');
+  }
+  if (
+    body.coupon_code !== undefined &&
+    body.coupon_code !== null &&
+    (typeof body.coupon_code !== 'string' || body.coupon_code.trim().length > 50)
+  ) {
+    errors.push('Mã giảm giá không hợp lệ.');
+  }
+
+  return { isValid: errors.length === 0, errors };
+};
+
+const validateGuestInfoPayload = (body) => {
+  const errors = [];
+  if (!isObject(body)) {
+    return { isValid: false, errors: ['Dữ liệu cập nhật thông tin khách không hợp lệ.'] };
+  }
+
+  const fields = ['guest_name', 'guest_phone', 'special_request'];
+  if (!fields.some((field) => body[field] !== undefined)) {
+    errors.push('Vui lòng cung cấp ít nhất một thông tin cần cập nhật.');
+  }
+
+  if (body.guest_name !== undefined) {
+    if (typeof body.guest_name !== 'string' || !body.guest_name.trim()) {
+      errors.push('Họ và tên người nhận phòng không được để trống.');
+    } else if (body.guest_name.trim().length > MAX_GUEST_NAME_LENGTH) {
+      errors.push(`Họ và tên không được vượt quá ${MAX_GUEST_NAME_LENGTH} ký tự.`);
     }
   }
 
-  return {
-    isValid: errors.length === 0,
-    errors,
-  };
+  if (body.guest_phone !== undefined && !isValidGuestPhone(body.guest_phone)) {
+    errors.push('Số điện thoại liên hệ không hợp lệ.');
+  }
+
+  if (
+    body.special_request !== undefined &&
+    body.special_request !== null &&
+    (typeof body.special_request !== 'string' || body.special_request.length > MAX_SPECIAL_REQUEST_LENGTH)
+  ) {
+    errors.push(`Yêu cầu đặc biệt phải là văn bản tối đa ${MAX_SPECIAL_REQUEST_LENGTH} ký tự.`);
+  }
+
+  return { isValid: errors.length === 0, errors };
 };
 
 module.exports = {
+  isValidGuestPhone,
+  normalizeGuestPhone,
   validateBookingPayload,
+  validateBookingSelection,
+  validateGuestInfoPayload,
+  validateStayDates,
 };

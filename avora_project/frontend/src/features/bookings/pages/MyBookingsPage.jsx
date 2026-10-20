@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import {
@@ -292,6 +292,35 @@ const formatVnStayDate = (dateStr) => {
   return `${dd}/${mm}/${yyyy} (${dayName})`;
 };
 
+const PAYMENT_HOLD_MS = 10 * 60 * 1000;
+
+const getBookingPaymentDeadline = (booking) => {
+  if (!booking?.created_at) return null;
+  const createdAt = new Date(booking.created_at);
+  if (Number.isNaN(createdAt.getTime())) return null;
+  return new Date(createdAt.getTime() + PAYMENT_HOLD_MS);
+};
+
+const getBookingCountdown = (booking, currentTime) => {
+  const deadline = getBookingPaymentDeadline(booking);
+  if (!deadline) return null;
+
+  const remainingMs = Math.max(0, deadline.getTime() - currentTime);
+  const totalSeconds = Math.ceil(remainingMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return {
+    deadline,
+    remainingMs,
+    totalSeconds,
+    minutes,
+    seconds,
+    expired: remainingMs <= 0,
+    label: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+  };
+};
+
 /**
  * Main "Quản lý Đặt Chỗ & Lịch Sử Kỳ Nghỉ" Page Component
  */
@@ -299,13 +328,15 @@ const MyBookingsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
+  const userId = user?.user_id;
 
   // Active status tab: 'all' | 'upcoming' | 'completed' | 'cancelled'
   const activeTab = searchParams.get('status') || 'all';
-  const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const [currentYear] = useState(() => new Date().getFullYear());
 
   // Search input & filter state
   const [searchInput, setSearchInput] = useState('');
+  const searchInputRef = useRef('');
   const [timeRange, setTimeRange] = useState('all');
   const [requireVatOnly, setRequireVatOnly] = useState(false);
 
@@ -315,6 +346,12 @@ const MyBookingsPage = () => {
   const [counts, setCounts] = useState({ all: 0, upcoming: 0, completed: 0, cancelled: 0 });
   const [availableYears, setAvailableYears] = useState([]);
   const [errorMsg, setErrorMsg] = useState('');
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const tick = setInterval(() => setNowMs(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   // Modals state
   const [selectedBookingForVoucher, setSelectedBookingForVoucher] = useState(null);
@@ -341,7 +378,7 @@ const MyBookingsPage = () => {
   const [galleryModalImages, setGalleryModalImages] = useState(null);
 
   // Load bookings from database
-  const loadBookings = async (overrideStatus = activeTab, keyword = searchInput) => {
+  const loadBookings = useCallback(async (overrideStatus = activeTab, keyword = searchInputRef.current) => {
     setLoading(true);
     setErrorMsg('');
     try {
@@ -349,7 +386,7 @@ const MyBookingsPage = () => {
         status: overrideStatus,
         search: keyword,
         timeRange,
-        userId: user?.user_id || undefined,
+        userId: userId || undefined,
       });
       setBookings(data.bookings || []);
       setCounts(data.counts || { all: 0, upcoming: 0, completed: 0, cancelled: 0 });
@@ -362,12 +399,18 @@ const MyBookingsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [activeTab, timeRange, userId]);
 
   useEffect(() => {
     if (authLoading) return;
-    loadBookings(activeTab, searchInput);
-  }, [activeTab, timeRange, user?.user_id, authLoading]);
+    let isActive = true;
+    Promise.resolve().then(() => {
+      if (isActive) loadBookings(activeTab);
+    });
+    return () => {
+      isActive = false;
+    };
+  }, [activeTab, authLoading, loadBookings, searchInput]);
 
   // Tab switch handler
   const handleTabChange = (statusKey) => {
@@ -378,6 +421,11 @@ const MyBookingsPage = () => {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     loadBookings(activeTab, searchInput);
+  };
+
+  const handleSearchInputChange = (e) => {
+    searchInputRef.current = e.target.value;
+    setSearchInput(e.target.value);
   };
 
   // Apply client-side filter for VAT / Invoice eligible bookings if toggled
@@ -550,17 +598,6 @@ const MyBookingsPage = () => {
             </p>
           </div>
 
-          <div className="my-bookings-guarantee-card">
-            <div className="my-bookings-guarantee-icon">
-              <ShieldCheckIcon />
-            </div>
-            <div className="my-bookings-guarantee-content">
-              <span className="my-bookings-guarantee-title">Dữ liệu đặt chỗ thời gian thực</span>
-              <span className="my-bookings-guarantee-desc">
-                • {counts.upcoming} đơn sắp tới / {counts.all} tổng đơn trong CSDL
-              </span>
-            </div>
-          </div>
         </div>
 
         {/* ─── 2. STATUS TABS BAR ───────────────────────────────────────── */}
@@ -615,7 +652,7 @@ const MyBookingsPage = () => {
               className="my-bookings-search-input"
               placeholder="Tìm theo mã đơn (AV#...), tên khách sạn, địa danh..."
               value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
+              onChange={handleSearchInputChange}
             />
           </div>
 
@@ -818,6 +855,21 @@ const MyBookingsPage = () => {
                               <CheckCircleIcon width="13" height="13" />
                             )}
                             <span>{booking.status_name}</span>
+                            {(booking.status_badge_variant === 'amber' || booking.status_badge_variant === 'pending') &&
+                              booking.payment?.is_paid !== true && (() => {
+                                const countdown = getBookingCountdown(booking, nowMs);
+                                if (!countdown) return null;
+
+                                return (
+                                  <span
+                                    className={`my-bookings-payment-timer ${countdown.expired ? 'is-expired' : ''}`}
+                                    aria-label={countdown.expired ? 'Đã hết thời gian thanh toán' : `Còn ${countdown.label} để thanh toán`}
+                                  >
+                                    <ClockIcon width="12" height="12" />
+                                    <span>{countdown.label}</span>
+                                  </span>
+                                );
+                              })()}
                           </span>
 
                           {booking.booking_code && (

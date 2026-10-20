@@ -29,7 +29,9 @@ export const createBooking = async (payload) => {
 
   const json = await response.json();
   if (!response.ok || json.status === 'error') {
-    throw new Error(json.message || 'Không thể tạo đơn đặt phòng.');
+    const error = new Error(json.message || 'Không thể tạo đơn đặt phòng.');
+    error.code = json.code;
+    throw error;
   }
 
   return json.data;
@@ -137,4 +139,3 @@ export const fetchBookingInvoice = async (id) => {
 
   return json.data;
 };
-

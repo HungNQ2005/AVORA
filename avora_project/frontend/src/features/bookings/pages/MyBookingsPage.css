@@ -54,50 +54,6 @@
   line-height: 1.5;
 }
 
-.my-bookings-guarantee-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 12px 18px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-
-.my-bookings-guarantee-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  background: #e0f2fe;
-  color: #0284c7;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  flex-shrink: 0;
-}
-
-.my-bookings-guarantee-content {
-  display: flex;
-  flex-direction: column;
-}
-
-.my-bookings-guarantee-title {
-  font-size: 13px;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.my-bookings-guarantee-desc {
-  font-size: 12px;
-  color: #10b981;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 /* ─── 2. TABS & SEARCH FILTER BAR ─────────────────────────────────────── */
 .my-bookings-tabs-bar {
   display: flex;
@@ -898,6 +854,24 @@
   color: #b91c1c;
   border: 1px solid #fecaca;
 }
+
+.my-bookings-payment-timer {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  padding-left: 8px;
+  border-left: 1px solid currentColor;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+
+.my-bookings-payment-timer.is-expired {
+  color: #b91c1c;
+}
+
 .my-bookings-compact-name {
   font-size: 16px;
   font-weight: 700;

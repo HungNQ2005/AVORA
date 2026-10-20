@@ -6,6 +6,7 @@ import SelectedRoomCard from '../components/SelectedRoomCard';
 import SpecialRequestsCard from '../components/SpecialRequestsCard';
 import OrderSummarySidebar from '../components/OrderSummarySidebar';
 import BookingSuccessModal from '../components/BookingSuccessModal';
+import BookingErrorModal from '../components/BookingErrorModal';
 import { calculateBookingPricing, createBooking } from '../../../services/bookingApi';
 import { useAuth } from '../../../context/AuthContext';
 import './booking.css';
@@ -24,6 +25,24 @@ const BookingPage = () => {
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
   const [errorMessage, setErrorMessage] = useState(null);
+
+  const getBookingErrorMessage = (error) => {
+    if (error?.code === 'SOLD_OUT') {
+      const dates = error.message.match(/đêm:\s*(.+)\.$/i)?.[1];
+      const formattedDates = dates
+        ? dates.split(',').map((date) => {
+          const [year, month, day] = date.trim().split('-');
+          return day && month && year ? `${day}/${month}/${year}` : date.trim();
+        }).join(', ')
+        : null;
+
+      return formattedDates
+        ? `Rất tiếc, phòng đã hết cho đêm ${formattedDates}. Vui lòng chọn ngày khác hoặc giảm số phòng.`
+        : 'Rất tiếc, phòng đã hết trong thời gian bạn chọn. Vui lòng chọn ngày khác hoặc giảm số phòng.';
+    }
+
+    return error?.message || 'Không thể lưu đơn đặt phòng vào cơ sở dữ liệu.';
+  };
 
   const formatDateLabel = (dateStr) => {
     if (!dateStr) return '—';
@@ -346,7 +365,7 @@ const BookingPage = () => {
       const res = await createBooking(bookingPayload);
       setCreatedBookingResult(res);
     } catch (err) {
-      setErrorMessage(err.message || 'Không thể lưu đơn đặt phòng vào cơ sở dữ liệu.');
+      setErrorMessage(getBookingErrorMessage(err));
     } finally {
       isSubmittingRef.current = false;
       setIsSubmitting(false);
@@ -390,41 +409,6 @@ const BookingPage = () => {
           <span>3. Quản lý đặt chỗ</span>
         </div>
       </div>
-
-      {errorMessage && (
-        <div
-          style={{
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            fontSize: '14px',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <span>⚠️ {errorMessage}</span>
-          <button
-            type="button"
-            onClick={() => setErrorMessage(null)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#dc2626',
-              fontSize: '16px',
-              cursor: 'pointer',
-              fontWeight: 700,
-              padding: '0 4px',
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {isLoadingPricing && !activeHotel ? (
         <div style={{ padding: '48px 16px', textAlign: 'center', color: '#475569' }}>
@@ -492,6 +476,10 @@ const BookingPage = () => {
           }}
         />
       )}
+      <BookingErrorModal
+        message={errorMessage}
+        onClose={() => setErrorMessage(null)}
+      />
     </div>
   );
 };

@@ -1,7 +1,11 @@
 'use strict';
 
 const bookingService = require('./booking.service');
-const { validateBookingPayload } = require('./booking.validation');
+const {
+  validateBookingPayload,
+  validateBookingSelection,
+  validateGuestInfoPayload,
+} = require('./booking.validation');
 
 /**
  * Controller handling customer booking actions.
@@ -9,6 +13,15 @@ const { validateBookingPayload } = require('./booking.validation');
 
 const calculatePricing = async (req, res, next) => {
   try {
+    const { isValid, errors } = validateBookingSelection(req.body);
+    if (!isValid) {
+      return res.status(400).json({
+        status: 'error',
+        message: errors[0],
+        errors,
+      });
+    }
+
     const result = await bookingService.calculatePricing(req.body);
     return res.status(200).json({
       status: 'success',
@@ -81,8 +94,17 @@ const getMyBookings = async (req, res, next) => {
 
 const updateBookingGuestInfo = async (req, res, next) => {
   try {
+    const { isValid, errors } = validateGuestInfoPayload(req.body);
+    if (!isValid) {
+      return res.status(400).json({
+        status: 'error',
+        message: errors[0],
+        errors,
+      });
+    }
+
     const { id } = req.params;
-    const updated = await bookingService.updateBookingGuestInfo(id, req.body);
+    const updated = await bookingService.updateBookingGuestInfo(id, req.body, req.user);
     return res.status(200).json({
       status: 'success',
       message: 'Cập nhật thông tin đơn đặt phòng thành công!',
@@ -96,7 +118,7 @@ const updateBookingGuestInfo = async (req, res, next) => {
 const changeBookingDates = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await bookingService.changeBookingDates(id, req.body);
+    const result = await bookingService.changeBookingDates(id, req.body, req.user);
     return res.status(200).json({
       status: 'success',
       message: 'Đổi ngày lưu trú thành công!',
@@ -110,7 +132,7 @@ const changeBookingDates = async (req, res, next) => {
 const cancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const result = await bookingService.cancelBooking(id, req.body);
+    const result = await bookingService.cancelBooking(id, req.body, req.user);
     return res.status(200).json({
       status: 'success',
       message: result.message,
@@ -158,4 +180,3 @@ module.exports = {
   getBookingVoucher,
   getBookingInvoice,
 };
-
