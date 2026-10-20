@@ -246,7 +246,7 @@ const deactivateHotel = async ({ hotelId, access, options = {} }) => {
   return (await addStatusNames([data]))[0];
 };
 
-const HOTEL_IMAGE_BUCKET = 'hotel-images';
+const HOTEL_IMAGE_BUCKET = 'hotel_images';
 
 // Confirms the hotel exists and belongs to the Vendor performing the image operation.
 const assertHotelAccess = async (hotelId, access) => {
@@ -275,7 +275,7 @@ const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbn
   const imageUrl = publicUrlData?.publicUrl;
   if (!imageUrl) {
     await supabase.storage.from(HOTEL_IMAGE_BUCKET).remove([objectPath]);
-    const err = new Error('Không thể tạo đường dẫn công khai cho ảnh khách sạn. Kiểm tra cấu hình bucket hotel-images.');
+    const err = new Error('Không thể tạo đường dẫn công khai cho ảnh khách sạn. Kiểm tra cấu hình bucket hotel_images.');
     err.statusCode = 500;
     throw err;
   }

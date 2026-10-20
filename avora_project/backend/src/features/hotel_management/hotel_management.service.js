@@ -154,7 +154,7 @@ const uploadHotelImage = async (hotelId, file, access) => {
 	if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimetype)) {
 		throw createError('Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF.', 400);
 	}
-	if (file.size > 5 * 1024 * 1024) throw createError('Ảnh vượt quá dung lượng tối đa 5 MB.', 413);
+	if (file.size > 2 * 1024 * 1024) throw createError('Ảnh vượt quá dung lượng tối đa 2 MB.', 413);
 
 	const image = await hotelModel.addHotelImage(hotelId, {
 		buffer: file.buffer,

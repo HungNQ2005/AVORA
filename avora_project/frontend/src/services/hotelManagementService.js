@@ -15,13 +15,13 @@ api.interceptors.request.use((config) => {
 
 const unwrap = (response) => response.data.data;
 
-export const HOTEL_IMAGE_MAX_SIZE_BYTES = 5 * 1024 * 1024;
+export const HOTEL_IMAGE_MAX_SIZE_BYTES = 2 * 1024 * 1024;
 export const HOTEL_IMAGE_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export const validateHotelImageFile = (file) => {
   if (!file) return 'Vui lòng chọn tệp hình ảnh.';
   if (!HOTEL_IMAGE_ACCEPTED_TYPES.includes(file.type)) return 'Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF.';
-  if (file.size > HOTEL_IMAGE_MAX_SIZE_BYTES) return 'Ảnh vượt quá dung lượng tối đa 5 MB.';
+  if (file.size > HOTEL_IMAGE_MAX_SIZE_BYTES) return 'Ảnh vượt quá dung lượng tối đa 2 MB.';
   return null;
 };
 

@@ -96,7 +96,7 @@ const HotelImageManager = ({ hotelId, images, onImagesChange, canManage }) => {
           ))}
         </div>
       ) : (
-        <p className="hotel-image-manager__empty">Chưa có hình ảnh nào. Tải JPG, PNG, WEBP hoặc GIF (tối đa 5 MB) để hiển thị cho khách hàng.</p>
+        <p className="hotel-image-manager__empty">Chưa có hình ảnh nào. Tải JPG, PNG, WEBP hoặc GIF (tối đa 2 MB) để hiển thị cho khách hàng.</p>
       )}
     </section>
   );
