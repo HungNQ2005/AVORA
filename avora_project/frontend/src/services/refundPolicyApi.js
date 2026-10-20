@@ -65,11 +65,25 @@ export const fetchRefundPolicies = async (params = {}) => {
   }
 
   const softDeletedIds = getSoftDeletedRefundPolicyIds();
-  const list = Array.isArray(json.data) ? json.data : [];
-  return list.filter((p) => {
+  const rawPolicies = Array.isArray(json.data?.policies)
+    ? json.data.policies
+    : Array.isArray(json.data)
+    ? json.data
+    : [];
+
+  const filteredPolicies = rawPolicies.filter((p) => {
     const pId = String(p.policy_id || p.cancellation_policy_id || '').trim();
     return !softDeletedIds.includes(pId);
   });
+
+  if (Array.isArray(json.data)) {
+    return filteredPolicies;
+  }
+
+  return {
+    ...json.data,
+    policies: filteredPolicies,
+  };
 };
 
 /**
