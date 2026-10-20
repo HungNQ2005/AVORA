@@ -70,8 +70,8 @@ const createHotel = async (input, access) => {
 };
 
 const approveHotel = async (hotelId, access) => {
-	if (!access.isSystemAdmin && !access.isBusinessManager) {
-		throw createError('Chỉ Quản trị viên hệ thống và Quản lý doanh nghiệp mới có quyền phê duyệt khách sạn.', 403);
+	if (!access.isSystemAdmin) {
+		throw createError('Chỉ Quản trị viên hệ thống mới có quyền phê duyệt khách sạn.', 403);
 	}
 	const hotel = await hotelModel.approveHotel(hotelId);
 	if (!hotel) throw createError('Không tìm thấy khách sạn, khách sạn đã hoạt động hoặc đã bị xóa.', 404);
@@ -80,7 +80,7 @@ const approveHotel = async (hotelId, access) => {
 
 const updateHotel = async (hotelId, input, access) => {
 	const updates = { ...input };
-	const isStaff = access.isSystemAdmin || access.isBusinessManager;
+	const isStaff = access.isSystemAdmin;
 	if (!access.isVendor && !isStaff) {
 		throw createError('Bạn không có quyền cập nhật khách sạn.', 403);
 	}
@@ -100,7 +100,7 @@ const updateHotel = async (hotelId, input, access) => {
 	}
 	if (updates.hotel_status !== undefined) {
 		if (isStaff && updates.hotel_status === 'INACTIVE') {
-			throw createError('Quản trị viên hệ thống và Quản lý doanh nghiệp không được phép ngừng hoạt động khách sạn.', 403);
+			throw createError('Quản trị viên hệ thống không được phép ngừng hoạt động khách sạn.', 403);
 		}
 		if (access.isVendor && (updates.hotel_status !== 'PENDING' || hotel.hotel_status !== 'INACTIVE')) {
 			throw createError('Nhà cung cấp chỉ có thể yêu cầu mở lại khách sạn đang ngừng hoạt động.', 403);

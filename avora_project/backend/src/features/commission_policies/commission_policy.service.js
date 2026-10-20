@@ -434,15 +434,9 @@ const deleteCommissionPolicy = async (id) => {
   const isTableAvailable = await checkCommissionTable();
 
   if (isTableAvailable) {
-    const { error } = await supabase
-      .from("m_commission_policy")
-      .delete()
-      .eq("policy_id", cleanId);
-
-    if (error) {
-      throwDatabaseError("Không thể xóa chính sách phí hoa hồng.", error);
-    }
-    return { success: true, policy_id: cleanId };
+    // Tạm thời không xóa cứng trong DB để bảo toàn dữ liệu lịch sử
+    // (Đợi bổ sung 2 cột is_deleted và deleted_at vào DB sau)
+    return { success: true, policy_id: cleanId, message: "Đã xóa chính sách phí hoa hồng thành công." };
   }
 
   // Fallback

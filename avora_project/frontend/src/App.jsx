@@ -78,17 +78,33 @@ const AdminRoute = ({ children }) => {
 };
 
 /**
- * Guard coupon management routes for Business Managers only.
+ * Guard coupon management routes for Business Managers only (strictly BMR).
  */
-const BusinessManagerRoute = ({ children }) => {
+const CouponManagerRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
   const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const isBmr = roleCode === 'BMR' || roleCd === '3' || roleCode === 'ADM' || roleCd === '1';
+  const isBmr = roleCode === 'BMR' || roleCd === '3';
   if (!isBmr) return <Navigate to="/forbidden" replace />;
+
+  return children;
+};
+
+/**
+ * Guard policy management routes (refund policies, commission policies) for BMR and ADM.
+ */
+const BusinessPolicyRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const isAllowed = roleCode === 'BMR' || roleCd === '3' || roleCode === 'ADM' || roleCd === '1';
+  if (!isAllowed) return <Navigate to="/forbidden" replace />;
 
   return children;
 };
@@ -200,8 +216,22 @@ function App() {
             }
           >
             <Route index element={<DashboardIndexRedirect />} />
-            <Route path="hotel-management" element={<HotelManagementPage />} />
-            <Route path="hotel-management/:id" element={<HotelManagementDetailPage />} />
+            <Route
+              path="hotel-management"
+              element={
+                <HotelManagerRoute>
+                  <HotelManagementPage />
+                </HotelManagerRoute>
+              }
+            />
+            <Route
+              path="hotel-management/:id"
+              element={
+                <HotelManagerRoute>
+                  <HotelManagementDetailPage />
+                </HotelManagerRoute>
+              }
+            />
             <Route
               path="rooms"
               element={
@@ -253,49 +283,49 @@ function App() {
             <Route
               path="coupons"
               element={
-                <BusinessManagerRoute>
+                <CouponManagerRoute>
                   <CouponManagementPage />
-                </BusinessManagerRoute>
+                </CouponManagerRoute>
               }
             />
             <Route
               path="coupons/:id"
               element={
-                <BusinessManagerRoute>
+                <CouponManagerRoute>
                   <CouponDetailPage />
-                </BusinessManagerRoute>
+                </CouponManagerRoute>
               }
             />
             <Route
               path="refund-policies"
               element={
-                <BusinessManagerRoute>
+                <BusinessPolicyRoute>
                   <RefundPolicyManagementPage />
-                </BusinessManagerRoute>
+                </BusinessPolicyRoute>
               }
             />
             <Route
               path="refund-policies/:id"
               element={
-                <BusinessManagerRoute>
+                <BusinessPolicyRoute>
                   <RefundPolicyDetailPage />
-                </BusinessManagerRoute>
+                </BusinessPolicyRoute>
               }
             />
             <Route
               path="commission-policies"
               element={
-                <BusinessManagerRoute>
+                <BusinessPolicyRoute>
                   <CommissionPolicyManagementPage />
-                </BusinessManagerRoute>
+                </BusinessPolicyRoute>
               }
             />
             <Route
               path="commission-policies/:id"
               element={
-                <BusinessManagerRoute>
+                <BusinessPolicyRoute>
                   <CommissionPolicyDetailPage />
-                </BusinessManagerRoute>
+                </BusinessPolicyRoute>
               }
             />
             <Route

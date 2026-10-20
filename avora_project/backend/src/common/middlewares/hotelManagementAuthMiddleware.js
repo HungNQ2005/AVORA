@@ -31,9 +31,8 @@ const authorizeHotelManagement = async (req, res, next) => {
     if (roleError) throw roleError;
     const roleName = String(role?.code_name || '').trim().toUpperCase();
     const isSystemAdmin = roleName === 'ADM';
-    const isBusinessManager = roleName === 'BMR';
     const isVendor = roleName === 'VEN';
-    if (!isSystemAdmin && !isBusinessManager && !isVendor) {
+    if (!isSystemAdmin && !isVendor) {
       return sendError(res, 403, 'Bạn không có quyền quản lý khách sạn.');
     }
 
@@ -43,7 +42,6 @@ const authorizeHotelManagement = async (req, res, next) => {
       roleName,
       roleDisplayName: codeNameParser(roleName),
       isSystemAdmin,
-      isBusinessManager,
       isVendor,
     };
     return next();

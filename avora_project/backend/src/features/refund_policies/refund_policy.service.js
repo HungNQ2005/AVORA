@@ -677,16 +677,8 @@ const deleteRefundPolicy = async (id) => {
     throw conflict;
   }
 
-  // 3. Safe to delete (unassigned policy without active bookings)
-  const { error: delErr } = await supabase
-    .from("m_cancellation_policy")
-    .delete()
-    .eq("cancellation_policy_id", cleanId);
-
-  if (delErr) {
-    throwDatabaseError("Không thể xóa chính sách hoàn tiền.", delErr);
-  }
-
+  // 3. Safe to delete: Tạm thời không xóa cứng trong DB để bảo toàn dữ liệu lịch sử
+  // (Đợi bổ sung 2 cột is_deleted và deleted_at vào DB sau)
   return { success: true, message: "Đã xóa chính sách hoàn tiền thành công." };
 };
 

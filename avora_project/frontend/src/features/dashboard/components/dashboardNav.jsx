@@ -26,8 +26,8 @@ const DashboardNav = () => {
   const isBmr = roleCode === 'BMR' || roleCd === '3';
   const isVendor = roleCode === 'VEN' || roleCd === '4';
   const canManageVenue = isAdmin || isVendor;
-  const canManageHotels = isAdmin || isBmr || isVendor;
-  const canManageCoupons = isAdmin || isBmr;
+  const canManageHotels = isAdmin || isVendor;
+  const canManageCoupons = isBmr;
   const canManageRefundPolicies = isAdmin || isBmr;
   const canManageCommissionPolicies = isAdmin || isBmr;
   const canManageRooms = isVendor || isAdmin;

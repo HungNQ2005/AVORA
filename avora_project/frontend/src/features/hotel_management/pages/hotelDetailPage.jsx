@@ -39,7 +39,7 @@ const HotelDetailPage = () => {
   const [toast, setToast] = useState('');
   const role = String(user?.role_code_name || '').trim().toUpperCase();
   const isVendor = role === 'VEN';
-  const canApprove = role === 'ADM' || role === 'BMR';
+  const canApprove = role === 'ADM';
   const [images, setImages] = useState([]);
 
   useEffect(() => {
