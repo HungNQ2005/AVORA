@@ -184,6 +184,27 @@ const formatPrice = (val) => {
 };
 
 /**
+ * Clean up policy description for customer display:
+ * Strips internal <!--META:...--> comments and [Policy Name] brackets,
+ * leaving clean, concise benefits text.
+ */
+const cleanPolicyText = (raw) => {
+  if (!raw || typeof raw !== 'string') return 'Theo chính sách đặt phòng của khách sạn';
+  let clean = raw.replace(/<!--META:[\s\S]*?-->/g, '').trim();
+  clean = clean.replace(/^\[.*?\]\s*/g, '').trim();
+  const condMatch = clean.match(/Điều kiện:\s*(.*)$/i);
+  let descText = clean;
+  if (condMatch) {
+    descText = descText.replace(/Điều kiện:\s*.*$/i, '').trim();
+  }
+  if (descText) return descText;
+  if (condMatch && condMatch[1] && condMatch[1].trim()) {
+    return condMatch[1].trim();
+  }
+  return clean || 'Theo chính sách đặt phòng của khách sạn';
+};
+
+/**
  * HotelDetailPage — 100% faithful replication of the reference designs.
  * Fetches real database data via backend endpoint /api/hotels/:id
  */
@@ -688,12 +709,7 @@ const HotelDetailPage = () => {
                   <ShieldCheckIcon />
                 </span>
                 <span>
-                  {cancellation_policy.description
-                    ? String(cancellation_policy.description)
-                        .replace(/<!--META:.*?-->/g, '')
-                        .replace(/^\[.*?\]\s*/g, '')
-                        .trim()
-                    : ''}
+                  {cleanPolicyText(cancellation_policy.description)}
                 </span>
               </div>
             )}
@@ -785,7 +801,7 @@ const HotelDetailPage = () => {
                           <span className="benefit-icon">
                             <CheckIcon />
                           </span>
-                          <span>{room.policy_description || 'Theo chính sách đặt phòng của khách sạn'}</span>
+                          <span>{cleanPolicyText(room.policy_description)}</span>
                         </li>
                         <li className="benefit-item">
                           <span className="benefit-icon">

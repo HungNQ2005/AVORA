@@ -58,6 +58,22 @@ const formatPrice = (val) => {
   return `${new Intl.NumberFormat('vi-VN').format(val)} VND`;
 };
 
+const cleanPolicyText = (raw) => {
+  if (!raw || typeof raw !== 'string') return '';
+  let clean = raw.replace(/<!--META:[\s\S]*?-->/g, '').trim();
+  clean = clean.replace(/^\[.*?\]\s*/g, '').trim();
+  const condMatch = clean.match(/Điều kiện:\s*(.*)$/i);
+  let descText = clean;
+  if (condMatch) {
+    descText = descText.replace(/Điều kiện:\s*.*$/i, '').trim();
+  }
+  if (descText) return descText;
+  if (condMatch && condMatch[1] && condMatch[1].trim()) {
+    return condMatch[1].trim();
+  }
+  return clean;
+};
+
 /**
  * Single Hotel Card Component matching the reference UI exactly.
  */
@@ -216,12 +232,7 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
             <li className="hotel-card__amenity-item hotel-card__amenity-item--policy">
               <CalendarCheckIcon />
               <span>
-                {hotel.cancellation_policy.description
-                  ? String(hotel.cancellation_policy.description)
-                      .replace(/<!--META:.*?-->/g, '')
-                      .replace(/^\[.*?\]\s*/g, '')
-                      .trim()
-                  : ''}
+                {cleanPolicyText(hotel.cancellation_policy.description)}
               </span>
             </li>
           )}

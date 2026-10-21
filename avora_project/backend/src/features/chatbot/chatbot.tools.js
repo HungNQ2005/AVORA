@@ -378,8 +378,9 @@ const getSpecificHotelDetails = async (args = {}, ctx = {}) => {
                 free_cancel_before_hours: policyRes.data.free_cancel_before_hours,
                 penalty_rate: policyRes.data.penalty_rate,
                 description: String(policyRes.data.description || '')
-                    .replace(/<!--META:.*?-->/g, '')
+                    .replace(/<!--META:[\s\S]*?-->/g, '')
                     .replace(/^\[.*?\]\s*/g, '')
+                    .replace(/Điều kiện:\s*.*$/i, '')
                     .trim() || `Miễn phí hủy phòng trước ${policyRes.data.free_cancel_before_hours || 48}h`,
             } : null,
             link: `/hotel/${hotel.hotel_id}`,
