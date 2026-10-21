@@ -30,9 +30,18 @@ const getAdminReviews = async (_req, res, next) => {
   }
 };
 
+const getMyReviewRemovalNotifications = async (req, res, next) => {
+  try {
+    const notifications = await reviewService.getMyReviewRemovalNotifications(req.user.user_id);
+    return sendSuccess(res, 200, 'Lấy thông báo thành công.', notifications);
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const adminSoftDeleteReview = async (req, res, next) => {
   try {
-    const result = await reviewService.adminSoftDeleteReview(req.params.reviewId);
+    const result = await reviewService.adminSoftDeleteReview(req.params.reviewId, req.user.user_id, req.body, req.ip);
     return sendSuccess(res, 200, 'Đánh giá đã được ẩn khỏi hệ thống.', result);
   } catch (error) {
     return next(error);
@@ -68,7 +77,7 @@ const updateReview = async (req, res, next) => {
 
 const deleteReview = async (req, res, next) => {
   try {
-    const data = await reviewService.deleteReview(req.user.user_id, req.params.reviewId);
+    const data = await reviewService.deleteReview(req.user.user_id, req.params.reviewId, req.body, req.ip);
     return sendSuccess(res, 200, 'Xóa đánh giá thành công.', data);
   } catch (error) {
     return next(error);
@@ -79,6 +88,7 @@ module.exports = {
   getHotelReviews,
   getMyReviews,
   getAdminReviews,
+  getMyReviewRemovalNotifications,
   adminSoftDeleteReview,
   getBookingReview,
   createReview,

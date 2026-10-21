@@ -1,9 +1,16 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const { sendMail } = require('../../common/services/email/email.service');
 
 const EDIT_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
 const isConfirmedBooking = (statusCode) => ['2', 'CFM'].includes(String(statusCode ?? '').trim().toUpperCase());
+const REVIEW_DELETION_REASONS = {
+  VIOLENCE: 'Nội dung có yếu tố bạo lực',
+  DEFAMATION: 'Nội dung phỉ báng hoặc không chính xác',
+  SEXUAL_CONTENT: 'Nội dung không phù hợp hoặc gợi dục',
+  POLITICAL_CONTENT: 'Nội dung chính trị không cần thiết',
+};
 
 const httpError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
 
@@ -171,6 +178,24 @@ const getAdminReviews = async () => {
   }
   if (!reviews.length) return [];
 
+  const reviewIds = reviews.map((review) => review.review_id);
+  const auditRows = [];
+  for (let offset = 0; offset < reviewIds.length; offset += 500) {
+    const { data, error } = await supabase
+      .from('h_system_audit_log')
+      .select('entity_id, new_data, created_at')
+      .eq('entity_name', 't_review')
+      .eq('action_cd', '3')
+      .in('entity_id', reviewIds.slice(offset, offset + 500))
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    auditRows.push(...(data || []));
+  }
+  const deletionAuditByReview = new Map();
+  auditRows.forEach((audit) => {
+    if (!deletionAuditByReview.has(audit.entity_id)) deletionAuditByReview.set(audit.entity_id, audit);
+  });
+
   const bookingIds = [...new Set(reviews.map((review) => review.booking_id).filter(Boolean))];
   const bookings = await selectRowsByIds('t_booking', 'booking_id, hotel_id, user_id, guest_name', 'booking_id', bookingIds);
 
@@ -188,6 +213,7 @@ const getAdminReviews = async () => {
     const booking = bookingById.get(review.booking_id);
     const hotel = hotelById.get(booking?.hotel_id);
     const author = userById.get(booking?.user_id);
+    const deletionAudit = deletionAuditByReview.get(review.review_id);
     return {
       review_id: review.review_id,
       hotel_id: hotel?.hotel_id || booking?.hotel_id || null,
@@ -198,10 +224,36 @@ const getAdminReviews = async () => {
       rating_score: Number(review.rating_score),
       comment: review.comment || '',
       is_deleted: Boolean(review.is_deleted),
+      deletion_reason: deletionAudit?.new_data?.deletion_reason || null,
+      deletion_reason_code: deletionAudit?.new_data?.deletion_reason_code || null,
       created_at: review.created_at,
       updated_at: review.updated_at,
     };
   });
+};
+
+const getMyReviewRemovalNotifications = async (userId) => {
+  const { data: auditRows, error } = await supabase
+    .from('h_system_audit_log')
+    .select('log_id, entity_id, old_data, new_data, created_at')
+    .eq('entity_name', 't_review')
+    .eq('action_cd', '3')
+    .contains('new_data', { author_user_id: userId })
+    .order('created_at', { ascending: false })
+    .limit(50);
+  if (error) throw error;
+
+  return (auditRows || []).map((audit) => ({
+    notification_id: audit.log_id,
+    type: 'REVIEW_REMOVED',
+    review_id: audit.entity_id,
+    hotel_id: audit.new_data?.hotel_id || null,
+    hotel_name: audit.new_data?.hotel_name || 'Khách sạn',
+    rating_score: audit.old_data?.rating_score ?? null,
+    comment: audit.old_data?.comment || '',
+    reason: audit.new_data?.deletion_reason || 'Đánh giá không còn hiển thị.',
+    created_at: audit.new_data?.deleted_at || audit.created_at,
+  }));
 };
 
 const refreshHotelRating = async (hotelId) => {
@@ -319,7 +371,7 @@ const getBookingReview = async (userId, bookingId) => {
 const getOwnedReview = async (userId, reviewId) => {
   const { data: review, error: reviewError } = await supabase
     .from('t_review')
-    .select('review_id, booking_id, created_at, is_deleted')
+    .select('review_id, booking_id, rating_score, comment, created_at, updated_at, is_deleted')
     .eq('review_id', reviewId)
     .maybeSingle();
   if (reviewError) throw reviewError;
@@ -327,7 +379,7 @@ const getOwnedReview = async (userId, reviewId) => {
 
   const { data: booking, error: bookingError } = await supabase
     .from('t_booking')
-    .select('booking_id, hotel_id, booking_status_cd')
+    .select('booking_id, hotel_id, user_id, booking_status_cd')
     .eq('booking_id', review.booking_id)
     .eq('user_id', userId)
     .maybeSingle();
@@ -366,48 +418,135 @@ const updateReview = async (userId, reviewId, payload) => {
   return { review: result.reviews.find((item) => item.review_id === reviewId), ...rating };
 };
 
-const deleteReview = async (userId, reviewId) => {
-  const { booking } = await getOwnedReview(userId, reviewId);
-  const { error } = await supabase
-    .from('t_review')
-    .update({ is_deleted: true, updated_at: new Date().toISOString() })
-    .eq('review_id', reviewId)
-    .or('is_deleted.is.null,is_deleted.eq.false');
-  if (error) throw error;
-
-  const rating = await refreshHotelRating(booking.hotel_id);
-  return rating;
+const deleteReview = async (userId, reviewId, reason, ipAddress) => {
+  const { review, booking } = await getOwnedReview(userId, reviewId);
+  return softDeleteReview({ review, booking, actorUserId: userId, reason, ipAddress });
 };
 
-const adminSoftDeleteReview = async (reviewId) => {
+const normalizeDeletionReason = (reason) => {
+  const reasonCode = reason?.reason_code;
+  if (reasonCode === 'OTHER') {
+    const reasonText = String(reason?.reason_text || '').trim();
+    if (!reasonText) throw httpError(400, 'Vui lòng nhập lý do cụ thể.');
+    return { reasonCode, reasonText, reasonLabel: `Lý do khác: ${reasonText}` };
+  }
+  const reasonLabel = REVIEW_DELETION_REASONS[reasonCode];
+  if (!reasonLabel) throw httpError(400, 'Lý do xóa đánh giá không hợp lệ.');
+  return { reasonCode, reasonText: null, reasonLabel };
+};
+
+const softDeleteReview = async ({ review, booking, actorUserId, reason, ipAddress }) => {
+  const normalizedReason = normalizeDeletionReason(reason);
+  const deletedAt = new Date().toISOString();
+  const { data: hotel, error: hotelError } = await supabase
+    .from('m_hotel')
+    .select('name')
+    .eq('hotel_id', booking.hotel_id)
+    .maybeSingle();
+  if (hotelError) throw hotelError;
+
+  const { error: updateError } = await supabase
+    .from('t_review')
+    .update({ is_deleted: true, updated_at: deletedAt })
+    .eq('review_id', review.review_id)
+    .or('is_deleted.is.null,is_deleted.eq.false');
+  if (updateError) throw updateError;
+
+  const auditPayload = {
+    actor_user_id: actorUserId,
+    action_cd: '3',
+    entity_name: 't_review',
+    entity_id: review.review_id,
+    old_data: {
+      review_id: review.review_id,
+      booking_id: review.booking_id,
+      rating_score: review.rating_score,
+      comment: review.comment,
+      is_deleted: Boolean(review.is_deleted),
+      created_at: review.created_at,
+    },
+    new_data: {
+      is_deleted: true,
+      deletion_reason_code: normalizedReason.reasonCode,
+      deletion_reason: normalizedReason.reasonLabel,
+      deletion_reason_text: normalizedReason.reasonText,
+      author_user_id: booking.user_id,
+      hotel_id: booking.hotel_id,
+      hotel_name: hotel?.name || 'Khách sạn',
+      deleted_at: deletedAt,
+    },
+    ip_address: String(ipAddress || '').slice(0, 50) || null,
+  };
+  const { error: auditError } = await supabase.from('h_system_audit_log').insert(auditPayload);
+  if (auditError) {
+    const { error: rollbackError } = await supabase
+      .from('t_review')
+      .update({ is_deleted: Boolean(review.is_deleted), updated_at: review.updated_at || deletedAt })
+      .eq('review_id', review.review_id);
+    if (rollbackError) console.error(`[REVIEW DELETE] Rollback failed: ${rollbackError.message}`);
+    throw auditError;
+  }
+
+  try {
+    await refreshHotelRating(booking.hotel_id);
+  } catch (ratingError) {
+    console.error(`[REVIEW DELETE] Hotel rating refresh failed: ${ratingError.message}`);
+  }
+
+  const { data: author, error: authorError } = booking.user_id
+    ? await supabase.from('m_user').select('email, full_name').eq('user_id', booking.user_id).maybeSingle()
+    : { data: null, error: null };
+  if (authorError) {
+    console.error(`[REVIEW DELETE] Could not load author for notification: ${authorError.message}`);
+  } else if (author?.email) {
+    await sendMail({
+      to: author.email,
+      subject: 'Thông báo: Đánh giá của bạn đã được gỡ - Avora',
+      templateName: 'reviewRemoved',
+      templateData: {
+        fullName: author.full_name || 'Quý khách',
+        hotelName: hotel?.name || 'khách sạn',
+        deletionReason: normalizedReason.reasonLabel,
+        ratingScore: review.rating_score,
+        comment: review.comment || 'Không có nhận xét.',
+        deletedAt: new Date(deletedAt).toLocaleString('vi-VN'),
+      },
+    });
+  }
+
+  return {
+    review_id: review.review_id,
+    is_deleted: true,
+    deletion_reason_code: normalizedReason.reasonCode,
+    deletion_reason: normalizedReason.reasonLabel,
+    deleted_at: deletedAt,
+  };
+};
+
+const adminSoftDeleteReview = async (reviewId, actorUserId, reason, ipAddress) => {
   const { data: review, error: reviewError } = await supabase
     .from('t_review')
-    .select('review_id, booking_id, is_deleted')
+    .select('review_id, booking_id, rating_score, comment, created_at, updated_at, is_deleted')
     .eq('review_id', reviewId)
     .maybeSingle();
   if (reviewError) throw reviewError;
   if (!review) throw httpError(404, 'Không tìm thấy đánh giá.');
-  if (review.is_deleted) return { review_id: reviewId, is_deleted: true };
-
-  const { error: updateError } = await supabase
-    .from('t_review')
-    .update({ is_deleted: true, updated_at: new Date().toISOString() })
-    .eq('review_id', reviewId);
-  if (updateError) throw updateError;
+  if (review.is_deleted) throw httpError(409, 'Đánh giá này đã bị gỡ và không thể xóa lại.');
 
   const { data: booking, error: bookingError } = await supabase
     .from('t_booking')
-    .select('hotel_id')
+    .select('booking_id, hotel_id, user_id')
     .eq('booking_id', review.booking_id)
     .maybeSingle();
   if (bookingError) throw bookingError;
-  if (booking?.hotel_id) await refreshHotelRating(booking.hotel_id);
-  return { review_id: reviewId, is_deleted: true };
+  if (!booking) throw httpError(404, 'Không tìm thấy đặt phòng của đánh giá.');
+  return softDeleteReview({ review, booking, actorUserId, reason, ipAddress });
 };
 
 module.exports = {
   getHotelReviews,
   getMyReviews,
+  getMyReviewRemovalNotifications,
   getAdminReviews,
   adminSoftDeleteReview,
   getBookingReview,

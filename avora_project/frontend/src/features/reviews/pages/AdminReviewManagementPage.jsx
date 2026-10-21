@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { adminSoftDeleteReview, getAdminReviews } from '../../../services/reviewApi';
+import ReviewDeletionDialog from '../components/ReviewDeletionDialog';
 import './AdminReviewManagementPage.css';
 
 const AdminReviewManagementPage = () => {
@@ -12,6 +13,7 @@ const AdminReviewManagementPage = () => {
   const [hotelId, setHotelId] = useState('all');
   const [status, setStatus] = useState('all');
   const [busyReviewId, setBusyReviewId] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
 
   useEffect(() => {
     let current = true;
@@ -54,15 +56,17 @@ const AdminReviewManagementPage = () => {
     setStatus('all');
   };
 
-  const handleSoftDelete = async (review) => {
-    if (review.is_deleted || !window.confirm('Ẩn đánh giá này? Đánh giá đã ẩn không thể khôi phục trong hệ thống.')) return;
+  const handleSoftDelete = async (reason) => {
+    if (!deleteTarget || deleteTarget.is_deleted) return;
+    const review = deleteTarget;
     setBusyReviewId(review.review_id);
     setError('');
     try {
-      await adminSoftDeleteReview(review.review_id);
+      const result = await adminSoftDeleteReview(review.review_id, reason);
       setReviews((current) => current.map((item) => item.review_id === review.review_id
-        ? { ...item, is_deleted: true, updated_at: new Date().toISOString() }
+        ? { ...item, is_deleted: true, deletion_reason: result.deletion_reason, updated_at: result.deleted_at || new Date().toISOString() }
         : item));
+      setDeleteTarget(null);
     } catch (requestError) {
       setError(requestError.message || 'Không thể ẩn đánh giá này.');
     } finally {
@@ -108,13 +112,14 @@ const AdminReviewManagementPage = () => {
                   <span className={`admin-review-hotel-status ${review.hotel_status === 'ACTIVE' && !review.hotel_is_deleted ? '' : 'admin-review-hotel-status--inactive'}`}>{review.hotel_is_deleted ? 'Khách sạn đã xóa' : review.hotel_status === 'ACTIVE' ? 'Khách sạn hoạt động' : `Khách sạn ${review.hotel_status.toLowerCase()}`}</span>
                 </div>
                 <p className="admin-review-row__comment">{review.comment || 'Không có nội dung nhận xét.'}</p>
+                {review.is_deleted && review.deletion_reason && <p className="admin-review-row__deletion-reason"><strong>Lý do gỡ:</strong> {review.deletion_reason}</p>}
                 <div className="admin-review-row__meta">
                   <span><strong>{review.author_name}</strong></span>
                   <time dateTime={review.created_at}>{review.created_at ? new Date(review.created_at).toLocaleString('vi-VN') : 'Thời gian không xác định'}</time>
                   {review.updated_at && review.updated_at !== review.created_at && <span>Cập nhật: {new Date(review.updated_at).toLocaleString('vi-VN')}</span>}
                 </div>
               </div>
-              <button type="button" className="admin-review-row__delete" onClick={() => handleSoftDelete(review)} disabled={review.is_deleted || busyReviewId === review.review_id}>
+              <button type="button" className="admin-review-row__delete" onClick={() => setDeleteTarget(review)} disabled={review.is_deleted || busyReviewId === review.review_id}>
                 {review.is_deleted ? 'Đã ẩn vĩnh viễn' : busyReviewId === review.review_id ? 'Đang ẩn...' : 'Ẩn đánh giá'}
               </button>
             </article>
@@ -123,6 +128,7 @@ const AdminReviewManagementPage = () => {
       ) : (
         <div className="admin-reviews-state">Không tìm thấy đánh giá phù hợp với bộ lọc.</div>
       )}
+      {deleteTarget && <ReviewDeletionDialog onCancel={() => { setDeleteTarget(null); setError(''); }} onConfirm={handleSoftDelete} busy={busyReviewId === deleteTarget.review_id} error={error} />}
     </section>
   );
 };

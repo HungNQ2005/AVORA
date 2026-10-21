@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createReview, deleteReview, getBookingReview, updateReview } from '../../../services/reviewApi';
+import ReviewDeletionDialog from '../../reviews/components/ReviewDeletionDialog';
 import './ReviewModal.css';
 
 const isConfirmedBooking = (statusCode) => ['2', 'CFM'].includes(String(statusCode ?? '').trim().toUpperCase());
@@ -13,6 +14,7 @@ const ReviewModal = ({ booking, onClose, onSaved, onDeleted }) => {
     const [ratingScore, setRatingScore] = useState(8);
     const [comment, setComment] = useState('');
     const [isSaving, setIsSaving] = useState(false);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [error, setError] = useState('');
 
     useEffect(() => {
@@ -38,7 +40,7 @@ const ReviewModal = ({ booking, onClose, onSaved, onDeleted }) => {
             });
 
         return () => { isCurrent = false; };
-    }, [booking.booking_id]);
+    }, [booking.booking_id, booking.booking_status_cd]);
 
     const canEdit = Boolean(review?.can_edit);
     const handleSubmit = async (event) => {
@@ -63,16 +65,16 @@ const ReviewModal = ({ booking, onClose, onSaved, onDeleted }) => {
         }
     };
 
-    const handleDelete = async () => {
-        if (!window.confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) return;
+    const handleDelete = async (reason) => {
         setIsSaving(true);
         setError('');
         try {
-            await deleteReview(review.review_id);
+            await deleteReview(review.review_id, reason);
             onDeleted?.(booking.booking_id);
             onClose();
         } catch (requestError) {
             setError(requestError.message);
+        } finally {
             setIsSaving(false);
         }
     };
@@ -151,7 +153,7 @@ const ReviewModal = ({ booking, onClose, onSaved, onDeleted }) => {
                                 <footer className="review-modal__actions">
                                     {review && canEdit && !isEditing && (
                                         <>
-                                            <button type="button" className="review-modal__button review-modal__button--danger" onClick={handleDelete} disabled={isSaving}>
+                                            <button type="button" className="review-modal__button review-modal__button--danger" onClick={() => setDeleteDialogOpen(true)} disabled={isSaving}>
                                                 Xóa đánh giá
                                             </button>
                                             <button type="button" className="review-modal__button review-modal__button--primary" onClick={() => setIsEditing(true)}>
@@ -184,6 +186,7 @@ const ReviewModal = ({ booking, onClose, onSaved, onDeleted }) => {
                     )}
                 </div>
             </section>
+            {deleteDialogOpen && <ReviewDeletionDialog onCancel={() => setDeleteDialogOpen(false)} onConfirm={handleDelete} busy={isSaving} error={error} />}
         </div>
     );
 };

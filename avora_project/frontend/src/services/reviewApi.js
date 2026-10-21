@@ -20,10 +20,13 @@ export const getBookingReview = (bookingId) => requestReview(API_ENDPOINTS.BOOKI
 
 export const getMyReviews = () => requestReview(API_ENDPOINTS.REVIEWS_MY);
 
+export const getReviewRemovalNotifications = () => requestReview(API_ENDPOINTS.REVIEW_NOTIFICATIONS);
+
 export const getAdminReviews = () => requestReview(API_ENDPOINTS.REVIEWS_ADMIN);
 
-export const adminSoftDeleteReview = (reviewId) => requestReview(API_ENDPOINTS.ADMIN_REVIEW(reviewId), {
+export const adminSoftDeleteReview = (reviewId, reason) => requestReview(API_ENDPOINTS.ADMIN_REVIEW(reviewId), {
   method: 'DELETE',
+  body: JSON.stringify(reason),
 });
 
 export const createReview = (bookingId, payload) => requestReview(API_ENDPOINTS.BOOKING_REVIEWS(bookingId), {
@@ -36,6 +39,7 @@ export const updateReview = (reviewId, payload) => requestReview(API_ENDPOINTS.R
   body: JSON.stringify(payload),
 });
 
-export const deleteReview = (reviewId) => requestReview(API_ENDPOINTS.REVIEW(reviewId), {
+export const deleteReview = (reviewId, reason) => requestReview(API_ENDPOINTS.REVIEW(reviewId), {
   method: 'DELETE',
+  body: JSON.stringify(reason),
 });

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { codeNameParser } from '../../utils/codeNameParser';
 import AvatarContent from './AvatarContent';
 import { getSavedFavorites } from '../../utils/favoritesStorage';
+import { getReviewRemovalNotifications } from '../../services/reviewApi';
 import './Header.css';
 
 /* Custom SVG Icons matching the reference UI */
@@ -97,6 +98,13 @@ const CloseIcon = () => (
   </svg>
 );
 
+const BellIcon = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+    <path d="M10 21h4" />
+  </svg>
+);
+
 const FlagIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#003580" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
@@ -175,8 +183,14 @@ const Header = ({
   const headerRef = useRef(null);
   const userMenuRef = useRef(null);
   const accountDropdownRef = useRef(null);
+  const notificationRef = useRef(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notificationState, setNotificationState] = useState({ userId: null, items: [], error: '' });
+  const notifications = notificationState.userId === user?.user_id ? notificationState.items : [];
+  const notificationError = notificationState.userId === user?.user_id ? notificationState.error : '';
+  const notificationLoading = Boolean(user?.user_id && notificationState.userId !== user.user_id && !notificationError);
   const role = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
   const canManageHotels = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER', 'VEN', 'VENDOR'].includes(role);
@@ -220,10 +234,46 @@ const Header = ({
       if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target)) {
         setIsAccountDropdownOpen(false);
       }
+      if (notificationRef.current && !notificationRef.current.contains(e.target)) {
+        setIsNotificationOpen(false);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsNotificationOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
+
+  useEffect(() => {
+    const userId = user?.user_id;
+    if (!userId) return undefined;
+
+    let active = true;
+    const loadNotifications = async () => {
+      try {
+        const result = await getReviewRemovalNotifications();
+        if (!active) return;
+        setNotificationState({ userId, items: Array.isArray(result) ? result : [], error: '' });
+      } catch (error) {
+        if (active) setNotificationState({ userId, items: [], error: error.message || 'Không thể tải thông báo.' });
+      }
+    };
+
+    loadNotifications();
+    const refreshTimer = window.setInterval(() => loadNotifications(), 60000);
+    const handleFocus = () => loadNotifications();
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      active = false;
+      window.clearInterval(refreshTimer);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.user_id]);
 
   const userRoleDisplayName = codeNameParser(user?.role_code_name);
 
@@ -373,6 +423,62 @@ const Header = ({
                   <span>24/7</span>
                 </span>
               </button>
+
+              {user && (
+                <div className="avora-header__notification" ref={notificationRef}>
+                  <button
+                    type="button"
+                    className={`avora-header__notification-btn ${isNotificationOpen ? 'is-active' : ''}`}
+                    aria-label={`Thông báo${notifications.length ? `, ${notifications.length} thông báo` : ''}`}
+                    aria-expanded={isNotificationOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => setIsNotificationOpen((open) => !open)}
+                  >
+                    <BellIcon />
+                    <span>Thông báo</span>
+                    {notifications.length > 0 && <span className="avora-header__notification-count">{notifications.length > 99 ? '99+' : notifications.length}</span>}
+                  </button>
+                  {isNotificationOpen && (
+                    <section className="avora-header__notification-panel" role="dialog" aria-label="Thông báo của bạn">
+                      <header className="avora-header__notification-header">
+                        <div><h2>Thông báo</h2><span>{notifications.length} mục</span></div>
+                        <button type="button" onClick={() => setIsNotificationOpen(false)} aria-label="Đóng thông báo"><CloseIcon /></button>
+                      </header>
+                      {notificationLoading ? (
+                        <p className="avora-header__notification-state" role="status">Đang tải thông báo...</p>
+                      ) : notificationError ? (
+                        <p className="avora-header__notification-error" role="alert">{notificationError}</p>
+                      ) : notifications.length ? (
+                        <div className="avora-header__notification-list">
+                          {notifications.map((notification) => (
+                            <button
+                              type="button"
+                              className="avora-header__notification-item"
+                              key={notification.notification_id}
+                              onClick={() => {
+                                setIsNotificationOpen(false);
+                                if (notification.hotel_id) navigate(`/hotels/${notification.hotel_id}`);
+                              }}
+                              disabled={!notification.hotel_id}
+                            >
+                              <span className="avora-header__notification-dot" aria-hidden="true" />
+                              <span className="avora-header__notification-copy">
+                                <strong>Đánh giá đã được gỡ</strong>
+                                <span>{notification.hotel_name}</span>
+                                <span>Lý do: {notification.reason}</span>
+                                {notification.comment && <span className="avora-header__notification-quote">“{notification.comment}”</span>}
+                                <time dateTime={notification.created_at}>{notification.created_at ? new Date(notification.created_at).toLocaleString('vi-VN') : ''}</time>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="avora-header__notification-state">Bạn chưa có thông báo mới.</p>
+                      )}
+                    </section>
+                  )}
+                </div>
+              )}
 
               {/* Favorites / Saved (Default: like Contact button, Active: default state of My Bookings) */}
               <button

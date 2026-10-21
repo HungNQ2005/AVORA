@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { deleteReview, updateReview } from '../../../services/reviewApi';
+import ReviewDeletionDialog from '../../reviews/components/ReviewDeletionDialog';
 
 const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 	const [isEditing, setIsEditing] = useState(false);
 	const [ratingScore, setRatingScore] = useState(review.rating_score);
 	const [comment, setComment] = useState(review.comment || '');
 	const [isSaving, setIsSaving] = useState(false);
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 	const [error, setError] = useState('');
 
 	const canManage = Boolean(review.can_manage);
@@ -28,20 +30,22 @@ const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 		}
 	};
 
-	const handleDelete = async () => {
-		if (!window.confirm('Bạn có chắc chắn muốn xóa đánh giá này?')) return;
+	const handleDelete = async (reason) => {
 		setIsSaving(true);
 		setError('');
 		try {
-			const result = await deleteReview(review.review_id);
+			const result = await deleteReview(review.review_id, reason);
 			onDeleted(result);
+			setDeleteDialogOpen(false);
 		} catch (requestError) {
 			setError(requestError.message);
+		} finally {
 			setIsSaving(false);
 		}
 	};
 
 	return (
+		<>
 		<article className="customer-review-card">
 			<div className="customer-review-header">
 				<div className="customer-author-info">
@@ -102,7 +106,7 @@ const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 							<button type="button" className="review-action-button" onClick={() => setIsEditing(true)} disabled={isSaving}>
 								Chỉnh sửa
 							</button>
-							<button type="button" className="review-action-button review-action-button--danger" onClick={handleDelete} disabled={isSaving}>
+							<button type="button" className="review-action-button review-action-button--danger" onClick={() => setDeleteDialogOpen(true)} disabled={isSaving}>
 								{isSaving ? 'Đang xóa...' : 'Xóa'}
 							</button>
 						</div>
@@ -110,6 +114,8 @@ const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 				</>
 			)}
 		</article>
+		{deleteDialogOpen && <ReviewDeletionDialog onCancel={() => setDeleteDialogOpen(false)} onConfirm={handleDelete} busy={isSaving} error={error} />}
+		</>
 	);
 };
 

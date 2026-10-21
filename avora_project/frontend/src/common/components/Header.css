@@ -204,6 +204,99 @@
   margin-left: 2px;
 }
 
+.avora-header__notification {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.avora-header__notification-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 6px 9px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.avora-header__notification-btn:hover,
+.avora-header__notification-btn.is-active {
+  border-color: rgba(255, 255, 255, .28);
+  background: rgba(255, 255, 255, .1);
+}
+
+.avora-header__notification-btn:focus-visible,
+.avora-header__notification-header button:focus-visible,
+.avora-header__notification-item:focus-visible {
+  outline: 3px solid rgba(255, 193, 7, .6);
+  outline-offset: 2px;
+}
+
+.avora-header__notification-count {
+  position: absolute;
+  top: -4px;
+  right: -3px;
+  display: grid;
+  min-width: 17px;
+  height: 17px;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid #06346c;
+  border-radius: 999px;
+  background: #ffc107;
+  color: #14243a;
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.avora-header__notification-panel {
+  position: absolute;
+  z-index: 2100;
+  top: calc(100% + 10px);
+  right: 0;
+  width: min(370px, calc(100vw - 24px));
+  overflow: hidden;
+  border: 1px solid #d7e0ea;
+  border-radius: 10px;
+  background: #fff;
+  color: #17263d;
+  box-shadow: 0 18px 48px rgba(7, 24, 45, .25);
+}
+
+.avora-header__notification-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #e7edf3;
+  background: #f8fafc;
+}
+
+.avora-header__notification-header h2 { margin: 0; color: #123354; font-size: 14px; font-weight: 800; }
+.avora-header__notification-header span { display: block; margin-top: 3px; color: #748398; font-size: 10px; }
+.avora-header__notification-header button { display: grid; width: 30px; height: 30px; place-items: center; border: 1px solid #d7e0ea; border-radius: 7px; background: #fff; color: #53657a; cursor: pointer; }
+.avora-header__notification-list { max-height: min(420px, 65vh); overflow-y: auto; }
+.avora-header__notification-item { display: flex; align-items: flex-start; gap: 10px; width: 100%; padding: 13px 15px; border: 0; border-bottom: 1px solid #edf1f5; background: #fff; color: inherit; text-align: left; cursor: pointer; }
+.avora-header__notification-item:hover:not(:disabled) { background: #f4f8fc; }
+.avora-header__notification-item:disabled { cursor: default; }
+.avora-header__notification-dot { flex: 0 0 8px; width: 8px; height: 8px; margin-top: 5px; border-radius: 50%; background: #c18b25; }
+.avora-header__notification-copy { display: grid; min-width: 0; gap: 4px; }
+.avora-header__notification-copy strong { color: #173b60; font-size: 11px; }
+.avora-header__notification-copy > span { color: #53657a; font-size: 10px; line-height: 1.45; overflow-wrap: anywhere; }
+.avora-header__notification-copy .avora-header__notification-quote { padding-left: 7px; border-left: 2px solid #d5e1ed; color: #718096; }
+.avora-header__notification-copy time { margin-top: 2px; color: #8b98a8; font-size: 9px; }
+.avora-header__notification-state,
+.avora-header__notification-error { margin: 0; padding: 24px 16px; color: #69798d; font-size: 11px; line-height: 1.5; text-align: center; }
+.avora-header__notification-error { color: #a52b2b; }
+
 /* Translucent Pill Action Buttons ("My Bookings", "PMS") */
 .avora-header__pill-btn {
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -1153,4 +1246,4 @@
   }
 }
 
-
+
