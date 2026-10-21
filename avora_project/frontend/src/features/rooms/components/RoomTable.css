@@ -417,6 +417,16 @@
   transform: translateX(20px);
 }
 
+.room-switch input:disabled + .room-slider {
+  background-color: #e2e8f0;
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.room-switch--disabled {
+  cursor: not-allowed;
+}
+
 .room-toggle-label {
   font-size: 10px;
   font-weight: 700;
@@ -428,6 +438,10 @@
 
 .room-toggle-label--locked {
   color: #64748b;
+}
+
+.room-toggle-label--busy {
+  color: #d97706;
 }
 
 /* 9. Actions */
@@ -473,6 +487,18 @@
   color: #dc2626;
   border-color: #fca5a5;
   background: #fef2f2;
+}
+
+.room-btn-icon--blocked {
+  color: #94a3b8;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+}
+
+.room-btn-icon--blocked:hover {
+  color: #c2410c;
+  border-color: #fed7aa;
+  background: #fff7ed;
 }
 
 /* Empty State */

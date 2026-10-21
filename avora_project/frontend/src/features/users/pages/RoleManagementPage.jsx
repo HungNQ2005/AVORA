@@ -22,9 +22,13 @@ const getInitials = (name) => {
 const RoleManagementPage = () => {
   const { user, loading: authLoading } = useAuth();
 
+  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const isAdmin = roleCode === 'ADM' || roleCd === '1';
+
   // Guard: Only System Admin (ADM) can access
-  if (!authLoading && user && user.role_code_name !== 'ADM') {
-    return <Navigate to="/admin" replace />;
+  if (!authLoading && user && !isAdmin) {
+    return <Navigate to="/forbidden" replace />;
   }
 
   // Data states

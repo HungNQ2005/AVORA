@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import GeniusBanner from '../components/GeniusBanner';
 import ContactInfoCard from '../components/ContactInfoCard';
@@ -6,6 +6,7 @@ import SelectedRoomCard from '../components/SelectedRoomCard';
 import SpecialRequestsCard from '../components/SpecialRequestsCard';
 import OrderSummarySidebar from '../components/OrderSummarySidebar';
 import BookingSuccessModal from '../components/BookingSuccessModal';
+import BookingErrorModal from '../components/BookingErrorModal';
 import { calculateBookingPricing, createBooking } from '../../../services/bookingApi';
 import { useAuth } from '../../../context/AuthContext';
 import './booking.css';
@@ -24,6 +25,24 @@ const BookingPage = () => {
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
 
   const [errorMessage, setErrorMessage] = useState(null);
+
+  const getBookingErrorMessage = (error) => {
+    if (error?.code === 'SOLD_OUT') {
+      const dates = error.message.match(/đêm:\s*(.+)\.$/i)?.[1];
+      const formattedDates = dates
+        ? dates.split(',').map((date) => {
+          const [year, month, day] = date.trim().split('-');
+          return day && month && year ? `${day}/${month}/${year}` : date.trim();
+        }).join(', ')
+        : null;
+
+      return formattedDates
+        ? `Rất tiếc, phòng đã hết cho đêm ${formattedDates}. Vui lòng chọn ngày khác hoặc giảm số phòng.`
+        : 'Rất tiếc, phòng đã hết trong thời gian bạn chọn. Vui lòng chọn ngày khác hoặc giảm số phòng.';
+    }
+
+    return error?.message || 'Không thể lưu đơn đặt phòng vào cơ sở dữ liệu.';
+  };
 
   const formatDateLabel = (dateStr) => {
     if (!dateStr) return '—';
@@ -49,18 +68,29 @@ const BookingPage = () => {
     return `${year}-${month}-${day}`;
   };
 
+  const parseLocalDateOnly = (dateStr) => {
+    if (!dateStr || typeof dateStr !== 'string') return new Date();
+    const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  const addDaysToDateString = (dateStr, days = 1) => {
+    const d = parseLocalDateOnly(dateStr);
+    d.setDate(d.getDate() + days);
+    return getLocalDateString(d);
+  };
+
+  const MAX_STAY_NIGHTS = 30; // Tiêu chuẩn OTA: đặt trực tuyến tối đa 30 đêm
+  const MAX_ADVANCE_DAYS = 365; // Đặt phòng trước tối đa 365 ngày (1 năm)
+  const MAX_ROOMS_PER_BOOKING = 8; // Tối đa 8 phòng/lần đặt (tránh đầu cơ)
+  const GUEST_NAME_REGEX = /^[\p{L}\s'.-]{2,}$/u;
+
   // Real-time current day (cannot book earlier than today)
   const todayStr = useMemo(() => {
     return getLocalDateString(new Date());
   }, []);
 
   const defaultCheckIn = todayStr;
-
-  const defaultCheckOut = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    return getLocalDateString(d);
-  }, []);
 
   // Strict initial dates: reject any past dates passed from router state / query params
   const initialCheckIn = useMemo(() => {
@@ -71,9 +101,7 @@ const BookingPage = () => {
 
   const initialCheckOut = useMemo(() => {
     const raw = stateData.checkOut || queryParams.get('checkOut');
-    const minOut = new Date(initialCheckIn);
-    minOut.setDate(minOut.getDate() + 1);
-    const minOutStr = getLocalDateString(minOut);
+    const minOutStr = addDaysToDateString(initialCheckIn, 1);
     if (raw && raw > initialCheckIn) return raw;
     return minOutStr;
   }, [stateData.checkOut, queryParams, initialCheckIn]);
@@ -81,11 +109,18 @@ const BookingPage = () => {
   const [checkInDate, setCheckInDate] = useState(initialCheckIn);
   const [checkOutDate, setCheckOutDate] = useState(initialCheckOut);
 
+  const maxCheckInStr = useMemo(() => {
+    return addDaysToDateString(todayStr, MAX_ADVANCE_DAYS);
+  }, [todayStr]);
+
   const minCheckOutStr = useMemo(() => {
     if (!checkInDate) return todayStr;
-    const d = new Date(checkInDate);
-    d.setDate(d.getDate() + 1);
-    return getLocalDateString(d);
+    return addDaysToDateString(checkInDate, 1);
+  }, [checkInDate, todayStr]);
+
+  const maxCheckOutStr = useMemo(() => {
+    if (!checkInDate) return addDaysToDateString(todayStr, MAX_STAY_NIGHTS);
+    return addDaysToDateString(checkInDate, MAX_STAY_NIGHTS);
   }, [checkInDate, todayStr]);
 
   const handleCheckInChange = (newDate) => {
@@ -96,16 +131,22 @@ const BookingPage = () => {
       setCheckInDate(todayStr);
       return;
     }
+    if (newDate > maxCheckInStr) {
+      setErrorMessage(`Chỉ hỗ trợ đặt phòng trước tối đa ${MAX_ADVANCE_DAYS} ngày.`);
+      setCheckInDate(maxCheckInStr);
+      return;
+    }
     setErrorMessage(null);
     setCheckInDate(newDate);
 
     // If checkOut <= checkIn, automatically shift checkOut to checkIn + 1 day
-    const inDateObj = new Date(newDate);
-    const outDateObj = new Date(checkOutDate);
-    if (outDateObj <= inDateObj) {
-      const nextD = new Date(inDateObj);
-      nextD.setDate(nextD.getDate() + 1);
-      setCheckOutDate(getLocalDateString(nextD));
+    if (checkOutDate <= newDate) {
+      setCheckOutDate(addDaysToDateString(newDate, 1));
+    } else {
+      const allowedMaxOut = addDaysToDateString(newDate, MAX_STAY_NIGHTS);
+      if (checkOutDate > allowedMaxOut) {
+        setCheckOutDate(allowedMaxOut);
+      }
     }
   };
 
@@ -113,9 +154,13 @@ const BookingPage = () => {
     if (!newDate) return;
     if (newDate <= checkInDate) {
       setErrorMessage('Ngày trả phòng phải sau ngày nhận phòng ít nhất 1 đêm.');
-      const inDateObj = new Date(checkInDate);
-      inDateObj.setDate(inDateObj.getDate() + 1);
-      setCheckOutDate(getLocalDateString(inDateObj));
+      setCheckOutDate(addDaysToDateString(checkInDate, 1));
+      return;
+    }
+    const currentMaxOut = addDaysToDateString(checkInDate, MAX_STAY_NIGHTS);
+    if (newDate > currentMaxOut) {
+      setErrorMessage(`Thời gian lưu trú tối đa cho mỗi đơn đặt phòng trực tuyến là ${MAX_STAY_NIGHTS} đêm. Vui lòng liên hệ để đặt phòng dài hạn.`);
+      setCheckOutDate(currentMaxOut);
       return;
     }
     setErrorMessage(null);
@@ -221,9 +266,13 @@ const BookingPage = () => {
   });
 
 
+  const activeCouponRef = useRef('');
+  activeCouponRef.current = couponCode;
+
   // Fetch real hotel, room, pricing, cancellation policy & active coupons from DB
   const syncBookingPricing = useCallback(
-    async (codeToApply = '') => {
+    async (codeOverride) => {
+      const codeToApply = codeOverride !== undefined ? codeOverride : activeCouponRef.current;
       setIsApplyingCoupon(true);
       try {
         const res = await calculateBookingPricing({
@@ -232,7 +281,7 @@ const BookingPage = () => {
           quantity: roomsCount,
           check_in_date: checkInDate,
           check_out_date: checkOutDate,
-          coupon_code: codeToApply ? codeToApply.trim() : undefined,
+          coupon_code: codeToApply && codeToApply.trim() ? codeToApply.trim() : undefined,
         });
 
         setPricing(res);
@@ -255,13 +304,15 @@ const BookingPage = () => {
   );
 
   useEffect(() => {
-    syncBookingPricing('');
+    syncBookingPricing();
   }, [syncBookingPricing]);
 
   const handleApplyCoupon = async (overrideCode) => {
     const targetCode = typeof overrideCode === 'string' ? overrideCode : couponCode;
     if (!targetCode || !targetCode.trim()) return;
-    await syncBookingPricing(targetCode);
+    const cleanCode = targetCode.trim().toUpperCase();
+    setCouponCode(cleanCode);
+    await syncBookingPricing(cleanCode);
   };
 
   const handleRemoveCoupon = async () => {
@@ -274,11 +325,15 @@ const BookingPage = () => {
   const activeRoom = pricing.rooms?.[0] || stateData.room || null;
   const nights = pricing.nights || 1;
 
-  // Submit Booking State
+  // Submit Booking State with double-click guard
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [createdBookingResult, setCreatedBookingResult] = useState(null);
 
   const handleConfirmBooking = async () => {
+    // Chặn triệt để double-click ngay lập tức
+    if (isSubmittingRef.current || isSubmitting) return;
+
     setErrorMessage(null);
 
     if (!contactForm.lastName.trim() && !contactForm.firstName.trim()) {
@@ -303,12 +358,40 @@ const BookingPage = () => {
       setErrorMessage('Ngày trả phòng phải sau ngày nhận phòng ít nhất 1 đêm.');
       return;
     }
-    setIsSubmitting(true);
+
     const fullName = [contactForm.lastName.trim(), contactForm.firstName.trim()]
       .filter(Boolean)
       .join(' ');
+
+    if (!GUEST_NAME_REGEX.test(fullName)) {
+      setErrorMessage('Họ và tên người nhận phòng không hợp lệ (tối thiểu 2 ký tự, chỉ chứa chữ cái và không chứa số hay ký tự đặc biệt).');
+      return;
+    }
+
+    if (roomsCount > MAX_ROOMS_PER_BOOKING) {
+      setErrorMessage(`Số lượng phòng tối đa cho mỗi đơn đặt phòng trực tuyến là ${MAX_ROOMS_PER_BOOKING} phòng. Để đặt số lượng lớn hơn, vui lòng liên hệ dịch vụ khách đoàn.`);
+      return;
+    }
+
+    // Khóa cờ ngay lập tức trước khi thực hiện bất kỳ tác vụ bất đồng bộ nào
+    isSubmittingRef.current = true;
+    setIsSubmitting(true);
+
     const rawDigits = contactForm.phone.replace(/[^\d]/g, '');
-    const fullPhone = `${contactForm.countryCode}${rawDigits}`.slice(0, 20);
+    let fullPhone = '';
+    const selectedCode = (contactForm.countryCode || '+84').trim();
+
+    if (selectedCode === '+84') {
+      let vnDigits = rawDigits;
+      if (vnDigits.startsWith('84') && vnDigits.length > 9) {
+        vnDigits = vnDigits.slice(2);
+      }
+      vnDigits = vnDigits.replace(/^0+/, '');
+      fullPhone = vnDigits ? `0${vnDigits}` : contactForm.phone.trim();
+    } else {
+      const intlDigits = rawDigits.replace(/^0+/, '');
+      fullPhone = intlDigits ? `${selectedCode}${intlDigits}` : contactForm.phone.trim();
+    }
 
     const combinedSpecialRequest = [
       ...selectedRequests,
@@ -335,8 +418,9 @@ const BookingPage = () => {
       const res = await createBooking(bookingPayload);
       setCreatedBookingResult(res);
     } catch (err) {
-      setErrorMessage(err.message || 'Không thể lưu đơn đặt phòng vào cơ sở dữ liệu.');
+      setErrorMessage(getBookingErrorMessage(err));
     } finally {
+      isSubmittingRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -378,41 +462,6 @@ const BookingPage = () => {
           <span>3. Quản lý đặt chỗ</span>
         </div>
       </div>
-
-      {errorMessage && (
-        <div
-          style={{
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            fontSize: '14px',
-            fontWeight: 600,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          <span>⚠️ {errorMessage}</span>
-          <button
-            type="button"
-            onClick={() => setErrorMessage(null)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#dc2626',
-              fontSize: '16px',
-              cursor: 'pointer',
-              fontWeight: 700,
-              padding: '0 4px',
-            }}
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {isLoadingPricing && !activeHotel ? (
         <div style={{ padding: '48px 16px', textAlign: 'center', color: '#475569' }}>
@@ -456,7 +505,9 @@ const BookingPage = () => {
             onCheckInChange={handleCheckInChange}
             onCheckOutChange={handleCheckOutChange}
             minCheckIn={todayStr}
+            maxCheckIn={maxCheckInStr}
             minCheckOut={minCheckOutStr}
+            maxCheckOut={maxCheckOutStr}
             nights={nights}
             couponCode={couponCode}
             onCouponChange={setCouponCode}
@@ -474,12 +525,19 @@ const BookingPage = () => {
       {createdBookingResult && (
         <BookingSuccessModal
           bookingData={createdBookingResult}
-          onClose={() => setCreatedBookingResult(null)}
+          onClose={() => {
+            setCreatedBookingResult(null);
+            navigate('/my-bookings');
+          }}
           onViewMyBookings={() => {
             navigate('/my-bookings');
           }}
         />
       )}
+      <BookingErrorModal
+        message={errorMessage}
+        onClose={() => setErrorMessage(null)}
+      />
     </div>
   );
 };

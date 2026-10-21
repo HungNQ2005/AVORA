@@ -18,7 +18,10 @@ const RoomFloorMatrixModal = ({
   // Group rooms by floor
   const floorsMap = {};
   rooms.forEach((room) => {
-    const floor = room.floor || 'Tầng 1';
+    const rawFloor = room.floor != null ? String(room.floor).trim() : '';
+    const floor = rawFloor !== ''
+      ? (rawFloor.toLowerCase().startsWith('tầng') ? rawFloor : `Tầng ${rawFloor}`)
+      : 'Chưa phân tầng';
     if (!floorsMap[floor]) {
       floorsMap[floor] = [];
     }
@@ -128,7 +131,7 @@ const RoomFloorMatrixModal = ({
                             <span className="matrix-room-card__status">{statusText}</span>
                           </div>
                           <div className="matrix-room-card__type">
-                            {room.m_room_type?.type_name || 'Phòng tiêu chuẩn'}
+                            {room.m_room_type?.type_name || 'Chưa cập nhật'}
                           </div>
                           <div className="matrix-room-card__price">
                             {formatCurrency(room.m_room_type?.default_price)}

@@ -109,7 +109,11 @@ const RoomTable = ({
               const isSelected = selectedIds.includes(room.room_id);
               const tag = getBadgeForRoomType(rt.type_name);
               const statusInfo = getStatusBadge(room);
-              const isAvailable = !room.is_deleted && room.status_cd === 'AVAILABLE';
+              const statusUpper = String(room.status_cd || '').toUpperCase();
+              const isAvailable = !room.is_deleted && statusUpper === 'AVAILABLE';
+              const isOccupied = statusUpper === 'OCCUPIED';
+              const isBooked = statusUpper === 'BOOKED';
+              const isOccupiedOrBooked = isOccupied || isBooked;
 
               return (
                 <tr
@@ -200,17 +204,45 @@ const RoomTable = ({
                   <td className="room-td room-td--toggle">
                     <div className="room-toggle-cell">
                       {!readOnly && (
-                        <label className="room-switch" title={isAvailable ? 'Nhấn để tạm khóa' : 'Nhấn để mở bán'}>
+                        <label
+                          className={`room-switch ${isOccupiedOrBooked ? 'room-switch--disabled' : ''}`}
+                          title={
+                            isOccupiedOrBooked
+                              ? `Phòng đang ${isOccupied ? 'có khách lưu trú' : 'đã đặt trước'}, không thể đổi trạng thái đóng/mở bán trực tiếp`
+                              : isAvailable
+                                ? 'Nhấn để tạm khóa'
+                                : 'Nhấn để mở bán'
+                          }
+                        >
                           <input
                             type="checkbox"
                             checked={isAvailable}
-                            onChange={() => onToggleStatus(room)}
+                            disabled={isOccupiedOrBooked}
+                            onChange={() => {
+                              if (!isOccupiedOrBooked) {
+                                onToggleStatus(room);
+                              }
+                            }}
                           />
                           <span className="room-slider"></span>
                         </label>
                       )}
-                      <span className={`room-toggle-label ${isAvailable ? 'room-toggle-label--active' : 'room-toggle-label--locked'}`}>
-                        {isAvailable ? 'Đang mở bán' : 'Tạm khóa'}
+                      <span
+                        className={`room-toggle-label ${
+                          isAvailable
+                            ? 'room-toggle-label--active'
+                            : isOccupiedOrBooked
+                              ? 'room-toggle-label--busy'
+                              : 'room-toggle-label--locked'
+                        }`}
+                      >
+                        {isAvailable
+                          ? 'Đang mở bán'
+                          : isOccupied
+                            ? 'Đang có khách'
+                            : isBooked
+                              ? 'Đã đặt trước'
+                              : 'Tạm khóa'}
                       </span>
                     </div>
                   </td>
@@ -244,9 +276,13 @@ const RoomTable = ({
                       </button>
                       <button
                         type="button"
-                        className="room-btn-icon room-btn-icon--delete"
+                        className={`room-btn-icon room-btn-icon--delete ${isOccupiedOrBooked ? 'room-btn-icon--blocked' : ''}`}
                         onClick={() => onDeleteClick(room)}
-                        title="Xóa buồng phòng"
+                        title={
+                          isOccupiedOrBooked
+                            ? `Phòng đang ${isOccupied ? 'có khách lưu trú' : 'đã đặt trước'} (bấm để xem lý do không thể xóa)`
+                            : 'Xóa buồng phòng'
+                        }
                       >
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                           <polyline points="3 6 5 6 21 6"></polyline>

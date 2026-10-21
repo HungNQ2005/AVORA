@@ -2,6 +2,27 @@
 
 const supabase = require('../../config/supabaseClient');
 const reviewService = require('../review/review.service');
+const { validateStayDates } = require('../bookings/booking.validation');
+const { loadActiveBookingHolds } = require('../bookings/booking.service');
+const {
+  calculateAverageRoomPrice,
+  calculateRoomTypeAvailability,
+  getOperationalRoomCount,
+  getStayDates,
+} = require('./hotel.availability');
+
+const resolveStayDates = (checkIn, checkOut) => {
+  if (!checkIn && !checkOut) return [];
+
+  const errors = validateStayDates(checkIn, checkOut, { allowPast: true });
+  if (errors.length > 0) {
+    const error = new Error(errors[0]);
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return getStayDates(String(checkIn).trim(), String(checkOut).trim());
+};
 
 /**
  * Service handling hotel search, filtering, and data aggregation
@@ -23,6 +44,51 @@ const reviewService = require('../review/review.service');
  * @param {number} [params.minScore] - Minimum review score (e.g. 7, 8, 9)
  * @param {string[]} [params.facilities] - Array of facility IDs or names
  * @param {boolean} [params.onlyAvailable] - If true, only include hotels with available rooms
+/**
+ * Helper to sanitize policy description from m_cancellation_policy.
+ * Strips internal <!--META:...--> and brackets so clients get clean, friendly text.
+ */
+const cleanCancellationDescription = (rawDesc, freeBeforeHours = 48, penaltyRate = 0) => {
+  const hours = freeBeforeHours !== undefined && freeBeforeHours !== null ? Number(freeBeforeHours) : 48;
+  const pRate = penaltyRate !== undefined && penaltyRate !== null ? Number(penaltyRate) : 0;
+  const refundRate = Math.max(0, 100 - pRate);
+  const defaultText = hours > 0
+    ? `Miễn phí hủy phòng trước ${hours}h (hoàn tiền ${refundRate}%)`
+    : `Miễn phí hủy phòng trước thời điểm nhận phòng (hoàn tiền ${refundRate}%)`;
+
+  if (!rawDesc || typeof rawDesc !== 'string') {
+    return defaultText;
+  }
+
+  // Remove <!--META:...--> tags
+  let clean = rawDesc.replace(/<!--META:.*?-->/g, '').trim();
+
+  const condMatch = clean.match(/Điều kiện:\s*(.*)$/i);
+  const nameMatch = clean.match(/^\[(.*?)\]\s*/);
+
+  let descText = clean;
+  if (nameMatch) {
+    descText = descText.replace(/^\[(.*?)\]\s*/, '').trim();
+  }
+  if (condMatch) {
+    descText = descText.replace(/Điều kiện:\s*.*$/i, '').trim();
+  }
+
+  if (condMatch && condMatch[1] && condMatch[1].trim()) {
+    return condMatch[1].trim();
+  }
+
+  if (descText) {
+    return descText;
+  }
+
+  if (nameMatch && nameMatch[1] && nameMatch[1].trim()) {
+    return `${nameMatch[1].trim()} - ${defaultText}`;
+  }
+
+  return clean || defaultText;
+};
+
 /**
  * Room capacity rule:
  * - 2 giường tiêu chuẩn * 2 người = 4 người
@@ -109,6 +175,9 @@ const searchHotels = async (params = {}) => {
     onlyAvailable = false,
     sortBy = 'popularity',
   } = params;
+  const stayDates = resolveStayDates(checkIn, checkOut);
+  const inventoryCheckIn = checkIn ? String(checkIn).trim() : null;
+  const inventoryCheckOut = checkOut ? String(checkOut).trim() : null;
 
   // Calculate guests per room and validate capacity rule:
   // 2 giường tiêu chuẩn * 2 người = 4 người
@@ -360,10 +429,13 @@ const searchHotels = async (params = {}) => {
       .in('room_type_id', allRoomTypeIds);
 
     if (checkIn && checkOut) {
-      invQuery = invQuery.gte('target_date', checkIn).lt('target_date', checkOut);
+      invQuery = invQuery.gte('target_date', inventoryCheckIn).lt('target_date', inventoryCheckOut);
     }
 
-    const { data: invData } = await invQuery;
+    const { data: invData, error: inventoryError } = await invQuery;
+    if (inventoryError) {
+      throw new Error(`Failed to query room inventory: ${inventoryError.message}`);
+    }
     if (invData) {
       invData.forEach((inv) => {
         if (!inventoryByRoomType[inv.room_type_id]) inventoryByRoomType[inv.room_type_id] = [];
@@ -371,6 +443,9 @@ const searchHotels = async (params = {}) => {
       });
     }
   }
+  const heldByRoomType = stayDates.length > 0 && allRoomTypeIds.length > 0
+    ? await loadActiveBookingHolds(allRoomTypeIds, inventoryCheckIn, inventoryCheckOut)
+    : new Map();
 
   // Group facilities by hotel_id
   const facilitiesByHotel = {};
@@ -456,17 +531,31 @@ const searchHotels = async (params = {}) => {
     roomTypes.forEach((rt) => {
       const invList = inventoryByRoomType[rt.room_type_id] || [];
       const physRooms = hotelPhysicalByType[rt.room_type_id] || [];
+      const inventoryByDate = new Map(invList.map((inventory) => [
+        String(inventory.target_date).slice(0, 10),
+        inventory,
+      ]));
       let price = Number(rt.default_price) || 1500000;
       let avail = 0;
 
-      if (physRooms.length > 0) {
-        avail = physRooms.filter(
-          (r) => !r.status_cd || String(r.status_cd).toUpperCase() === 'AVAILABLE'
-        ).length;
-      } else if (invList.length > 0) {
+      if (stayDates.length > 0) {
+        price = calculateAverageRoomPrice({
+          stayDates,
+          inventoryByDate,
+          defaultPrice: price,
+        });
+        avail = calculateRoomTypeAvailability({
+          stayDates,
+          inventoryByDate,
+          operationalRoomCount: getOperationalRoomCount(physRooms),
+          heldByDate: heldByRoomType.get(rt.room_type_id) || new Map(),
+        });
+      } else {
+        avail = getOperationalRoomCount(physRooms);
+      }
+      if (!stayDates.length && invList.length > 0) {
         const sumPrice = invList.reduce((acc, curr) => acc + (Number(curr.current_price) || price), 0);
         price = Math.round(sumPrice / invList.length);
-        avail = Math.min(...invList.map((i) => Math.max(0, (i.available_rooms || 0) - (i.locked_rooms || 0))));
       }
 
       totalAvailableRooms += avail;
@@ -546,7 +635,11 @@ const searchHotels = async (params = {}) => {
       latest_room_at: latestRoomAtByHotel[hotel.hotel_id] || 0,
       cancellation_policy: {
         free_before_hours: policy.free_cancel_before_hours || 48,
-        description: policy.description || 'Miễn phí hủy phòng trước 48h (hoàn tiền 100%)',
+        description: cleanCancellationDescription(
+          policy.description,
+          policy.free_cancel_before_hours,
+          policy.penalty_rate
+        ),
       },
       tag: hotel.star_quality === 5 ? 'Ưu đãi mùa hè - Giảm 20%' : (minPriceForHotel < 2000000 ? 'Giá tốt nhất cho kỳ nghỉ này' : 'Ưu đãi chớp nhoáng'),
       is_genius: hotel.star_quality >= 4,
@@ -570,7 +663,7 @@ const searchHotels = async (params = {}) => {
     enrichedHotels = enrichedHotels.filter((h) => h.star_rating >= Number(minScore));
   }
   if (onlyAvailable) {
-    enrichedHotels = enrichedHotels.filter((h) => h.available_rooms > 0);
+    enrichedHotels = enrichedHotels.filter((h) => h.available_rooms >= parsedRooms);
   }
   if (Array.isArray(facilities) && facilities.length > 0) {
     enrichedHotels = enrichedHotels.filter((h) =>
@@ -711,6 +804,9 @@ const getHotelById = async (hotelId, options = {}) => {
   }
 
   const { checkIn, checkOut, adults = 2, children = 0, rooms: requestedRooms = 1, viewerId = null } = options;
+  const stayDates = resolveStayDates(checkIn, checkOut);
+  const inventoryCheckIn = checkIn ? String(checkIn).trim() : null;
+  const inventoryCheckOut = checkOut ? String(checkOut).trim() : null;
   const parsedAdults = parseInt(adults, 10) || 2;
   const parsedChildren = parseInt(children, 10) || 0;
   const parsedRooms = Math.max(1, parseInt(requestedRooms, 10) || 1);
@@ -842,10 +938,13 @@ const getHotelById = async (hotelId, options = {}) => {
       .in('room_type_id', roomTypeIds);
 
     if (checkIn && checkOut) {
-      invQuery = invQuery.gte('target_date', checkIn).lt('target_date', checkOut);
+      invQuery = invQuery.gte('target_date', inventoryCheckIn).lt('target_date', inventoryCheckOut);
     }
 
-    const { data: invData } = await invQuery;
+    const { data: invData, error: inventoryError } = await invQuery;
+    if (inventoryError) {
+      throw new Error(`Failed to query room inventory: ${inventoryError.message}`);
+    }
     if (invData && invData.length > 0) {
       invData.forEach((inv) => {
         if (!inventoryByRoom[inv.room_type_id]) inventoryByRoom[inv.room_type_id] = [];
@@ -853,20 +952,53 @@ const getHotelById = async (hotelId, options = {}) => {
       });
     }
   }
+  const heldByRoomType = stayDates.length > 0 && roomTypeIds.length > 0
+    ? await loadActiveBookingHolds(roomTypeIds, inventoryCheckIn, inventoryCheckOut)
+    : new Map();
+
+  const availabilityByRoomType = new Map();
+  const physicalRoomsByType = new Map();
+  activeRoomsList.forEach((room) => {
+    if (!physicalRoomsByType.has(room.room_type_id)) {
+      physicalRoomsByType.set(room.room_type_id, []);
+    }
+    physicalRoomsByType.get(room.room_type_id).push(room);
+  });
+  for (const roomTypeId of roomTypeIds) {
+    const invList = inventoryByRoom[roomTypeId] || [];
+    const inventoryByDate = new Map(invList.map((inventory) => [
+      String(inventory.target_date).slice(0, 10),
+      inventory,
+    ]));
+    availabilityByRoomType.set(roomTypeId, calculateRoomTypeAvailability({
+      stayDates,
+      inventoryByDate,
+      operationalRoomCount: getOperationalRoomCount(physicalRoomsByType.get(roomTypeId)),
+      heldByDate: heldByRoomType.get(roomTypeId) || new Map(),
+    }));
+  }
 
   const rooms = activeRoomsList.map((roomRecord, idx) => {
     const rt = roomRecord.m_room_type || {};
     const invList = inventoryByRoom[roomRecord.room_type_id] || [];
     let price = Number(rt.default_price) || 0;
 
-    if (invList.length > 0) {
+    if (stayDates.length > 0) {
+      const inventoryByDate = new Map(invList.map((inventory) => [
+        String(inventory.target_date).slice(0, 10),
+        inventory,
+      ]));
+      price = calculateAverageRoomPrice({
+        stayDates,
+        inventoryByDate,
+        defaultPrice: price,
+      });
+    } else if (invList.length > 0) {
       const sumPrice = invList.reduce((acc, curr) => acc + (Number(curr.current_price) || price), 0);
       price = Math.round(sumPrice / invList.length);
     }
 
-    const isRoomAvailable =
-      !roomRecord.status_cd || String(roomRecord.status_cd).toUpperCase() === 'AVAILABLE';
-    const available = isRoomAvailable ? 1 : 0;
+    const available = availabilityByRoomType.get(roomRecord.room_type_id) || 0;
 
     const origPrice = Math.round(price * 1.2);
     const cap = getRoomTypeCapacity(rt);
@@ -878,9 +1010,7 @@ const getHotelById = async (hotelId, options = {}) => {
       room_number: roomRecord.room_number,
       floor: roomRecord.floor || 'Tầng 1',
       status_cd: roomRecord.status_cd || 'AVAILABLE',
-      name: rt.type_name
-        ? `${rt.type_name} - Phòng ${roomRecord.room_number}`
-        : `Phòng ${roomRecord.room_number}`,
+      name: rt.type_name || 'Hạng phòng',
       type_name: rt.type_name,
       room_size: rt.room_size,
       bed_type: rt.bed_type,
@@ -947,7 +1077,11 @@ const getHotelById = async (hotelId, options = {}) => {
     cancellation_policy: policy ? {
       free_cancel_before_hours: policy.free_cancel_before_hours,
       penalty_rate: policy.penalty_rate,
-      description: policy.description,
+      description: cleanCancellationDescription(
+        policy.description,
+        policy.free_cancel_before_hours,
+        policy.penalty_rate
+      ),
     } : null,
     rooms: rooms,
     reviews: reviews,

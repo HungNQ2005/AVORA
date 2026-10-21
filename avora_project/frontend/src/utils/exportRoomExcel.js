@@ -32,7 +32,8 @@ export const getRoomExportExcelFilename = () => {
 
 const getStatusLabel = (room) => {
   if (room.is_deleted) return 'Đã khóa';
-  switch (room.status_cd) {
+  if (!room.status_cd) return 'Chưa cập nhật';
+  switch (String(room.status_cd).toUpperCase()) {
     case 'AVAILABLE':
       return 'Đang mở bán';
     case 'OCCUPIED':
@@ -44,7 +45,7 @@ const getStatusLabel = (room) => {
     case 'LOCKED':
       return 'Tạm khóa';
     default:
-      return room.status_cd || 'Đang mở bán';
+      return String(room.status_cd);
   }
 };
 
@@ -53,20 +54,33 @@ const getStatusLabel = (room) => {
  * matching the exact AVORA Enterprise branding of Users & Amenities reports.
  *
  * @param {Array} rooms - List of room objects from database
- * @param {string} [hotelName] - Current hotel context name
+ * @param {string} [hotelNameOrFilename] - Current hotel context name or filename override
  * @param {string} [customFilename] - Optional override filename
- * @returns {Promise<{ success: boolean, count?: number, filename?: string, message?: string }>}
+ * @returns {Promise<{ success: boolean, count?: number, filename?: string, incompleteRoomsCount?: number, message?: string }>}
  */
 export const exportRoomsToExcel = async (
   rooms = [],
-  hotelName = 'Tất cả cơ sở lưu trú',
+  hotelNameOrFilename = 'Tất cả cơ sở lưu trú',
   customFilename
 ) => {
   if (!rooms || rooms.length === 0) {
     return { success: false, message: 'Không có dữ liệu buồng phòng để xuất file.' };
   }
 
-  const filename = customFilename || getRoomExportExcelFilename();
+  let hotelName = 'Tất cả cơ sở lưu trú';
+  let filename = customFilename;
+
+  if (typeof hotelNameOrFilename === 'string') {
+    if (hotelNameOrFilename.toLowerCase().endsWith('.xlsx')) {
+      filename = hotelNameOrFilename;
+    } else {
+      hotelName = hotelNameOrFilename;
+    }
+  }
+
+  if (!filename) {
+    filename = getRoomExportExcelFilename();
+  }
 
   try {
     const workbook = new ExcelJS.Workbook();
@@ -109,16 +123,21 @@ export const exportRoomsToExcel = async (
     // ─── 2. Report Header / Branding ─────────────────────────────────────────
     // Row 1: Logo & Enterprise Badge
     worksheet.getRow(1).height = 40;
-    const logoBase64 = await getAvoraLogoBase64();
-    if (logoBase64) {
-      const logoId = workbook.addImage({
-        base64: logoBase64,
-        extension: 'png',
-      });
-      worksheet.addImage(logoId, {
-        tl: { col: 0.1, row: 0.1 },
-        ext: { width: 135, height: 36 },
-      });
+    try {
+      const logoBase64 = await getAvoraLogoBase64();
+      if (logoBase64) {
+        const cleanBase64 = logoBase64.replace(/^data:image\/[a-z]+;base64,/, '');
+        const logoId = workbook.addImage({
+          base64: cleanBase64,
+          extension: 'png',
+        });
+        worksheet.addImage(logoId, {
+          tl: { col: 0.1, row: 0.1 },
+          ext: { width: 135, height: 36 },
+        });
+      }
+    } catch (logoErr) {
+      console.warn('Could not add logo to Excel report, continuing without logo:', logoErr);
     }
 
     worksheet.mergeCells('F1:K1');
@@ -135,17 +154,35 @@ export const exportRoomsToExcel = async (
     titleCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     worksheet.getRow(2).height = 26;
 
+    // ─── Audit Data Completeness ───────────────────────────────────────────
+    let incompleteRoomsCount = 0;
+    rooms.forEach((room) => {
+      const rt = room.m_room_type || {};
+      const isMissingType = !rt.type_name;
+      const isMissingFloor = room.floor === undefined || room.floor === null || String(room.floor).trim() === '';
+      const isMissingStatus = !room.status_cd;
+      const isMissingCapacity = rt.max_adults === undefined || rt.max_adults === null;
+
+      if (isMissingType || isMissingFloor || isMissingStatus || isMissingCapacity) {
+        incompleteRoomsCount++;
+      }
+    });
+
     // Row 3: Subtitle & Export Date
     const now = new Date();
     const formattedDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
     worksheet.mergeCells('A3:K3');
     const subCell = worksheet.getCell('A3');
-    subCell.value = `Hotel Management System • Báo cáo quản trị buồng phòng lưu trú (${hotelName})  |  Thời gian xuất: ${formattedDate}`;
+    let subtitleText = `Hotel Management System • Báo cáo quản trị buồng phòng lưu trú (${hotelName})  |  Thời gian xuất: ${formattedDate}`;
+    if (incompleteRoomsCount > 0) {
+      subtitleText += `  |  ⚠️ Lưu ý kiểm toán: Có ${incompleteRoomsCount}/${rooms.length} phòng chưa cập nhật đủ dữ liệu`;
+    }
+    subCell.value = subtitleText;
     subCell.font = { name: 'Segoe UI', size: 9, italic: true, color: { argb: 'FF64748B' } };
     subCell.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     worksheet.getRow(3).height = 18;
 
-    // Row 4: Small spacing row
+    // Row 4: Clean Spacing Row (prevents AutoFilter conflict)
     worksheet.getRow(4).height = 6;
 
     // ─── 3. Table Header (Row 5) ─────────────────────────────────────────────
@@ -207,17 +244,37 @@ export const exportRoomsToExcel = async (
       const stt = index + 1;
       const roomHotelName = hotel.name || hotelName || 'Chưa cập nhật';
       const roomNumber = room.room_number || '-';
-      const sku = (room.sku || `SKU-${roomNumber}`).replace(/^SKU:\s*/i, '');
-      const typeName = rt.type_name || 'Phòng tiêu chuẩn';
-      const floor = room.floor || 'Tầng 1';
-      const roomSize = rt.room_size || '-';
+      const sku = room.sku ? String(room.sku).replace(/^SKU:\s*/i, '') : (room.room_number ? `SKU-${room.room_number}` : '-');
+      const typeName = rt.type_name ? String(rt.type_name).trim() : 'Chưa cập nhật';
+      const rawFloor = room.floor != null ? String(room.floor).trim() : '';
+      const floor = rawFloor !== ''
+        ? (rawFloor.toLowerCase().startsWith('tầng') ? rawFloor : `Tầng ${rawFloor}`)
+        : 'Chưa cập nhật';
+      const rawRoomSize = (rt.room_size !== undefined && rt.room_size !== null)
+        ? String(rt.room_size).trim()
+        : '';
+      const cleanRoomSize = rawRoomSize.replace(/(?:\s*m(?:²|2))+\s*$/gi, '').trim();
+      const roomSize = cleanRoomSize
+        ? `${cleanRoomSize} m²`
+        : (rawRoomSize || '-');
       const bedType = rt.bed_type || '-';
-      const capacity = `${rt.max_adults || 2} người lớn, ${rt.max_children || 0} trẻ em`;
-      const price = Number(rt.default_price) || 0;
+      const maxAdults = rt.max_adults ?? null;
+      const maxChildren = rt.max_children ?? 0;
+      const capacity = maxAdults !== null
+        ? `${maxAdults} người lớn, ${maxChildren} trẻ em`
+        : 'Chưa cập nhật';
+      const price = (rt.default_price !== undefined && rt.default_price !== null)
+        ? Number(rt.default_price) || 0
+        : 0;
       const status = getStatusLabel(room);
 
-      const isAvailable = !room.is_deleted && room.status_cd === 'AVAILABLE';
-      const isOccupied = !room.is_deleted && (room.status_cd === 'OCCUPIED' || room.status_cd === 'BOOKED');
+      const statusUpper = String(room.status_cd || '').toUpperCase();
+      const isAvailable = !room.is_deleted && statusUpper === 'AVAILABLE';
+      const isOccupied = !room.is_deleted && (statusUpper === 'OCCUPIED' || statusUpper === 'BOOKED');
+      const isMissingStatus = status === 'Chưa cập nhật';
+      const isMissingType = typeName === 'Chưa cập nhật';
+      const isMissingFloor = floor === 'Chưa cập nhật';
+      const isMissingCapacity = capacity === 'Chưa cập nhật';
 
       // Cell 1: STT
       const c1 = row.getCell(1);
@@ -255,7 +312,13 @@ export const exportRoomsToExcel = async (
       const c5 = row.getCell(5);
       c5.value = typeName;
       c5.alignment = { horizontal: 'left', vertical: 'middle', indent: 1, wrapText: true };
-      c5.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF0F172A' } };
+      c5.font = {
+        name: 'Segoe UI',
+        size: 9.5,
+        bold: !isMissingType,
+        italic: isMissingType,
+        color: { argb: isMissingType ? 'FF94A3B8' : 'FF0F172A' },
+      };
       c5.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
       c5.border = thinBorder;
 
@@ -263,7 +326,12 @@ export const exportRoomsToExcel = async (
       const c6 = row.getCell(6);
       c6.value = floor;
       c6.alignment = { horizontal: 'center', vertical: 'middle' };
-      c6.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF334155' } };
+      c6.font = {
+        name: 'Segoe UI',
+        size: 9.5,
+        italic: isMissingFloor,
+        color: { argb: isMissingFloor ? 'FF94A3B8' : 'FF334155' },
+      };
       c6.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
       c6.border = thinBorder;
 
@@ -287,14 +355,19 @@ export const exportRoomsToExcel = async (
       const c9 = row.getCell(9);
       c9.value = capacity;
       c9.alignment = { horizontal: 'center', vertical: 'middle' };
-      c9.font = { name: 'Segoe UI', size: 9.5, color: { argb: 'FF334155' } };
+      c9.font = {
+        name: 'Segoe UI',
+        size: 9.5,
+        italic: isMissingCapacity,
+        color: { argb: isMissingCapacity ? 'FF94A3B8' : 'FF334155' },
+      };
       c9.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
       c9.border = thinBorder;
 
       // Cell 10: Giá niêm yết (VND)
       const c10 = row.getCell(10);
       c10.value = price;
-      c10.numFmt = '#,##0 "đ"';
+      c10.numFmt = '#,##0';
       c10.alignment = { horizontal: 'right', vertical: 'middle' };
       c10.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF003580' } };
       c10.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
@@ -308,15 +381,28 @@ export const exportRoomsToExcel = async (
         name: 'Segoe UI',
         size: 9.5,
         bold: true,
+        italic: isMissingStatus,
         color: {
-          argb: isAvailable ? 'FF065F46' : isOccupied ? 'FF9A3412' : 'FF991B1B',
+          argb: isAvailable
+            ? 'FF065F46'
+            : isOccupied
+              ? 'FF9A3412'
+              : isMissingStatus
+                ? 'FF94A3B8'
+                : 'FF991B1B',
         },
       };
       c11.fill = {
         type: 'pattern',
         pattern: 'solid',
         fgColor: {
-          argb: isAvailable ? 'FFECFDF5' : isOccupied ? 'FFFFEDD5' : 'FFFEF2F2',
+          argb: isAvailable
+            ? 'FFECFDF5'
+            : isOccupied
+              ? 'FFFFEDD5'
+              : isMissingStatus
+                ? 'FFF1F5F9'
+                : 'FFFEF2F2',
         },
       };
       c11.border = thinBorder;
@@ -334,9 +420,10 @@ export const exportRoomsToExcel = async (
     fTitle.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: 'FF003580' } };
     fTitle.alignment = { horizontal: 'center', vertical: 'middle' };
 
+    const totalPrice = rooms.reduce((sum, r) => sum + (Number(r.m_room_type?.default_price) || 0), 0);
     const fPrice = worksheet.getCell(`J${footerRowIndex}`);
-    fPrice.value = { formula: `SUM(J6:J${lastDataRow})` };
-    fPrice.numFmt = '#,##0 "đ"';
+    fPrice.value = { formula: `SUM(J6:J${lastDataRow})`, result: totalPrice };
+    fPrice.numFmt = '#,##0';
     fPrice.font = { name: 'Segoe UI', size: 10, bold: true, color: { argb: 'FF003580' } };
     fPrice.alignment = { horizontal: 'right', vertical: 'middle' };
 
@@ -463,15 +550,21 @@ export const exportRoomsToExcel = async (
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = filename;
+    link.setAttribute('download', filename);
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+
+    // Critical fix: Delay revocation so browser download manager has time to stream blob
+    setTimeout(() => {
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }, 2000);
 
     return {
       success: true,
       count: rooms.length,
+      incompleteRoomsCount,
       filename,
     };
   } catch (error) {

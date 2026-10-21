@@ -427,6 +427,7 @@ const HotelDetailPage = () => {
     rooms = [],
   } = hotel || {};
 
+<<<<<<< HEAD
   const handleReviewUpdated = (result) => {
     if (result.review) {
       setReviews((current) => current.map((review) => (
@@ -455,6 +456,11 @@ const HotelDetailPage = () => {
     }));
   };
 
+=======
+  const roomTypes = [...new Map(
+    rooms.map((room) => [room.room_type_id, room])
+  ).values()];
+>>>>>>> origin/main
   const mainImage = images[0] || hotel?.thumbnail || '';
   const sideImage = images[1] || mainImage;
 
@@ -715,7 +721,14 @@ const HotelDetailPage = () => {
                 <span className="shuttle-callout-icon">
                   <ShieldCheckIcon />
                 </span>
-                <span>{cancellation_policy.description}</span>
+                <span>
+                  {cancellation_policy.description
+                    ? String(cancellation_policy.description)
+                        .replace(/<!--META:.*?-->/g, '')
+                        .replace(/^\[.*?\]\s*/g, '')
+                        .trim()
+                    : ''}
+                </span>
               </div>
             )}
           </section>
@@ -740,9 +753,9 @@ const HotelDetailPage = () => {
           </div>
 
           {/* Rooms Stack from DB */}
-          {rooms.length > 0 ? (
+          {roomTypes.length > 0 ? (
             <div className="rooms-list">
-              {rooms.map((room) => {
+              {roomTypes.map((room) => {
                 const capDetails = getRoomCapacityDetails(room);
                 const isCapacityExceeded = guestsPerRoom > capDetails.maxCapacity;
 
@@ -775,15 +788,6 @@ const HotelDetailPage = () => {
                       </div>
 
                       <ul className="room-specs-list">
-                        {room.room_number && (
-                          <li className="room-spec-item">
-                            <span className="room-spec-icon">🚪</span>
-                            <span>
-                              Phòng: <strong>{room.room_number}</strong>
-                              {room.floor ? ` (${room.floor})` : ''}
-                            </span>
-                          </li>
-                        )}
                         {room.room_size && (
                           <li className="room-spec-item">
                             <span className="room-spec-icon">📐</span>

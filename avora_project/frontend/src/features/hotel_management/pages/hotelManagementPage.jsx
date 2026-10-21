@@ -28,7 +28,7 @@ const HotelManagementPage = () => {
 	const userRole = String(user?.role_code_name || '').trim().toUpperCase();
 	const hasActiveFilters = Boolean(debouncedKeyword || filters.city_id || filters.star_quality);
 	const isVendor = userRole === 'VEN';
-	const canApprove = userRole === 'ADM' || userRole === 'BMR';
+	const canApprove = userRole === 'ADM';
 	const vendorHasNoHotels = isVendor && !hasActiveFilters;
 
 	useEffect(() => {

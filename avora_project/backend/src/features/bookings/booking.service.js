@@ -1,10 +1,20 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const { normalizeGuestPhone, validateStayDates } = require('./booking.validation');
+const {
+  getOperationalRoomCount,
+  isOperationalRoom,
+} = require('../hotels/hotel.availability');
+const { createInventorySeed } = require('./booking.inventory');
+const { getRoomTypesForHotel } = require('./booking.room-types');
 
-const createError = (message, statusCode = 500) => {
+const PENDING_BOOKING_TTL_MS = 10 * 60 * 1000;
+
+const createError = (message, statusCode = 500, code = null) => {
   const err = new Error(message);
   err.statusCode = statusCode;
+  if (code) err.code = code;
   return err;
 };
 
@@ -54,14 +64,137 @@ const loadSystemCodes = async (businessCds = ['BOOKING_STS', 'REFUND_STS', 'PAYM
 };
 
 /**
+ * Ensure database timestamps without timezone offsets are treated as UTC ISO strings with trailing Z
+ */
+const ensureUtcIsoString = (val) => {
+  if (!val) return val;
+  const s = String(val).trim();
+  if (s.includes('T') && !s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
+    return `${s}Z`;
+  }
+  return s;
+};
+
+/**
  * Format short booking reference code from booking_id and created_at.
  */
 const formatBookingCode = (bookingId, createdAt) => {
-  const d = createdAt ? new Date(createdAt) : new Date();
+  const d = createdAt ? new Date(ensureUtcIsoString(createdAt)) : new Date();
   const bYear = d.getFullYear() % 100;
   const bMonth = String(d.getMonth() + 1).padStart(2, '0');
   const bCodeSuffix = String(bookingId || '').substring(0, 4).toUpperCase();
   return `AV-${bMonth}${bYear}-${bCodeSuffix}`;
+};
+
+const parseDateString = (dateString) => {
+  const [year, month, day] = String(dateString).slice(0, 10).split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+};
+
+const addDays = (date, days = 1) => {
+  const result = new Date(date);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
+};
+
+const formatDateString = (date) => date.toISOString().slice(0, 10);
+
+const getVietnamToday = () => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Asia/Ho_Chi_Minh',
+}).format(new Date());
+
+const getStayDates = (checkInStr, checkOutStr) => {
+  const dates = [];
+  for (let date = parseDateString(checkInStr); date < parseDateString(checkOutStr); date = addDays(date)) {
+    dates.push(formatDateString(date));
+  }
+  return dates;
+};
+
+const getBookingStatusCodes = async () => {
+  const sysCodes = await loadSystemCodes(['BOOKING_STS']);
+  return {
+    sysCodes,
+    pending: sysCodes.getCodeCd('BOOKING_STS', 'PND', '1'),
+    confirmed: sysCodes.getCodeCd('BOOKING_STS', 'CFM', '2'),
+  };
+};
+
+const hasBookingStatus = (booking, codeName, codeCd, sysCodes) => (
+  sysCodes.getCodeName('BOOKING_STS', booking.booking_status_cd) === codeName ||
+  String(booking.booking_status_cd) === String(codeCd)
+);
+
+const loadActiveBookingHolds = async (roomTypeIds, checkInStr, checkOutStr, excludeBookingId = null) => {
+  if (roomTypeIds.length === 0) return new Map();
+
+  const [{ data: details, error }, statusCodes] = await Promise.all([
+    supabase
+      .from('t_booking_detail')
+      .select('room_type_id, quantity, check_in_date, check_out_date, t_booking!inner(booking_id, booking_status_cd, created_at)')
+      .in('room_type_id', roomTypeIds)
+      .lt('check_in_date', checkOutStr)
+      .gt('check_out_date', checkInStr),
+    getBookingStatusCodes(),
+  ]);
+
+  if (error) throw createError(`Không thể kiểm tra phòng đã đặt: ${error.message}`);
+
+  const cutoff = Date.now() - PENDING_BOOKING_TTL_MS;
+  const dateSet = new Set(getStayDates(checkInStr, checkOutStr));
+  const heldByRoomType = new Map();
+  (details || []).forEach((detail) => {
+    const booking = detail.t_booking;
+    if (!booking || String(booking.booking_id) === String(excludeBookingId)) return;
+
+    const isPendingActive =
+      hasBookingStatus(booking, 'PND', statusCodes.pending, statusCodes.sysCodes) &&
+      new Date(booking.created_at).getTime() > cutoff;
+    const isConfirmed = hasBookingStatus(booking, 'CFM', statusCodes.confirmed, statusCodes.sysCodes);
+    if (!isConfirmed && !isPendingActive) return;
+
+    const start = String(detail.check_in_date).slice(0, 10);
+    const end = String(detail.check_out_date).slice(0, 10);
+    for (const date of getStayDates(start < checkInStr ? checkInStr : start, end > checkOutStr ? checkOutStr : end)) {
+      if (!dateSet.has(date)) continue;
+      if (!heldByRoomType.has(detail.room_type_id)) heldByRoomType.set(detail.room_type_id, new Map());
+      const heldByDate = heldByRoomType.get(detail.room_type_id);
+      heldByDate.set(date, (heldByDate.get(date) || 0) + Number(detail.quantity || 0));
+    }
+  });
+
+  return heldByRoomType;
+};
+
+const getExcludedBookingQuantity = (details, roomTypeId, date) => (details || []).reduce((sum, detail) => {
+  const checkIn = String(detail.check_in_date).slice(0, 10);
+  const checkOut = String(detail.check_out_date).slice(0, 10);
+  return detail.room_type_id === roomTypeId && checkIn <= date && date < checkOut
+    ? sum + Number(detail.quantity || 0)
+    : sum;
+}, 0);
+
+const ensureBookingAccess = async (booking, currentUser) => {
+  if (!currentUser?.user_id) {
+    throw createError('Vui lòng đăng nhập để tiếp tục.', 401);
+  }
+  if (String(booking.user_id) === String(currentUser.user_id)) return;
+
+  const tokenRoleName = String(currentUser.role_code_name || currentUser.role_name || '').toUpperCase();
+  if (tokenRoleName === 'ADM') return;
+
+  if (currentUser.role_cd) {
+    const { data: role, error } = await supabase
+      .from('m_system_code')
+      .select('code_name')
+      .eq('business_cd', 'USER_ROLE')
+      .eq('code_cd', currentUser.role_cd)
+      .maybeSingle();
+    if (error) throw createError(`Không thể kiểm tra quyền người dùng: ${error.message}`);
+    if (String(role?.code_name || '').toUpperCase() === 'ADM') return;
+  }
+
+  throw createError('Bạn không có quyền truy cập đơn đặt phòng này.', 403);
 };
 
 /**
@@ -75,137 +208,68 @@ const calculatePricing = async ({
   check_in_date,
   check_out_date,
   coupon_code,
+  exclude_booking_id,
+  excluded_details = [],
 }) => {
   ensureClient();
 
-  // Normalize dates using real-time local date (no past check-in permitted)
   const now = new Date();
-  const todayYear = now.getFullYear();
-  const todayMonth = String(now.getMonth() + 1).padStart(2, '0');
-  const todayDay = String(now.getDate()).padStart(2, '0');
-  const todayStr = `${todayYear}-${todayMonth}-${todayDay}`;
-
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowYear = tomorrow.getFullYear();
-  const tomorrowMonth = String(tomorrow.getMonth() + 1).padStart(2, '0');
-  const tomorrowDay = String(tomorrow.getDate()).padStart(2, '0');
-  const tomorrowStr = `${tomorrowYear}-${tomorrowMonth}-${tomorrowDay}`;
-
-  let checkInStr = check_in_date ? String(check_in_date).trim() : todayStr;
-  if (checkInStr < todayStr) {
-    checkInStr = todayStr;
-  }
-
-  let checkOutStr = check_out_date ? String(check_out_date).trim() : tomorrowStr;
-  if (checkOutStr <= checkInStr) {
-    const nextDay = new Date(checkInStr);
-    nextDay.setDate(nextDay.getDate() + 1);
-    const ny = nextDay.getFullYear();
-    const nm = String(nextDay.getMonth() + 1).padStart(2, '0');
-    const nd = String(nextDay.getDate()).padStart(2, '0');
-    checkOutStr = `${ny}-${nm}-${nd}`;
-  }
-
-  const checkIn = new Date(checkInStr);
-  const checkOut = new Date(checkOutStr);
-  const diffTime = checkOut.getTime() - checkIn.getTime();
-  const nights = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1);
+  const dateErrors = validateStayDates(check_in_date, check_out_date);
+  if (dateErrors.length > 0) throw createError(dateErrors[0], 400);
+  if (!hotel_id) throw createError('hotel_id là bắt buộc.', 400);
+  const checkInStr = String(check_in_date).trim();
+  const checkOutStr = String(check_out_date).trim();
+  const stayDates = getStayDates(checkInStr, checkOutStr);
+  const nights = stayDates.length;
 
   // 1. Resolve hotel from m_hotel
-  let activeHotelId = hotel_id || null;
-  let dbHotel = null;
+  const activeHotelId = hotel_id;
 
-  if (activeHotelId) {
-    const { data: foundHotel } = await supabase
-      .from('m_hotel')
-      .select('hotel_id, name, description, address, city_id, district_id, ward_id, star_rating, star_quality, hotel_status, is_deleted')
-      .eq('hotel_id', activeHotelId)
-      .maybeSingle();
-    if (foundHotel && !foundHotel.is_deleted) {
-      dbHotel = foundHotel;
-    }
-  }
-
-  // If no valid hotel_id was passed, resolve from room_type_id or pick first active hotel with room types in DB
-  if (!dbHotel && room_type_id) {
-    const { data: rtForHotel } = await supabase
-      .from('m_room_type')
-      .select('hotel_id')
-      .eq('room_type_id', room_type_id)
-      .eq('is_deleted', false)
-      .maybeSingle();
-    if (rtForHotel?.hotel_id) {
-      const { data: foundHotel } = await supabase
-        .from('m_hotel')
-        .select('hotel_id, name, description, address, city_id, district_id, ward_id, star_rating, star_quality, hotel_status, is_deleted')
-        .eq('hotel_id', rtForHotel.hotel_id)
-        .maybeSingle();
-      if (foundHotel) dbHotel = foundHotel;
-    }
-  }
-
-  if (!dbHotel) {
-    const { data: firstRoomType } = await supabase
-      .from('m_room_type')
-      .select('hotel_id, room_type_id')
-      .eq('is_deleted', false)
-      .limit(1)
-      .maybeSingle();
-
-    if (firstRoomType?.hotel_id) {
-      const { data: fallbackHotel } = await supabase
-        .from('m_hotel')
-        .select('hotel_id, name, description, address, city_id, district_id, ward_id, star_rating, star_quality, hotel_status, is_deleted')
-        .eq('hotel_id', firstRoomType.hotel_id)
-        .maybeSingle();
-      dbHotel = fallbackHotel;
-    }
-  }
-
-  activeHotelId = dbHotel?.hotel_id || hotel_id || null;
+  const { data: foundHotel, error: hotelError } = await supabase
+    .from('m_hotel')
+    .select('hotel_id, name, description, address, city_id, district_id, ward_id, star_rating, star_quality, hotel_status, is_deleted')
+    .eq('hotel_id', activeHotelId)
+    .eq('hotel_status', 'ACTIVE')
+    .eq('is_deleted', false)
+    .maybeSingle();
+  if (hotelError) throw createError(`Không thể kiểm tra khách sạn: ${hotelError.message}`);
+  if (!foundHotel) throw createError('Khách sạn không tồn tại hoặc hiện không nhận đặt phòng.', 400);
+  const dbHotel = foundHotel;
 
   // Normalize rooms list
-  let roomItems = Array.isArray(rooms) && rooms.length > 0 ? rooms : [];
-  if (roomItems.length === 0 && room_type_id) {
-    roomItems = [{ room_type_id, quantity: Math.max(1, Number(quantity) || 1) }];
-  }
+  const roomItems = Array.isArray(rooms) && rooms.length > 0
+    ? rooms
+    : room_type_id
+      ? [{ room_type_id, quantity }]
+      : [];
 
   // Fetch room types from m_room_type
-  let requestedRoomTypeIds = roomItems.map((r) => r.room_type_id).filter(Boolean);
-  let dbRoomTypes = [];
-
-  if (requestedRoomTypeIds.length > 0) {
-    const { data: rtData, error: rtError } = await supabase
+  const requestedRoomTypeIds = [...new Set(roomItems.map((room) => room.room_type_id).filter(Boolean))];
+  if (requestedRoomTypeIds.length === 0) {
+    throw createError('Vui lòng chọn ít nhất 1 hạng phòng để đặt.', 400);
+  }
+  const [{ data: roomTypeRows, error: rtError }, { data: hotelRoomRows, error: hotelRoomError }] = await Promise.all([
+    supabase
       .from('m_room_type')
       .select('room_type_id, hotel_id, type_name, default_price, bed_type, room_size, max_adults, max_children')
       .in('room_type_id', requestedRoomTypeIds)
-      .eq('is_deleted', false);
-
-    if (rtError) {
-      throw createError(`Không thể lấy thông tin hạng phòng: ${rtError.message}`);
-    }
-    dbRoomTypes = rtData || [];
-  }
-
-  // If requested room_type_id did not match DB or was omitted, load active room types of activeHotelId
-  if (dbRoomTypes.length === 0 && activeHotelId) {
-    const { data: hotelRoomTypes } = await supabase
-      .from('m_room_type')
-      .select('room_type_id, hotel_id, type_name, default_price, bed_type, room_size, max_adults, max_children')
+      .or('is_deleted.is.null,is_deleted.eq.false'),
+    supabase
+      .from('m_room')
+      .select('room_type_id')
       .eq('hotel_id', activeHotelId)
       .eq('is_deleted', false)
-      .order('default_price', { ascending: true });
-
-    if (hotelRoomTypes && hotelRoomTypes.length > 0) {
-      dbRoomTypes = [hotelRoomTypes[0]];
-      const defaultQty = Math.max(1, Number(roomItems[0]?.quantity || quantity) || 1);
-      roomItems = [{ room_type_id: hotelRoomTypes[0].room_type_id, quantity: defaultQty }];
-    }
-  }
-
-  if (roomItems.length === 0 || dbRoomTypes.length === 0) {
-    throw createError('Không tìm thấy hạng phòng hợp lệ trong cơ sở dữ liệu.', 400);
+      .in('room_type_id', requestedRoomTypeIds),
+  ]);
+  if (rtError) throw createError(`Không thể lấy thông tin hạng phòng: ${rtError.message}`);
+  if (hotelRoomError) throw createError(`Không thể xác minh hạng phòng thuộc khách sạn: ${hotelRoomError.message}`);
+  const dbRoomTypes = getRoomTypesForHotel(
+    roomTypeRows || [],
+    activeHotelId,
+    (hotelRoomRows || []).map((room) => room.room_type_id)
+  );
+  if (dbRoomTypes.length !== requestedRoomTypeIds.length) {
+    throw createError('Một hoặc nhiều hạng phòng không hợp lệ hoặc không thuộc khách sạn đã chọn.', 400);
   }
 
   const validRoomTypeIds = dbRoomTypes.map((rt) => rt.room_type_id);
@@ -222,7 +286,7 @@ const calculatePricing = async ({
   ] = await Promise.all([
     supabase
       .from('t_inventory')
-      .select('inventory_id, room_type_id, target_date, available_rooms, locked_rooms, current_price')
+      .select('room_type_id, target_date, available_rooms, locked_rooms, current_price')
       .in('room_type_id', validRoomTypeIds)
       .gte('target_date', checkInStr)
       .lt('target_date', checkOutStr),
@@ -237,25 +301,25 @@ const calculatePricing = async ({
       .eq('is_deleted', false),
     activeHotelId
       ? supabase
-          .from('m_hotel_image')
-          .select('image_id, image_url, is_thumbnail, sort_order')
-          .eq('hotel_id', activeHotelId)
-          .order('sort_order', { ascending: true })
+        .from('m_hotel_image')
+        .select('image_id, image_url, is_thumbnail, sort_order')
+        .eq('hotel_id', activeHotelId)
+        .order('sort_order', { ascending: true })
       : Promise.resolve({ data: [] }),
     activeHotelId
       ? supabase
-          .from('t_booking')
-          .select('booking_id, t_review(rating_score)')
-          .eq('hotel_id', activeHotelId)
+        .from('t_booking')
+        .select('booking_id, t_review(rating_score)')
+        .eq('hotel_id', activeHotelId)
       : Promise.resolve({ data: [] }),
     activeHotelId
       ? supabase
-          .from('m_cancellation_policy')
-          .select('*')
-          .or(`hotel_id.eq.${activeHotelId},hotel_id.is.null`)
-          .order('hotel_id', { ascending: false, nullsFirst: false })
-          .limit(1)
-          .maybeSingle()
+        .from('m_cancellation_policy')
+        .select('*')
+        .or(`hotel_id.eq.${activeHotelId},hotel_id.is.null`)
+        .order('hotel_id', { ascending: false, nullsFirst: false })
+        .limit(1)
+        .maybeSingle()
       : Promise.resolve({ data: null }),
     supabase
       .from('m_coupon')
@@ -264,7 +328,13 @@ const calculatePricing = async ({
       .order('created_at', { ascending: false }),
   ]);
 
-  const roomTypeMap = new Map(dbRoomTypes.map((rt) => [rt.room_type_id, rt]));
+  const roomTypeMap = new Map(dbRoomTypes.map((rt) => [String(rt.room_type_id), rt]));
+  const heldByRoomType = await loadActiveBookingHolds(
+    validRoomTypeIds,
+    checkInStr,
+    checkOutStr,
+    exclude_booking_id
+  );
 
   // Map inventory by room_type_id
   const invByRoomType = new Map();
@@ -293,35 +363,35 @@ const calculatePricing = async ({
     physRoomsByType.get(rm.room_type_id).push(rm);
   });
 
-  // Calculate subtotal strictly from DB prices (t_inventory.current_price -> m_room_type.default_price)
+  // Calculate each night's amount from inventory, falling back to the room type's base price.
   let subtotal = 0;
   const processedRooms = roomItems.map((item) => {
-    const rt = roomTypeMap.get(item.room_type_id) || dbRoomTypes[0];
+    const rt = roomTypeMap.get(String(item.room_type_id));
+    if (!rt) throw createError('Hạng phòng không thuộc khách sạn đã chọn.', 400);
     const rtId = rt.room_type_id;
     const invList = invByRoomType.get(rtId) || [];
     const defaultPrice = Number(rt.default_price || 0);
-
-    let unitPrice = defaultPrice;
-    if (invList.length > 0) {
-      const totalInvPrice = invList.reduce(
-        (sum, inv) => sum + (inv.current_price != null ? Number(inv.current_price) : defaultPrice),
-        0
-      );
-      unitPrice = Math.round(totalInvPrice / invList.length);
-    }
+    const inventoryByDate = new Map(invList.map((inv) => [String(inv.target_date).slice(0, 10), inv]));
+    const nightlyPrices = stayDates.map((date) => {
+      const inventory = inventoryByDate.get(date);
+      return inventory?.current_price != null ? Number(inventory.current_price) : defaultPrice;
+    });
+    const roomStayPrice = nightlyPrices.reduce((sum, price) => sum + price, 0);
+    const unitPrice = roomStayPrice / nights;
 
     const physRooms = physRoomsByType.get(rtId) || [];
-    const availPhysCount = physRooms.filter(
-      (r) => !r.status_cd || String(r.status_cd).toUpperCase() === 'AVAILABLE'
-    ).length;
-
-    let availableRooms = availPhysCount > 0 ? availPhysCount : null;
-    if (invList.length > 0) {
-      availableRooms = Math.min(...invList.map((inv) => Number(inv.available_rooms ?? 0)));
-    }
+    const physicalRoomCount = getOperationalRoomCount(physRooms);
+    const nightlyAvailability = stayDates.map((date) => {
+      const inventory = inventoryByDate.get(date);
+      const excludedQuantity = getExcludedBookingQuantity(excluded_details, rtId, date);
+      if (inventory) return Number(inventory.available_rooms ?? 0) + excludedQuantity;
+      const held = heldByRoomType.get(rtId)?.get(date) || 0;
+      return physicalRoomCount - held;
+    });
+    const availableRooms = nightlyAvailability.length ? Math.min(...nightlyAvailability) : 0;
 
     const qty = Math.max(1, Number(item.quantity) || 1);
-    const roomSubtotal = unitPrice * qty * nights;
+    const roomSubtotal = roomStayPrice * qty;
     subtotal += roomSubtotal;
 
     return {
@@ -381,12 +451,26 @@ const calculatePricing = async ({
         couponMessage = `Đơn hàng tối thiểu để áp dụng mã là ${Number(dbCoupon.min_order_amount).toLocaleString('vi-VN')} đ.`;
       } else {
         if (dbCoupon.usage_limit != null) {
-          const { count, error: countError } = await supabase
-            .from('t_booking')
-            .select('booking_id', { count: 'exact', head: true })
-            .eq('coupon_id', dbCoupon.coupon_id);
-
-          if (!countError && count != null && count >= dbCoupon.usage_limit) {
+          const { pending, confirmed } = await getBookingStatusCodes();
+          const cutoff = new Date(Date.now() - PENDING_BOOKING_TTL_MS).toISOString();
+          const [confirmedCount, pendingCount] = await Promise.all([
+            supabase
+              .from('t_booking')
+              .select('booking_id', { count: 'exact', head: true })
+              .eq('coupon_id', dbCoupon.coupon_id)
+              .eq('booking_status_cd', confirmed),
+            supabase
+              .from('t_booking')
+              .select('booking_id', { count: 'exact', head: true })
+              .eq('coupon_id', dbCoupon.coupon_id)
+              .eq('booking_status_cd', pending)
+              .gt('created_at', cutoff),
+          ]);
+          if (confirmedCount.error || pendingCount.error) {
+            throw createError(`Lỗi kiểm tra lượt sử dụng coupon: ${(confirmedCount.error || pendingCount.error).message}`);
+          }
+          const usageCount = (confirmedCount.count || 0) + (pendingCount.count || 0);
+          if (usageCount >= dbCoupon.usage_limit) {
             couponMessage = 'Mã giảm giá đã đạt giới hạn lượt sử dụng.';
           }
         }
@@ -434,16 +518,16 @@ const calculatePricing = async ({
     hotel_id: activeHotelId,
     hotel: dbHotel
       ? {
-          hotel_id: dbHotel.hotel_id,
-          name: dbHotel.name,
-          address: dbHotel.address || '',
-          star_quality: Number(dbHotel.star_quality || 0),
-          star_rating: Number(dbHotel.star_rating || 0),
-          rating_score: avgReviewScore,
-          review_count: reviewScores.length,
-          thumbnail_url: thumbnailImg,
-          images: hotelImages,
-        }
+        hotel_id: dbHotel.hotel_id,
+        name: dbHotel.name,
+        address: dbHotel.address || '',
+        star_quality: Number(dbHotel.star_quality || 0),
+        star_rating: Number(dbHotel.star_rating || 0),
+        rating_score: avgReviewScore,
+        review_count: reviewScores.length,
+        thumbnail_url: thumbnailImg,
+        images: hotelImages,
+      }
       : null,
     nights,
     check_in_date: checkInStr,
@@ -454,13 +538,13 @@ const calculatePricing = async ({
     total_amount,
     coupon: coupon
       ? {
-          coupon_id: coupon.coupon_id,
-          code: coupon.code,
-          discount_type: coupon.discount_type,
-          discount_value: Number(coupon.discount_value),
-          max_discount_amount: coupon.max_discount_amount ? Number(coupon.max_discount_amount) : null,
-          min_order_amount: coupon.min_order_amount ? Number(coupon.min_order_amount) : null,
-        }
+        coupon_id: coupon.coupon_id,
+        code: coupon.code,
+        discount_type: coupon.discount_type,
+        discount_value: Number(coupon.discount_value),
+        max_discount_amount: coupon.max_discount_amount ? Number(coupon.max_discount_amount) : null,
+        min_order_amount: coupon.min_order_amount ? Number(coupon.min_order_amount) : null,
+      }
       : null,
     coupon_message: couponMessage,
     available_coupons: availableCoupons.map((c) => ({
@@ -481,44 +565,219 @@ const calculatePricing = async ({
  * deltaLocked > 0 locks rooms (decreases available_rooms, increases locked_rooms).
  * deltaLocked < 0 releases rooms (increases available_rooms, decreases locked_rooms).
  */
-const adjustInventoryForStay = async (rooms, checkInStr, checkOutStr, deltaSign = 1) => {
+const createSoldOutError = (dates) => createError(
+  `SOLD_OUT: Không đủ phòng trong các đêm: ${[...new Set(dates)].sort().join(', ')}.`,
+  409,
+  'SOLD_OUT'
+);
+
+const loadInventoryFallback = async (rooms, checkInStr, checkOutStr, excludeBookingId = null) => {
+  const roomTypeIds = [...new Set(rooms.map((room) => room.room_type_id))];
+  const [{ data: physicalRooms, error }, { data: roomTypes, error: roomTypeError }, heldByRoomType] = await Promise.all([
+    supabase
+      .from('m_room')
+      .select('room_type_id, status_cd')
+      .in('room_type_id', roomTypeIds)
+      .eq('is_deleted', false),
+    supabase
+      .from('m_room_type')
+      .select('room_type_id, default_price')
+      .in('room_type_id', roomTypeIds),
+    loadActiveBookingHolds(roomTypeIds, checkInStr, checkOutStr, excludeBookingId),
+  ]);
+  if (error) throw createError(`Không thể kiểm tra tổng số phòng: ${error.message}`);
+  if (roomTypeError) throw createError(`Không thể đọc giá hạng phòng: ${roomTypeError.message}`);
+
+  const roomsByType = new Map();
+  const pricesByType = new Map((roomTypes || []).map((roomType) => [
+    roomType.room_type_id,
+    Number(roomType.default_price || 0),
+  ]));
+  const operationalRoomCounts = new Map();
+  (physicalRooms || []).forEach((room) => {
+    if (!isOperationalRoom(room)) return;
+    operationalRoomCounts.set(
+      room.room_type_id,
+      (operationalRoomCounts.get(room.room_type_id) || 0) + 1
+    );
+  });
+  operationalRoomCounts.forEach((count, roomTypeId) => roomsByType.set(roomTypeId, count));
+  return { roomsByType, pricesByType, heldByRoomType };
+};
+
+const loadNightlyAvailability = async (rooms, checkInStr, checkOutStr, excludeBookingId, excludedDetails = []) => {
+  const roomTypeIds = [...new Set(rooms.map((room) => room.room_type_id))];
+  const [{ data: inventoryRows, error: inventoryError }, { data: physicalRooms, error: roomsError }, heldByRoomType] =
+    await Promise.all([
+      supabase
+        .from('t_inventory')
+        .select('room_type_id, target_date, available_rooms')
+        .in('room_type_id', roomTypeIds)
+        .gte('target_date', checkInStr)
+        .lt('target_date', checkOutStr),
+      supabase
+        .from('m_room')
+        .select('room_type_id, status_cd')
+        .in('room_type_id', roomTypeIds)
+        .eq('is_deleted', false),
+      loadActiveBookingHolds(roomTypeIds, checkInStr, checkOutStr, excludeBookingId),
+    ]);
+  if (inventoryError) throw createError(`Không thể đọc tồn kho: ${inventoryError.message}`);
+  if (roomsError) throw createError(`Không thể kiểm tra tổng số phòng: ${roomsError.message}`);
+
+  const physicalCountByType = new Map();
+  (physicalRooms || []).forEach((room) => {
+    if (!isOperationalRoom(room)) return;
+    physicalCountByType.set(
+      room.room_type_id,
+      (physicalCountByType.get(room.room_type_id) || 0) + 1
+    );
+  });
+  const inventoryByKey = new Map((inventoryRows || []).map((row) => [
+    `${row.room_type_id}:${String(row.target_date).slice(0, 10)}`,
+    row,
+  ]));
+  const availability = new Map();
+  for (const room of rooms) {
+    for (const date of getStayDates(checkInStr, checkOutStr)) {
+      const inventory = inventoryByKey.get(`${room.room_type_id}:${date}`);
+      const available = inventory
+        ? Number(inventory.available_rooms || 0) + getExcludedBookingQuantity(excludedDetails, room.room_type_id, date)
+        : (physicalCountByType.get(room.room_type_id) || 0)
+          - (heldByRoomType.get(room.room_type_id)?.get(date) || 0);
+      availability.set(`${room.room_type_id}:${date}`, available);
+    }
+  }
+  return availability;
+};
+
+const readInventoryRow = async (roomTypeId, dateStr) => {
+  const { data, error } = await supabase
+    .from('t_inventory')
+    .select('available_rooms, locked_rooms, version')
+    .eq('room_type_id', roomTypeId)
+    .eq('target_date', dateStr)
+    .maybeSingle();
+  if (error) throw createError(`Không thể đọc tồn kho: ${error.message}`);
+  return data;
+};
+
+const applyInventoryDeltaForNight = async (roomTypeId, dateStr, quantity, deltaSign, fallback) => {
+  let inventory = await readInventoryRow(roomTypeId, dateStr);
+  if (!inventory) {
+    const held = fallback.heldByRoomType.get(roomTypeId)?.get(dateStr) || 0;
+    const totalRooms = fallback.roomsByType.get(roomTypeId) || 0;
+    const inventorySeed = createInventorySeed(totalRooms, held);
+    const { error } = await supabase
+      .from('t_inventory')
+      .upsert({
+        room_type_id: roomTypeId,
+        target_date: dateStr,
+        ...inventorySeed,
+        current_price: fallback.pricesByType.get(roomTypeId) || 0,
+      }, {
+        onConflict: 'room_type_id,target_date',
+        ignoreDuplicates: true,
+      });
+    if (error) throw createError(`Không thể khởi tạo tồn kho: ${error.message}`);
+  }
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    inventory = await readInventoryRow(roomTypeId, dateStr);
+    if (!inventory) continue;
+
+    const nextAvailable = Number(inventory.available_rooms || 0) - deltaSign * quantity;
+    if (nextAvailable < 0) throw createSoldOutError([dateStr]);
+    const { data: updated, error } = await supabase
+      .from('t_inventory')
+      .update({
+        available_rooms: nextAvailable,
+        locked_rooms: Math.max(0, Number(inventory.locked_rooms || 0) + deltaSign * quantity),
+        version: Number(inventory.version || 0) + 1,
+      })
+      .eq('room_type_id', roomTypeId)
+      .eq('target_date', dateStr)
+      .eq('version', inventory.version)
+      .select('available_rooms')
+      .maybeSingle();
+
+    if (error) throw createError(`Không thể cập nhật tồn kho: ${error.message}`);
+    if (!updated) continue;
+    if (Number(updated.available_rooms) < 0) throw createSoldOutError([dateStr]);
+    return;
+  }
+
+  throw createSoldOutError([dateStr]);
+};
+
+const adjustInventoryForStay = async (
+  rooms,
+  checkInStr,
+  checkOutStr,
+  deltaSign = 1,
+  excludeBookingId = null,
+  includedNights = null
+) => {
+  const fallback = await loadInventoryFallback(rooms, checkInStr, checkOutStr, excludeBookingId);
+  const quantities = new Map();
+  for (const room of rooms) {
+    const quantity = Math.max(1, Number(room.quantity) || 1);
+    for (const date of getStayDates(checkInStr, checkOutStr)) {
+      if (includedNights && !includedNights.has(`${room.room_type_id}:${date}`)) continue;
+      const key = `${room.room_type_id}:${date}`;
+      quantities.set(key, {
+        roomTypeId: room.room_type_id,
+        date,
+        quantity: (quantities.get(key)?.quantity || 0) + quantity,
+      });
+    }
+  }
+
+  const soldOutDates = [];
+  for (const item of quantities.values()) {
+    const inventory = await readInventoryRow(item.roomTypeId, item.date);
+    const held = fallback.heldByRoomType.get(item.roomTypeId)?.get(item.date) || 0;
+    const available = inventory
+      ? Number(inventory.available_rooms || 0)
+      : (fallback.roomsByType.get(item.roomTypeId) || 0) - held - (deltaSign < 0 ? item.quantity : 0);
+    if (deltaSign > 0 && available < item.quantity) soldOutDates.push(item.date);
+  }
+  if (soldOutDates.length > 0) throw createSoldOutError(soldOutDates);
+
+  const applied = [];
   try {
-    for (const room of rooms) {
-      const checkInDate = new Date(checkInStr);
-      const checkOutDate = new Date(checkOutStr);
-      const qty = Math.max(1, Number(room.quantity) || 1);
-
-      for (let d = new Date(checkInDate); d < checkOutDate; d.setDate(d.getDate() + 1)) {
-        const dateStr = d.toISOString().split('T')[0];
-
-        const { data: existingInv } = await supabase
-          .from('t_inventory')
-          .select('inventory_id, available_rooms, locked_rooms')
-          .eq('room_type_id', room.room_type_id)
-          .eq('target_date', dateStr)
-          .maybeSingle();
-
-        if (existingInv) {
-          const nextLocked = Math.max(0, (existingInv.locked_rooms || 0) + deltaSign * qty);
-          const nextAvail = Math.max(0, (existingInv.available_rooms || 0) - deltaSign * qty);
-          await supabase
-            .from('t_inventory')
-            .update({
-              locked_rooms: nextLocked,
-              available_rooms: nextAvail,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('inventory_id', existingInv.inventory_id);
-        }
+    for (const item of quantities.values()) {
+      await applyInventoryDeltaForNight(item.roomTypeId, item.date, item.quantity, deltaSign, fallback);
+      applied.push(item);
+    }
+  } catch (error) {
+    let rollbackError = null;
+    for (const item of applied.reverse()) {
+      try {
+        await applyInventoryDeltaForNight(item.roomTypeId, item.date, item.quantity, -deltaSign, fallback);
+      } catch (rollbackFailure) {
+        rollbackError = rollbackFailure;
       }
     }
-  } catch (invErr) {
-    console.warn('[BookingService] Cảnh báo cập nhật tồn kho:', invErr.message);
+    if (rollbackError) {
+      throw createError(
+        `Lỗi cập nhật tồn kho: ${error.message}; không thể hoàn tác tồn kho: ${rollbackError.message}`,
+        error.statusCode || 500,
+        error.code
+      );
+    }
+    throw error;
   }
+
+  return [...quantities.values()];
 };
+
+// In-memory Mutex Set to prevent duplicate concurrent booking submissions
+const activeBookingLocks = new Set();
 
 /**
  * Create a new booking in t_booking and t_booking_detail using m_system_code ('1' = PND).
+ * Đã tích hợp bảo vệ chống duplicate booking: Concurrency Lock (Mutex) + Idempotency Check 60s.
  */
 const createBooking = async (payload, currentUser = null) => {
   const userId = currentUser?.user_id;
@@ -526,130 +785,236 @@ const createBooking = async (payload, currentUser = null) => {
     throw createError('Vui lòng đăng nhập để tiếp tục.', 401);
   }
 
-  ensureClient();
-
-  const [pricing, sysCodes] = await Promise.all([
-    calculatePricing({
-      hotel_id: payload.hotel_id,
-      rooms: payload.rooms,
-      room_type_id: payload.room_type_id,
-      quantity: payload.quantity,
-      check_in_date: payload.check_in_date,
-      check_out_date: payload.check_out_date,
-      coupon_code: payload.coupon_code,
-    }),
-    loadSystemCodes(['BOOKING_STS', 'USER_ACTION']),
-  ]);
-
-  // Check inventory availability before creating booking
-  for (const room of pricing.rooms) {
-    if (room.available_rooms !== null && room.available_rooms < room.quantity) {
-      throw createError(
-        `Hạng phòng "${room.type_name}" không đủ số lượng phòng trống trong khoảng ngày đã chọn (Còn: ${room.available_rooms}, Yêu cầu: ${room.quantity}).`,
-        400
-      );
-    }
+  // Khóa chống thao tác song song / double-click theo user, khách sạn, ngày và các phòng đã chọn
+  const roomKeySummary = (Array.isArray(payload.rooms) && payload.rooms.length > 0 ? payload.rooms : [{ room_type_id: payload.room_type_id, quantity: payload.quantity }])
+    .map((r) => `${r.room_type_id}:${r.quantity || 1}`)
+    .sort()
+    .join(';');
+  const lockKey = `${userId}_${payload.hotel_id}_${payload.check_in_date}_${payload.check_out_date}_${roomKeySummary}`;
+  if (activeBookingLocks.has(lockKey)) {
+    throw createError(
+      'Yêu cầu đặt phòng của bạn đang được xử lý, vui lòng không gửi yêu cầu liên tục.',
+      429
+    );
   }
+  activeBookingLocks.add(lockKey);
 
-  // Construct special request notes directly mapping to t_booking.special_request
-  let formattedSpecialRequest = null;
-  if (payload.special_request && String(payload.special_request).trim()) {
-    formattedSpecialRequest = String(payload.special_request).trim();
-  } else {
-    const requestParts = [];
-    if (Array.isArray(payload.special_request_options) && payload.special_request_options.length > 0) {
-      requestParts.push(payload.special_request_options.join(', '));
-    }
-    if (payload.estimated_arrival_time) {
-      requestParts.push(payload.estimated_arrival_time);
-    }
-    formattedSpecialRequest = requestParts.length > 0 ? requestParts.join('; ') : null;
-  }
-  const pendingStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'PND', '1');
-  const bookingActionCd = sysCodes.getCodeCd('USER_ACTION', 'BOK', '4');
-
-  // Insert into t_booking
-  const bookingInsertPayload = {
-    user_id: userId,
-    hotel_id: pricing.hotel_id,
-    total_amount: pricing.total_amount,
-    guest_name: payload.guest_name.trim(),
-    guest_phone: payload.guest_phone.trim(),
-    special_request: formattedSpecialRequest,
-    booking_status_cd: pendingStatusCd,
-    coupon_id: pricing.coupon?.coupon_id || null,
-    discount_amount: pricing.discount_amount || 0,
-    cancellation_policy_id: pricing.cancellation_policy?.cancellation_policy_id || null,
-    applied_penalty_rate: pricing.cancellation_policy?.penalty_rate ?? 0,
-  };
-
-  const { data: createdBooking, error: bookingError } = await supabase
-    .from('t_booking')
-    .insert(bookingInsertPayload)
-    .select('*')
-    .single();
-
-  if (bookingError) {
-    throw createError(`Không thể tạo đơn đặt phòng: ${bookingError.message}`);
-  }
-
-  // Insert details into t_booking_detail
-  const detailRows = pricing.rooms.map((room) => ({
-    booking_id: createdBooking.booking_id,
-    room_type_id: room.room_type_id,
-    check_in_date: pricing.check_in_date,
-    check_out_date: pricing.check_out_date,
-    quantity: room.quantity,
-    unit_price: room.unit_price,
-  }));
-
-  const { data: createdDetails, error: detailsError } = await supabase
-    .from('t_booking_detail')
-    .insert(detailRows)
-    .select('*');
-
-  if (detailsError) {
-    await supabase.from('t_booking').delete().eq('booking_id', createdBooking.booking_id);
-    throw createError(`Lỗi lưu chi tiết đặt phòng: ${detailsError.message}`);
-  }
-
-  // Update inventory in t_inventory if entries exist
-  await adjustInventoryForStay(pricing.rooms, pricing.check_in_date, pricing.check_out_date, 1);
-
-  // Log user behavior (USER_ACTION = '4' / BOK)
   try {
-    if (userId) {
-      await supabase.from('h_user_behavior').insert({
-        user_id: userId,
-        action_type_cd: bookingActionCd,
-        search_criteria: {
-          hotel_id: pricing.hotel_id,
-          check_in_date: pricing.check_in_date,
-          check_out_date: pricing.check_out_date,
-          nights: pricing.nights,
-          total_amount: pricing.total_amount,
-        },
-      });
-    }
-  } catch (behaviorErr) {
-    console.warn('[BookingService] Cảnh báo ghi user behavior:', behaviorErr.message);
-  }
+    ensureClient();
 
-  return {
-    booking_id: createdBooking.booking_id,
-    booking_code: formatBookingCode(createdBooking.booking_id, createdBooking.created_at),
-    booking_status_cd: createdBooking.booking_status_cd,
-    status_code_name: sysCodes.getCodeName('BOOKING_STS', createdBooking.booking_status_cd, 'PND'),
-    hotel_id: createdBooking.hotel_id,
-    guest_name: createdBooking.guest_name,
-    guest_phone: createdBooking.guest_phone,
-    total_amount: Number(createdBooking.total_amount),
-    discount_amount: Number(createdBooking.discount_amount || 0),
-    coupon_applied: pricing.coupon?.code || null,
-    pricing,
-    details: createdDetails || [],
-    created_at: createdBooking.created_at,
-  };
+    const [pricing, sysCodes] = await Promise.all([
+      calculatePricing({
+        hotel_id: payload.hotel_id,
+        rooms: payload.rooms,
+        room_type_id: payload.room_type_id,
+        quantity: payload.quantity,
+        check_in_date: payload.check_in_date,
+        check_out_date: payload.check_out_date,
+        coupon_code: payload.coupon_code,
+      }),
+      loadSystemCodes(['BOOKING_STS', 'USER_ACTION']),
+    ]);
+
+    const pendingStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'PND', '1');
+    const bookingActionCd = sysCodes.getCodeCd('USER_ACTION', 'BOK', '4');
+
+    // Kiểm tra đơn trùng lặp trong vòng 60 giây gần nhất (Idempotency)
+    const recentWindow = new Date(Date.now() - 60 * 1000).toISOString();
+    const { data: recentBookings } = await supabase
+      .from('t_booking')
+      .select(`
+        booking_id,
+        user_id,
+        hotel_id,
+        total_amount,
+        discount_amount,
+        guest_name,
+        guest_phone,
+        booking_status_cd,
+        created_at,
+        t_booking_detail (
+          booking_detail_id,
+          room_type_id,
+          check_in_date,
+          check_out_date,
+          quantity,
+          unit_price
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('hotel_id', pricing.hotel_id)
+      .eq('booking_status_cd', pendingStatusCd)
+      .gte('created_at', recentWindow)
+      .order('created_at', { ascending: false })
+      .limit(3);
+
+    if (Array.isArray(recentBookings) && recentBookings.length > 0) {
+      const duplicate = recentBookings.find((b) => {
+        const details = b.t_booking_detail || [];
+        if (details.length !== pricing.rooms.length) return false;
+
+        const sortedDetails = [...details].sort((x, y) => String(x.room_type_id).localeCompare(String(y.room_type_id)));
+        const sortedPricingRooms = [...pricing.rooms].sort((x, y) => String(x.room_type_id).localeCompare(String(y.room_type_id)));
+
+        return sortedDetails.every((d, idx) => {
+          const pr = sortedPricingRooms[idx];
+          if (!pr || String(d.room_type_id) !== String(pr.room_type_id)) return false;
+          if (Number(d.quantity) !== Number(pr.quantity)) return false;
+
+          const dIn = String(d.check_in_date).substring(0, 10);
+          const dOut = String(d.check_out_date).substring(0, 10);
+          const pIn = String(pricing.check_in_date).substring(0, 10);
+          const pOut = String(pricing.check_out_date).substring(0, 10);
+          return dIn === pIn && dOut === pOut;
+        });
+      });
+
+      if (duplicate) {
+        return {
+          booking_id: duplicate.booking_id,
+          booking_code: formatBookingCode(duplicate.booking_id, duplicate.created_at),
+          booking_status_cd: duplicate.booking_status_cd,
+          status_code_name: sysCodes.getCodeName('BOOKING_STS', duplicate.booking_status_cd, 'PND'),
+          hotel_id: duplicate.hotel_id,
+          guest_name: duplicate.guest_name,
+          guest_phone: duplicate.guest_phone,
+          total_amount: Number(duplicate.total_amount),
+          discount_amount: Number(duplicate.discount_amount || 0),
+          coupon_applied: pricing.coupon?.code || null,
+          pricing,
+          details: duplicate.t_booking_detail || [],
+          created_at: ensureUtcIsoString(duplicate.created_at),
+          is_duplicate_prevented: true,
+        };
+      }
+    }
+
+    // Construct special request notes directly mapping to t_booking.special_request
+    let formattedSpecialRequest = null;
+    if (payload.special_request && String(payload.special_request).trim()) {
+      formattedSpecialRequest = String(payload.special_request).trim();
+    } else {
+      const requestParts = [];
+      if (Array.isArray(payload.special_request_options) && payload.special_request_options.length > 0) {
+        requestParts.push(payload.special_request_options.join(', '));
+      }
+      if (payload.estimated_arrival_time) {
+        requestParts.push(payload.estimated_arrival_time);
+      }
+      formattedSpecialRequest = requestParts.length > 0 ? requestParts.join('; ') : null;
+    }
+
+    const normalizedPhone = normalizeGuestPhone(payload.guest_phone);
+
+    // Insert into t_booking
+    const bookingInsertPayload = {
+      user_id: userId,
+      hotel_id: pricing.hotel_id,
+      total_amount: pricing.total_amount,
+      guest_name: payload.guest_name.trim(),
+      guest_phone: normalizedPhone,
+      special_request: formattedSpecialRequest,
+      booking_status_cd: pendingStatusCd,
+      coupon_id: pricing.coupon?.coupon_id || null,
+      discount_amount: pricing.discount_amount || 0,
+      cancellation_policy_id: pricing.cancellation_policy?.cancellation_policy_id || null,
+      applied_penalty_rate: pricing.cancellation_policy?.penalty_rate ?? 0,
+    };
+
+    const { data: createdBooking, error: bookingError } = await supabase
+      .from('t_booking')
+      .insert(bookingInsertPayload)
+      .select('*')
+      .single();
+
+    if (bookingError) {
+      throw createError(`Không thể tạo đơn đặt phòng: ${bookingError.message}`);
+    }
+
+    // Insert details into t_booking_detail
+    const detailRows = pricing.rooms.map((room) => ({
+      booking_id: createdBooking.booking_id,
+      room_type_id: room.room_type_id,
+      check_in_date: pricing.check_in_date,
+      check_out_date: pricing.check_out_date,
+      quantity: room.quantity,
+      unit_price: room.unit_price,
+    }));
+
+    const { data: createdDetails, error: detailsError } = await supabase
+      .from('t_booking_detail')
+      .insert(detailRows)
+      .select('*');
+
+    if (detailsError) {
+      await supabase.from('t_booking').delete().eq('booking_id', createdBooking.booking_id);
+      throw createError(`Lỗi lưu chi tiết đặt phòng: ${detailsError.message}`);
+    }
+
+    try {
+      await adjustInventoryForStay(
+        pricing.rooms,
+        pricing.check_in_date,
+        pricing.check_out_date,
+        1,
+        createdBooking.booking_id
+      );
+    } catch (inventoryError) {
+      const { error: detailCleanupError } = await supabase
+        .from('t_booking_detail')
+        .delete()
+        .eq('booking_id', createdBooking.booking_id);
+      const { error: bookingCleanupError } = await supabase
+        .from('t_booking')
+        .delete()
+        .eq('booking_id', createdBooking.booking_id);
+      if (detailCleanupError || bookingCleanupError) {
+        throw createError(
+          `Lỗi tồn kho: ${inventoryError.message}; lỗi hoàn tác đơn: ${(detailCleanupError || bookingCleanupError).message}`,
+          inventoryError.statusCode || 500,
+          inventoryError.code
+        );
+      }
+      throw inventoryError;
+    }
+
+    // Log user behavior (USER_ACTION = '4' / BOK)
+    try {
+      if (userId) {
+        await supabase.from('h_user_behavior').insert({
+          user_id: userId,
+          action_type_cd: bookingActionCd,
+          search_criteria: {
+            hotel_id: pricing.hotel_id,
+            check_in_date: pricing.check_in_date,
+            check_out_date: pricing.check_out_date,
+            nights: pricing.nights,
+            total_amount: pricing.total_amount,
+          },
+        });
+      }
+    } catch (behaviorErr) {
+      console.warn('[BookingService] Cảnh báo ghi user behavior:', behaviorErr.message);
+    }
+
+    return {
+      booking_id: createdBooking.booking_id,
+      booking_code: formatBookingCode(createdBooking.booking_id, createdBooking.created_at),
+      booking_status_cd: createdBooking.booking_status_cd,
+      status_code_name: sysCodes.getCodeName('BOOKING_STS', createdBooking.booking_status_cd, 'PND'),
+      hotel_id: createdBooking.hotel_id,
+      guest_name: createdBooking.guest_name,
+      guest_phone: createdBooking.guest_phone,
+      total_amount: Number(createdBooking.total_amount),
+      discount_amount: Number(createdBooking.discount_amount || 0),
+      coupon_applied: pricing.coupon?.code || null,
+      pricing,
+      details: createdDetails || [],
+      created_at: ensureUtcIsoString(createdBooking.created_at),
+    };
+  } finally {
+    activeBookingLocks.delete(lockKey);
+  }
 };
 
 /**
@@ -762,7 +1127,7 @@ const getBookingCategory = (b, sysCodes) => {
 
   const details = b.t_booking_detail || [];
   const latestCheckOut = details.reduce((max, d) => (!max || d.check_out_date > max ? d.check_out_date : max), null);
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getVietnamToday();
 
   if (latestCheckOut && latestCheckOut < todayStr) {
     return 'completed';
@@ -896,21 +1261,21 @@ const getMyBookings = async ({
   const [hotelPoliciesRes, hotelReviewsRes, roomFacilitiesRes] = await Promise.all([
     hotelIds.length > 0
       ? supabase
-          .from('m_cancellation_policy')
-          .select('cancellation_policy_id, hotel_id, free_cancel_before_hours, penalty_rate, description')
-          .in('hotel_id', hotelIds)
+        .from('m_cancellation_policy')
+        .select('cancellation_policy_id, hotel_id, free_cancel_before_hours, penalty_rate, description')
+        .in('hotel_id', hotelIds)
       : Promise.resolve({ data: [] }),
     hotelIds.length > 0
       ? supabase
-          .from('t_booking')
-          .select('hotel_id, t_review(rating_score)')
-          .in('hotel_id', hotelIds)
+        .from('t_booking')
+        .select('hotel_id, t_review(rating_score)')
+        .in('hotel_id', hotelIds)
       : Promise.resolve({ data: [] }),
     roomTypeIds.length > 0
       ? supabase
-          .from('m_room_facility_map')
-          .select('room_type_id, m_facility(facility_id, facility_name, type, icon)')
-          .in('room_type_id', roomTypeIds)
+        .from('m_room_facility_map')
+        .select('room_type_id, m_facility(facility_id, facility_name, type, icon)')
+        .in('room_type_id', roomTypeIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -1157,26 +1522,26 @@ const getMyBookings = async ({
       status_badge_variant: statusInfo.badge_variant,
       total_amount: Number(b.total_amount || 0),
       discount_amount: Number(b.discount_amount || 0),
-      created_at: b.created_at,
+      created_at: ensureUtcIsoString(b.created_at),
       booking_date_formatted: b.created_at
-        ? new Date(b.created_at).toLocaleDateString('vi-VN', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-          })
+        ? new Date(ensureUtcIsoString(b.created_at)).toLocaleDateString('vi-VN', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
         : '',
       coupon: couponData
         ? {
-            coupon_id: couponData.coupon_id,
-            code: couponData.code,
-            discount_type: couponData.discount_type,
-            discount_value: Number(couponData.discount_value),
-            discount_text: discountText,
-            min_order_amount: couponData.min_order_amount,
-            valid_to: couponData.valid_to,
-          }
+          coupon_id: couponData.coupon_id,
+          code: couponData.code,
+          discount_type: couponData.discount_type,
+          discount_value: Number(couponData.discount_value),
+          discount_text: discountText,
+          min_order_amount: couponData.min_order_amount,
+          valid_to: couponData.valid_to,
+        }
         : null,
       hotel: {
         hotel_id: hotel.hotel_id,
@@ -1219,16 +1584,16 @@ const getMyBookings = async ({
       },
       refund: refund
         ? {
-            refund_id: refund.refund_id,
-            transaction_id: refund.transaction_id,
-            refund_amount: Number(refund.refund_amount || 0),
-            refund_status_cd: refund.refund_status_cd,
-            refund_status_name: refundStatusCodeName,
-            refund_status_label: refundStatusLabel,
-            gateway_refund_ref: refund.gateway_refund_ref || null,
-            reason: refund.reason || '',
-            created_at: refund.created_at,
-          }
+          refund_id: refund.refund_id,
+          transaction_id: refund.transaction_id,
+          refund_amount: Number(refund.refund_amount || 0),
+          refund_status_cd: refund.refund_status_cd,
+          refund_status_name: refundStatusCodeName,
+          refund_status_label: refundStatusLabel,
+          gateway_refund_ref: refund.gateway_refund_ref || null,
+          reason: refund.reason || '',
+          created_at: refund.created_at,
+        }
         : null,
       payment: {
         is_paid: paymentTxns.length > 0 && Boolean(latestPayment?.paid_at || latestPayment?.amount_paid),
@@ -1318,15 +1683,21 @@ const getMyBookings = async ({
 /**
  * Update guest info (name, phone, special requests) for a booking.
  */
-const updateBookingGuestInfo = async (bookingId, { guest_name, guest_phone, special_request }) => {
+const updateBookingGuestInfo = async (bookingId, { guest_name, guest_phone, special_request }, currentUser) => {
   ensureClient();
+  const booking = await getBookingById(bookingId);
+  await ensureBookingAccess(booking, currentUser);
 
   const updatePayload = {
     updated_at: new Date().toISOString(),
   };
   if (guest_name !== undefined) updatePayload.guest_name = String(guest_name).trim();
-  if (guest_phone !== undefined) updatePayload.guest_phone = String(guest_phone).trim();
-  if (special_request !== undefined) updatePayload.special_request = String(special_request).trim();
+  if (guest_phone !== undefined) {
+    updatePayload.guest_phone = normalizeGuestPhone(guest_phone);
+  }
+  if (special_request !== undefined) {
+    updatePayload.special_request = special_request === null ? null : special_request.trim();
+  }
 
   const { data, error } = await supabase
     .from('t_booking')
@@ -1345,24 +1716,28 @@ const updateBookingGuestInfo = async (bookingId, { guest_name, guest_phone, spec
 /**
  * Change stay dates for a booking and recalculate total_amount, discount_amount, and t_inventory.
  */
-const changeBookingDates = async (bookingId, { check_in_date, check_out_date }) => {
+const changeBookingDates = async (bookingId, { check_in_date, check_out_date }, currentUser) => {
   ensureClient();
 
   if (!check_in_date || !check_out_date) {
     throw createError('Vui lòng cung cấp ngày nhận và trả phòng hợp lệ.', 400);
   }
 
-  const dIn = new Date(check_in_date);
-  const dOut = new Date(check_out_date);
-  if (isNaN(dIn.getTime()) || isNaN(dOut.getTime()) || dOut <= dIn) {
-    throw createError('Ngày trả phòng phải sau ngày nhận phòng.', 400);
-  }
+  const newCheckIn = String(check_in_date).trim();
+  const newCheckOut = String(check_out_date).trim();
+  const dateErrors = validateStayDates(newCheckIn, newCheckOut);
+  if (dateErrors.length > 0) throw createError(dateErrors[0], 400);
 
   const existingBooking = await getBookingById(bookingId);
+  await ensureBookingAccess(existingBooking, currentUser);
+  const statusCodes = await getBookingStatusCodes();
+  if (
+    !hasBookingStatus(existingBooking, 'PND', statusCodes.pending, statusCodes.sysCodes) &&
+    !hasBookingStatus(existingBooking, 'CFM', statusCodes.confirmed, statusCodes.sysCodes)
+  ) {
+    throw createError('Chỉ được đổi ngày cho đơn đang chờ hoặc đã xác nhận.', 400);
+  }
   const oldDetails = existingBooking.t_booking_detail || [];
-  const oldCheckIn = oldDetails[0]?.check_in_date;
-  const oldCheckOut = oldDetails[0]?.check_out_date;
-
   const roomsInput = oldDetails.map((d) => ({
     room_type_id: d.room_type_id,
     quantity: d.quantity,
@@ -1371,71 +1746,174 @@ const changeBookingDates = async (bookingId, { check_in_date, check_out_date }) 
   const recalculated = await calculatePricing({
     hotel_id: existingBooking.hotel_id,
     rooms: roomsInput,
-    check_in_date,
-    check_out_date,
+    check_in_date: newCheckIn,
+    check_out_date: newCheckOut,
     coupon_code: existingBooking.m_coupon?.code || null,
+    exclude_booking_id: bookingId,
+    excluded_details: oldDetails,
   });
 
-  // Release old inventory and lock new inventory
-  if (oldCheckIn && oldCheckOut) {
-    await adjustInventoryForStay(roomsInput, oldCheckIn, oldCheckOut, -1);
+  const availability = await loadNightlyAvailability(
+    recalculated.rooms,
+    newCheckIn,
+    newCheckOut,
+    bookingId,
+    oldDetails
+  );
+  const soldOutDates = [];
+  const quantityByRoomType = new Map();
+  recalculated.rooms.forEach((room) => {
+    quantityByRoomType.set(
+      room.room_type_id,
+      (quantityByRoomType.get(room.room_type_id) || 0) + Number(room.quantity || 0)
+    );
+  });
+  for (const [roomTypeId, quantity] of quantityByRoomType) {
+    for (const date of getStayDates(newCheckIn, newCheckOut)) {
+      if ((availability.get(`${roomTypeId}:${date}`) ?? 0) < quantity) {
+        soldOutDates.push(date);
+      }
+    }
   }
-  await adjustInventoryForStay(recalculated.rooms, check_in_date, check_out_date, 1);
+  if (soldOutDates.length) throw createSoldOutError(soldOutDates);
 
-  // Update each t_booking_detail row with new dates and recalculated unit_price
-  for (const roomPricing of recalculated.rooms) {
-    const { error: detailError } = await supabase
-      .from('t_booking_detail')
+  const oldNightKeys = new Set();
+  oldDetails.forEach((detail) => {
+    getStayDates(String(detail.check_in_date).slice(0, 10), String(detail.check_out_date).slice(0, 10))
+      .forEach((date) => oldNightKeys.add(`${detail.room_type_id}:${date}`));
+  });
+  const newNightKeys = new Set();
+  recalculated.rooms.forEach((room) => {
+    getStayDates(newCheckIn, newCheckOut).forEach((date) => newNightKeys.add(`${room.room_type_id}:${date}`));
+  });
+  const addedNights = new Set([...newNightKeys].filter((key) => !oldNightKeys.has(key)));
+  const removedNights = new Set([...oldNightKeys].filter((key) => !newNightKeys.has(key)));
+  let reservedNights = false;
+  const changedDetails = [];
+  let bookingTotalsUpdated = false;
+
+  const rollbackDateChange = async () => {
+    let rollbackFailure = null;
+    for (const detail of changedDetails.reverse()) {
+      const { error } = await supabase
+        .from('t_booking_detail')
+        .update({
+          check_in_date: detail.check_in_date,
+          check_out_date: detail.check_out_date,
+          unit_price: detail.unit_price,
+        })
+        .eq('booking_detail_id', detail.booking_detail_id);
+      if (error) rollbackFailure = error;
+    }
+    if (bookingTotalsUpdated) {
+      const { error } = await supabase
+        .from('t_booking')
+        .update({
+          total_amount: existingBooking.total_amount,
+          discount_amount: existingBooking.discount_amount || 0,
+        })
+        .eq('booking_id', bookingId);
+      if (error) rollbackFailure = error;
+    }
+    if (reservedNights) {
+      try {
+        await adjustInventoryForStay(
+          recalculated.rooms,
+          newCheckIn,
+          newCheckOut,
+          -1,
+          bookingId,
+          addedNights
+        );
+      } catch (error) {
+        rollbackFailure = error;
+      }
+    }
+    if (rollbackFailure) {
+      throw createError(`Không thể hoàn tác thay đổi ngày: ${rollbackFailure.message}`);
+    }
+  };
+
+  try {
+    if (addedNights.size > 0) {
+      await adjustInventoryForStay(
+        recalculated.rooms,
+        newCheckIn,
+        newCheckOut,
+        1,
+        bookingId,
+        addedNights
+      );
+      reservedNights = true;
+    }
+
+    for (const roomPricing of recalculated.rooms) {
+      for (const detail of oldDetails.filter((row) => row.room_type_id === roomPricing.room_type_id)) {
+        const { error: detailError } = await supabase
+          .from('t_booking_detail')
+          .update({
+            check_in_date: newCheckIn,
+            check_out_date: newCheckOut,
+            unit_price: roomPricing.unit_price,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('booking_detail_id', detail.booking_detail_id);
+
+        if (detailError) {
+          throw createError(`Không thể cập nhật ngày lưu trú: ${detailError.message}`);
+        }
+        changedDetails.push(detail);
+      }
+    }
+
+    const { data: updatedBooking, error: bookingUpdateErr } = await supabase
+      .from('t_booking')
       .update({
-        check_in_date,
-        check_out_date,
-        unit_price: roomPricing.unit_price,
+        total_amount: recalculated.total_amount,
+        discount_amount: recalculated.discount_amount || 0,
         updated_at: new Date().toISOString(),
       })
       .eq('booking_id', bookingId)
-      .eq('room_type_id', roomPricing.room_type_id);
+      .select('*')
+      .single();
 
-    if (detailError) {
-      throw createError(`Không thể cập nhật ngày lưu trú: ${detailError.message}`);
+    if (bookingUpdateErr) {
+      throw createError(`Không thể cập nhật tổng tiền đơn đặt phòng: ${bookingUpdateErr.message}`);
     }
+    bookingTotalsUpdated = true;
+
+    if (removedNights.size > 0) {
+      const oldCheckIn = oldDetails.map((detail) => String(detail.check_in_date).slice(0, 10)).sort()[0];
+      const oldCheckOut = oldDetails.map((detail) => String(detail.check_out_date).slice(0, 10)).sort().reverse()[0];
+      await adjustInventoryForStay(roomsInput, oldCheckIn, oldCheckOut, -1, null, removedNights);
+    }
+
+    return {
+      booking_id: bookingId,
+      check_in_date: newCheckIn,
+      check_out_date: newCheckOut,
+      nights: recalculated.nights,
+      total_amount: Number(updatedBooking.total_amount),
+      discount_amount: Number(updatedBooking.discount_amount || 0),
+      message: 'Đổi ngày lưu trú và cập nhật chi phí thành công!',
+    };
+  } catch (error) {
+    await rollbackDateChange();
+    throw error;
   }
-
-  const { data: updatedBooking, error: bookingUpdateErr } = await supabase
-    .from('t_booking')
-    .update({
-      total_amount: recalculated.total_amount,
-      discount_amount: recalculated.discount_amount || 0,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('booking_id', bookingId)
-    .select('*')
-    .single();
-
-  if (bookingUpdateErr) {
-    throw createError(`Không thể cập nhật tổng tiền đơn đặt phòng: ${bookingUpdateErr.message}`);
-  }
-
-  return {
-    booking_id: bookingId,
-    check_in_date,
-    check_out_date,
-    nights: recalculated.nights,
-    total_amount: Number(updatedBooking.total_amount),
-    discount_amount: Number(updatedBooking.discount_amount || 0),
-    message: 'Đổi ngày lưu trú và cập nhật chi phí thành công!',
-  };
 };
 
 /**
  * Cancel a booking using m_system_code ('3' = CAN), restore inventory, and record refund request based on policy.
  */
-const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phòng' } = {}) => {
+const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phòng' } = {}, currentUser) => {
   ensureClient();
 
   const [booking, sysCodes] = await Promise.all([
     getBookingById(bookingId),
     loadSystemCodes(['BOOKING_STS', 'REFUND_STS']),
   ]);
+  await ensureBookingAccess(booking, currentUser);
 
   const cancelledStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'CAN', '3');
 
@@ -1455,7 +1933,22 @@ const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phò
   // Restore inventory in t_inventory
   const details = booking.t_booking_detail || [];
   if (details.length > 0 && details[0].check_in_date && details[0].check_out_date) {
-    await adjustInventoryForStay(details, details[0].check_in_date, details[0].check_out_date, -1);
+    try {
+      await adjustInventoryForStay(details, details[0].check_in_date, details[0].check_out_date, -1);
+    } catch (inventoryError) {
+      const { error: statusRollbackError } = await supabase
+        .from('t_booking')
+        .update({ booking_status_cd: booking.booking_status_cd })
+        .eq('booking_id', bookingId);
+      if (statusRollbackError) {
+        throw createError(
+          `Lỗi hoàn tồn kho: ${inventoryError.message}; không thể khôi phục trạng thái đơn: ${statusRollbackError.message}`,
+          inventoryError.statusCode || 500,
+          inventoryError.code
+        );
+      }
+      throw inventoryError;
+    }
   }
 
   // Calculate refund amount according to m_cancellation_policy and applied_penalty_rate
@@ -1532,12 +2025,12 @@ const getBookingVoucher = async (bookingId) => {
 
   const bookingDateFormatted = booking.created_at
     ? new Date(booking.created_at).toLocaleDateString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
     : '';
 
   const bookingCode = formatBookingCode(booking.booking_id, booking.created_at);
@@ -1652,4 +2145,6 @@ module.exports = {
   cancelBooking,
   getBookingVoucher,
   getBookingInvoice,
+  adjustInventoryForStay,
+  loadActiveBookingHolds,
 };

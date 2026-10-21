@@ -26,8 +26,13 @@ const AdminSidebar = () => {
   const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
   const isSystemAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || String(user?.role_cd) === '1';
-  const canManageVenue = ['ADM', 'ADMIN', 'VEN', 'VENDOR'].includes(roleCode) || ['1', '4'].includes(String(user?.role_cd));
-  const canManageCoupons = ['BMR', 'BUSINESS_MANAGER', 'ADM', 'ADMIN'].includes(roleCode) || ['3', '1'].includes(String(user?.role_cd));
+  const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || String(user?.role_cd) === '4';
+  const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || String(user?.role_cd) === '3';
+  const canManageVenue = isSystemAdmin || isVendor;
+  const canManageHotels = isSystemAdmin || isVendor;
+  const canManageCoupons = isBmr;
+  const canManageRefundPolicies = isSystemAdmin || isBmr;
+  const canViewStatistics = isSystemAdmin || isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
 
@@ -50,20 +55,22 @@ const AdminSidebar = () => {
       {/* Navigation Sections */}
       <nav className="admin-sidebar__nav">
         {/* TỔNG QUAN */}
-        <div className="admin-sidebar__group">
-          <div className="admin-sidebar__group-title">TỔNG QUAN</div>
-          <NavLink to="/admin" className="admin-sidebar__link" end>
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Bảng điều khiển</span>
-          </NavLink>
-        </div>
+        {canViewStatistics && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">TỔNG QUAN</div>
+            <NavLink to="/dashboard/statistics" className="admin-sidebar__link">
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Bảng thống kê</span>
+            </NavLink>
+          </div>
+        )}
 
         {/* NGƯỜI DÙNG & PHÂN QUYỀN */}
         <div className="admin-sidebar__group">
@@ -111,14 +118,30 @@ const AdminSidebar = () => {
         {/* HỆ THỐNG KHÁCH SẠN */}
         <div className="admin-sidebar__group">
           <div className="admin-sidebar__group-title">HỆ THỐNG KHÁCH SẠN</div>
-          <div className="admin-sidebar__link disabled">
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Quản lý khách sạn</span>
-          </div>
+          {canManageHotels ? (
+            <NavLink
+              to="/dashboard/hotel-management"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/hotel-management') || location.pathname.startsWith('/admin/hotel-management') ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý khách sạn</span>
+            </NavLink>
+          ) : (
+            <div className="admin-sidebar__link disabled">
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý khách sạn</span>
+            </div>
+          )}
           <div className="admin-sidebar__link disabled">
             <span className="admin-sidebar__icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -206,15 +229,38 @@ const AdminSidebar = () => {
               <span className="admin-sidebar__label">Quản lý mã khuyến mãi</span>
             </NavLink>
           )}
-          <div className="admin-sidebar__link disabled">
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                <polyline points="17 6 23 6 23 12"></polyline>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Báo cáo doanh thu & Booking</span>
-          </div>
+          {canManageRefundPolicies && (
+            <NavLink
+              to="/admin/refund-policies"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/refund-policies') ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                  <path d="M9 12l2 2 4-4"></path>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý chính sách hoàn tiền</span>
+            </NavLink>
+          )}
+          {canViewStatistics && (
+            <NavLink
+              to="/dashboard/statistics"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/statistics') ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Báo cáo doanh thu & Booking</span>
+            </NavLink>
+          )}
         </div>
 
         {/* HỆ THỐNG */}

@@ -1,0 +1,310 @@
+/* ─── Refund Policy Form Modal ────────────────────────────────────────── */
+.rp-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.rp-modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 820px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  animation: rpModalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes rpModalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header */
+.rp-modal-header {
+  background: #003580; /* AVORA Deep Navy */
+  color: white;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #c9a227; /* AVORA Gold Accent */
+}
+
+.rp-modal-header-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.rp-modal-icon {
+  background: rgba(255, 255, 255, 0.12);
+  width: 42px;
+  height: 42px;
+  border-radius: 8px;
+  color: #fbbf24;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.rp-modal-title {
+  margin: 0 0 4px 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.rp-modal-subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #bfdbfe;
+}
+
+.rp-modal-close {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  color: white;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.rp-modal-close:hover {
+  background: rgba(255, 255, 255, 0.28);
+  transform: rotate(90deg);
+}
+
+/* Body */
+.rp-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.rp-modal-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .rp-modal-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.rp-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rp-form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rp-required {
+  color: #ef4444;
+}
+
+.rp-form-hint {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 400;
+}
+
+.rp-form-input,
+.rp-form-select,
+.rp-form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.9rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background-color: #f8fafc;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.2s;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.rp-form-input:focus,
+.rp-form-select:focus,
+.rp-form-textarea:focus {
+  border-color: #003580;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 53, 128, 0.12);
+}
+
+.rp-form-input--error,
+.rp-form-select--error,
+.rp-form-textarea--error {
+  border-color: #ef4444 !important;
+  background-color: #fffaf0 !important;
+}
+
+.rp-form-error-msg {
+  font-size: 0.78rem;
+  color: #dc2626;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Quick pills for % and hours */
+.rp-quick-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.rp-quick-tag {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.rp-quick-tag:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.rp-quick-tag--active {
+  background: #003580;
+  color: #ffffff;
+  border-color: #003580;
+}
+
+/* Callout Summary Box */
+.rp-policy-preview-box {
+  background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+  border: 1px solid #a7f3d0;
+  border-radius: 8px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.rp-preview-badge {
+  background: #047857;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  white-space: nowrap;
+}
+
+.rp-preview-text {
+  font-size: 0.84rem;
+  color: #065f46;
+  line-height: 1.45;
+}
+
+/* Footer */
+.rp-modal-footer {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.rp-btn {
+  padding: 9px 20px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s;
+  border: none;
+}
+
+.rp-btn--cancel {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+
+.rp-btn--cancel:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.rp-btn--primary {
+  background: #003580;
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 53, 128, 0.2);
+}
+
+.rp-btn--primary:hover:not(:disabled) {
+  background: #002255;
+  box-shadow: 0 4px 8px rgba(0, 53, 128, 0.3);
+}
+
+.rp-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+.rp-btn-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: rpSpin 0.7s linear infinite;
+}
+
+@keyframes rpSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}

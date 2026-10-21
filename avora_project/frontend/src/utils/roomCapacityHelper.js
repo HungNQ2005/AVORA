@@ -17,7 +17,8 @@ export const MAX_ROOM_CAPACITY = 5; // 2 standard beds * 2 + 1 extra bed * 1
  */
 export const getRoomCapacityDetails = (room = {}) => {
   const bedTypeStr = String(room.bed_type || '').trim().toLowerCase();
-  const maxAdults = Number(room.max_adults) || 2;
+  const rawAdults = room.max_adults ?? null;
+  const maxAdults = rawAdults !== null && !isNaN(Number(rawAdults)) ? Number(rawAdults) : 2;
 
   // Determine number of standard beds
   let bedCount = 1;

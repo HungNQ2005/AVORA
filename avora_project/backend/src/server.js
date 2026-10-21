@@ -18,8 +18,12 @@ const couponRoute = require('./features/coupons/coupon.route');
 const userRoute = require('./features/users/user.route');
 const chatbotRoute = require("./features/chatbot/chatbot.route");
 const reviewRoute = require('./features/review/review.route');
+const statisticsRoute = require("./features/statistics/statistics.route");
+const refundPolicyRoute = require("./features/refund_policies/refund_policy.route");
+const commissionPolicyRoute = require("./features/commission_policies/commission_policy.route");
+const env = require("./config/env");
 const bookingRoute = require('./features/bookings/booking.route');
-const env = require('./config/env');
+const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
 
 const app = express();
 
@@ -56,6 +60,9 @@ app.use("/api", couponRoute);
 app.use("/api", userRoute);
 app.use("/api", chatbotRoute);
 app.use('/api', reviewRoute);
+app.use("/api", statisticsRoute);
+app.use("/api", refundPolicyRoute);
+app.use("/api", commissionPolicyRoute);
 app.use("/api", bookingRoute);
 
 app.use((_req, _res, next) => {
@@ -63,6 +70,7 @@ app.use((_req, _res, next) => {
   err.statusCode = 404;
   next(err);
 });
+
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
 
@@ -73,6 +81,7 @@ process.on("unhandledRejection", (reason) => {
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(env.PORT, () => {
+  startBookingExpiryCron();
   console.log(`\n🚀 AVORA Backend running on http://localhost:${env.PORT}`);
   console.log(`   ENV: ${env.NODE_ENV}`);
   console.log(`   API: http://localhost:${env.PORT}/api/system-codes\n`);

@@ -289,7 +289,14 @@ const RoomManagementPage = () => {
 
   // Status Toggle (Đóng/Mở bán)
   const handleToggleStatus = async (room) => {
-    const isCurrentlyAvailable = !room.is_deleted && room.status_cd === 'AVAILABLE';
+    const statusUpper = String(room?.status_cd || '').toUpperCase();
+    if (statusUpper === 'OCCUPIED' || statusUpper === 'BOOKED') {
+      const statusText = statusUpper === 'OCCUPIED' ? 'đang có khách lưu trú' : 'đã được đặt trước';
+      showToast(`Không thể thay đổi trạng thái đóng/mở bán khi buồng phòng ${statusText}.`);
+      return;
+    }
+
+    const isCurrentlyAvailable = !room.is_deleted && statusUpper === 'AVAILABLE';
     const nextStatus = isCurrentlyAvailable ? 'LOCKED' : 'AVAILABLE';
     const nextDeleted = false;
 
@@ -322,7 +329,7 @@ const RoomManagementPage = () => {
     if (isExporting) return;
     setIsExporting(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     try {
       const exportFilename = getRoomExportExcelFilename();
@@ -330,13 +337,22 @@ const RoomManagementPage = () => {
       const exportList = filteredRooms.length > 0 ? filteredRooms : rooms;
       const result = await exportRoomsToExcel(exportList, activeHotelName, exportFilename);
       if (result && result.success) {
-        showToast(`Đã xuất thành công ${result.count || exportList.length} buồng phòng ra file Excel!`);
+        if (result.incompleteRoomsCount > 0) {
+          showToast(
+            `Đã xuất ${result.count || exportList.length} buồng phòng. Cảnh báo: Có ${result.incompleteRoomsCount} phòng chưa đầy đủ dữ liệu.`
+          );
+        } else {
+          showToast(`Đã xuất thành công ${result.count || exportList.length} buồng phòng ra file Excel!`);
+        }
         setIsExportModalOpen(false);
       } else {
         showToast(result?.message || 'Không thể xuất file Excel.');
+        setIsExportModalOpen(false);
       }
     } catch (err) {
+      console.error('Export Excel failed:', err);
       showToast(err.message || 'Có lỗi xảy ra trong quá trình xuất file Excel.');
+      setIsExportModalOpen(false);
     } finally {
       setIsExporting(false);
     }
@@ -442,21 +458,36 @@ const RoomManagementPage = () => {
 
         {/* Top Action Buttons */}
         <div className="room-page__top-actions">
+          {/* Button: Xuất Excel (Luxury Hotel Style - Navy & Gold, Synchronized with Amenities) */}
           <button
             type="button"
-            className="room-btn-action room-btn-action--outline"
+            className="room-btn-excel"
             onClick={handleOpenExportModal}
             disabled={loading || isExporting}
-            title="Xuất bảng dữ liệu buồng phòng sang tệp Microsoft Excel"
+            title="Xuất danh sách buồng phòng ra tệp Excel"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <polyline points="14 2 14 8 20 8"></polyline>
-              <line x1="8" y1="13" x2="16" y2="13"></line>
-              <line x1="8" y1="17" x2="16" y2="17"></line>
-              <polyline points="10 9 9 9 8 9"></polyline>
-            </svg>
-            <span>{isExporting ? 'Đang xuất...' : 'Xuất dữ liệu (Excel)'}</span>
+            {isExporting ? (
+              <>
+                <svg className="avora-btn-spinner" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10" strokeDasharray="32" strokeDashoffset="12" />
+                </svg>
+                <span>Đang xuất...</span>
+              </>
+            ) : (
+              <>
+                <svg className="room-excel-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                  <line x1="8" y1="13" x2="16" y2="13" />
+                  <line x1="8" y1="17" x2="16" y2="17" />
+                  <polyline points="10 9 9 9 8 9" />
+                </svg>
+                <span>Xuất Excel</span>
+                {filteredRooms.length > 0 && (
+                  <span className="room-excel-badge">{filteredRooms.length}</span>
+                )}
+              </>
+            )}
           </button>
           <button
             type="button"
@@ -611,7 +642,7 @@ const RoomManagementPage = () => {
                         </span>
                       </div>
                       <div className="matrix-room-card__type">
-                        {room.m_room_type?.type_name || 'Phòng tiêu chuẩn'}
+                        {room.m_room_type?.type_name || 'Chưa cập nhật'}
                       </div>
                       <div className="matrix-room-card__price">
                         {Number(room.m_room_type?.default_price || 0).toLocaleString('vi-VN')} đ
