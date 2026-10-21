@@ -26,7 +26,8 @@ const HotelManagerRoute = ({ children }) => {
   const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
 
-  const isHotelManager = roleCode === 'VEN' || roleCd === '4';
+  const isHotelManager =
+    roleCode === 'VEN' || roleCd === '4' || roleCode === 'ADM' || roleCd === '1';
 
   if (!isHotelManager) {
     return <Navigate to="/forbidden" replace />;

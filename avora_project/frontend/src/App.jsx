@@ -48,7 +48,8 @@ function ScrollToTop() {
 }
 
 /**
- * Guard route for Venue Managers (role_code_name === 'VEN' or role_cd === '4') only.
+ * Guard route for Venue Managers (role_code_name === 'VEN' or role_cd === '4')
+ * and System Admins (role_code_name === 'ADM' or role_cd === '1').
  */
 const VenueManagerRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -57,7 +58,7 @@ const VenueManagerRoute = ({ children }) => {
   if (!user) return <Navigate to="/signin" replace />;
   const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const isVenueManager = roleCode === 'VEN' || roleCd === '4';
+  const isVenueManager = roleCode === 'VEN' || roleCd === '4' || roleCode === 'ADM' || roleCd === '1';
 
   if (!isVenueManager) return <Navigate to="/forbidden" replace />;
 

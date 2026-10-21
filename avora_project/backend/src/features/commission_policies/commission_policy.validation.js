@@ -123,11 +123,6 @@ const validateCommissionPolicyPayload = (body, { partial = false } = {}) => {
     }
   }
 
-  // 9. is_active (boolean)
-  if (isPresent("is_active")) {
-    payload.is_active = Boolean(body.is_active);
-  }
-
   return { payload };
 };
 

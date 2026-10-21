@@ -131,11 +131,6 @@ const validateRefundPolicyPayload = (body, { partial = false } = {}) => {
     payload.status = "ACTIVE";
   }
 
-  // 10. is_active (boolean)
-  if (isPresent("is_active")) {
-    payload.is_active = Boolean(body.is_active);
-  }
-
   return { payload };
 };
 

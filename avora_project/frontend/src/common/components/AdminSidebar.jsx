@@ -29,7 +29,7 @@ const AdminSidebar = () => {
   const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || String(user?.role_cd) === '4';
   const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || String(user?.role_cd) === '3';
   const canManageVenue = isVendor;
-  const canManageHotels = isVendor;
+  const canManageHotels = isSystemAdmin || isVendor;
   const canManageCoupons = isBmr;
   const canManageRefundPolicies = isBmr;
   const canManageCommissionPolicies = isBmr;
@@ -110,9 +110,9 @@ const AdminSidebar = () => {
         )}
 
         {/* HỆ THỐNG KHÁCH SẠN */}
-        {canManageHotels && (
-          <div className="admin-sidebar__group">
-            <div className="admin-sidebar__group-title">HỆ THỐNG KHÁCH SẠN</div>
+        <div className="admin-sidebar__group">
+          <div className="admin-sidebar__group-title">HỆ THỐNG KHÁCH SẠN</div>
+          {canManageHotels ? (
             <NavLink
               to="/dashboard/hotel-management"
               className={({ isActive }) =>
@@ -126,31 +126,40 @@ const AdminSidebar = () => {
               </span>
               <span className="admin-sidebar__label">Quản lý khách sạn</span>
             </NavLink>
+          ) : (
             <div className="admin-sidebar__link disabled">
               <span className="admin-sidebar__icon">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                  <path d="M9 15l2 2 4-4"></path>
+                  <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path>
                 </svg>
               </span>
-              <span className="admin-sidebar__label">Phê duyệt hồ sơ chỗ nghỉ</span>
+              <span className="admin-sidebar__label">Quản lý khách sạn</span>
             </div>
-            <div className="admin-sidebar__link disabled">
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Phân loại & Xếp hạng sao</span>
-            </div>
+          )}
+          <div className="admin-sidebar__link disabled">
+            <span className="admin-sidebar__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                <polyline points="14 2 14 8 20 8"></polyline>
+                <path d="M9 15l2 2 4-4"></path>
+              </svg>
+            </span>
+            <span className="admin-sidebar__label">Phê duyệt hồ sơ chỗ nghỉ</span>
           </div>
-        )}
+          <div className="admin-sidebar__link disabled">
+            <span className="admin-sidebar__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+              </svg>
+            </span>
+            <span className="admin-sidebar__label">Phân loại & Xếp hạng sao</span>
+          </div>
+        </div>
 
         {/* QUẢN LÝ PHÒNG & LƯU TRÚ (ACTIVE SECTION) */}
-        {canManageVenue && (
-          <div className="admin-sidebar__group">
-            <div className="admin-sidebar__group-title">QUẢN LÝ PHÒNG & LƯU TRÚ</div>
+        <div className="admin-sidebar__group">
+          <div className="admin-sidebar__group-title">QUẢN LÝ PHÒNG & LƯU TRÚ</div>
+          {canManageVenue && (
             <NavLink
               to="/admin/room-types"
               className={({ isActive }) =>
@@ -164,16 +173,18 @@ const AdminSidebar = () => {
               </span>
               <span className="admin-sidebar__label">Quản lý loại phòng</span>
             </NavLink>
-            <div className="admin-sidebar__link disabled">
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="3" y1="9" x2="21" y2="9"></line>
-                  <line x1="9" y1="21" x2="9" y2="9"></line>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Sơ đồ buồng phòng & Trạng thái</span>
-            </div>
+          )}
+          <div className="admin-sidebar__link disabled">
+            <span className="admin-sidebar__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="3" y1="9" x2="21" y2="9"></line>
+                <line x1="9" y1="21" x2="9" y2="9"></line>
+              </svg>
+            </span>
+            <span className="admin-sidebar__label">Sơ đồ buồng phòng & Trạng thái</span>
+          </div>
+          {canManageVenue && (
             <NavLink
               to="/admin/amenities"
               className={({ isActive }) =>
@@ -190,8 +201,8 @@ const AdminSidebar = () => {
               </span>
               <span className="admin-sidebar__label">Quản lý tiện nghi</span>
             </NavLink>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* MARKETING & DOANH THU */}
         {(canManageCoupons || canManageRefundPolicies || canManageCommissionPolicies || canViewStatistics) && (

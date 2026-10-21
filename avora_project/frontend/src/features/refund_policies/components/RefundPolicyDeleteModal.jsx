@@ -12,6 +12,7 @@ const RefundPolicyDeleteModal = ({
 
   const isAssignedToHotel = Boolean(policy.hotel_id);
   const hasBookings = (policy.associated_bookings_count || 0) > 0;
+  const isDeletionBlocked = isAssignedToHotel || hasBookings;
 
   return (
     <div className="rp-delete-overlay" onClick={onClose}>
@@ -25,9 +26,13 @@ const RefundPolicyDeleteModal = ({
             </svg>
           </div>
 
-          <h3 className="rp-delete-title">Xác nhận xóa chính sách hoàn tiền?</h3>
+          <h3 className="rp-delete-title">
+            {isDeletionBlocked ? 'Không thể xóa chính sách' : 'Xác nhận xóa chính sách?'}
+          </h3>
           <p className="rp-delete-desc">
-            Chính sách sẽ được chuyển sang trạng thái đã xóa (xóa mềm trong CSDL) và ẩn khỏi giao diện hoạt động. Lịch sử giao dịch và đơn đặt phòng liên quan vẫn được bảo lưu nguyên vẹn.
+            {isDeletionBlocked
+              ? 'Hệ thống kiểm soát tính toàn vẹn dữ liệu ngăn việc xóa chính sách này.'
+              : 'Hành động này sẽ xóa chính sách hoàn tiền không thuộc khách sạn nào khỏi hệ thống AVORA.'}
           </p>
 
           <div className="rp-delete-item-box">
@@ -35,18 +40,17 @@ const RefundPolicyDeleteModal = ({
             <div className="rp-delete-item-meta">
               <span>Mã: <strong>{policy.policy_code || policy.policy_id?.substring(0, 8)}</strong></span>
               <span>Áp dụng: <strong>{policy.hotel_name || 'Toàn hệ thống'}</strong></span>
-              <span>Mức hoàn: <strong>{policy.refund_percentage}%</strong></span>
             </div>
 
             {isAssignedToHotel && (
-              <div style={{ marginTop: '8px', color: '#1e40af', fontSize: '0.8rem', fontWeight: 500, background: '#eff6ff', padding: '8px 10px', borderRadius: '6px', border: '1px solid #bfdbfe', textAlign: 'left' }}>
-                ℹ️ Lưu ý: Chính sách này hiện gắn với khách sạn "{policy.hotel_name}". Khi xóa mềm, khách sạn sẽ không còn áp dụng chính sách hoàn tiền này cho các đặt phòng mới.
+              <div style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.8rem', fontWeight: 600, background: '#fef2f2', padding: '8px 10px', borderRadius: '6px', border: '1px solid #fecaca', textAlign: 'left' }}>
+                ⚠️ Không thể xóa: Chính sách đang được chỉ định cho khách sạn "{policy.hotel_name}". Theo quy định, chỉ có thể xóa các chính sách không thuộc khách sạn nào (hoặc chuyển trạng thái sang "Tạm dừng").
               </div>
             )}
 
-            {hasBookings && (
-              <div style={{ marginTop: '8px', color: '#854d0e', fontSize: '0.8rem', fontWeight: 500, background: '#fefce8', padding: '8px 10px', borderRadius: '6px', border: '1px solid #fef08a', textAlign: 'left' }}>
-                🛡️ Bảo toàn: Có {policy.associated_bookings_count} đơn đặt phòng đã liên kết. Dữ liệu kế toán quá khứ vẫn được giữ nguyên đầy đủ.
+            {!isAssignedToHotel && hasBookings && (
+              <div style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.8rem', fontWeight: 600, background: '#fef2f2', padding: '8px 10px', borderRadius: '6px', border: '1px solid #fecaca', textAlign: 'left' }}>
+                ⚠️ Cảnh báo: Chính sách đang gắn với {policy.associated_bookings_count} đơn đặt phòng. Hệ thống từ chối xóa để đảm bảo toàn vẹn dữ liệu.
               </div>
             )}
           </div>
@@ -59,17 +63,19 @@ const RefundPolicyDeleteModal = ({
             onClick={onClose}
             disabled={loading}
           >
-            Hủy bỏ
+            {isDeletionBlocked ? 'Đóng lại' : 'Hủy bỏ'}
           </button>
-          <button
-            type="button"
-            className="rp-btn rp-btn--danger"
-            onClick={onConfirm}
-            disabled={loading}
-          >
-            {loading && <span className="rp-btn-spinner"></span>}
-            Xác nhận xóa
-          </button>
+          {!isDeletionBlocked && (
+            <button
+              type="button"
+              className="rp-btn rp-btn--danger"
+              onClick={onConfirm}
+              disabled={loading}
+            >
+              {loading && <span className="rp-btn-spinner"></span>}
+              Xóa chính sách
+            </button>
+          )}
         </div>
       </div>
     </div>

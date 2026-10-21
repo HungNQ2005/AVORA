@@ -36,8 +36,8 @@ const requireVenueManager = async (req, res, next) => {
       );
     }
 
-    // Role check: '4' is VEN (Vendor / Hotel Manager)
-    if (String(user.role_cd) === "4") {
+    // Role check: '4' is VEN (Vendor / Hotel Manager), '1' is ADM (Administrator)
+    if (["4", "1"].includes(String(user.role_cd))) {
       return next();
     }
 
@@ -52,7 +52,7 @@ const requireVenueManager = async (req, res, next) => {
       return next(roleError);
     }
 
-    if (role?.code_name !== "VEN") {
+    if (!["VEN", "ADM"].includes(role?.code_name)) {
       return sendError(
         res,
         403,
