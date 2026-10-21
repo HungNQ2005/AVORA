@@ -54,27 +54,25 @@ const DashboardNav = () => {
       {/* Navigation Sections */}
       <nav className="admin-sidebar__nav">
         {/* TỔNG QUAN */}
-        {canViewStatistics && (
-          <div className="admin-sidebar__group">
-            <div className="admin-sidebar__group-title">TỔNG QUAN</div>
-            <NavLink
-              to="/dashboard/statistics"
-              className={({ isActive }) =>
-                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-              }
-            >
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="7" height="7"></rect>
-                  <rect x="14" y="3" width="7" height="7"></rect>
-                  <rect x="14" y="14" width="7" height="7"></rect>
-                  <rect x="3" y="14" width="7" height="7"></rect>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Bảng thống kê</span>
-            </NavLink>
-          </div>
-        )}
+        <div className="admin-sidebar__group">
+          <div className="admin-sidebar__group-title">TỔNG QUAN</div>
+          <NavLink
+            to="/dashboard/statistics"
+            className={({ isActive }) =>
+              `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+            }
+          >
+            <span className="admin-sidebar__icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            </span>
+            <span className="admin-sidebar__label">Bảng thống kê</span>
+          </NavLink>
+        </div>
 
         {/* NGƯỜI DÙNG & PHÂN QUYỀN */}
         <div className="admin-sidebar__group">
@@ -300,7 +298,7 @@ const DashboardNav = () => {
               <span className="admin-sidebar__label">Chính sách phí hoa hồng</span>
             </div>
           )}
-          {canViewStatistics && (
+          {canViewStatistics ? (
             <NavLink
               to="/dashboard/statistics"
               className={({ isActive }) =>
@@ -315,6 +313,16 @@ const DashboardNav = () => {
               </span>
               <span className="admin-sidebar__label">Báo cáo doanh thu & Booking</span>
             </NavLink>
+          ) : (
+            <div className="admin-sidebar__link disabled">
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                  <polyline points="17 6 23 6 23 12"></polyline>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Báo cáo doanh thu & Booking</span>
+            </div>
           )}
         </div>
 

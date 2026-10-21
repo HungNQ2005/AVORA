@@ -138,12 +138,11 @@ const AdminDashboardRedirect = () => {
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
   const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
-  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  if (roleCode === 'BMR' || roleCd === '3') return <Navigate to="/dashboard/coupons" replace />;
-  if (roleCode === 'VEN' || roleCd === '4') return <Navigate to="/dashboard/statistics" replace />;
-  if (roleCode === 'ADM' || roleCd === '1') return <Navigate to="/dashboard/statistics" replace />;
+  if (roleCode === 'BMR') return <Navigate to="/dashboard/coupons" replace />;
+  if (roleCode === 'VEN') return <Navigate to="/dashboard/statistics" replace />;
+  if (roleCode === 'ADM') return <Navigate to="/dashboard/statistics" replace />;
 
-  return <Navigate to="/" replace />;
+  return <Navigate to="/dashboard/statistics" replace />;
 };
 
 /**
@@ -156,12 +155,8 @@ const DashboardIndexRedirect = () => {
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
   const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
-  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  if (roleCode === 'BMR' || roleCd === '3') return <Navigate to="/dashboard/coupons" replace />;
-  if (roleCode === 'VEN' || roleCd === '4' || roleCode === 'ADM' || roleCd === '1') {
-    return <Navigate to="/dashboard/statistics" replace />;
-  }
-  return <Navigate to="/" replace />;
+  if (roleCode === 'BMR') return <Navigate to="/dashboard/coupons" replace />;
+  return <Navigate to="/dashboard/statistics" replace />;
 };
 
 /**
