@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { deleteReview, updateReview } from '../../../services/reviewApi';
 import ReviewDeletionDialog from '../../reviews/components/ReviewDeletionDialog';
+import AvatarContent from '../../../common/components/AvatarContent';
 
 const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 	const [isEditing, setIsEditing] = useState(false);

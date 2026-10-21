@@ -74,7 +74,7 @@ const getHotelReviews = async (hotelId, viewerId = null) => {
   const bookingById = new Map(bookings.map((booking) => [booking.booking_id, booking]));
   const userIds = [...new Set(bookings.map((booking) => booking.user_id).filter(Boolean))];
   const { data: users, error: usersError } = userIds.length
-    ? await supabase.from('m_user').select('user_id, full_name').in('user_id', userIds)
+    ? await supabase.from('m_user').select('user_id, full_name, avatar_url').in('user_id', userIds)
     : { data: [], error: null };
   if (usersError) throw usersError;
 
