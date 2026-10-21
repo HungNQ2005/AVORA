@@ -15,9 +15,11 @@ import RoomTypeManagementPage from './features/room_types/pages/RoomTypeManageme
 import RoomTypeDetailPage from './features/room_types/pages/RoomTypeDetailPage';
 import AmenityManagementPage from './features/amenities/pages/AmenityManagementPage';
 import UserManagementPage from './features/users/pages/UserManagementPage';
+import RoleManagementPage from './features/users/pages/RoleManagementPage';
 import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import AIChatWidget from './features/chatbot/AIChatWidget';
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -92,6 +94,7 @@ function CustomerLayout() {
   return (
     <MainLayout>
       <Outlet />
+      <AIChatWidget />
     </MainLayout>
   );
 }
@@ -132,6 +135,14 @@ function App() {
               element={
                 <AdminRoute>
                   <UserManagementPage />
+                </AdminRoute>
+              }
+            />
+            <Route
+              path="roles"
+              element={
+                <AdminRoute>
+                  <RoleManagementPage />
                 </AdminRoute>
               }
             />
@@ -191,6 +202,14 @@ function App() {
                 </AdminRoute>
               }
             />
+            <Route
+              path="roles"
+              element={
+                <AdminRoute>
+                  <RoleManagementPage />
+                </AdminRoute>
+              }
+            />
           </Route>
 
           {/* Friendly redirect aliases for admin paths */}
@@ -199,6 +218,7 @@ function App() {
           <Route path="/facilities" element={<Navigate to="/admin/facilities" replace />} />
           <Route path="/coupons" element={<Navigate to="/admin/coupons" replace />} />
           <Route path="/users" element={<Navigate to="/admin/users" replace />} />
+          <Route path="/roles" element={<Navigate to="/admin/roles" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

@@ -4,6 +4,8 @@ import { useAuth } from '../../../context/AuthContext';
 import { getProfile, updateProfile, changePassword, requestDeactivateOtp } from '../../../services/authService';
 import Dialog from '../../../common/components/Dialog';
 import DeactivateOtpModal from '../components/DeactivateOtpModal';
+import AvatarUploadModal from '../components/AvatarUploadModal';
+import AvatarContent from '../../../common/components/AvatarContent';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import { getSavedFavorites, removeFavoriteHotel } from '../../../utils/favoritesStorage';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
@@ -180,6 +182,7 @@ const MyAccountPage = () => {
   const [deactivateError, setDeactivateError] = useState('');
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [logoutDialog, setLogoutDialog] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
 
   // Saved accommodations list (backed strictly by real database or user state)
   const [savedAccommodations, setSavedAccommodations] = useState(() => {
@@ -360,6 +363,12 @@ const MyAccountPage = () => {
     navigate('/signin');
   };
 
+  /* ── Avatar updated (upload / change / remove) ────────────────────────────── */
+  const handleAvatarUpdated = (newAvatarUrl, message) => {
+    setUser((prev) => (prev ? { ...prev, avatar_url: newAvatarUrl } : prev));
+    setProfileMsg({ type: 'success', text: message || 'Cập nhật ảnh đại diện thành công!' });
+  };
+
   /* ── Remove Saved Accommodation ─────────────────────────────────── */
   const handleRemoveSaved = (hotelId, e) => {
     e.stopPropagation();
@@ -453,8 +462,22 @@ const MyAccountPage = () => {
         {/* ─── 2. HERO PROFILE HEADER CARD ─── */}
         <header className="profile-hero-card">
           <div className="profile-hero-card__left">
-            <div className="profile-hero-avatar" aria-label="User Avatar">
-              {avatarInitials}
+            <div className="profile-hero-avatar-wrap">
+              <div className="profile-hero-avatar" aria-label="User Avatar">
+                <AvatarContent src={user?.avatar_url} fallback={avatarInitials} alt={displayName} />
+              </div>
+              <button
+                type="button"
+                className="profile-hero-avatar-edit"
+                onClick={() => setAvatarModalOpen(true)}
+                aria-label="Đổi ảnh đại diện"
+                title="Đổi ảnh đại diện"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                  <circle cx="12" cy="13" r="4" />
+                </svg>
+              </button>
             </div>
 
             <div className="profile-hero-info">
@@ -1136,6 +1159,16 @@ const MyAccountPage = () => {
           onSuccess={handleDeactivateSuccess}
         />
       )}
+
+      {/* Avatar upload / change / remove modal */}
+      <AvatarUploadModal
+        isOpen={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+        userId={user?.user_id}
+        currentAvatarUrl={user?.avatar_url}
+        initials={avatarInitials}
+        onUpdated={handleAvatarUpdated}
+      />
     </div>
   );
 };

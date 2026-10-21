@@ -14,6 +14,7 @@ const roomTypeRoute = require("./features/room_types/room_type.route");
 const facilityRoute = require("./features/facilities/facility.route");
 const couponRoute = require("./features/coupons/coupon.route");
 const userRoute = require("./features/users/user.route");
+const chatbotRoute = require("./features/chatbot/chatbot.route");
 const env = require("./config/env");
 
 const app = express();
@@ -46,9 +47,14 @@ app.use("/api", roomTypeRoute);
 app.use("/api", facilityRoute);
 app.use("/api", couponRoute);
 app.use("/api", userRoute);
-
+app.use("/api", chatbotRoute);
 // ─── Global Error Handler (must be LAST) ─────────────────────────────────────
 app.use(errorHandler);
+
+// ─── Process-level guard (lỗi mạng/promise không được bắt không làm sập server) ───
+process.on("unhandledRejection", (reason) => {
+  console.error("[Process] Unhandled promise rejection:", reason);
+});
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(env.PORT, () => {
