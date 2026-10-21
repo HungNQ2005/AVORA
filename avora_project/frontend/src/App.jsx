@@ -48,19 +48,19 @@ function ScrollToTop() {
 }
 
 /**
- * Guard route for Venue Managers (role_code_name === 'VEN' or role_cd === '4')
- * and System Admins (role_code_name === 'ADM' or role_cd === '1').
+ * Guard route for Room Types & Amenities (System Admins only).
  */
 const VenueManagerRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const isVenueManager = roleCode === 'VEN' || roleCd === '4' || roleCode === 'ADM' || roleCd === '1';
+  const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1';
 
-  if (!isVenueManager) return <Navigate to="/forbidden" replace />;
+  if (!isAdmin) return <Navigate to="/forbidden" replace />;
 
   return children;
 };
@@ -278,33 +278,33 @@ function App() {
             <Route
               path="room-types"
               element={
-                <VenueManagerRoute>
+                <AdminRoute>
                   <RoomTypeManagementPage />
-                </VenueManagerRoute>
+                </AdminRoute>
               }
             />
             <Route
               path="room-types/:id"
               element={
-                <VenueManagerRoute>
+                <AdminRoute>
                   <RoomTypeDetailPage />
-                </VenueManagerRoute>
+                </AdminRoute>
               }
             />
             <Route
               path="amenities"
               element={
-                <VenueManagerRoute>
+                <AdminRoute>
                   <AmenityManagementPage />
-                </VenueManagerRoute>
+                </AdminRoute>
               }
             />
             <Route
               path="facilities"
               element={
-                <VenueManagerRoute>
+                <AdminRoute>
                   <AmenityManagementPage />
-                </VenueManagerRoute>
+                </AdminRoute>
               }
             />
             <Route

@@ -27,12 +27,13 @@ const DashboardNav = () => {
   const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1';
   const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3';
   const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4';
-  const canManageVenue = isAdmin || isVendor;
+  const canManageRoomTypes = isAdmin;
+  const canManageAmenities = isAdmin;
+  const canManageRooms = isVendor;
   const canManageHotels = isAdmin || isVendor;
   const canManageCoupons = isBmr;
   const canManageRefundPolicies = isBmr;
   const canManageCommissionPolicies = isBmr;
-  const canManageRooms = isAdmin || isVendor;
   const canViewStatistics = isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
@@ -162,59 +163,61 @@ const DashboardNav = () => {
         </div>
 
         {/* QUẢN LÝ PHÒNG & LƯU TRÚ (ACTIVE SECTION) */}
-        <div className="admin-sidebar__group">
-          <div className="admin-sidebar__group-title">QUẢN LÝ PHÒNG & LƯU TRÚ</div>
-          {canManageVenue && (
-            <NavLink
-              to="/dashboard/room-types"
-              className={({ isActive }) =>
-                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-              }
-            >
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"></path>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Quản lý loại phòng</span>
-            </NavLink>
-          )}
-          {canManageRooms && (
-            <NavLink
-              to="/dashboard/rooms"
-              className={({ isActive }) =>
-                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-              }
-            >
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="3" y1="9" x2="21" y2="9"></line>
-                  <line x1="9" y1="21" x2="9" y2="9"></line>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Quản lý buồng phòng</span>
-            </NavLink>
-          )}
-          {canManageVenue && (
-            <NavLink
-              to="/dashboard/amenities"
-              className={({ isActive }) =>
-                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-              }
-            >
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
-                  <line x1="6" y1="1" x2="6" y2="4"></line>
-                  <line x1="10" y1="1" x2="10" y2="4"></line>
-                  <line x1="14" y1="1" x2="14" y2="4"></line>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Quản lý tiện nghi</span>
-            </NavLink>
-          )}
-        </div>
+        {(canManageRoomTypes || canManageRooms || canManageAmenities) && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">QUẢN LÝ PHÒNG & LƯU TRÚ</div>
+            {canManageRoomTypes && (
+              <NavLink
+                to="/dashboard/room-types"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M2 4v16M2 8h18a2 2 0 0 1 2 2v10M2 17h20M6 8v9"></path>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Quản lý loại phòng</span>
+              </NavLink>
+            )}
+            {canManageRooms && (
+              <NavLink
+                to="/dashboard/rooms"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="3" y1="9" x2="21" y2="9"></line>
+                    <line x1="9" y1="21" x2="9" y2="9"></line>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Quản lý buồng phòng</span>
+              </NavLink>
+            )}
+            {canManageAmenities && (
+              <NavLink
+                to="/dashboard/amenities"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"></path>
+                    <line x1="6" y1="1" x2="6" y2="4"></line>
+                    <line x1="10" y1="1" x2="10" y2="4"></line>
+                    <line x1="14" y1="1" x2="14" y2="4"></line>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Quản lý tiện nghi</span>
+              </NavLink>
+            )}
+          </div>
+        )}
 
         {/* MARKETING & DOANH THU */}
         {(canManageCoupons || canManageRefundPolicies || canManageCommissionPolicies || canViewStatistics) && (
@@ -280,7 +283,7 @@ const DashboardNav = () => {
                     <polyline points="17 6 23 6 23 12"></polyline>
                   </svg>
                 </span>
-                <span className="admin-sidebar__label">Báo cáo doanh thu & Booking</span>
+                <span className="admin-sidebar__label">Báo cáo doanh thu</span>
               </NavLink>
             )}
           </div>

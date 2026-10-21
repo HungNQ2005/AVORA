@@ -36,8 +36,9 @@ const requireVenueManager = async (req, res, next) => {
       );
     }
 
-    // Role check: '4' is VEN (Vendor / Hotel Manager), '1' is ADM (Administrator)
-    if (["4", "1"].includes(String(user.role_cd))) {
+    // Role check: Only ADM ('1' / Administrator) is authorized for room types and amenities
+    if (String(user.role_cd) === "1") {
+      req.user.role_code_name = "ADM";
       return next();
     }
 
@@ -52,14 +53,15 @@ const requireVenueManager = async (req, res, next) => {
       return next(roleError);
     }
 
-    if (!["VEN", "ADM"].includes(role?.code_name)) {
+    if (!["ADM", "ADMIN", "ADMINISTRATOR", "SYSTEM_ADMIN"].includes(role?.code_name)) {
       return sendError(
         res,
         403,
-        "You do not have permission to access this resource.",
+        "Bạn không có quyền truy cập tài nguyên này. Chỉ dành cho Quản trị viên hệ thống (Admin).",
       );
     }
 
+    req.user.role_code_name = role.code_name;
     return next();
   } catch (error) {
     return next(error);
