@@ -20,15 +20,14 @@ import { useAuth } from '../../../context/AuthContext';
 import './RoomManagementPage.css';
 
 const RoomManagementPage = () => {
-  // Role: Hotel Manager (VEN) and System Admin (ADM) can create/update/delete.
+  // Role: Hotel Manager (VEN) can create/update/delete.
+  // System Admin (ADM) has view-only rights (can view rooms, details, floor layout, export report).
   const { user } = useAuth();
   const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const canEdit =
-    ['VEN', 'VENDOR', 'ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) ||
-    roleCd === '4' ||
-    roleCd === '1';
+  const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4';
+  const canEdit = isVendor;
 
   // Data State
   const [rooms, setRooms] = useState([]);
@@ -293,6 +292,10 @@ const RoomManagementPage = () => {
 
   // Status Toggle (Đóng/Mở bán)
   const handleToggleStatus = async (room) => {
+    if (!canEdit) {
+      showToast('Tài khoản Quản trị viên chỉ có quyền xem, không được chỉnh sửa buồng phòng.');
+      return;
+    }
     const statusUpper = String(room?.status_cd || '').toUpperCase();
     if (statusUpper === 'OCCUPIED' || statusUpper === 'BOOKED') {
       const statusText = statusUpper === 'OCCUPIED' ? 'đang có khách lưu trú' : 'đã được đặt trước';
@@ -363,12 +366,20 @@ const RoomManagementPage = () => {
   };
   // Modal Handlers
   const handleOpenCreateModal = () => {
+    if (!canEdit) {
+      showToast('Tài khoản Quản trị viên chỉ có quyền xem, không được thêm buồng phòng.');
+      return;
+    }
     setActiveRoom(null);
     setModalError('');
     setIsFormModalOpen(true);
   };
 
   const handleOpenEditModal = (room) => {
+    if (!canEdit) {
+      showToast('Tài khoản Quản trị viên chỉ có quyền xem, không được chỉnh sửa buồng phòng.');
+      return;
+    }
     setActiveRoom(room);
     setModalError('');
     setIsFormModalOpen(true);
@@ -380,12 +391,20 @@ const RoomManagementPage = () => {
   };
 
   const handleOpenDeleteModal = (room) => {
+    if (!canEdit) {
+      showToast('Tài khoản Quản trị viên chỉ có quyền xem, không được xóa buồng phòng.');
+      return;
+    }
     setActiveRoom(room);
     setModalError('');
     setIsDeleteModalOpen(true);
   };
 
   const handleSaveRoom = async (formData) => {
+    if (!canEdit) {
+      setModalError('Tài khoản Quản trị viên chỉ có quyền xem, không được lưu dữ liệu buồng phòng.');
+      return;
+    }
     setSaving(true);
     setModalError('');
     try {
@@ -416,6 +435,10 @@ const RoomManagementPage = () => {
 
   const handleConfirmDelete = async () => {
     if (!activeRoom) return;
+    if (!canEdit) {
+      setModalError('Tài khoản Quản trị viên chỉ có quyền xem, không được xóa buồng phòng.');
+      return;
+    }
     setDeleting(true);
     setModalError('');
     try {
@@ -453,7 +476,31 @@ const RoomManagementPage = () => {
         <div className="room-page__title-area">
           <div className="room-page__title-row">
             <h1 className="room-page__title">Quản lý Buồng phòng</h1>
-
+            {!canEdit && (
+              <span
+                className="room-page__badge-readonly"
+                style={{
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#64748b',
+                  background: '#f1f5f9',
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  marginLeft: '12px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+                title="Chế độ chỉ xem dành cho Quản trị viên hệ thống"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Chế độ chỉ xem
+              </span>
+            )}
           </div>
           <p className="room-page__subtitle">
             Quản trị cơ cấu các hạng phòng, phân bổ buồng phòng thực tế, định giá niêm yết &amp; khuyến mãi, sức chứa, quy cách giường ngủ và đóng/mở bán thời gian thực theo vai trò chuẩn.

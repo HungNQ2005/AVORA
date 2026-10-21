@@ -30,7 +30,7 @@ const AdminSidebar = () => {
   const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || String(user?.role_cd) === '3';
   const canManageRoomTypes = isSystemAdmin;
   const canManageAmenities = isSystemAdmin;
-  const canManageRooms = isVendor;
+  const canManageRooms = isSystemAdmin || isVendor;
   const canManageHotels = isSystemAdmin || isVendor;
   const canManageCoupons = isBmr;
   const canManageRefundPolicies = isBmr;

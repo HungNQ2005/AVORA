@@ -429,6 +429,9 @@ const getRoomById = async (roomId, access) => {
  */
 const createRoom = async (input, access) => {
   if (!supabase) throw createError('Database client is not initialized.', 503);
+  if (!access?.isVendor) {
+    throw createError('Bạn không có quyền tạo buồng phòng. Quản trị viên chỉ có quyền xem.', 403);
+  }
 
   const { hotel_id, room_type_id, room_number, floor, status_cd = 'AVAILABLE' } = input;
   const cleanRoomNumber = normalizeRoomNumber(room_number);
@@ -509,6 +512,9 @@ const createRoom = async (input, access) => {
  */
 const updateRoom = async (roomId, updates, access) => {
   if (!supabase) throw createError('Database client is not initialized.', 503);
+  if (!access?.isVendor) {
+    throw createError('Bạn không có quyền chỉnh sửa buồng phòng. Quản trị viên chỉ có quyền xem.', 403);
+  }
 
   const existingRoom = await getRoomById(roomId, access);
 

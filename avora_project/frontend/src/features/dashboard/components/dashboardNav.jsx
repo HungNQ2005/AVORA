@@ -29,7 +29,7 @@ const DashboardNav = () => {
   const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4';
   const canManageRoomTypes = isAdmin;
   const canManageAmenities = isAdmin;
-  const canManageRooms = isVendor;
+  const canManageRooms = isAdmin || isVendor;
   const canManageHotels = isAdmin || isVendor;
   const canManageCoupons = isBmr;
   const canManageRefundPolicies = isBmr;
