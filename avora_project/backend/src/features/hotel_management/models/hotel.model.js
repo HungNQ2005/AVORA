@@ -246,7 +246,7 @@ const deactivateHotel = async ({ hotelId, access, options = {} }) => {
   return (await addStatusNames([data]))[0];
 };
 
-const HOTEL_IMAGE_BUCKET = 'hotel-images';
+const HOTEL_IMAGE_BUCKET = 'hotel_images';
 
 // Confirms the hotel exists and belongs to the Vendor performing the image operation.
 const assertHotelAccess = async (hotelId, access) => {
@@ -268,10 +268,17 @@ const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbn
   const { error: uploadError } = await supabase.storage
     .from(HOTEL_IMAGE_BUCKET)
     .upload(objectPath, buffer, { contentType: mimeType, upsert: false });
+  if (uploadError) console.error(`[HOTEL IMAGE STORAGE] Upload to ${HOTEL_IMAGE_BUCKET} failed: ${uploadError.message}`);
   checkQuery(uploadError);
 
   const { data: publicUrlData } = supabase.storage.from(HOTEL_IMAGE_BUCKET).getPublicUrl(objectPath);
   const imageUrl = publicUrlData?.publicUrl;
+  if (!imageUrl) {
+    await supabase.storage.from(HOTEL_IMAGE_BUCKET).remove([objectPath]);
+    const err = new Error('Không thể tạo đường dẫn công khai cho ảnh khách sạn. Kiểm tra cấu hình bucket hotel_images.');
+    err.statusCode = 500;
+    throw err;
+  }
 
   if (isThumbnail) {
     const { error: resetError } = await supabase
@@ -281,10 +288,14 @@ const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbn
     checkQuery(resetError);
   }
 
-  const { count } = await supabase
+  const { count, error: countError } = await supabase
     .from('m_hotel_image')
     .select('image_id', { count: 'exact', head: true })
     .eq('hotel_id', hotelId);
+  if (countError) {
+    await supabase.storage.from(HOTEL_IMAGE_BUCKET).remove([objectPath]);
+    checkQuery(countError);
+  }
 
   const { data, error } = await supabase
     .from('m_hotel_image')
@@ -296,6 +307,10 @@ const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbn
     })
     .select('image_id, image_url, is_thumbnail, sort_order')
     .single();
+  if (error) {
+    const { error: cleanupError } = await supabase.storage.from(HOTEL_IMAGE_BUCKET).remove([objectPath]);
+    if (cleanupError) console.warn(`[HOTEL IMAGE STORAGE] Cleanup failed: ${cleanupError.message}`);
+  }
   checkQuery(error);
   return data;
 };

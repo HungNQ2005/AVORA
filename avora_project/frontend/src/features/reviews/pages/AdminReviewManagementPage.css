@@ -1,0 +1,37 @@
+.admin-reviews-page { min-height: 68vh; padding: 1.5rem; color: #17263d; }
+.admin-reviews-page__header { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.2rem; }
+.admin-reviews-page__header p { margin: 0 0 .35rem; color: #15569a; font-size: .68rem; font-weight: 800; }
+.admin-reviews-page__header h1 { margin: 0; color: #102b4b; font-size: 1.55rem; }
+.admin-reviews-page__header > div:first-child > span { display: block; margin-top: .45rem; color: #64748b; font-size: .82rem; }
+.admin-reviews-page__total { display: flex; align-items: baseline; gap: .4rem; color: #64748b; font-size: .75rem; }
+.admin-reviews-page__total strong { color: #15569a; font-size: 1.55rem; }
+.admin-reviews-filters { display: grid; grid-template-columns: minmax(200px, 1.5fr) repeat(3, minmax(115px, .75fr)) minmax(150px, 1fr) auto; align-items: end; gap: .65rem; padding: .85rem; border: 1px solid #dce5ef; border-radius: 9px; background: #fff; margin-bottom: 1rem; }
+.admin-reviews-filters label { display: grid; gap: .3rem; min-width: 0; color: #52647a; font-size: .68rem; font-weight: 700; }
+.admin-reviews-filters input, .admin-reviews-filters select { width: 100%; min-width: 0; height: 38px; padding: 0 .55rem; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; color: #1e293b; font: inherit; font-size: .76rem; }
+.admin-reviews-filters input:focus, .admin-reviews-filters select:focus { outline: 3px solid rgba(21, 86, 154, .18); border-color: #3978b5; }
+.admin-reviews-filters__clear { min-height: 38px; padding: 0 .65rem; border: 0; border-radius: 6px; background: #edf3f9; color: #244e77; font: inherit; font-size: .72rem; font-weight: 700; cursor: pointer; }
+.admin-reviews-filters__clear:disabled { opacity: .5; cursor: default; }
+.admin-reviews-error { padding: .7rem .85rem; border: 1px solid #fecaca; border-radius: 7px; background: #fff1f2; color: #b42318; font-size: .8rem; }
+.admin-reviews-list { display: grid; gap: .65rem; }
+.admin-review-row { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; gap: .9rem; align-items: start; padding: 1rem; border: 1px solid #dce5ef; border-radius: 9px; background: #fff; }
+.admin-review-row--deleted { background: #f7f8fa; }
+.admin-review-row__score { display: grid; place-items: center; min-height: 42px; border-radius: 7px; background: #edf5ff; color: #174c7d; }
+.admin-review-row__score strong { font-size: 1rem; line-height: 1.1; }
+.admin-review-row__score span { color: #718096; font-size: .58rem; }
+.admin-review-row__body { min-width: 0; }
+.admin-review-row__heading { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem .55rem; }
+.admin-review-row__heading h2 { margin: 0; color: #163454; font-size: .9rem; }
+.admin-review-status, .admin-review-hotel-status { padding: .18rem .42rem; border-radius: 4px; background: #e9f7ef; color: #187447; font-size: .62rem; font-weight: 750; }
+.admin-review-status--deleted { background: #fce8e8; color: #a52b2b; }
+.admin-review-hotel-status { background: #e8f5ee; color: #187447; }
+.admin-review-hotel-status--inactive { background: #f1f3f6; color: #58677a; }
+.admin-review-row__comment { margin: .45rem 0; color: #34465c; font-size: .8rem; line-height: 1.5; overflow-wrap: anywhere; white-space: pre-wrap; }
+.admin-review-row__deletion-reason { margin: -.15rem 0 .45rem; color: #8d3d2e; font-size: .72rem; line-height: 1.45; }
+.admin-review-row__meta { display: flex; flex-wrap: wrap; gap: .35rem .8rem; color: #76869a; font-size: .67rem; }
+.admin-review-row__meta strong { color: #45576d; }
+.admin-review-row__delete { min-height: 34px; padding: 0 .65rem; border: 1px solid #e8b5b5; border-radius: 6px; background: #fff; color: #a52b2b; font: inherit; font-size: .68rem; font-weight: 700; cursor: pointer; }
+.admin-review-row__delete:hover:not(:disabled) { background: #fff1f1; border-color: #dc8e8e; }
+.admin-review-row__delete:disabled { color: #7c8795; border-color: #d7dce2; background: #f3f4f6; cursor: default; }
+.admin-reviews-state { display: grid; place-items: center; min-height: 180px; border: 1px solid #dce5ef; border-radius: 9px; background: #fff; color: #63738a; font-size: .82rem; }
+@media (max-width: 900px) { .admin-reviews-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); } .admin-reviews-filters__search { grid-column: span 2; } }
+@media (max-width: 600px) { .admin-reviews-page { padding: 1rem; } .admin-reviews-page__header { align-items: flex-start; } .admin-reviews-filters { grid-template-columns: 1fr 1fr; } .admin-reviews-filters__search { grid-column: 1 / -1; } .admin-review-row { grid-template-columns: 40px minmax(0, 1fr); padding: .75rem; gap: .65rem; } .admin-review-row__delete { grid-column: 2; justify-self: start; } }

@@ -6,6 +6,8 @@ import MapModal from './components/MapModal';
 import { useAuth } from '../../context/AuthContext';
 import { isHotelSaved, toggleFavoriteHotel } from '../../utils/favoritesStorage';
 import { getRoomCapacityDetails } from '../../utils/roomCapacityHelper';
+import { authenticatedFetch } from '../../services/authenticatedFetch';
+import ReviewCard from './components/ReviewCard';
 import './HotelDetailPage.css';
 
 /* ─── CUSTOM SVG ICONS ─────────────────────────────────────────────────────── */
@@ -239,6 +241,7 @@ const HotelDetailPage = () => {
 
   // Component state
   const [hotel, setHotel] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -270,7 +273,7 @@ const HotelDetailPage = () => {
     const fetchDetails = async () => {
       try {
         const url = `${API_ENDPOINTS.HOTEL_DETAIL(id || 1)}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&children=${children}&rooms=${roomsCount}`;
-        const res = await fetch(url);
+        const res = await authenticatedFetch(url);
         const json = await res.json();
 
         if (res.status === 404) {
@@ -288,6 +291,7 @@ const HotelDetailPage = () => {
 
         if (isMounted) {
           setHotel(json.data);
+          setReviews(json.data.reviews || []);
         }
       } catch (err) {
         console.error('Error fetching hotel detail:', err);
@@ -421,8 +425,35 @@ const HotelDetailPage = () => {
     images = [],
     cancellation_policy = null,
     rooms = [],
-    reviews = [],
   } = hotel || {};
+
+  const handleReviewUpdated = (result) => {
+    if (result.review) {
+      setReviews((current) => current.map((review) => (
+        review.review_id === result.review.review_id ? result.review : review
+      )));
+    }
+    setHotel((current) => current && ({
+      ...current,
+      star_rating: result.star_rating === undefined ? current.star_rating : result.star_rating,
+      reviews_count: result.reviews_count ?? current.reviews_count,
+      score_label: result.star_rating >= 9
+        ? 'Xuất sắc'
+        : (result.star_rating >= 8 ? 'Tuyệt vời' : (result.star_rating > 0 ? 'Rất tốt' : 'Chưa có đánh giá')),
+    }));
+  };
+
+  const handleReviewDeleted = (reviewId, result) => {
+    setReviews((current) => current.filter((review) => review.review_id !== reviewId));
+    setHotel((current) => current && ({
+      ...current,
+      star_rating: result.star_rating === undefined ? current.star_rating : result.star_rating,
+      reviews_count: result.reviews_count ?? current.reviews_count,
+      score_label: result.star_rating >= 9
+        ? 'Xuất sắc'
+        : (result.star_rating >= 8 ? 'Tuyệt vời' : (result.star_rating > 0 ? 'Rất tốt' : 'Chưa có đánh giá')),
+    }));
+  };
 
   const roomTypes = [...new Map(
     rooms.map((room) => [room.room_type_id, room])
@@ -907,9 +938,7 @@ const HotelDetailPage = () => {
           <div className="reviews-section-header">
             <div>
               <h2 className="reviews-section-title">Đánh giá từ khách hàng thực tế ({reviews.length})</h2>
-              <p className="reviews-section-subtitle">
-                Toàn bộ đánh giá được truy xuất trực tiếp từ bảng t_review trong cơ sở dữ liệu
-              </p>
+              <p className="reviews-section-subtitle">Đánh giá từ khách hàng đã đặt phòng tại khách sạn</p>
             </div>
 
             <div className="reviews-overall-box">
@@ -930,29 +959,18 @@ const HotelDetailPage = () => {
           {/* Customer Reviews Grid from DB */}
           {reviews.length > 0 ? (
             <div className="customer-reviews-grid">
-              {reviews.map((rev) => (
-                <article key={rev.review_id} className="customer-review-card">
-                  <div className="customer-review-header">
-                    <div className="customer-author-info">
-                      <div className="customer-avatar">
-                        {(rev.guest_name || 'K').charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="customer-name">{rev.guest_name}</div>
-                        <div className="customer-trip-type">
-                          {rev.created_at ? new Date(rev.created_at).toLocaleDateString('vi-VN') : 'Khách đã lưu trú'}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="customer-score-tag">{rev.score} / 10</span>
-                  </div>
-                  <p className="customer-comment">"{rev.comment}"</p>
-                </article>
+              {reviews.map((review) => (
+                <ReviewCard
+                  key={review.review_id}
+                  review={review}
+                  onUpdated={handleReviewUpdated}
+                  onDeleted={(result) => handleReviewDeleted(review.review_id, result)}
+                />
               ))}
             </div>
           ) : (
             <p style={{ color: '#6b7280', fontSize: '14px', padding: '10px 0' }}>
-              Chưa có đánh giá nào được ghi nhận trong cơ sở dữ liệu.
+              Hãy sử dụng dịch vụ của chúng tôi và chia sẻ trải nghiệm của bạn.
             </p>
           )}
         </section>

@@ -32,7 +32,9 @@ import HotelManagementDetailPage from './features/hotel_management/pages/hotelDe
 import RoomManagementPage from './features/rooms/pages/RoomManagementPage';
 import AIChatWidget from './features/chatbot/AIChatWidget';
 import BookingPage from './features/bookings/pages/BookingPage';
-import MyBookingsPage from './features/mybookings/screens/MyBookingsPage';
+import MyBookingsPage from './features/bookings/pages/MyBookingsPage';
+import ReviewPage from './features/reviews/pages/ReviewPage';
+import AdminReviewManagementPage from './features/reviews/pages/AdminReviewManagementPage';
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -213,6 +215,7 @@ function App() {
             <Route path="/booking/:id" element={<BookingPage />} />
             <Route path="/my-bookings" element={<MyBookingsPage />} />
             <Route path="/myaccount/bookings" element={<MyBookingsPage />} />
+            <Route path="/my-reviews" element={<ReviewPage />} />
             <Route path="/search" element={<HotelSearchPage />} />
 
             <Route path="/forbidden" element={<section style={{ padding: '3rem 1rem', textAlign: 'center' }}><h1>403 - Truy cập bị từ chối</h1><p>Tài khoản của bạn không có quyền truy cập trang quản lý này.</p></section>} />
@@ -229,6 +232,14 @@ function App() {
             }
           >
             <Route index element={<DashboardIndexRedirect />} />
+            <Route
+              path="reviews"
+              element={
+                <AdminRoute>
+                  <AdminReviewManagementPage />
+                </AdminRoute>
+              }
+            />
             <Route
               path="hotel-management"
               element={
