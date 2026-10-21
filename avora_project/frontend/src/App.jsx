@@ -68,14 +68,19 @@ const VenueManagerRoute = ({ children }) => {
 /**
  * Guard route for system admins only.
  */
+/**
+ * Guard route for system admins only.
+ */
 const AdminRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  if (roleCode !== 'ADM' && roleCd !== '1') return <Navigate to="/forbidden" replace />;
+  const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1';
+  if (!isAdmin) return <Navigate to="/forbidden" replace />;
 
   return children;
 };
@@ -88,42 +93,44 @@ const CouponManagerRoute = ({ children }) => {
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const isBmr = roleCode === 'BMR' || roleCd === '3';
+  const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3';
   if (!isBmr) return <Navigate to="/forbidden" replace />;
 
   return children;
 };
 
 /**
- * Guard policy management routes (refund policies, commission policies) for BMR and ADM.
+ * Guard policy management routes (refund policies, commission policies) for BMR only.
  */
 const BusinessPolicyRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const isAllowed = roleCode === 'BMR' || roleCd === '3' || roleCode === 'ADM' || roleCd === '1';
-  if (!isAllowed) return <Navigate to="/forbidden" replace />;
+  const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3';
+  if (!isBmr) return <Navigate to="/forbidden" replace />;
 
   return children;
 };
 
 /**
- * Guard route for Vendors (role_code_name === 'VEN' or role_cd === '4')
- * and System Admins (role_code_name === 'ADM' or role_cd === '1') for hotel statistics.
+ * Guard route for Vendors (role_code_name === 'VEN' or role_cd === '4') for hotel statistics.
  */
 const VendorRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const isVendor = roleCode === 'VEN' || roleCd === '4' || roleCode === 'ADM' || roleCd === '1';
+  const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4';
   if (!isVendor) return <Navigate to="/forbidden" replace />;
 
   return children;
@@ -137,26 +144,46 @@ const AdminDashboardRedirect = () => {
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
-  if (roleCode === 'BMR') return <Navigate to="/dashboard/coupons" replace />;
-  if (roleCode === 'VEN') return <Navigate to="/dashboard/statistics" replace />;
-  if (roleCode === 'ADM') return <Navigate to="/dashboard/statistics" replace />;
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  if (['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1') {
+    return <Navigate to="/dashboard/users" replace />;
+  }
+  if (['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4') {
+    return <Navigate to="/dashboard/statistics" replace />;
+  }
+  if (['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3') {
+    return <Navigate to="/dashboard/coupons" replace />;
+  }
 
-  return <Navigate to="/dashboard/statistics" replace />;
+  return <Navigate to="/" replace />;
 };
 
 /**
  * Redirect /dashboard index to the appropriate initial dashboard page based on role.
- * Vendors and Admins land directly on the Statistics dashboard (Bảng thống kê).
+ * Admins land directly on Account & User Management (/dashboard/users).
+ * Vendors land on the Statistics dashboard (Bảng thống kê).
+ * Business Managers land on Coupon Management (/dashboard/coupons).
  */
 const DashboardIndexRedirect = () => {
   const { user, loading } = useAuth();
 
   if (loading) return null;
   if (!user) return <Navigate to="/signin" replace />;
-  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
-  if (roleCode === 'BMR') return <Navigate to="/dashboard/coupons" replace />;
-  return <Navigate to="/dashboard/statistics" replace />;
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  if (['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1') {
+    return <Navigate to="/dashboard/users" replace />;
+  }
+  if (['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4') {
+    return <Navigate to="/dashboard/statistics" replace />;
+  }
+  if (['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3') {
+    return <Navigate to="/dashboard/coupons" replace />;
+  }
+  return <Navigate to="/" replace />;
 };
 
 /**
@@ -373,6 +400,7 @@ function App() {
           <Route path="/admin/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/admin/users" element={<Navigate to="/dashboard/users" replace />} />
+          <Route path="/admin/roles" element={<Navigate to="/dashboard/roles" replace />} />
           <Route path="/room-types" element={<Navigate to="/dashboard/room-types" replace />} />
           <Route path="/room-types/:id" element={<DynamicParamRedirect toPrefix="/dashboard/room-types" />} />
           <Route path="/amenities" element={<Navigate to="/dashboard/amenities" replace />} />

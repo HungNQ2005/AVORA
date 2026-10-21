@@ -28,10 +28,12 @@ const AdminSidebar = () => {
   const isSystemAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || String(user?.role_cd) === '1';
   const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || String(user?.role_cd) === '4';
   const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || String(user?.role_cd) === '3';
-  const canManageVenue = isSystemAdmin || isVendor;
+  const canManageVenue = isVendor;
   const canManageHotels = isSystemAdmin || isVendor;
   const canManageCoupons = isBmr;
-  const canManageRefundPolicies = isSystemAdmin || isBmr;
+  const canManageRefundPolicies = isBmr;
+  const canManageCommissionPolicies = isBmr;
+  const canViewStatistics = isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
 
@@ -54,63 +56,58 @@ const AdminSidebar = () => {
       {/* Navigation Sections */}
       <nav className="admin-sidebar__nav">
         {/* TỔNG QUAN */}
-        <div className="admin-sidebar__group">
-          <div className="admin-sidebar__group-title">TỔNG QUAN</div>
-          <NavLink to="/dashboard/statistics" className="admin-sidebar__link">
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Bảng thống kê</span>
-          </NavLink>
-        </div>
+        {canViewStatistics && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">TỔNG QUAN</div>
+            <NavLink to="/dashboard/statistics" className="admin-sidebar__link">
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <rect x="3" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="3" width="7" height="7"></rect>
+                  <rect x="14" y="14" width="7" height="7"></rect>
+                  <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Bảng thống kê</span>
+            </NavLink>
+          </div>
+        )}
 
         {/* NGƯỜI DÙNG & PHÂN QUYỀN */}
-        <div className="admin-sidebar__group">
-          <div className="admin-sidebar__group-title">NGƯỜI DÙNG & PHÂN QUYỀN</div>
-          <NavLink
-            to="/admin/users"
-            className={({ isActive }) =>
-              `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/users') ? 'admin-sidebar__link--active' : ''}`
-            }
-          >
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Quản lý người dùng</span>
-          </NavLink>
-          <NavLink
-            to="/admin/roles"
-            className={({ isActive }) =>
-              `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/roles') || location.pathname === '/roles' ? 'admin-sidebar__link--active' : ''}`
-            }
-          >
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Vai trò & Quyền hạn (RBAC)</span>
-          </NavLink>
-          <div className="admin-sidebar__link disabled">
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Lịch sử truy cập</span>
+        {isSystemAdmin && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">NGƯỜI DÙNG & PHÂN QUYỀN</div>
+            <NavLink
+              to="/dashboard/users"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/users') || location.pathname.startsWith('/admin/users') ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="9" cy="7" r="4"></circle>
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý người dùng</span>
+            </NavLink>
+            <NavLink
+              to="/dashboard/roles"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/roles') || location.pathname.startsWith('/admin/roles') || location.pathname === '/roles' ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Vai trò & Quyền hạn (RBAC)</span>
+            </NavLink>
           </div>
-        </div>
+        )}
 
         {/* HỆ THỐNG KHÁCH SẠN */}
         <div className="admin-sidebar__group">
@@ -208,50 +205,74 @@ const AdminSidebar = () => {
         </div>
 
         {/* MARKETING & DOANH THU */}
-        <div className="admin-sidebar__group">
-          <div className="admin-sidebar__group-title">MARKETING & DOANH THU</div>
-          {canManageCoupons && (
-            <NavLink
-              to="/admin/coupons"
-              className={({ isActive }) =>
-                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-              }
-            >
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
-                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Quản lý mã khuyến mãi</span>
-            </NavLink>
-          )}
-          {canManageRefundPolicies && (
-            <NavLink
-              to="/admin/refund-policies"
-              className={({ isActive }) =>
-                `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/refund-policies') ? 'admin-sidebar__link--active' : ''}`
-              }
-            >
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                  <path d="M9 12l2 2 4-4"></path>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Quản lý chính sách hoàn tiền</span>
-            </NavLink>
-          )}
-          <div className="admin-sidebar__link disabled">
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
-                <polyline points="17 6 23 6 23 12"></polyline>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Báo cáo doanh thu & Booking</span>
+        {(canManageCoupons || canManageRefundPolicies || canManageCommissionPolicies || canViewStatistics) && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">MARKETING & DOANH THU</div>
+            {canManageCoupons && (
+              <NavLink
+                to="/dashboard/coupons"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/coupons') || location.pathname.startsWith('/admin/coupons') ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                    <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Quản lý mã khuyến mãi</span>
+              </NavLink>
+            )}
+            {canManageRefundPolicies && (
+              <NavLink
+                to="/dashboard/refund-policies"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/refund-policies') || location.pathname.startsWith('/admin/refund-policies') ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M3 10h18M3 14h18M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"></path>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Quản lý chính sách hoàn tiền</span>
+              </NavLink>
+            )}
+            {canManageCommissionPolicies && (
+              <NavLink
+                to="/dashboard/commission-policies"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/commission-policies') || location.pathname.startsWith('/admin/commission-policies') ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <line x1="12" y1="1" x2="12" y2="23"></line>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Chính sách phí hoa hồng</span>
+              </NavLink>
+            )}
+            {canViewStatistics && (
+              <NavLink
+                to="/dashboard/statistics"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/statistics') || location.pathname.startsWith('/admin/statistics') ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                    <polyline points="17 6 23 6 23 12"></polyline>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Báo cáo doanh thu & Booking</span>
+              </NavLink>
+            )}
           </div>
-        </div>
+        )}
 
         {/* HỆ THỐNG */}
         <div className="admin-sidebar__group">

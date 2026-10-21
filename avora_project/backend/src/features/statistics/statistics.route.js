@@ -6,8 +6,8 @@ const { authenticate, requireRole } = require('../../common/middlewares/authMidd
 
 const router = Router();
 
-// Statistics dashboard: Vendor (VEN) and Admin (ADM), enforced server-side.
-router.use('/statistics', authenticate, requireRole('VEN', 'ADM'));
+// Statistics dashboard: Vendor (VEN) only, enforced server-side.
+router.use('/statistics', authenticate, requireRole('VEN'));
 
 // GET /api/statistics/hotels
 router.get('/statistics/hotels', handleGetStatisticsHotels);
