@@ -427,7 +427,6 @@ const HotelDetailPage = () => {
     rooms = [],
   } = hotel || {};
 
-<<<<<<< HEAD
   const handleReviewUpdated = (result) => {
     if (result.review) {
       setReviews((current) => current.map((review) => (
@@ -456,11 +455,9 @@ const HotelDetailPage = () => {
     }));
   };
 
-=======
   const roomTypes = [...new Map(
     rooms.map((room) => [room.room_type_id, room])
   ).values()];
->>>>>>> origin/main
   const mainImage = images[0] || hotel?.thumbnail || '';
   const sideImage = images[1] || mainImage;
 
