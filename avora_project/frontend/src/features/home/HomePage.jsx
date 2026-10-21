@@ -1064,6 +1064,31 @@ const HomePage = () => {
                         <PinIcon /> <span>{hotel.address ? `${hotel.address}, ${hotel.city_name}` : hotel.city_name}</span>
                       </p>
 
+                      {hotel.room_highlight && (
+                        <div
+                          style={{
+                            margin: '4px 0 8px',
+                            padding: '6px 10px',
+                            background: '#f0f7ff',
+                            borderRadius: '6px',
+                            fontSize: '12.5px',
+                            color: '#003580',
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          <div style={{ fontWeight: 600 }}>{hotel.room_highlight.name}</div>
+                          <div style={{ color: '#475569', fontSize: '11.5px' }}>
+                            {hotel.room_highlight.room_numbers?.length > 0
+                              ? `Phòng ${hotel.room_highlight.room_numbers.join(', ')}${
+                                  hotel.room_highlight.floors?.length > 0
+                                    ? ` (${hotel.room_highlight.floors.join(', ')})`
+                                    : ''
+                                } · `
+                              : ''}
+                            {hotel.room_highlight.bed_type} · {hotel.room_highlight.room_size}
+                          </div>
+                        </div>
+                      )}
                       <div className="avora-hotel-card__rating">
                         <span className="avora-hotel-card__score">
                           {Number(hotel.star_rating || 9.2).toFixed(1)}
@@ -1235,4 +1260,3 @@ const HomePage = () => {
 };
 
 export default HomePage;
-

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
+import NotFoundNotice from '../../common/components/NotFoundNotice';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import MapModal from './components/MapModal';
 import { useAuth } from '../../context/AuthContext';
@@ -240,6 +241,7 @@ const HotelDetailPage = () => {
   const [hotel, setHotel] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [isFavorited, setIsFavorited] = useState(() => isHotelSaved(id));
   const [toastMsg, setToastMsg] = useState(null);
 
@@ -254,7 +256,6 @@ const HotelDetailPage = () => {
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [lightboxImgIdx, setLightboxImgIdx] = useState(0);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [selectedRoomForBooking, setSelectedRoomForBooking] = useState(null);
 
   // Ref for smooth scroll to room booking section
   const roomsSectionRef = useRef(null);
@@ -264,12 +265,18 @@ const HotelDetailPage = () => {
     let isMounted = true;
     setIsLoading(true);
     setErrorMsg(null);
+    setNotFound(false);
 
     const fetchDetails = async () => {
       try {
         const url = `${API_ENDPOINTS.HOTEL_DETAIL(id || 1)}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&children=${children}&rooms=${roomsCount}`;
         const res = await fetch(url);
         const json = await res.json();
+
+        if (res.status === 404) {
+          if (isMounted) setNotFound(true);
+          return;
+        }
 
         if (!res.ok || json.status === 'error') {
           throw new Error(json.message || 'Không thể tải thông tin khách sạn');
@@ -371,6 +378,15 @@ const HotelDetailPage = () => {
     );
   }
 
+  if (notFound) {
+    return (
+      <NotFoundNotice
+        title="Không tìm thấy khách sạn"
+        reason="Khách sạn không tồn tại, chưa được duyệt hoặc đã ngừng hoạt động."
+      />
+    );
+  }
+
   if (errorMsg && !hotel) {
     return (
       <div className="hotel-detail-page">
@@ -408,6 +424,9 @@ const HotelDetailPage = () => {
     reviews = [],
   } = hotel || {};
 
+  const roomTypes = [...new Map(
+    rooms.map((room) => [room.room_type_id, room])
+  ).values()];
   const mainImage = images[0] || hotel?.thumbnail || '';
   const sideImage = images[1] || mainImage;
 
@@ -668,7 +687,14 @@ const HotelDetailPage = () => {
                 <span className="shuttle-callout-icon">
                   <ShieldCheckIcon />
                 </span>
-                <span>{cancellation_policy.description}</span>
+                <span>
+                  {cancellation_policy.description
+                    ? String(cancellation_policy.description)
+                        .replace(/<!--META:.*?-->/g, '')
+                        .replace(/^\[.*?\]\s*/g, '')
+                        .trim()
+                    : ''}
+                </span>
               </div>
             )}
           </section>
@@ -693,15 +719,15 @@ const HotelDetailPage = () => {
           </div>
 
           {/* Rooms Stack from DB */}
-          {rooms.length > 0 ? (
+          {roomTypes.length > 0 ? (
             <div className="rooms-list">
-              {rooms.map((room) => {
+              {roomTypes.map((room) => {
                 const capDetails = getRoomCapacityDetails(room);
                 const isCapacityExceeded = guestsPerRoom > capDetails.maxCapacity;
 
                 return (
                   <article
-                    key={room.room_type_id}
+                    key={room.room_id || room.room_type_id}
                     className={`room-card ${isCapacityExceeded ? 'room-card--capacity-exceeded' : ''}`}
                   >
                     {/* Column 1: Info & Photo */}
@@ -842,7 +868,18 @@ const HotelDetailPage = () => {
                               setToastMsg(`Không được cho phép booking ${guestsPerRoom} người vào phòng này! Tối đa ${capDetails.maxCapacity} người.`);
                               return;
                             }
-                            setSelectedRoomForBooking(room);
+                            navigate('/booking', {
+                              state: {
+                                hotel,
+                                room,
+                                checkIn,
+                                checkOut,
+                                nights,
+                                adults,
+                                children,
+                                roomsCount,
+                              },
+                            });
                           }}
                         >
                           <CartIcon />
@@ -969,67 +1006,6 @@ const HotelDetailPage = () => {
         hotels={hotel ? [hotel] : []}
         destination={city_name || 'Hà Nội'}
       />
-
-      {/* ─── 9. BOOKING CONFIRMATION MODAL ─── */}
-      {selectedRoomForBooking && (
-        <div className="booking-modal-backdrop" onClick={() => setSelectedRoomForBooking(null)}>
-          <div className="booking-modal-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="booking-modal-icon">🎉</div>
-            <h3 className="booking-modal-title">Đặt chỗ thành công!</h3>
-            <p className="booking-modal-desc">
-              Bạn đã chọn <strong>{selectedRoomForBooking.name}</strong> tại <strong>{name}</strong>.
-            </p>
-
-            <div className="booking-modal-summary">
-              {user && (
-                <div className="booking-modal-row">
-                  <span>Khách đặt phòng:</span>
-                  <span><strong>{user.full_name || user.email}</strong></span>
-                </div>
-              )}
-              <div className="booking-modal-row">
-                <span>Thời gian lưu trú:</span>
-                <span>{formattedStayDates} ({nights} đêm)</span>
-              </div>
-              <div className="booking-modal-row">
-                <span>Số lượng khách:</span>
-                <span>{adults} người lớn{children > 0 ? `, ${children} trẻ em` : ''} ({roomsCount} phòng)</span>
-              </div>
-              <div className="booking-modal-row">
-                <span>Cấu hình sức chứa:</span>
-                <span>
-                  {getRoomCapacityDetails(selectedRoomForBooking).standardBeds} giường tiêu chuẩn ({getRoomCapacityDetails(selectedRoomForBooking).standardCapacity} người)
-                  {getRoomCapacityDetails(selectedRoomForBooking).hasExtraBed ? ` + 1 giường phụ (${getRoomCapacityDetails(selectedRoomForBooking).extraBedCapacity} người)` : ''}
-                  {' '}= Tối đa {getRoomCapacityDetails(selectedRoomForBooking).maxCapacity} người
-                </span>
-              </div>
-              <div className="booking-modal-row">
-                <span>Trạng thái sức chứa:</span>
-                <span style={{ color: '#008009', fontWeight: 600 }}>✓ Hợp lệ (≤ {getRoomCapacityDetails(selectedRoomForBooking).maxCapacity} người/phòng)</span>
-              </div>
-              <div className="booking-modal-row">
-                <span>Chính sách hủy:</span>
-                <span style={{ color: '#008009' }}>Miễn phí hủy phòng</span>
-              </div>
-              <div className="booking-modal-row">
-                <span>Tổng giá tạm tính:</span>
-                <span>{formatPrice(selectedRoomForBooking.price * nights)}</span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="booking-modal-btn"
-              onClick={() => {
-                setSelectedRoomForBooking(null);
-                setToastMsg('Đặt phòng thành công! Đơn đặt chỗ đã được ghi nhận.');
-              }}
-            >
-              Hoàn tất &amp; Đóng
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

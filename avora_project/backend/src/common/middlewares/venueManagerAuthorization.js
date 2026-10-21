@@ -36,6 +36,11 @@ const requireVenueManager = async (req, res, next) => {
       );
     }
 
+    // Role check: '4' is VEN (Vendor / Hotel Manager), '1' is ADM (Administrator)
+    if (["4", "1"].includes(String(user.role_cd))) {
+      return next();
+    }
+
     const { data: role, error: roleError } = await supabase
       .from("m_system_code")
       .select("code_name")
@@ -47,7 +52,7 @@ const requireVenueManager = async (req, res, next) => {
       return next(roleError);
     }
 
-    if (!["ADM"].includes(role?.code_name)) {
+    if (!["VEN", "ADM"].includes(role?.code_name)) {
       return sendError(
         res,
         403,
