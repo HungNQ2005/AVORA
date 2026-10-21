@@ -27,12 +27,12 @@ const DashboardNav = () => {
   const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1';
   const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3';
   const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4';
-  const canManageVenue = isVendor;
+  const canManageVenue = isAdmin || isVendor;
   const canManageHotels = isAdmin || isVendor;
   const canManageCoupons = isBmr;
   const canManageRefundPolicies = isBmr;
   const canManageCommissionPolicies = isBmr;
-  const canManageRooms = isVendor;
+  const canManageRooms = isAdmin || isVendor;
   const canViewStatistics = isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
@@ -179,7 +179,7 @@ const DashboardNav = () => {
               <span className="admin-sidebar__label">Quản lý loại phòng</span>
             </NavLink>
           )}
-          {canManageRooms ? (
+          {canManageRooms && (
             <NavLink
               to="/dashboard/rooms"
               className={({ isActive }) =>
@@ -195,17 +195,6 @@ const DashboardNav = () => {
               </span>
               <span className="admin-sidebar__label">Quản lý buồng phòng</span>
             </NavLink>
-          ) : (
-            <div className="admin-sidebar__link disabled">
-              <span className="admin-sidebar__icon">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                  <line x1="3" y1="9" x2="21" y2="9"></line>
-                  <line x1="9" y1="21" x2="9" y2="9"></line>
-                </svg>
-              </span>
-              <span className="admin-sidebar__label">Quản lý buồng phòng</span>
-            </div>
           )}
           {canManageVenue && (
             <NavLink

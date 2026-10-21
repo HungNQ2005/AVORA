@@ -19,13 +19,12 @@ const router = Router();
 router.use('/rooms', authenticate, requireRole('VEN', 'ADM'));
 
 /**
- * System Admin (ADM) is read-only for rooms.
- * Write operations (create / update / delete) are restricted to Hotel Manager (VEN).
+ * Write operations (create / update / delete) for Hotel Manager (VEN) and System Admin (ADM).
  * Relies on req.user.role_code_name resolved by requireRole above.
  */
 const requireVendorWrite = (req, res, next) => {
-  if (req.user?.role_code_name !== 'VEN') {
-    return sendError(res, 403, 'Quản trị viên hệ thống chỉ có quyền xem buồng phòng.');
+  if (req.user?.role_code_name !== 'VEN' && req.user?.role_code_name !== 'ADM') {
+    return sendError(res, 403, 'Bạn không có quyền chỉnh sửa buồng phòng.');
   }
   return next();
 };

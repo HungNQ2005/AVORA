@@ -20,11 +20,15 @@ import { useAuth } from '../../../context/AuthContext';
 import './RoomManagementPage.css';
 
 const RoomManagementPage = () => {
-  // Role: only Hotel Manager (VEN) can create/update/delete. System Admin (ADM) is view-only.
+  // Role: Hotel Manager (VEN) and System Admin (ADM) can create/update/delete.
   const { user } = useAuth();
-  const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const canEdit = roleCode === 'VEN' || roleCd === '4';
+  const canEdit =
+    ['VEN', 'VENDOR', 'ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) ||
+    roleCd === '4' ||
+    roleCd === '1';
 
   // Data State
   const [rooms, setRooms] = useState([]);
