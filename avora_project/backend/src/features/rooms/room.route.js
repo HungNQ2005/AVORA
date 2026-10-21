@@ -15,15 +15,15 @@ const { sendError } = require('../../utils/responseHelper');
 
 const router = Router();
 
-// Only Hotel Manager (VEN) and System Admin (ADM) are authorized
-router.use('/rooms', authenticate, requireRole('VEN', 'ADM'));
+// Only Hotel Manager (VEN) is authorized
+router.use('/rooms', authenticate, requireRole('VEN'));
 
 /**
- * Write operations (create / update / delete) for Hotel Manager (VEN) and System Admin (ADM).
+ * Write operations (create / update / delete) for Hotel Manager (VEN).
  * Relies on req.user.role_code_name resolved by requireRole above.
  */
 const requireVendorWrite = (req, res, next) => {
-  if (req.user?.role_code_name !== 'VEN' && req.user?.role_code_name !== 'ADM') {
+  if (req.user?.role_code_name !== 'VEN') {
     return sendError(res, 403, 'Bạn không có quyền chỉnh sửa buồng phòng.');
   }
   return next();

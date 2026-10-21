@@ -24,8 +24,7 @@ const CommissionPolicyDeleteModal = ({
 
           <h3 className="cp-delete-title">Xác nhận xóa chính sách phí hoa hồng?</h3>
           <p className="cp-delete-desc">
-            Hành động này sẽ xóa chính sách hoa hồng khỏi hệ thống AVORA.
-            Các quyết toán trong tương lai sẽ áp dụng chính sách cấp hệ thống mặc định.
+            Chính sách sẽ được chuyển sang trạng thái đã xóa (xóa mềm trong CSDL) và ẩn khỏi giao diện hoạt động. Lịch sử quyết toán và giao dịch liên kết vẫn được bảo toàn nguyên vẹn.
           </p>
 
           <div className="cp-delete-item-box">
@@ -55,7 +54,7 @@ const CommissionPolicyDeleteModal = ({
             disabled={loading}
           >
             {loading && <span className="rp-btn-spinner"></span>}
-            Xóa chính sách
+            Xác nhận xóa
           </button>
         </div>
       </div>

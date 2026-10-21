@@ -1,40 +1,12 @@
 import { API_ENDPOINTS } from '../constants/apiEndpoints';
 import { authenticatedFetch } from './authenticatedFetch';
 
-const SOFT_DELETED_KEY = 'avora_soft_deleted_commission_policies';
-
-export const getSoftDeletedCommissionPolicyIds = () => {
-  try {
-    const raw = localStorage.getItem(SOFT_DELETED_KEY);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-};
-
-export const addSoftDeletedCommissionPolicyId = (id) => {
-  try {
-    const list = getSoftDeletedCommissionPolicyIds();
-    const strId = String(id).trim();
-    if (!list.includes(strId)) {
-      list.push(strId);
-      localStorage.setItem(SOFT_DELETED_KEY, JSON.stringify(list));
-    }
-  } catch (err) {
-    console.error('Lỗi khi lưu id hoa hồng xóa mềm vào localStorage:', err);
-  }
-};
-
-export const restoreCommissionPolicy = (id) => {
-  try {
-    const list = getSoftDeletedCommissionPolicyIds();
-    const strId = String(id).trim();
-    const updated = list.filter((item) => item !== strId);
-    localStorage.setItem(SOFT_DELETED_KEY, JSON.stringify(updated));
-  } catch (err) {
-    console.error('Lỗi khi khôi phục chính sách hoa hồng:', err);
-  }
-};
+// Dọn dẹp key localStorage cũ nếu còn tồn tại trong trình duyệt
+try {
+  localStorage.removeItem('avora_soft_deleted_commission_policies');
+} catch {
+  // ignore
+}
 
 /**
  * Fetch list of commission policies with optional filtering.
@@ -67,26 +39,7 @@ export const fetchCommissionPolicies = async (params = {}) => {
     throw new Error(json.message || 'Không thể tải danh sách chính sách phí hoa hồng.');
   }
 
-  const softDeletedIds = getSoftDeletedCommissionPolicyIds();
-  const rawPolicies = Array.isArray(json.data?.policies)
-    ? json.data.policies
-    : Array.isArray(json.data)
-    ? json.data
-    : [];
-
-  const filteredPolicies = rawPolicies.filter((p) => {
-    const pId = String(p.policy_id || '').trim();
-    return !softDeletedIds.includes(pId);
-  });
-
-  if (Array.isArray(json.data)) {
-    return filteredPolicies;
-  }
-
-  return {
-    ...json.data,
-    policies: filteredPolicies,
-  };
+  return json.data;
 };
 
 /**
@@ -108,11 +61,6 @@ export const fetchCommissionPolicyHotels = async () => {
  * @param {string} id
  */
 export const fetchCommissionPolicyById = async (id) => {
-  const softDeletedIds = getSoftDeletedCommissionPolicyIds();
-  if (softDeletedIds.includes(String(id).trim())) {
-    throw new Error('Chính sách phí hoa hồng không tồn tại hoặc đã bị gỡ bỏ.');
-  }
-
   const response = await authenticatedFetch(
     `${API_ENDPOINTS.COMMISSION_POLICIES}/${encodeURIComponent(id)}`
   );
@@ -168,11 +116,21 @@ export const updateCommissionPolicy = async (id, payload) => {
 };
 
 /**
- * Delete a commission policy.
+ * Delete a commission policy (Soft delete in DB).
  * @param {string} id
  */
 export const deleteCommissionPolicy = async (id) => {
-  // CHẮP VÁ: Xóa mềm phía FE bằng localStorage, không gọi xóa cứng xuống DB.
-  addSoftDeletedCommissionPolicyId(id);
-  return { success: true, policy_id: id, message: 'Đã xóa chính sách phí hoa hồng thành công.' };
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.COMMISSION_POLICIES}/${encodeURIComponent(id)}`,
+    {
+      method: 'DELETE',
+    }
+  );
+  const json = await response.json();
+
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể xóa chính sách phí hoa hồng.');
+  }
+
+  return json.data;
 };

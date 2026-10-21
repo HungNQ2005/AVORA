@@ -97,7 +97,10 @@ const computePolicyStatus = (validFrom, validTo) => {
  */
 const formatCommissionPolicyRecord = (record, hotelMap = {}) => {
   const hotel = record.m_hotel || hotelMap[record.hotel_id] || null;
-  const status = computePolicyStatus(record.valid_from, record.valid_to);
+  let status = computePolicyStatus(record.valid_from, record.valid_to);
+  if (record.is_active === false) {
+    status = "INACTIVE";
+  }
 
   let scope = "SYSTEM";
   let scopeLabel = "Toàn hệ thống AVORA";
@@ -133,9 +136,12 @@ const formatCommissionPolicyRecord = (record, hotelMap = {}) => {
     scope_label: scopeLabel,
     valid_from: record.valid_from ? record.valid_from.substring(0, 10) : null,
     valid_to: record.valid_to ? record.valid_to.substring(0, 10) : null,
+    is_active: record.is_active !== false,
     status,
     status_label:
-      status === "ACTIVE"
+      record.is_active === false
+        ? "Đã xóa"
+        : status === "ACTIVE"
         ? "Đang áp dụng"
         : status === "UPCOMING"
         ? "Sắp hiệu lực"
@@ -204,13 +210,13 @@ const getCommissionPolicies = async (filters = {}) => {
     if (error) {
       throwDatabaseError("Không thể tải danh sách chính sách phí hoa hồng.", error);
     }
-    rawList = data || [];
+    rawList = (data || []).filter((r) => r.is_active !== false);
   } else {
     // Fallback in-memory
     if (!_fallbackPolicies) {
       _fallbackPolicies = getInitialFallbackPolicies();
     }
-    rawList = [..._fallbackPolicies];
+    rawList = _fallbackPolicies.filter((r) => r.is_active !== false);
   }
 
   let policies = rawList.map((record) => formatCommissionPolicyRecord(record, hotelMap));
@@ -305,8 +311,8 @@ const getCommissionPolicyById = async (id) => {
     if (error) {
       throwDatabaseError("Lỗi khi tải thông tin chi tiết chính sách hoa hồng.", error);
     }
-    if (!data) {
-      const err = new Error("Không tìm thấy chính sách hoa hồng yêu cầu.");
+    if (!data || data.is_active === false) {
+      const err = new Error("Chính sách phí hoa hồng không tồn tại hoặc đã bị xóa.");
       err.statusCode = 404;
       throw err;
     }
@@ -316,8 +322,8 @@ const getCommissionPolicyById = async (id) => {
   // Fallback
   if (!_fallbackPolicies) _fallbackPolicies = getInitialFallbackPolicies();
   const record = _fallbackPolicies.find((p) => p.policy_id === cleanId);
-  if (!record) {
-    const err = new Error("Không tìm thấy chính sách hoa hồng yêu cầu.");
+  if (!record || record.is_active === false) {
+    const err = new Error("Chính sách phí hoa hồng không tồn tại hoặc đã bị xóa.");
     err.statusCode = 404;
     throw err;
   }
@@ -351,6 +357,7 @@ const createCommissionPolicy = async (payload) => {
     hotel_id: payload.hotel_id || null,
     valid_from: payload.valid_from || null,
     valid_to: payload.valid_to || null,
+    is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -426,7 +433,7 @@ const updateCommissionPolicy = async (id, payload) => {
 };
 
 /**
- * DELETE a commission policy
+ * DELETE a commission policy - SOFT DELETE ONLY: updates is_active to false in DB (NO HARD DELETE)
  */
 const deleteCommissionPolicy = async (id) => {
   ensureClient();
@@ -434,21 +441,38 @@ const deleteCommissionPolicy = async (id) => {
   const isTableAvailable = await checkCommissionTable();
 
   if (isTableAvailable) {
-    // Tạm thời không xóa cứng trong DB để bảo toàn dữ liệu lịch sử
-    // (Đợi bổ sung 2 cột is_deleted và deleted_at vào DB sau)
-    return { success: true, policy_id: cleanId, message: "Đã xóa chính sách phí hoa hồng thành công." };
+    const { data, error } = await supabase
+      .from("m_commission_policy")
+      .update({
+        is_active: false,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("policy_id", cleanId)
+      .select("policy_id")
+      .maybeSingle();
+
+    if (error) {
+      throwDatabaseError("Không thể xóa chính sách phí hoa hồng.", error);
+    }
+    if (!data) {
+      const err = new Error("Chính sách phí hoa hồng không tồn tại hoặc đã bị xóa.");
+      err.statusCode = 404;
+      throw err;
+    }
+    return { success: true, policy_id: cleanId, message: "Đã xóa mềm chính sách phí hoa hồng thành công." };
   }
 
   // Fallback
   if (!_fallbackPolicies) _fallbackPolicies = getInitialFallbackPolicies();
-  const initialLen = _fallbackPolicies.length;
-  _fallbackPolicies = _fallbackPolicies.filter((p) => p.policy_id !== cleanId);
-  if (_fallbackPolicies.length === initialLen) {
-    const err = new Error("Không tìm thấy chính sách phí hoa hồng để xóa.");
+  const idx = _fallbackPolicies.findIndex((p) => p.policy_id === cleanId);
+  if (idx === -1 || _fallbackPolicies[idx].is_active === false) {
+    const err = new Error("Chính sách phí hoa hồng không tồn tại hoặc đã bị xóa.");
     err.statusCode = 404;
     throw err;
   }
-  return { success: true, policy_id: cleanId };
+  _fallbackPolicies[idx].is_active = false;
+  _fallbackPolicies[idx].updated_at = new Date().toISOString();
+  return { success: true, policy_id: cleanId, message: "Đã xóa mềm chính sách phí hoa hồng thành công." };
 };
 
 module.exports = {
