@@ -169,7 +169,20 @@ export const updateRefundPolicy = async (id, payload) => {
  * @param {string} id
  */
 export const deleteRefundPolicy = async (id) => {
-  // CHẮP VÁ: Xóa mềm phía FE bằng localStorage, không gọi xóa cứng xuống DB.
-  addSoftDeletedRefundPolicyId(id);
-  return { success: true, policy_id: id, message: 'Đã xóa chính sách hoàn tiền thành công.' };
+  const cleanId = String(id || '').trim();
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.REFUND_POLICIES}/${encodeURIComponent(cleanId)}`,
+    {
+      method: 'DELETE',
+    }
+  );
+  const json = await response.json().catch(() => ({}));
+
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể xóa chính sách hoàn tiền.');
+  }
+
+  addSoftDeletedRefundPolicyId(cleanId);
+  return json.data || { success: true, policy_id: cleanId, message: json.message || 'Đã xóa chính sách hoàn tiền thành công.' };
 };
+

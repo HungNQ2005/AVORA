@@ -48,8 +48,10 @@ const RefundPolicyManagementPage = () => {
   // Modals
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState(null);
+  const [formServerError, setFormServerError] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingPolicy, setDeletingPolicy] = useState(null);
+  const [deleteServerError, setDeleteServerError] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -197,6 +199,7 @@ const RefundPolicyManagementPage = () => {
   // Open Create Modal
   const openCreateModal = () => {
     setEditingPolicy(null);
+    setFormServerError(null);
     setFormModalOpen(true);
   };
 
@@ -204,6 +207,7 @@ const RefundPolicyManagementPage = () => {
   const openEditModal = (policy, e) => {
     if (e) e.stopPropagation();
     setEditingPolicy(policy);
+    setFormServerError(null);
     setFormModalOpen(true);
   };
 
@@ -211,12 +215,14 @@ const RefundPolicyManagementPage = () => {
   const openDeleteModal = (policy, e) => {
     if (e) e.stopPropagation();
     setDeletingPolicy(policy);
+    setDeleteServerError(null);
     setDeleteModalOpen(true);
   };
 
   // Submit Create / Edit
   const handleFormSubmit = async (formData) => {
     setFormLoading(true);
+    setFormServerError(null);
     try {
       if (editingPolicy) {
         await updateRefundPolicy(editingPolicy.policy_id, formData);
@@ -226,8 +232,10 @@ const RefundPolicyManagementPage = () => {
         showToast('Tạo mới chính sách hoàn tiền thành công!', 'success');
       }
       setFormModalOpen(false);
+      setEditingPolicy(null);
       loadData();
     } catch (err) {
+      setFormServerError(err.message || 'Có lỗi xảy ra khi lưu chính sách.');
       showToast(err.message || 'Có lỗi xảy ra khi lưu chính sách.', 'error');
     } finally {
       setFormLoading(false);
@@ -238,6 +246,7 @@ const RefundPolicyManagementPage = () => {
   const handleDeleteConfirm = async () => {
     if (!deletingPolicy) return;
     setDeleteLoading(true);
+    setDeleteServerError(null);
     try {
       await deleteRefundPolicy(deletingPolicy.policy_id);
       showToast(`Đã xóa thành công chính sách "${deletingPolicy.policy_name}".`, 'success');
@@ -245,6 +254,7 @@ const RefundPolicyManagementPage = () => {
       setDeletingPolicy(null);
       loadData();
     } catch (err) {
+      setDeleteServerError(err.message || 'Không thể xóa chính sách hoàn tiền.');
       showToast(err.message || 'Không thể xóa chính sách hoàn tiền.', 'error');
     } finally {
       setDeleteLoading(false);
@@ -857,20 +867,28 @@ const RefundPolicyManagementPage = () => {
       {/* Form Modal (Create / Edit) */}
       <RefundPolicyFormModal
         isOpen={formModalOpen}
-        onClose={() => setFormModalOpen(false)}
+        onClose={() => {
+          setFormModalOpen(false);
+          setFormServerError(null);
+        }}
         onSubmit={handleFormSubmit}
         initialData={editingPolicy}
         hotels={hotels}
         loading={formLoading}
+        serverError={formServerError}
       />
 
       {/* Delete Confirmation Modal */}
       <RefundPolicyDeleteModal
         isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeleteServerError(null);
+        }}
         onConfirm={handleDeleteConfirm}
         policy={deletingPolicy}
         loading={deleteLoading}
+        serverError={deleteServerError}
       />
     </div>
   );

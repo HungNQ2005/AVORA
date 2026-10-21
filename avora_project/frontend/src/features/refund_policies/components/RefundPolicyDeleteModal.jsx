@@ -7,6 +7,7 @@ const RefundPolicyDeleteModal = ({
   onConfirm,
   policy = null,
   loading = false,
+  serverError = null,
 }) => {
   if (!isOpen || !policy) return null;
 
@@ -51,6 +52,12 @@ const RefundPolicyDeleteModal = ({
             {!isAssignedToHotel && hasBookings && (
               <div style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.8rem', fontWeight: 600, background: '#fef2f2', padding: '8px 10px', borderRadius: '6px', border: '1px solid #fecaca', textAlign: 'left' }}>
                 ⚠️ Cảnh báo: Chính sách đang gắn với {policy.associated_bookings_count} đơn đặt phòng. Hệ thống từ chối xóa để đảm bảo toàn vẹn dữ liệu.
+              </div>
+            )}
+
+            {serverError && (
+              <div style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.8rem', fontWeight: 600, background: '#fef2f2', padding: '8px 10px', borderRadius: '6px', border: '1px solid #fecaca', textAlign: 'left' }}>
+                ⚠️ Lỗi từ máy chủ: {serverError}
               </div>
             )}
           </div>

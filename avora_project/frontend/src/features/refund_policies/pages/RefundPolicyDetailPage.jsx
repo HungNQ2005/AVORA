@@ -62,7 +62,9 @@ const RefundPolicyDetailPage = () => {
 
   // Modals
   const [formModalOpen, setFormModalOpen] = useState(false);
+  const [formServerError, setFormServerError] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteServerError, setDeleteServerError] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -94,12 +96,14 @@ const RefundPolicyDetailPage = () => {
 
   const handleFormSubmit = async (formData) => {
     setFormLoading(true);
+    setFormServerError(null);
     try {
       const updated = await updateRefundPolicy(id, formData);
       setPolicy(updated);
       setFormModalOpen(false);
       showToast('Cập nhật chính sách hoàn tiền thành công!', 'success');
     } catch (err) {
+      setFormServerError(err.message || 'Có lỗi xảy ra khi cập nhật chính sách hoàn tiền.');
       showToast(err.message || 'Có lỗi xảy ra khi cập nhật chính sách hoàn tiền.', 'error');
     } finally {
       setFormLoading(false);
@@ -108,11 +112,13 @@ const RefundPolicyDetailPage = () => {
 
   const handleDeleteConfirm = async () => {
     setDeleteLoading(true);
+    setDeleteServerError(null);
     try {
       await deleteRefundPolicy(id);
       setDeleteModalOpen(false);
       navigate('/dashboard/refund-policies');
     } catch (err) {
+      setDeleteServerError(err.message || 'Không thể xóa chính sách hoàn tiền.');
       showToast(err.message || 'Không thể xóa chính sách hoàn tiền.', 'error');
     } finally {
       setDeleteLoading(false);
@@ -243,7 +249,10 @@ const RefundPolicyDetailPage = () => {
           <button
             type="button"
             className="rp-btn rp-btn--danger"
-            onClick={() => setDeleteModalOpen(true)}
+            onClick={() => {
+              setDeleteServerError(null);
+              setDeleteModalOpen(true);
+            }}
             title="Xóa chính sách khỏi hệ thống"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -569,20 +578,28 @@ const RefundPolicyDetailPage = () => {
       {/* Form Edit Modal */}
       <RefundPolicyFormModal
         isOpen={formModalOpen}
-        onClose={() => setFormModalOpen(false)}
+        onClose={() => {
+          setFormModalOpen(false);
+          setFormServerError(null);
+        }}
         onSubmit={handleFormSubmit}
         initialData={policy}
         hotels={hotels}
         loading={formLoading}
+        serverError={formServerError}
       />
 
       {/* Delete Confirmation Modal */}
       <RefundPolicyDeleteModal
         isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeleteServerError(null);
+        }}
         onConfirm={handleDeleteConfirm}
         policy={policy}
         loading={deleteLoading}
+        serverError={deleteServerError}
       />
     </div>
   );

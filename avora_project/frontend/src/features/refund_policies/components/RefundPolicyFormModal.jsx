@@ -16,7 +16,7 @@ const EMPTY_FORM = {
 const stripMeta = (text) => {
   if (!text || typeof text !== 'string') return '';
   return text
-    .replace(/<!--META:.*?-->/g, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/^\[.*?\]\s*/g, '')
     .trim();
 };
@@ -28,6 +28,7 @@ const RefundPolicyFormModal = ({
   initialData = null,
   hotels = [],
   loading = false,
+  serverError = null,
 }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
@@ -64,27 +65,69 @@ const RefundPolicyFormModal = ({
 
   const validate = () => {
     const errs = {};
-    if (!form.policy_name.trim()) {
+    const cleanName = form.policy_name.trim();
+
+    // 1. Tên chính sách
+    if (!cleanName) {
       errs.policy_name = 'Vui lòng nhập tên chính sách hoàn tiền.';
-    } else if (form.policy_name.trim().length < 3) {
+    } else if (cleanName.length < 3) {
       errs.policy_name = 'Tên chính sách phải có ít nhất 3 ký tự.';
-    } else if (form.policy_name.trim().length > 200) {
+    } else if (cleanName.length > 200) {
       errs.policy_name = 'Tên chính sách không được vượt quá 200 ký tự.';
+    } else if (!/^[\p{L}0-9]/u.test(cleanName)) {
+      errs.policy_name = 'Tên chính sách phải bắt đầu bằng chữ cái hoặc chữ số, không được bắt đầu bằng ký tự đặc biệt.';
+    } else if (!/[\p{L}]/u.test(cleanName)) {
+      errs.policy_name = 'Tên chính sách phải chứa chữ cái, không được chỉ chứa toàn bộ ký tự đặc biệt hoặc chữ số.';
+    } else if (/[@#$^&*~`<>\[\]{}|\\_;=!]/.test(cleanName)) {
+      errs.policy_name = 'Tên chính sách chứa ký tự đặc biệt không hợp lệ (@, #, $, ^, &, *, ~, <, >, [, ], {, }, |, \\, _, ;, =). Chỉ cho phép chữ cái, chữ số, dấu cách và (- , ( ) % / . ,).';
     }
 
-    const rate = Number(form.refund_percentage);
-    if (isNaN(rate) || rate < 0 || rate > 100) {
-      errs.refund_percentage = 'Tỷ lệ hoàn tiền phải từ 0% đến 100%.';
+    // 2. Tỷ lệ hoàn tiền
+    if (form.refund_percentage === '' || form.refund_percentage === null || form.refund_percentage === undefined) {
+      errs.refund_percentage = 'Vui lòng nhập tỷ lệ hoàn tiền.';
+    } else {
+      const rate = Number(form.refund_percentage);
+      if (isNaN(rate) || !Number.isFinite(rate)) {
+        errs.refund_percentage = 'Tỷ lệ hoàn tiền phải là số hợp lệ.';
+      } else if (rate < 0 || rate > 100) {
+        errs.refund_percentage = 'Tỷ lệ hoàn tiền phải nằm trong khoảng từ 0% đến 100%.';
+      }
     }
 
-    const hours = Number(form.minimum_cancellation_hours);
-    if (isNaN(hours) || hours < 0 || !Number.isInteger(hours)) {
-      errs.minimum_cancellation_hours = 'Số giờ tối thiểu phải là số nguyên không âm (>= 0).';
+    // 3. Số giờ hủy tối thiểu
+    if (form.minimum_cancellation_hours === '' || form.minimum_cancellation_hours === null || form.minimum_cancellation_hours === undefined) {
+      errs.minimum_cancellation_hours = 'Vui lòng nhập số giờ hủy tối thiểu.';
+    } else {
+      const hours = Number(form.minimum_cancellation_hours);
+      if (isNaN(hours) || !Number.isFinite(hours) || !Number.isInteger(hours) || hours < 0) {
+        errs.minimum_cancellation_hours = 'Số giờ tối thiểu phải là số nguyên không âm (>= 0).';
+      } else if (hours > 8760) {
+        errs.minimum_cancellation_hours = 'Số giờ hủy tối đa không vượt quá 8.760 giờ (1 năm).';
+      }
     }
 
+    // 4. Điều kiện & Mô tả
+    if (form.refund_conditions) {
+      const cleanCond = form.refund_conditions.trim();
+      if (cleanCond.length > 1000) {
+        errs.refund_conditions = `Điều kiện hoàn tiền không vượt quá 1.000 ký tự (hiện có: ${cleanCond.length}).`;
+      } else if (cleanCond && !/[\p{L}0-9]/u.test(cleanCond)) {
+        errs.refund_conditions = 'Điều kiện hoàn tiền phải chứa chữ cái hoặc chữ số, không được chỉ chứa ký tự đặc biệt.';
+      }
+    }
+    if (form.description) {
+      const cleanDesc = form.description.trim();
+      if (cleanDesc.length > 1000) {
+        errs.description = `Mô tả chính sách không vượt quá 1.000 ký tự (hiện có: ${cleanDesc.length}).`;
+      } else if (cleanDesc && !/[\p{L}0-9]/u.test(cleanDesc)) {
+        errs.description = 'Mô tả chính sách phải chứa chữ cái hoặc chữ số, không được chỉ chứa ký tự đặc biệt.';
+      }
+    }
+
+    // 5. Ngày hiệu lực
     if (form.effective_from && form.effective_to) {
       if (new Date(form.effective_to) < new Date(form.effective_from)) {
-        errs.effective_to = 'Ngày kết thúc không được sớm hơn ngày bắt đầu.';
+        errs.effective_to = 'Ngày kết thúc hiệu lực không được sớm hơn ngày bắt đầu hiệu lực.';
       }
     }
 
@@ -143,13 +186,36 @@ const RefundPolicyFormModal = ({
               </p>
             </div>
           </div>
-          <button type="button" className="rp-modal-close" onClick={onClose} title="Đóng">
+          <button type="button" className="rp-modal-close" onClick={onClose} title="Đóng" disabled={loading}>
             ✕
           </button>
         </div>
 
         {/* Body */}
         <div className="rp-modal-body">
+          {/* Server Error Alert Banner */}
+          {serverError && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px',
+              padding: '12px 14px',
+              marginBottom: '16px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#991b1b',
+              fontSize: '0.86rem',
+              lineHeight: 1.45,
+            }}>
+              <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>⚠️</span>
+              <div>
+                <strong>Lỗi từ hệ thống: </strong>
+                <span>{serverError}</span>
+              </div>
+            </div>
+          )}
+
           {/* Tên chính sách */}
           <div className="rp-form-group">
             <label className="rp-form-label">
@@ -157,6 +223,7 @@ const RefundPolicyFormModal = ({
             </label>
             <input
               type="text"
+              maxLength={200}
               className={`rp-form-input ${errors.policy_name ? 'rp-form-input--error' : ''}`}
               placeholder="Ví dụ: Chính sách hoàn tiền linh hoạt 24h, Hoàn tiền 100% mùa cao điểm..."
               value={form.policy_name}
@@ -216,7 +283,7 @@ const RefundPolicyFormModal = ({
                 type="number"
                 min="0"
                 max="100"
-                step="1"
+                step="0.01"
                 className={`rp-form-input ${errors.refund_percentage ? 'rp-form-input--error' : ''}`}
                 value={form.refund_percentage}
                 onChange={(e) => handleChange('refund_percentage', e.target.value)}
@@ -229,6 +296,7 @@ const RefundPolicyFormModal = ({
                     type="button"
                     className={`rp-quick-tag ${Number(form.refund_percentage) === rate ? 'rp-quick-tag--active' : ''}`}
                     onClick={() => handleChange('refund_percentage', rate)}
+                    disabled={loading}
                   >
                     {rate}%
                   </button>
@@ -246,6 +314,7 @@ const RefundPolicyFormModal = ({
               <input
                 type="number"
                 min="0"
+                max="8760"
                 step="1"
                 className={`rp-form-input ${errors.minimum_cancellation_hours ? 'rp-form-input--error' : ''}`}
                 value={form.minimum_cancellation_hours}
@@ -264,6 +333,7 @@ const RefundPolicyFormModal = ({
                     type="button"
                     className={`rp-quick-tag ${Number(form.minimum_cancellation_hours) === h ? 'rp-quick-tag--active' : ''}`}
                     onClick={() => handleChange('minimum_cancellation_hours', h)}
+                    disabled={loading}
                   >
                     {label}
                   </button>
@@ -285,7 +355,7 @@ const RefundPolicyFormModal = ({
                   ? `${form.minimum_cancellation_hours} giờ`
                   : 'thời điểm nhận phòng'}
               </strong>{' '}
-              sẽ được hoàn tiền mức <strong>{form.refund_percentage}%</strong> tổng giá trị đơn đặt
+              sẽ được hoàn tiền mức <strong>{form.refund_percentage || 0}%</strong> tổng giá trị đơn đặt
               phòng (phí phạt:{' '}
               <strong>{Math.max(0, 100 - Number(form.refund_percentage || 0))}%</strong>).
             </div>
@@ -293,28 +363,46 @@ const RefundPolicyFormModal = ({
 
           {/* Điều kiện hoàn tiền */}
           <div className="rp-form-group">
-            <label className="rp-form-label">Điều kiện &amp; Quy định hoàn tiền chi tiết</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="rp-form-label">Điều kiện &amp; Quy định hoàn tiền chi tiết</label>
+              <span style={{ fontSize: '0.75rem', color: (form.refund_conditions?.length || 0) > 950 ? '#dc2626' : '#94a3b8' }}>
+                {form.refund_conditions?.length || 0} / 1000
+              </span>
+            </div>
             <input
               type="text"
-              className="rp-form-input"
+              maxLength={1000}
+              className={`rp-form-input ${errors.refund_conditions ? 'rp-form-input--error' : ''}`}
               placeholder="Ví dụ: Miễn phí hủy trước thời hạn, sau thời hạn phạt phần tiền phòng đêm đầu tiên..."
               value={form.refund_conditions}
               onChange={(e) => handleChange('refund_conditions', e.target.value)}
               disabled={loading}
             />
+            {errors.refund_conditions && (
+              <span className="rp-form-error-msg">{errors.refund_conditions}</span>
+            )}
           </div>
 
           {/* Mô tả chính sách */}
           <div className="rp-form-group">
-            <label className="rp-form-label">Mô tả chính sách (Ghi chú nội bộ / hiển thị khách sạn)</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label className="rp-form-label">Mô tả chính sách (Ghi chú nội bộ / hiển thị khách sạn)</label>
+              <span style={{ fontSize: '0.75rem', color: (form.description?.length || 0) > 950 ? '#dc2626' : '#94a3b8' }}>
+                {form.description?.length || 0} / 1000
+              </span>
+            </div>
             <textarea
-              className="rp-form-textarea"
+              className={`rp-form-textarea ${errors.description ? 'rp-form-textarea--error' : ''}`}
               rows="2"
+              maxLength={1000}
               placeholder="Mô tả bổ sung về chính sách hoàn tiền này..."
               value={form.description}
               onChange={(e) => handleChange('description', e.target.value)}
               disabled={loading}
             ></textarea>
+            {errors.description && (
+              <span className="rp-form-error-msg">{errors.description}</span>
+            )}
           </div>
 
           {/* Thời gian hiệu lực: Từ ngày -> Đến ngày */}
@@ -370,3 +458,4 @@ const RefundPolicyFormModal = ({
 };
 
 export default RefundPolicyFormModal;
+
