@@ -27,8 +27,8 @@ const RoleManagementPage = () => {
   const isAdmin = roleCode === 'ADM' || roleCd === '1';
 
   // Guard: Only System Admin (ADM) can access
-  if (!authLoading && user && !isAdmin) {
-    return <Navigate to="/forbidden" replace />;
+  if (!authLoading && user && user.role_code_name !== 'ADM') {
+    return <Navigate to="/admin" replace />;
   }
 
   // Data states

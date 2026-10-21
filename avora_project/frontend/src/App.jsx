@@ -265,6 +265,14 @@ function App() {
               }
             />
             <Route
+              path="roles"
+              element={
+                <AdminRoute>
+                  <RoleManagementPage />
+                </AdminRoute>
+              }
+            />
+            <Route
               path="room-types"
               element={
                 <VenueManagerRoute>
@@ -370,7 +378,7 @@ function App() {
             />
           </Route>
 
-          {/* Friendly redirect aliases for the old /admin and top-level paths */}
+  {/* Friendly redirect aliases for the old /admin and top-level paths */ }
           <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
           <Route path="/admin/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
           <Route path="/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
@@ -404,9 +412,9 @@ function App() {
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
 
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+        </Routes >
+      </BrowserRouter >
+    </AuthProvider >
   );
 }
 

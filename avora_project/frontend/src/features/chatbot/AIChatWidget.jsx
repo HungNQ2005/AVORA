@@ -184,37 +184,34 @@ const AIChatWidget = () => {
     return (
         <>
             <style>{`
-        .avora-chat__fab{position:fixed;right:24px;bottom:24px;width:60px;height:60px;border-radius:50%;border:2px solid #ffc107;cursor:pointer;z-index:1000;
-          background:linear-gradient(135deg,#003580,#006ce4);color:#fff;font-size:26px;box-shadow:0 8px 24px rgba(0,53,128,.4);transition:transform .2s,box-shadow .2s}
-        .avora-chat__fab:hover{transform:scale(1.08);box-shadow:0 10px 28px rgba(0,108,228,.5)}
+        .avora-chat__fab{position:fixed;right:24px;bottom:24px;width:60px;height:60px;border-radius:50%;border:none;cursor:pointer;z-index:1000;
+          background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;font-size:26px;box-shadow:0 8px 24px rgba(99,102,241,.45);transition:transform .2s}
+        .avora-chat__fab:hover{transform:scale(1.08)}
         .avora-chat__panel{position:fixed;right:24px;bottom:96px;width:380px;max-width:calc(100vw - 32px);height:560px;max-height:calc(100vh - 130px);
-          background:#fff;border:1px solid #dbeafe;border-radius:16px;box-shadow:0 20px 50px rgba(0,53,128,.22);display:flex;flex-direction:column;overflow:hidden;z-index:1000;
+          background:#fff;border-radius:18px;box-shadow:0 20px 50px rgba(15,23,42,.25);display:flex;flex-direction:column;overflow:hidden;z-index:1000;
           animation:avoraChatIn .22s ease-out;font-family:inherit}
         @keyframes avoraChatIn{from{opacity:0;transform:translateY(12px) scale(.97)}to{opacity:1;transform:none}}
-        .avora-chat__header{padding:14px 16px;background:linear-gradient(135deg,#003580,#006ce4);border-bottom:2px solid #ffc107;color:#fff;display:flex;justify-content:space-between;align-items:center}
-        .avora-chat__header h3{margin:0;font-size:15px;font-weight:700;color:#fff}
-        .avora-chat__header small{color:#fde68a;font-size:11px;font-weight:500}
-        .avora-chat__close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;opacity:.9}
-        .avora-chat__close:hover{opacity:1;color:#ffc107}
-        .avora-chat__geo{background:none;border:none;color:#fde68a;font-size:11px;cursor:pointer;padding:0;text-decoration:underline;opacity:.95}
+        .avora-chat__header{padding:14px 16px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;display:flex;justify-content:space-between;align-items:center}
+        .avora-chat__header h3{margin:0;font-size:15px;font-weight:700}
+        .avora-chat__header small{opacity:.9;font-size:11px}
+        .avora-chat__close{background:none;border:none;color:#fff;font-size:20px;cursor:pointer}
+        .avora-chat__geo{background:none;border:none;color:#fff;font-size:11px;cursor:pointer;padding:0;text-decoration:underline;opacity:.95}
         .avora-chat__body{flex:1;overflow-y:auto;padding:14px;background:#f8fafc;display:flex;flex-direction:column;gap:10px}
         .avora-chat__msg{max-width:86%;padding:9px 13px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-        .avora-chat__msg--user{align-self:flex-end;background:linear-gradient(135deg,#003580,#006ce4);color:#fff;border-bottom-right-radius:4px;box-shadow:0 2px 8px rgba(0,53,128,.18)}
-        .avora-chat__msg--assistant{align-self:flex-start;background:#fff;color:#1f2937;border:1px solid #dbeafe;border-bottom-left-radius:4px;box-shadow:0 1px 4px rgba(15,23,42,.05)}
-        .avora-chat__link{color:#006ce4;font-weight:600;text-decoration:underline}
-        .avora-chat__link:hover{color:#003580}
-        .avora-chat__typing{align-self:flex-start;color:#003580;font-size:13px;font-style:italic}
+        .avora-chat__msg--user{align-self:flex-end;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;border-bottom-right-radius:4px}
+        .avora-chat__msg--assistant{align-self:flex-start;background:#fff;color:#1e293b;border:1px solid #e2e8f0;border-bottom-left-radius:4px}
+        .avora-chat__link{color:#4f46e5;font-weight:600;text-decoration:underline}
+        .avora-chat__typing{align-self:flex-start;color:#64748b;font-size:13px;font-style:italic}
         .avora-chat__chips{display:flex;flex-wrap:wrap;gap:6px;align-self:flex-start}
-        .avora-chat__chip{border:1px solid #bfdbfe;background:#f0f7ff;color:#003580;font-weight:500;border-radius:16px;padding:6px 11px;font-size:12px;cursor:pointer;transition:all .15s}
-        .avora-chat__chip:hover{background:#006ce4;color:#fff;border-color:#006ce4}
+        .avora-chat__chip{border:1px solid #c7d2fe;background:#eef2ff;color:#4338ca;border-radius:16px;padding:6px 11px;font-size:12px;cursor:pointer}
+        .avora-chat__chip:hover{background:#e0e7ff}
         .avora-chat__footer{display:flex;gap:8px;padding:10px;border-top:1px solid #e2e8f0;background:#fff}
-        .avora-chat__input{flex:1;border:1px solid #cbd5e1;border-radius:20px;padding:9px 14px;font-size:14px;outline:none;transition:border-color .15s,box-shadow .15s}
-        .avora-chat__input:focus{border-color:#006ce4;box-shadow:0 0 0 3px rgba(0,108,228,.12)}
-        .avora-chat__send{border:none;border-radius:50%;width:40px;height:40px;background:#003580;color:#ffc107;cursor:pointer;font-size:16px;transition:background .15s}
-        .avora-chat__send:hover:not(:disabled){background:#006ce4;color:#fff}
+        .avora-chat__input{flex:1;border:1px solid #cbd5e1;border-radius:20px;padding:9px 14px;font-size:14px;outline:none}
+        .avora-chat__input:focus{border-color:#6366f1}
+        .avora-chat__send{border:none;border-radius:50%;width:40px;height:40px;background:#6366f1;color:#fff;cursor:pointer;font-size:16px}
         .avora-chat__send:disabled{opacity:.5;cursor:not-allowed}
         .avora-chat__login{padding:12px;border-top:1px solid #e2e8f0;background:#fff;display:flex;justify-content:center}
-        .avora-chat__login button{border:2px solid #ffc107;border-radius:24px;padding:11px 20px;background:linear-gradient(135deg,#003580,#006ce4);color:#fff;font-weight:600;cursor:pointer}
+        .avora-chat__login button{border:none;border-radius:24px;padding:11px 20px;background:linear-gradient(135deg,#0ea5e9,#6366f1);color:#fff;font-weight:600;cursor:pointer}
       `}</style>
 
             {open && (

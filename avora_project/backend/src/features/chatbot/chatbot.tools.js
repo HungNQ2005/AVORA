@@ -382,6 +382,7 @@ const getSpecificHotelDetails = async (args = {}, ctx = {}) => {
                     .replace(/^\[.*?\]\s*/g, '')
                     .trim() || `Miễn phí hủy phòng trước ${policyRes.data.free_cancel_before_hours || 48}h`,
             } : null,
+            cancellation_policy: policyRes.data || null,
             link: `/hotel/${hotel.hotel_id}`,
         };
     } catch (err) {
