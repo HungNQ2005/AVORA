@@ -241,7 +241,7 @@ function App() {
               }
             />
             <Route
-              path="roles"
+              path="hotel-management"
               element={
                 <HotelManagerRoute>
                   <HotelManagementPage />
