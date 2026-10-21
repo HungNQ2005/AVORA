@@ -76,7 +76,7 @@ export const fetchCommissionPolicies = async (params = {}) => {
 
   const filteredPolicies = rawPolicies.filter((p) => {
     const pId = String(p.policy_id || '').trim();
-    return !softDeletedIds.includes(pId);
+    return !softDeletedIds.includes(pId) && p.is_active !== false;
   });
 
   if (Array.isArray(json.data)) {
@@ -172,7 +172,16 @@ export const updateCommissionPolicy = async (id, payload) => {
  * @param {string} id
  */
 export const deleteCommissionPolicy = async (id) => {
-  // CHẮP VÁ: Xóa mềm phía FE bằng localStorage, không gọi xóa cứng xuống DB.
   addSoftDeletedCommissionPolicyId(id);
-  return { success: true, policy_id: id, message: 'Đã xóa chính sách phí hoa hồng thành công.' };
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.COMMISSION_POLICIES}/${encodeURIComponent(id)}`,
+    {
+      method: 'DELETE',
+    }
+  );
+  const json = await response.json();
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể xóa chính sách phí hoa hồng.');
+  }
+  return json.data || { success: true, policy_id: id };
 };

@@ -123,6 +123,11 @@ const validateCommissionPolicyPayload = (body, { partial = false } = {}) => {
     }
   }
 
+  // 9. is_active (Trạng thái hoạt động / xóa mềm)
+  if (isPresent("is_active")) {
+    payload.is_active = Boolean(body.is_active);
+  }
+
   return { payload };
 };
 
