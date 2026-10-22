@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import AvatarContent from '../../../common/components/AvatarContent';
 import './UserTable.css';
 
@@ -57,9 +57,6 @@ const UserTable = ({
   onEditUser,
   onChangeRole,
 }) => {
-  const [selectedIds, setSelectedIds] = useState(new Set());
-
-  // Checkbox handlers (exclude self and System Admin from bulk actions)
   const isUserSelf = (u) =>
     Boolean(
       (currentUserId && String(u.user_id) === String(currentUserId)) ||
@@ -74,28 +71,6 @@ const UserTable = ({
         String(u.role_cd) === 'ADM'
       )
     );
-
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      const selectable = users.filter((u) => !isUserSelf(u) && !isProtectedAdmin(u));
-      setSelectedIds(new Set(selectable.map((u) => u.user_id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  };
-
-  const handleSelectOne = (id) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectableUsers = users.filter((u) => !isUserSelf(u) && !isProtectedAdmin(u));
-  const allSelected =
-    selectableUsers.length > 0 && selectableUsers.every((u) => selectedIds.has(u.user_id));
 
   // Quick stats for current page
   const activeCount = users.filter((u) => u.account_status === 'ACTIVE').length;
@@ -174,7 +149,7 @@ const UserTable = ({
 
   return (
     <div className="user-table-wrapper">
-      {/* Table Sub-header (Bulk selection & Quick status summary) */}
+      {/* Quick status summary */}
       <div className="user-table-subheader">
         <div style={{ color: '#64748b', fontSize: '0.84rem' }}>
           Hiển thị <strong>{users.length}</strong> / <strong>{totalItems}</strong> người dùng
@@ -199,14 +174,6 @@ const UserTable = ({
           <table className="user-table">
             <thead>
               <tr>
-                <th style={{ width: '42px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    className="user-checkbox"
-                    checked={allSelected}
-                    onChange={handleSelectAll}
-                  />
-                </th>
                 <th>NGƯỜI DÙNG & MÃ NV</th>
                 <th>LIÊN HỆ & XÁC THỰC</th>
                 <th>VAI TRÒ & CẤP BẬC</th>
@@ -219,29 +186,10 @@ const UserTable = ({
             <tbody>
               {users.map((u) => {
                 const activity = formatActivityTime(u);
-                const isSelected = selectedIds.has(u.user_id);
                 const isSelf = isUserSelf(u);
 
                 return (
-                  <tr key={u.user_id} className={isSelected ? 'user-table-row--selected' : ''}>
-                    {/* Checkbox */}
-                    <td style={{ textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        className="user-checkbox"
-                        checked={isSelected}
-                        disabled={isSelf || isProtectedAdmin(u)}
-                        title={
-                          isSelf
-                            ? 'Không thể chọn tài khoản của chính mình'
-                            : isProtectedAdmin(u)
-                            ? 'Tài khoản Quản trị viên hệ thống (Được bảo vệ toàn quyền - Không thể khóa)'
-                            : undefined
-                        }
-                        onChange={() => !isSelf && !isProtectedAdmin(u) && handleSelectOne(u.user_id)}
-                      />
-                    </td>
-
+                  <tr key={u.user_id}>
                     {/* Người dùng & Mã NV */}
                     <td>
                       <div className="user-cell-profile">
