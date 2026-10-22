@@ -127,7 +127,7 @@ const OrderSummarySidebar = ({
               <div>
                 <div className="summary-review-text">{getScoreLabel(ratingScore)}</div>
                 <div className="summary-review-count">
-                  {reviewCount > 0 ? `${reviewCount} lượt đánh giá trong CSDL` : 'Điểm chất lượng từ CSDL'}
+                  {reviewCount > 0 ? `${reviewCount} lượt đánh giá` : 'Điểm chất lượng'}
                 </div>
               </div>
               <div className="summary-review-score">{ratingScore}</div>

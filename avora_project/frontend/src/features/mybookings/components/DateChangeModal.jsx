@@ -10,11 +10,15 @@ const DateChangeModal = ({
   setNewCheckIn,
   newCheckOut,
   setNewCheckOut,
+  couponRemovalNotice,
   isChanging,
   onSave,
+  onConfirmCouponRemoval,
+  onCancelCouponRemoval,
   onClose,
 }) => {
   if (!booking) return null;
+  const formatVnd = (amount) => `${Number(amount || 0).toLocaleString('vi-VN')} đ`;
 
   return (
     <div
@@ -86,24 +90,63 @@ const DateChangeModal = ({
                 <strong>Chính sách linh hoạt Avora:</strong> Ngày lưu trú mới cần nằm trong khung thời gian phòng còn trống tại khách sạn.
               </div>
             </div>
+
+            {couponRemovalNotice && (
+              <div className="date-change-coupon-warning" role="alert">
+                <strong>Voucher sẽ bị mất nếu bạn đổi ngày</strong>
+                <p>
+                  {couponRemovalNotice.coupon_code
+                    ? `Voucher ${couponRemovalNotice.coupon_code} không còn đủ điều kiện áp dụng.`
+                    : 'Voucher hiện tại không còn đủ điều kiện áp dụng.'}
+                  {' '}Khoản giảm giá hiện tại {formatVnd(couponRemovalNotice.current_discount)} sẽ bị gỡ.
+                </p>
+                <p>
+                  Tổng tiền sau khi đổi ngày và bỏ voucher: <strong>{formatVnd(couponRemovalNotice.proposed_total)}</strong>
+                </p>
+                {couponRemovalNotice.reason && <small>{couponRemovalNotice.reason}</small>}
+              </div>
+            )}
           </div>
 
           <div className="my-bookings-modal-footer">
-            <button
-              type="button"
-              className="my-bookings-btn-secondary"
-              onClick={onClose}
-              disabled={isChanging}
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              className="my-bookings-btn-primary"
-              disabled={isChanging}
-            >
-              {isChanging ? 'Đang cập nhật...' : 'Xác nhận đổi ngày'}
-            </button>
+            {couponRemovalNotice ? (
+              <>
+                <button
+                  type="button"
+                  className="my-bookings-btn-secondary"
+                  onClick={onCancelCouponRemoval}
+                  disabled={isChanging}
+                >
+                  Không đổi ngày
+                </button>
+                <button
+                  type="button"
+                  className="my-bookings-btn-primary"
+                  onClick={onConfirmCouponRemoval}
+                  disabled={isChanging}
+                >
+                  {isChanging ? 'Đang cập nhật...' : 'Bỏ voucher và xác nhận đổi ngày'}
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="my-bookings-btn-secondary"
+                  onClick={onClose}
+                  disabled={isChanging}
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  className="my-bookings-btn-primary"
+                  disabled={isChanging}
+                >
+                  {isChanging ? 'Đang cập nhật...' : 'Xác nhận đổi ngày'}
+                </button>
+              </>
+            )}
           </div>
         </form>
       </div>
