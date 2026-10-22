@@ -224,6 +224,8 @@ function App() {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/system_codes" element={<TestConnectionPage />} />
             <Route path="/myaccount" element={<MyAccountPage />} />
+            <Route path="/watchlist" element={<FavoritesPage />} />
+            <Route path="/wishlist" element={<FavoritesPage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/saved" element={<FavoritesPage />} />
             <Route path="/hotels" element={<HotelSearchPage />} />

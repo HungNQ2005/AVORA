@@ -547,9 +547,10 @@ const HotelDetailPage = () => {
                   type="button"
                   className={`hotel-action-btn ${isFavorited ? 'is-favorited' : ''}`}
                   onClick={handleFavoriteClick}
+                  title={isFavorited ? 'Đã lưu trong WatchList' : 'Thêm vào WatchList'}
                 >
                   <HeartIcon filled={isFavorited} />
-                  <span>{isFavorited ? 'Đã yêu thích' : 'Yêu thích'}</span>
+                  <span>{isFavorited ? 'Đã lưu WatchList' : 'Lưu WatchList'}</span>
                 </button>
 
                 <button

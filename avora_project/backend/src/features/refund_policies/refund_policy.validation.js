@@ -43,6 +43,12 @@ const validateRefundPolicyPayload = (body, { partial = false } = {}) => {
     }
     const cleanName = sanitizeString(rawName).replace(/^\[(.*?)\]$/, "$1").trim();
     if (cleanName) {
+      if (!/[\p{L}]/u.test(cleanName)) {
+        return { error: "Tên chính sách không được chỉ tồn tại với ký tự đặc biệt hoặc chữ số (phải bao gồm chữ cái)." };
+      }
+      if (!/^[\p{L}\p{N}\s(),./%_-]+$/u.test(cleanName)) {
+        return { error: "Tên chính sách không được chứa các ký tự đặc biệt (chỉ cho phép chữ cái, chữ số, khoảng trắng và các dấu (), . - / % _)." };
+      }
       payload.policy_name = cleanName;
     }
   }
@@ -156,15 +162,27 @@ const validateRefundPolicyPayload = (body, { partial = false } = {}) => {
     }
   }
 
-  // 9. status ('ACTIVE' | 'INACTIVE')
+  // 9. is_active (Trạng thái hoạt động / xóa mềm: true | false)
+  if (isPresent("is_active")) {
+    payload.is_active = Boolean(body.is_active);
+    if (!isPresent("status")) {
+      payload.status = payload.is_active ? "ACTIVE" : "INACTIVE";
+    }
+  }
+
+  // 10. status ('ACTIVE' | 'INACTIVE')
   if (isPresent("status")) {
     const status = String(body.status || "").trim().toUpperCase();
     if (!["ACTIVE", "INACTIVE"].includes(status)) {
       return { error: "Trạng thái chính sách không hợp lệ (phải là ACTIVE - Đang áp dụng hoặc INACTIVE - Tạm dừng)." };
     }
     payload.status = status;
-  } else if (!partial) {
+    if (!isPresent("is_active")) {
+      payload.is_active = status === "ACTIVE";
+    }
+  } else if (!partial && !isPresent("is_active")) {
     payload.status = "ACTIVE";
+    payload.is_active = true;
   }
 
   return { payload };

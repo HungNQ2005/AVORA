@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS avora.m_refund_policy (
     effective_from TIMESTAMP,
     effective_to TIMESTAMP,
     status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE')),
+    is_active BOOLEAN DEFAULT TRUE,
     is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
@@ -25,7 +26,8 @@ CREATE TABLE IF NOT EXISTS avora.m_refund_policy (
 
 -- Index tìm kiếm & hiệu suất
 CREATE INDEX IF NOT EXISTS idx_refund_policy_hotel ON avora.m_refund_policy(hotel_id);
-CREATE INDEX IF NOT EXISTS idx_refund_policy_status ON avora.m_refund_policy(status, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_refund_policy_status ON avora.m_refund_policy(status, is_active, is_deleted);
+CREATE INDEX IF NOT EXISTS idx_refund_policy_is_active ON avora.m_refund_policy(is_active);
 CREATE INDEX IF NOT EXISTS idx_refund_policy_code ON avora.m_refund_policy(policy_code);
 
 COMMENT ON TABLE avora.m_refund_policy IS 'Bảng lưu trữ chính sách hoàn tiền dành cho Business Manager quản trị';

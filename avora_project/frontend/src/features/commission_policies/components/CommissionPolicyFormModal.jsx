@@ -72,13 +72,17 @@ const CommissionPolicyFormModal = ({
   };
 
   const validate = () => {
-    const errs = {};
-    if (!form.policy_name.trim()) {
+    const cleanName = form.policy_name.trim();
+    if (!cleanName) {
       errs.policy_name = 'Vui lòng nhập tên chính sách hoa hồng.';
-    } else if (form.policy_name.trim().length < 3) {
+    } else if (cleanName.length < 3) {
       errs.policy_name = 'Tên chính sách phải có ít nhất 3 ký tự.';
-    } else if (form.policy_name.trim().length > 255) {
+    } else if (cleanName.length > 255) {
       errs.policy_name = 'Tên chính sách không được vượt quá 255 ký tự.';
+    } else if (!/[\p{L}]/u.test(cleanName)) {
+      errs.policy_name = 'Tên chính sách không được chỉ tồn tại với ký tự đặc biệt hoặc chữ số (phải bao gồm chữ cái).';
+    } else if (!/^[\p{L}\p{N}\s(),./%_-]+$/u.test(cleanName)) {
+      errs.policy_name = 'Tên chính sách không được chứa các ký tự đặc biệt (chỉ cho phép chữ cái, chữ số, khoảng trắng và các dấu (), . - / % _).';
     }
 
     const rate = Number(form.commission_rate);

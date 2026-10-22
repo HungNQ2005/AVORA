@@ -27,12 +27,13 @@
 
 /* Header */
 .rt-modal-header {
-  background: #1e3a8a; /* Dark blue from mockup */
+  background: #003580; /* AVORA Deep Navy */
   color: white;
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  border-bottom: 2px solid #c9a227; /* AVORA Gold Accent */
 }
 
 .rt-modal-header-info {
@@ -63,7 +64,7 @@
 .rt-modal-hotel-badge {
   font-size: 0.7rem;
   background: #ffffff;
-  color: #1e3a8a;
+  color: #003580;
   padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
@@ -231,7 +232,7 @@
 }
 
 .rt-facility-option input {
-  accent-color: #1e3a8a;
+  accent-color: #003580;
 }
 
 .rt-facility-empty {
@@ -541,11 +542,11 @@
 }
 
 .rt-btn-primary {
-  background: #1e3a8a;
+  background: #003580;
   color: white;
 }
 .rt-btn-primary:hover {
-  background: #1e40af;
+  background: #00224f;
 }
 
 .rt-form-error {

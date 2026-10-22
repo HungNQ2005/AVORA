@@ -1,0 +1,1 @@
+-- Không thay đổi DB, chỉ tham chiếu schema

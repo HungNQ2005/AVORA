@@ -13,7 +13,6 @@ const RefundPolicyDeleteModal = ({
 
   const isAssignedToHotel = Boolean(policy.hotel_id);
   const hasBookings = (policy.associated_bookings_count || 0) > 0;
-  const isDeletionBlocked = isAssignedToHotel || hasBookings;
 
   return (
     <div className="rp-delete-overlay" onClick={onClose}>
@@ -27,13 +26,9 @@ const RefundPolicyDeleteModal = ({
             </svg>
           </div>
 
-          <h3 className="rp-delete-title">
-            {isDeletionBlocked ? 'Không thể xóa chính sách' : 'Xác nhận xóa chính sách?'}
-          </h3>
+          <h3 className="rp-delete-title">Xác nhận xóa chính sách?</h3>
           <p className="rp-delete-desc">
-            {isDeletionBlocked
-              ? 'Hệ thống kiểm soát tính toàn vẹn dữ liệu ngăn việc xóa chính sách này.'
-              : 'Hành động này sẽ xóa chính sách hoàn tiền không thuộc khách sạn nào khỏi hệ thống AVORA.'}
+            Hành động này sẽ thực hiện xóa chính sách hoàn tiền, ẩn khỏi danh sách hiển thị và ngưng áp dụng.
           </p>
 
           <div className="rp-delete-item-box">
@@ -44,14 +39,14 @@ const RefundPolicyDeleteModal = ({
             </div>
 
             {isAssignedToHotel && (
-              <div style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.8rem', fontWeight: 600, background: '#fef2f2', padding: '8px 10px', borderRadius: '6px', border: '1px solid #fecaca', textAlign: 'left' }}>
-                ⚠️ Không thể xóa: Chính sách đang được chỉ định cho khách sạn "{policy.hotel_name}". Theo quy định, chỉ có thể xóa các chính sách không thuộc khách sạn nào (hoặc chuyển trạng thái sang "Tạm dừng").
+              <div style={{ marginTop: '8px', color: '#1e40af', fontSize: '0.8rem', fontWeight: 500, background: '#eff6ff', padding: '8px 10px', borderRadius: '6px', border: '1px solid #bfdbfe', textAlign: 'left' }}>
+                ℹ️ Lưu ý: Chính sách này đang chỉ định cho khách sạn "{policy.hotel_name}". Khi xóa, chính sách sẽ được ẩn đi và ngưng áp dụng cho các lượt đặt phòng mới.
               </div>
             )}
 
-            {!isAssignedToHotel && hasBookings && (
-              <div style={{ marginTop: '8px', color: '#b91c1c', fontSize: '0.8rem', fontWeight: 600, background: '#fef2f2', padding: '8px 10px', borderRadius: '6px', border: '1px solid #fecaca', textAlign: 'left' }}>
-                ⚠️ Cảnh báo: Chính sách đang gắn với {policy.associated_bookings_count} đơn đặt phòng. Hệ thống từ chối xóa để đảm bảo toàn vẹn dữ liệu.
+            {hasBookings && (
+              <div style={{ marginTop: '8px', color: '#854d0e', fontSize: '0.8rem', fontWeight: 500, background: '#fefce8', padding: '8px 10px', borderRadius: '6px', border: '1px solid #fef08a', textAlign: 'left' }}>
+                ℹ️ Lưu ý: Chính sách đang gắn với {policy.associated_bookings_count} đơn đặt phòng. Lịch sử giao dịch kế toán vẫn được bảo toàn nguyên vẹn.
               </div>
             )}
 
@@ -70,19 +65,17 @@ const RefundPolicyDeleteModal = ({
             onClick={onClose}
             disabled={loading}
           >
-            {isDeletionBlocked ? 'Đóng lại' : 'Hủy bỏ'}
+            Hủy bỏ
           </button>
-          {!isDeletionBlocked && (
-            <button
-              type="button"
-              className="rp-btn rp-btn--danger"
-              onClick={onConfirm}
-              disabled={loading}
-            >
-              {loading && <span className="rp-btn-spinner"></span>}
-              Xóa chính sách
-            </button>
-          )}
+          <button
+            type="button"
+            className="rp-btn rp-btn--danger"
+            onClick={onConfirm}
+            disabled={loading}
+          >
+            {loading && <span className="rp-btn-spinner"></span>}
+            Xác nhận xóa
+          </button>
         </div>
       </div>
     </div>

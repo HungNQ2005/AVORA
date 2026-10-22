@@ -38,14 +38,15 @@
   }
 }
 
-/* Header (Dark Blue #1e3a8a matching Room Types) */
+/* Header (Dark Blue #003580 matching AVORA Enterprise Design) */
 .rt-modal-header {
-  background: #1e3a8a;
+  background: #003580;
   color: white;
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  border-bottom: 2px solid #c9a227;
 }
 
 .rt-modal-header-info {
@@ -124,7 +125,7 @@
   gap: 8px;
   font-size: 0.95rem;
   font-weight: 700;
-  color: #1e40af;
+  color: #003580;
   margin: 0 0 20px 0;
   text-transform: uppercase;
   letter-spacing: 0.02em;
@@ -299,12 +300,12 @@
 }
 
 .rt-btn-primary {
-  background: #1e3a8a;
+  background: #003580;
   color: white;
 }
 
 .rt-btn-primary:hover:not(:disabled) {
-  background: #1e40af;
+  background: #00224f;
 }
 
 .rt-btn:disabled,

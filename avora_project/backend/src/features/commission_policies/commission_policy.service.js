@@ -127,7 +127,8 @@ const formatCommissionPolicyRecord = (record, hotelMap = {}) => {
           hotel_id: hotel.hotel_id,
           name: hotel.name,
           address: hotel.address,
-          star_quality: hotel.star_quality,
+          star_quality: hotel.star_rating || hotel.star_quality,
+          star_rating: hotel.star_rating || hotel.star_quality,
         }
       : null,
     hotel_name: hotel?.name || null,
@@ -155,17 +156,31 @@ const formatCommissionPolicyRecord = (record, hotelMap = {}) => {
 const getHotelsList = async () => {
   ensureClient();
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("m_hotel")
-      .select("hotel_id, name, address, star_quality")
+      .select("hotel_id, name, address, star_rating")
       .eq("is_deleted", false)
       .order("name", { ascending: true });
+
+    if (error && (error.code === "42703" || error.message?.includes("star_rating"))) {
+      const retry = await supabase
+        .from("m_hotel")
+        .select("hotel_id, name, address, star_quality")
+        .eq("is_deleted", false)
+        .order("name", { ascending: true });
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       console.warn("[CommissionPolicy] Lỗi khi tải danh sách khách sạn:", error.message);
       return [];
     }
-    return data || [];
+    return (data || []).map((h) => ({
+      ...h,
+      star_quality: h.star_quality || h.star_rating,
+      star_rating: h.star_rating || h.star_quality,
+    }));
   } catch (err) {
     console.warn("[CommissionPolicy] Lỗi khi tải khách sạn:", err.message);
     return [];
@@ -189,7 +204,7 @@ const getCommissionPolicies = async (filters = {}) => {
   if (isTableAvailable) {
     let query = supabase
       .from("m_commission_policy")
-      .select("*, m_hotel(hotel_id, name, address, star_quality)")
+      .select("*, m_hotel(hotel_id, name, address, star_rating)")
       .order("priority_level", { ascending: false })
       .order("created_at", { ascending: false });
 
@@ -207,7 +222,28 @@ const getCommissionPolicies = async (filters = {}) => {
     // Lọc bỏ các bản ghi đã xóa mềm (is_active = false)
     query = query.or("is_active.eq.true,is_active.is.null");
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+    if (error && (error.code === "42703" || error.message?.includes("star_rating"))) {
+      let retryQuery = supabase
+        .from("m_commission_policy")
+        .select("*, m_hotel(hotel_id, name, address, star_quality)")
+        .order("priority_level", { ascending: false })
+        .order("created_at", { ascending: false });
+      if (filters.hotel_id && filters.hotel_id !== "ALL") {
+        if (filters.hotel_id === "SYSTEM") {
+          retryQuery = retryQuery.is("hotel_id", null).is("star_quality", null);
+        } else if (filters.hotel_id.startsWith("STAR_")) {
+          const star = Number(filters.hotel_id.replace("STAR_", ""));
+          retryQuery = retryQuery.eq("star_quality", star);
+        } else {
+          retryQuery = retryQuery.eq("hotel_id", filters.hotel_id);
+        }
+      }
+      retryQuery = retryQuery.or("is_active.eq.true,is_active.is.null");
+      const retry = await retryQuery;
+      data = retry.data;
+      error = retry.error;
+    }
     if (error) {
       throwDatabaseError("Không thể tải danh sách chính sách phí hoa hồng.", error);
     }
@@ -305,13 +341,22 @@ const getCommissionPolicyById = async (id) => {
   ensureClient();
   const cleanId = String(id || "").trim();
   const isTableAvailable = await checkCommissionTable();
-
   if (isTableAvailable) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("m_commission_policy")
-      .select("*, m_hotel(hotel_id, name, address, star_quality)")
+      .select("*, m_hotel(hotel_id, name, address, star_rating)")
       .eq("policy_id", cleanId)
       .maybeSingle();
+
+    if (error && (error.code === "42703" || error.message?.includes("star_rating"))) {
+      const retry = await supabase
+        .from("m_commission_policy")
+        .select("*, m_hotel(hotel_id, name, address, star_quality)")
+        .eq("policy_id", cleanId)
+        .maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       throwDatabaseError("Lỗi khi tải thông tin chi tiết chính sách hoa hồng.", error);

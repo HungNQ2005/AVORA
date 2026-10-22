@@ -103,16 +103,17 @@ const RefundPolicyManagementPage = () => {
 
   // Tab counts
   const tabCounts = useMemo(() => {
+    const activeList = policies.filter((p) => p.is_active !== false);
     return {
-      ALL: policies.length,
-      ACTIVE: policies.filter((p) => p.status === 'ACTIVE').length,
-      INACTIVE: policies.filter((p) => p.status === 'INACTIVE').length,
+      ALL: activeList.length,
+      ACTIVE: activeList.filter((p) => p.status === 'ACTIVE').length,
+      INACTIVE: activeList.filter((p) => p.status === 'INACTIVE').length,
     };
   }, [policies]);
 
   // Filter & Sort Logic (Client-side for instant responsiveness)
   const filtered = useMemo(() => {
-    let result = [...policies];
+    let result = policies.filter((p) => p.is_active !== false);
 
     // Search filter using debouncedSearch (matches all fields like Admin User Management)
     if (debouncedSearch.trim()) {

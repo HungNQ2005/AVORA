@@ -129,14 +129,15 @@
 }
 
 .promo-btn--primary {
-  background: #2563eb;
-  border: 1px solid #2563eb;
+  background: #003580;
+  border: 1px solid #003580;
   color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 53, 128, 0.2);
 }
 
 .promo-btn--primary:hover {
-  background: #1d4ed8;
-  border-color: #1d4ed8;
+  background: #00224f;
+  border-color: #00224f;
 }
 
 /* ─── Alert ───────────────────────────────────────────────── */

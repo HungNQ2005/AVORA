@@ -32,6 +32,12 @@ const validateCommissionPolicyPayload = (body, { partial = false } = {}) => {
     if (name.length < 3 || name.length > 255) {
       return { error: "Tên chính sách hoa hồng phải từ 3 đến 255 ký tự." };
     }
+    if (!/[\p{L}]/u.test(name)) {
+      return { error: "Tên chính sách hoa hồng không được chỉ tồn tại với ký tự đặc biệt hoặc chữ số (phải bao gồm chữ cái)." };
+    }
+    if (!/^[\p{L}\p{N}\s(),./%_-]+$/u.test(name)) {
+      return { error: "Tên chính sách hoa hồng không được chứa các ký tự đặc biệt (chỉ cho phép chữ cái, chữ số, khoảng trắng và các dấu (), . - / % _)." };
+    }
     payload.policy_name = name;
   }
 

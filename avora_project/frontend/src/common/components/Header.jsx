@@ -187,7 +187,7 @@ const Header = ({
     ? internalTab
     : (currentPath.startsWith('/hotels') || currentPath === '/search'
       ? 'hotels'
-      : (currentPath === '/favorites' || currentPath === '/saved'
+      : (currentPath === '/watchlist' || currentPath === '/wishlist' || currentPath === '/favorites' || currentPath === '/saved'
         ? 'favorites'
         : (currentPath === '/'
           ? 'home'
@@ -205,9 +205,11 @@ const Header = ({
     };
     window.addEventListener('storage', syncCount);
     window.addEventListener('avora_favorites_updated', syncCount);
+    window.addEventListener('avora_watchlist_updated', syncCount);
     return () => {
       window.removeEventListener('storage', syncCount);
       window.removeEventListener('avora_favorites_updated', syncCount);
+      window.removeEventListener('avora_watchlist_updated', syncCount);
     };
   }, []);
 
@@ -313,7 +315,7 @@ const Header = ({
       setInternalTab(tabKey);
       setShowContactModal(true);
     } else if (tabKey === 'favorites') {
-      navigate('/favorites');
+      navigate('/watchlist');
       return;
     } else if (tabKey === 'my-bookings') {
       navigate('/my-bookings');
@@ -374,16 +376,18 @@ const Header = ({
                 </span>
               </button>
 
-              {/* Favorites / Saved (Default: like Contact button, Active: default state of My Bookings) */}
+              {/* WatchList / Saved */}
               <button
                 type="button"
-                className={`avora-header__saved-btn ${(currentTab === 'favorites' || currentPath === '/favorites' || currentPath === '/saved' || (location.pathname === '/myaccount' && location.search.includes('tab=favorites'))) ? 'is-active' : ''}`}
+                className={`avora-header__saved-btn ${(currentTab === 'favorites' || currentPath === '/watchlist' || currentPath === '/wishlist' || currentPath === '/favorites' || currentPath === '/saved' || (location.pathname === '/myaccount' && location.search.includes('tab=favorites'))) ? 'is-active' : ''}`}
                 onClick={handleAction('favorites')}
+                title="WatchList - Chỗ nghỉ đã lưu"
+                aria-label="Xem WatchList"
               >
                 <HeartIcon />
                 <span className="avora-header__two-line">
-                  <span>Yêu</span>
-                  <span>thích</span>
+                  <span>Watch</span>
+                  <span>List</span>
                 </span>
                 <span className="avora-header__count-badge">{internalSavedCount}</span>
               </button>

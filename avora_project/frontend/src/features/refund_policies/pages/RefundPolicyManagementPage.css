@@ -173,15 +173,15 @@
 }
 
 .rp-btn--primary-gold {
-  background: #f59e0b;
-  border: 1px solid #d97706;
+  background: #003580;
+  border: 1px solid #003580;
   color: #ffffff;
-  box-shadow: 0 2px 4px rgba(245, 158, 11, 0.25);
+  box-shadow: 0 2px 4px rgba(0, 53, 128, 0.2);
 }
 
 .rp-btn--primary-gold:hover:not(:disabled) {
-  background: #d97706;
-  border-color: #b45309;
+  background: #00224f;
+  border-color: #00224f;
 }
 
 .rp-btn:disabled {

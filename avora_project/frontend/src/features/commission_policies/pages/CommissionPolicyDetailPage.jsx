@@ -491,9 +491,8 @@ const CommissionPolicyDetailPage = () => {
               <div className="cpd-sop-step__content">
                 <div className="cpd-sop-step__title">Xác định tỷ lệ hoa hồng hiệu lực tại thời điểm đặt phòng</div>
                 <div className="cpd-sop-step__desc">
-                  Khi khách hàng hoàn tất thanh toán đơn đặt phòng (<code>t_booking</code>),
-                  hệ thống sẽ rà soát các chính sách hoa hồng đang trong thời hạn hiệu lực theo thứ tự ưu tiên
-                  (Khách sạn cụ thể &rarr; Phân khúc sao &rarr; Toàn chuỗi).
+                  Khi khách hàng hoàn tất thanh toán đơn đặt phòng, hệ thống tự động rà soát các chính sách hoa hồng
+                  đang trong thời hạn hiệu lực theo thứ tự ưu tiên (Khách sạn cụ thể &rarr; Phân khúc sao &rarr; Toàn chuỗi).
                 </div>
               </div>
             </div>
@@ -501,11 +500,11 @@ const CommissionPolicyDetailPage = () => {
             <div className="cpd-sop-step">
               <div className="cpd-sop-step__number">2</div>
               <div className="cpd-sop-step__content">
-                <div className="cpd-sop-step__title">Tạo bản ghi đối soát tài chính (Settlement Record)</div>
+                <div className="cpd-sop-step__title">Phân chia hoa hồng & Doanh thu đối tác</div>
                 <div className="cpd-sop-step__desc">
-                  Hệ thống tự động khởi tạo bản ghi trong bảng <code>t_settlement</code> với tỷ lệ{' '}
-                  <strong>{rate}%</strong>, tính toán trường <code>commission_amount</code> và{' '}
-                  <code>host_earnings</code> tương ứng.
+                  Hệ thống tự động áp dụng tỷ lệ phí hoa hồng nền tảng AVORA thu là{' '}
+                  <strong>{rate}%</strong> và phần doanh thu thực nhận của đối tác khách sạn là{' '}
+                  <strong>{hostRate}%</strong> tính trên tổng giá trị đơn đặt phòng.
                 </div>
               </div>
             </div>
@@ -513,11 +512,10 @@ const CommissionPolicyDetailPage = () => {
             <div className="cpd-sop-step">
               <div className="cpd-sop-step__number">3</div>
               <div className="cpd-sop-step__content">
-                <div className="cpd-sop-step__title">Ghi nhận số dư chờ và giải ngân vào ví đối tác</div>
+                <div className="cpd-sop-step__title">Ghi nhận doanh thu và quyết toán cho khách sạn</div>
                 <div className="cpd-sop-step__desc">
-                  Khoản doanh thu thực nhận của đối tác được cập nhật vào số dư chờ (<code>pending_balance</code>)
-                  trong ví <code>t_hotel_wallet</code>. Sau khi khách hàng hoàn tất kỳ lưu trú (Check-out an toàn),
-                  khoản tiền được chuyển thành số dư khả dụng (<code>available_balance</code>).
+                  Khoản doanh thu thực nhận của đối tác được ghi nhận vào hệ thống quản lý tài chính của khách sạn.
+                  Sau khi khách hàng hoàn tất kỳ lưu trú (Check-out an toàn), khoản tiền sẽ được xác nhận đủ điều kiện quyết toán theo chu kỳ hợp đồng.
                 </div>
               </div>
             </div>

@@ -61,8 +61,14 @@ const RefundPolicyFormModal = ({
     const cleanName = form.policy_name.trim();
 
     // 1. Tên chính sách (nếu có nhập)
-    if (cleanName && cleanName.length > 200) {
-      errs.policy_name = 'Tên chính sách không được vượt quá 200 ký tự.';
+    if (cleanName) {
+      if (cleanName.length > 200) {
+        errs.policy_name = 'Tên chính sách không được vượt quá 200 ký tự.';
+      } else if (!/[\p{L}]/u.test(cleanName)) {
+        errs.policy_name = 'Tên chính sách không được chỉ tồn tại với ký tự đặc biệt hoặc chữ số (phải bao gồm chữ cái).';
+      } else if (!/^[\p{L}\p{N}\s(),./%_-]+$/u.test(cleanName)) {
+        errs.policy_name = 'Tên chính sách không được chứa các ký tự đặc biệt (chỉ cho phép chữ cái, chữ số, khoảng trắng và các dấu (), . - / % _).';
+      }
     }
 
     // 2. Tỷ lệ hoàn tiền

@@ -38,14 +38,15 @@
   }
 }
 
-/* ─── Header (Dark Blue #1e3a8a matching Room Types & Amenities) ─── */
+/* ─── Header (Dark Blue #003580 matching AVORA Enterprise Design) ─── */
 .coupon-modal-content .rt-modal-header {
-  background: #1e3a8a;
+  background: #003580;
   color: white;
   padding: 16px 24px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  border-bottom: 2px solid #c9a227;
 }
 
 .coupon-modal-content .rt-modal-header-info {
@@ -261,12 +262,12 @@
 }
 
 .coupon-modal-content .rt-btn-primary {
-  background: #1e3a8a;
+  background: #003580;
   color: white;
 }
 
 .coupon-modal-content .rt-btn-primary:hover:not(:disabled) {
-  background: #1e40af;
+  background: #00224f;
 }
 
 .coupon-modal-content .rt-btn:disabled,

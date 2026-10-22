@@ -176,9 +176,11 @@ const FavoritesPage = () => {
     };
     window.addEventListener('storage', handleSync);
     window.addEventListener('avora_favorites_updated', handleSync);
+    window.addEventListener('avora_watchlist_updated', handleSync);
     return () => {
       window.removeEventListener('storage', handleSync);
       window.removeEventListener('avora_favorites_updated', handleSync);
+      window.removeEventListener('avora_watchlist_updated', handleSync);
     };
   }, []);
 
@@ -269,12 +271,12 @@ const FavoritesPage = () => {
     e.stopPropagation();
     const updated = removeFavoriteHotel(hotelId);
     setSavedIds(updated);
-    setToastMessage(`Đã xóa "${hotelName || 'chỗ nghỉ'}" khỏi danh sách yêu thích.`);
+    setToastMessage(`Đã xóa "${hotelName || 'chỗ nghỉ'}" khỏi WatchList.`);
   };
 
   const handleShareList = () => {
     navigator.clipboard?.writeText(window.location.href);
-    setToastMessage('Đã sao chép liên kết chia sẻ danh sách yêu thích vào clipboard!');
+    setToastMessage('Đã sao chép liên kết chia sẻ WatchList vào clipboard!');
   };
 
   const handleCreateFolder = (e) => {
@@ -365,7 +367,7 @@ const FavoritesPage = () => {
           <span className="fav-breadcrumb-sep">/</span>
           <Link to="/myaccount" className="fav-breadcrumb-link">Tài khoản của tôi</Link>
           <span className="fav-breadcrumb-sep">/</span>
-          <span className="fav-breadcrumb-current">Danh sách yêu thích</span>
+          <span className="fav-breadcrumb-current">WatchList</span>
         </nav>
 
         {/* ─── 2. HERO BANNER CARD ────────────────────────────────────── */}
@@ -375,11 +377,11 @@ const FavoritesPage = () => {
               <span className="favorites-hero-heart-icon">
                 <HeartOutlineIcon />
               </span>
-              <h1 className="favorites-hero-title">Danh sách chỗ nghỉ yêu thích</h1>
+              <h1 className="favorites-hero-title">WatchList - Chỗ nghỉ đã lưu</h1>
               <span className="favorites-hero-count-pill">{savedHotels.length} chỗ nghỉ</span>
             </div>
             <p className="favorites-hero-subtitle">
-              Lưu trữ các điểm dừng chân lý tưởng, so sánh giá phòng và nhận thông báo khi có đợt giảm giá chớp nhoáng.
+              Lưu trữ các điểm dừng chân theo dõi, cập nhật thông tin phòng trống, chính sách và giá phòng thực tế từ cơ sở dữ liệu.
             </p>
           </div>
 
@@ -484,8 +486,10 @@ const FavoritesPage = () => {
             ) : filteredHotels.length > 0 ? (
               filteredHotels.map((hotel) => {
                 const hotelId = hotel.hotel_id || hotel.id;
-                const starCount = Math.max(1, Math.min(5, Number(hotel.star_quality || 4)));
-                const score = Number(hotel.star_rating || 9.0).toFixed(1);
+                const starCount = Math.max(1, Math.min(5, Number(hotel.star_quality || hotel.star_rating || 4)));
+                const score = hotel.star_rating !== undefined && hotel.star_rating !== null
+                  ? Number(hotel.star_rating).toFixed(1)
+                  : null;
                 const isSoldOut = hotel.available_rooms !== undefined && Number(hotel.available_rooms) <= 0;
 
                 // Resolved Facilities from Database
@@ -515,8 +519,8 @@ const FavoritesPage = () => {
                         type="button"
                         className="fav-card__trash-btn"
                         onClick={(e) => handleRemove(hotelId, hotel.name, e)}
-                        title="Xóa khỏi danh sách yêu thích"
-                        aria-label="Xóa khỏi danh sách yêu thích"
+                        title="Xóa khỏi WatchList"
+                        aria-label="Xóa khỏi WatchList"
                       >
                         <TrashIcon />
                       </button>
@@ -537,7 +541,7 @@ const FavoritesPage = () => {
 
                     {/* Right Content Area */}
                     <div className="fav-card__body">
-                      {/* Top Row: Stars, Genius, Score */}
+                      {/* Top Row: Stars, Score */}
                       <div className="fav-card__top-row">
                         <div className="fav-card__stars-wrap">
                           <div className="fav-card__stars" title={`${starCount} sao`}>
@@ -545,20 +549,21 @@ const FavoritesPage = () => {
                               <StarIcon key={sIdx} />
                             ))}
                           </div>
-                          {hotel.genius_level && (
-                            <span className="fav-card__genius-tag">
-                              Genius Cấp {hotel.genius_level}
-                            </span>
-                          )}
                         </div>
 
-                        <div className="fav-card__rating-box">
-                          <div className="fav-card__rating-labels">
-                            <span className="fav-card__score-label">{hotel.score_label || (Number(score) >= 9 ? 'Tuyệt hảo' : 'Tuyệt vời')}</span>
-                            <span className="fav-card__review-count">{hotel.reviews_count || '1.200'} đánh giá</span>
+                        {score && (
+                          <div className="fav-card__rating-box">
+                            <div className="fav-card__rating-labels">
+                              <span className="fav-card__score-label">
+                                {hotel.score_label || (Number(score) >= 9 ? 'Tuyệt hảo' : Number(score) >= 8 ? 'Tuyệt vời' : 'Rất tốt')}
+                              </span>
+                              <span className="fav-card__review-count">
+                                {hotel.reviews_count ? `${Number(hotel.reviews_count).toLocaleString('vi-VN')} đánh giá` : 'Chưa có đánh giá'}
+                              </span>
+                            </div>
+                            <span className="fav-card__score-badge">{score}</span>
                           </div>
-                          <span className="fav-card__score-badge">{score}</span>
-                        </div>
+                        )}
                       </div>
 
                       {/* Hotel Name */}
@@ -587,7 +592,7 @@ const FavoritesPage = () => {
                       {/* Policy / Status alerts */}
                       {!isSoldOut ? (
                         <div className="fav-card__policy-text">
-                          Miễn phí hủy phòng • Không cần thanh toán trước
+                          {hotel.cancellation_policy?.description || 'Chính sách hủy phòng theo tiêu chuẩn chỗ nghỉ'}
                         </div>
                       ) : (
                         <div className="fav-card__soldout-text">
@@ -599,17 +604,17 @@ const FavoritesPage = () => {
                       {hotel.room_highlight && (
                         <div className="fav-card__room-highlight">
                           <div className="fav-room-highlight__header">
-                            HẠNG PHÒNG YÊU THÍCH CỤ THỂ:
+                            HẠNG PHÒNG TIÊU BIỂU:
                           </div>
                           <div className="fav-room-highlight__title">
-                            {hotel.room_highlight.name || hotel.room_highlight.title}
+                            {hotel.room_highlight.name || hotel.room_highlight.type_name || hotel.room_highlight.title}
                           </div>
                           <div className="fav-room-highlight__specs">
-                            {hotel.room_highlight.bed_type} • {hotel.room_highlight.room_size}
+                            {[hotel.room_highlight.bed_type, hotel.room_highlight.room_size].filter(Boolean).join(' • ')}
                           </div>
                           <div className="fav-room-highlight__guarantee">
                             <CheckIcon />
-                            <span>Bảo đảm giá độc quyền cho phòng yêu thích</span>
+                            <span>Giá niêm yết chuẩn theo cơ sở dữ liệu</span>
                           </div>
                         </div>
                       )}
@@ -617,13 +622,13 @@ const FavoritesPage = () => {
                       {/* Bottom Footer: Price & Action */}
                       <div className="fav-card__footer">
                         <div className="fav-card__price-box">
-                          {hotel.original_price && hotel.original_price > hotel.price && (
+                          {hotel.original_price && hotel.price && hotel.original_price > hotel.price && (
                             <span className="fav-card__orig-price">
                               {formatPriceVND(hotel.original_price)}
                             </span>
                           )}
                           <div className="fav-card__main-price">
-                            {formatPriceVND(hotel.price || 1500000)}
+                            {hotel.price ? formatPriceVND(hotel.price) : 'Liên hệ đặt phòng'}
                           </div>
                           <span className="fav-card__price-subtext">
                             Đã bao gồm thuế & phí
@@ -659,12 +664,12 @@ const FavoritesPage = () => {
                 </div>
                 <h3 className="fav-empty-title">
                   {savedHotels.length === 0
-                    ? 'Bạn chưa có chỗ nghỉ nào trong danh sách yêu thích'
+                    ? 'WatchList của bạn đang trống'
                     : 'Không tìm thấy chỗ nghỉ nào phù hợp bộ lọc'}
                 </h3>
                 <p className="fav-empty-desc">
                   {savedHotels.length === 0
-                    ? 'Hãy khám phá các điểm lưu trú tuyệt vời trên Avora và bấm biểu tượng trái tim để lưu lại theo dõi giá bất cứ lúc nào!'
+                    ? 'Hãy khám phá các điểm lưu trú tuyệt vời trên Avora và bấm biểu tượng trái tim để lưu vào WatchList theo dõi giá bất cứ lúc nào!'
                     : 'Hãy thử chọn tất cả các thành phố hoặc tắt bộ lọc chỉ xem phòng còn trống.'}
                 </p>
                 {savedHotels.length === 0 ? (

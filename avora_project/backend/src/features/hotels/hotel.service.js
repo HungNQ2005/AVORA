@@ -253,6 +253,11 @@ const searchHotels = async (params = {}) => {
     query = query.in('star_quality', starRatings);
   }
 
+  // Filter by explicit hotelIds if provided (for WatchList / Wishlist)
+  if (Array.isArray(params.hotelIds) && params.hotelIds.length > 0) {
+    query = query.in('hotel_id', params.hotelIds);
+  }
+
   const { data: rawHotels, error: hotelError } = await query;
   if (hotelError) {
     throw new Error(`Failed to query hotels: ${hotelError.message}`);

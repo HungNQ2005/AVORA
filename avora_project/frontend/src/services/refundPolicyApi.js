@@ -73,7 +73,7 @@ export const fetchRefundPolicies = async (params = {}) => {
 
   const filteredPolicies = rawPolicies.filter((p) => {
     const pId = String(p.policy_id || p.cancellation_policy_id || '').trim();
-    return !softDeletedIds.includes(pId);
+    return p.is_active !== false && !softDeletedIds.includes(pId);
   });
 
   if (Array.isArray(json.data)) {
@@ -107,7 +107,7 @@ export const fetchRefundPolicyHotels = async () => {
 export const fetchRefundPolicyById = async (id) => {
   const softDeletedIds = getSoftDeletedRefundPolicyIds();
   if (softDeletedIds.includes(String(id).trim())) {
-    throw new Error('Chính sách hoàn tiền không tồn tại hoặc đã bị xóa.');
+    throw new Error('Chính sách hoàn tiền không tồn tại hoặc đã bị ẩn.');
   }
 
   const response = await authenticatedFetch(
@@ -115,7 +115,7 @@ export const fetchRefundPolicyById = async (id) => {
   );
   const json = await response.json();
 
-  if (!response.ok || json.status === 'error') {
+  if (!response.ok || json.status === 'error' || json.data?.is_active === false) {
     throw new Error(json.message || 'Không thể tải thông tin chi tiết chính sách hoàn tiền.');
   }
 

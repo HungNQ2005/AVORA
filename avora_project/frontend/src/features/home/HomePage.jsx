@@ -223,9 +223,11 @@ const HomePage = () => {
     };
     window.addEventListener('storage', syncFavs);
     window.addEventListener('avora_favorites_updated', syncFavs);
+    window.addEventListener('avora_watchlist_updated', syncFavs);
     return () => {
       window.removeEventListener('storage', syncFavs);
       window.removeEventListener('avora_favorites_updated', syncFavs);
+      window.removeEventListener('avora_watchlist_updated', syncFavs);
     };
   }, []);
 
@@ -280,7 +282,7 @@ const HomePage = () => {
     const hotelObj = hotels.find((h) => String(h.hotel_id) === String(id)) || { hotel_id: id };
     const nextState = toggleFavoriteHotel(hotelObj);
     setFavorites(prev => ({ ...prev, [id]: nextState }));
-    triggerToast(nextState ? 'Đã thêm chỗ nghỉ vào danh sách yêu thích' : 'Đã xóa chỗ nghỉ khỏi danh sách yêu thích');
+    triggerToast(nextState ? 'Đã thêm chỗ nghỉ vào WatchList' : 'Đã xóa chỗ nghỉ khỏi WatchList');
   };
 
   const handleFilterToggle = (key) => {
