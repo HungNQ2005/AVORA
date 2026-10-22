@@ -35,52 +35,24 @@ const validateRefundPolicyPayload = (body, { partial = false } = {}) => {
   const payload = {};
   const isPresent = (field) => body[field] !== undefined;
 
-  // 1. policy_name (Tên chính sách)
-  if (!partial || isPresent("policy_name")) {
-    if (body.policy_name === null || body.policy_name === undefined) {
-      return { error: "Tên chính sách hoàn tiền không được để trống." };
-    }
+  // 1. policy_name (Tùy chọn hiển thị, tự sinh nếu không cung cấp)
+  if (isPresent("policy_name") && body.policy_name) {
     const rawName = String(body.policy_name || "").trim();
-    if (!rawName) {
-      return { error: "Tên chính sách hoàn tiền không được để trống." };
-    }
-    if (rawName.length < 3) {
-      return { error: "Tên chính sách phải có ít nhất 3 ký tự." };
-    }
     if (rawName.length > 200) {
       return { error: "Tên chính sách không được vượt quá 200 ký tự." };
     }
-
-    // Sanitize any bracket/meta injection
     const cleanName = sanitizeString(rawName).replace(/^\[(.*?)\]$/, "$1").trim();
-    if (!cleanName) {
-      return { error: "Tên chính sách chứa ký tự không hợp lệ." };
+    if (cleanName) {
+      payload.policy_name = cleanName;
     }
-
-    // Must start with letter or digit
-    if (!/^[\p{L}0-9]/u.test(cleanName)) {
-      return { error: "Tên chính sách phải bắt đầu bằng chữ cái hoặc chữ số, không được bắt đầu bằng ký tự đặc biệt." };
-    }
-
-    // Must contain letters (cannot be only special characters or only numbers)
-    if (!/[\p{L}]/u.test(cleanName)) {
-      return { error: "Tên chính sách phải chứa chữ cái, không được chỉ chứa toàn bộ ký tự đặc biệt hoặc số." };
-    }
-
-    // Disallow dangerous or weird special characters
-    if (/[@#$^&*~`<>\[\]{}|\\_;=!]/.test(cleanName)) {
-      return {
-        error:
-          "Tên chính sách chứa ký tự đặc biệt không hợp lệ (@, #, $, ^, &, *, ~, <, >, [, ], {, }, |, \\, _, ;, =). Chỉ cho phép chữ cái, số, dấu cách và các dấu (- , ( ) % / . ,).",
-      };
-    }
-
-    payload.policy_name = cleanName;
   }
 
-  // 2. refund_percentage (Tỷ lệ hoàn tiền: 0% - 100%)
-  if (!partial || isPresent("refund_percentage")) {
-    const rawVal = body.refund_percentage;
+  // 2. refund_percentage hoặc penalty_rate (Tỷ lệ hoàn tiền: 0% - 100%)
+  if (!partial || isPresent("refund_percentage") || isPresent("penalty_rate")) {
+    let rawVal = body.refund_percentage;
+    if (rawVal === undefined && body.penalty_rate !== undefined) {
+      rawVal = Math.max(0, 100 - Number(body.penalty_rate));
+    }
     if (rawVal === null || rawVal === undefined || String(rawVal).trim() === "") {
       return { error: "Vui lòng nhập tỷ lệ hoàn tiền (từ 0% đến 100%)." };
     }
@@ -93,11 +65,15 @@ const validateRefundPolicyPayload = (body, { partial = false } = {}) => {
     }
     // Limit to max 2 decimal places
     payload.refund_percentage = Math.round(rawRate * 100) / 100;
+    payload.penalty_rate = Math.round((100 - payload.refund_percentage) * 100) / 100;
   }
 
-  // 3. minimum_cancellation_hours (Số giờ tối thiểu trước nhận phòng)
-  if (!partial || isPresent("minimum_cancellation_hours")) {
-    const rawVal = body.minimum_cancellation_hours;
+  // 3. minimum_cancellation_hours hoặc free_cancel_before_hours (Số giờ hủy tối thiểu trước check-in)
+  if (!partial || isPresent("minimum_cancellation_hours") || isPresent("free_cancel_before_hours")) {
+    let rawVal = body.minimum_cancellation_hours;
+    if (rawVal === undefined && body.free_cancel_before_hours !== undefined) {
+      rawVal = body.free_cancel_before_hours;
+    }
     if (rawVal === null || rawVal === undefined || String(rawVal).trim() === "") {
       return { error: "Vui lòng nhập số giờ hủy tối thiểu trước giờ nhận phòng." };
     }
@@ -115,32 +91,26 @@ const validateRefundPolicyPayload = (body, { partial = false } = {}) => {
       return { error: "Số giờ hủy phòng tối đa không được vượt quá 8.760 giờ (tương đương 1 năm)." };
     }
     payload.minimum_cancellation_hours = rawHours;
+    payload.free_cancel_before_hours = rawHours;
   }
 
-  // 4. description (Mô tả chính sách)
+  // 4. description (Mô tả quy định hủy & hoàn tiền lưu trực tiếp vào DB)
   if (!partial || isPresent("description")) {
     const rawDesc = String(body.description || "").trim();
     if (rawDesc.length > 1000) {
       return { error: "Mô tả chính sách không được vượt quá 1.000 ký tự." };
     }
     const cleanDesc = sanitizeString(rawDesc);
-    if (cleanDesc && !/[\p{L}0-9]/u.test(cleanDesc)) {
-      return { error: "Mô tả chính sách phải chứa chữ cái hoặc chữ số, không được chỉ chứa ký tự đặc biệt." };
-    }
     payload.description = cleanDesc;
   }
 
-  // 5. refund_conditions (Điều kiện hoàn tiền)
-  if (!partial || isPresent("refund_conditions")) {
+  // 5. refund_conditions (Nếu có thì gán, nhưng không bắt buộc)
+  if (isPresent("refund_conditions") && body.refund_conditions) {
     const rawCond = String(body.refund_conditions || "").trim();
     if (rawCond.length > 1000) {
       return { error: "Điều kiện hoàn tiền không được vượt quá 1.000 ký tự." };
     }
-    const cleanCond = sanitizeString(rawCond);
-    if (cleanCond && !/[\p{L}0-9]/u.test(cleanCond)) {
-      return { error: "Điều kiện hoàn tiền phải chứa chữ cái hoặc chữ số, không được chỉ chứa ký tự đặc biệt." };
-    }
-    payload.refund_conditions = cleanCond;
+    payload.refund_conditions = sanitizeString(rawCond);
   }
 
   // 6. hotel_id (Khách sạn áp dụng, hoặc null/rỗng/"ALL"/"SYSTEM" cho toàn hệ thống)

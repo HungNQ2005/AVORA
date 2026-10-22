@@ -345,71 +345,106 @@ const CommissionPolicyManagementPage = () => {
       {/* 4 Thẻ KPI Metrics Cards */}
       <div className="cp-stats-grid">
         {/* Card 1: Tổng chính sách */}
-        <div className="cp-stat-card cp-stat-card--total">
-          <div className="cp-stat-card__accent" />
-          <div className="cp-stat-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-            </svg>
+        <div className="cp-stat-card">
+          <div className="cp-stat-card__header">
+            <span className="cp-stat-card__title">TỔNG SỐ CHÍNH SÁCH</span>
+            <div className="cp-stat-card__icon-box cp-stat-card__icon-box--blue">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="2" y="5" width="20" height="14" rx="2" />
+                <line x1="2" y1="10" x2="22" y2="10" />
+              </svg>
+            </div>
           </div>
-          <div className="cp-stat-card__info">
-            <span className="cp-stat-card__label">Tổng chính sách</span>
-            <span className="cp-stat-card__value">{stats?.total_policies ?? policies.length}</span>
-            <span className="cp-stat-card__sub">Quy định hoa hồng hệ thống</span>
+          <div className="cp-stat-card__value-row">
+            <span className="cp-stat-card__main-value">
+              {loading ? '—' : stats?.total_policies ?? policies.length}
+            </span>
+            <span className="cp-stat-card__unit">chính sách</span>
+            <span className="cp-stat-card__badge cp-stat-card__badge--online">Hệ thống</span>
+          </div>
+          <div className="cp-stat-card__footer">
+            <span className="cp-stat-card__footer-left">Đang áp dụng</span>
+            <span className="cp-stat-card__footer-right">
+              {stats?.active_policies ?? tabCounts.ACTIVE} chính sách
+            </span>
           </div>
         </div>
 
-        {/* Card 2: Đang áp dụng */}
-        <div className="cp-stat-card cp-stat-card--active">
-          <div className="cp-stat-card__accent" />
-          <div className="cp-stat-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
+        {/* Card 2: Đang kích hoạt / áp dụng */}
+        <div className="cp-stat-card">
+          <div className="cp-stat-card__header">
+            <span className="cp-stat-card__title">ĐANG KÍCH HOẠT</span>
+            <div className="cp-stat-card__icon-box cp-stat-card__icon-box--green">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                <polyline points="22 4 12 14.01 9 11.01" />
+              </svg>
+            </div>
           </div>
-          <div className="cp-stat-card__info">
-            <span className="cp-stat-card__label">Đang áp dụng</span>
-            <span className="cp-stat-card__value" style={{ color: '#10b981' }}>
-              {stats?.active_policies ?? tabCounts.ACTIVE}
+          <div className="cp-stat-card__value-row">
+            <span className="cp-stat-card__main-value">
+              {loading ? '—' : stats?.active_policies ?? tabCounts.ACTIVE}
             </span>
-            <span className="cp-stat-card__sub">Có hiệu lực đối soát</span>
+            <span className="cp-stat-card__unit">hoạt động</span>
+            <span className="cp-stat-card__badge cp-stat-card__badge--growth">Hiệu lực</span>
+          </div>
+          <div className="cp-stat-card__footer">
+            <span className="cp-stat-card__footer-left">Chờ &amp; Hết hạn</span>
+            <span className="cp-stat-card__footer-right">
+              {(tabCounts.UPCOMING || 0) + (tabCounts.EXPIRED || 0)} chính sách
+            </span>
           </div>
         </div>
 
         {/* Card 3: Tỷ lệ hoa hồng trung bình */}
-        <div className="cp-stat-card cp-stat-card--rate">
-          <div className="cp-stat-card__accent" />
-          <div className="cp-stat-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
+        <div className="cp-stat-card">
+          <div className="cp-stat-card__header">
+            <span className="cp-stat-card__title">TỶ LỆ HOA HỒNG TRUNG BÌNH</span>
+            <div className="cp-stat-card__icon-box cp-stat-card__icon-box--amber">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+            </div>
           </div>
-          <div className="cp-stat-card__info">
-            <span className="cp-stat-card__label">Tỷ lệ hoa hồng TB</span>
-            <span className="cp-stat-card__value" style={{ color: '#d97706' }}>
-              {stats?.avg_commission_rate ?? 0}%
+          <div className="cp-stat-card__value-row">
+            <span className="cp-stat-card__main-value">
+              {loading ? '—' : `${stats?.avg_commission_rate ?? 0}%`}
             </span>
-            <span className="cp-stat-card__sub">Trung bình chuỗi AVORA</span>
+            <span className="cp-stat-card__unit">toàn chuỗi</span>
+            <span className="cp-stat-card__badge cp-stat-card__badge--urgent">Mức thu</span>
+          </div>
+          <div className="cp-stat-card__footer">
+            <span className="cp-stat-card__footer-left">Đối tác nhận bình quân</span>
+            <span className="cp-stat-card__footer-right">
+              {100 - (Number(stats?.avg_commission_rate) || 0)}% doanh thu
+            </span>
           </div>
         </div>
 
         {/* Card 4: Đối tác & Khách sạn riêng */}
-        <div className="cp-stat-card cp-stat-card--hotel">
-          <div className="cp-stat-card__accent" />
-          <div className="cp-stat-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
-            </svg>
+        <div className="cp-stat-card">
+          <div className="cp-stat-card__header">
+            <span className="cp-stat-card__title">CHÍNH SÁCH RIÊNG &amp; ĐỐI TÁC</span>
+            <div className="cp-stat-card__icon-box cp-stat-card__icon-box--purple">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
+              </svg>
+            </div>
           </div>
-          <div className="cp-stat-card__info">
-            <span className="cp-stat-card__label">Chính sách riêng</span>
-            <span className="cp-stat-card__value" style={{ color: '#6366f1' }}>
-              {(stats?.hotel_specific_count || 0) + (stats?.star_specific_count || 0)}
+          <div className="cp-stat-card__value-row">
+            <span className="cp-stat-card__main-value">
+              {loading ? '—' : (stats?.hotel_specific_count || 0) + (stats?.star_specific_count || 0)}
             </span>
-            <span className="cp-stat-card__sub">Theo khách sạn & Hạng sao</span>
+            <span className="cp-stat-card__unit">hợp đồng</span>
+            <span className="cp-stat-card__badge cp-stat-card__badge--secured">Phân cấp</span>
+          </div>
+          <div className="cp-stat-card__footer">
+            <span className="cp-stat-card__footer-left">Theo khách sạn riêng</span>
+            <span className="cp-stat-card__footer-right">
+              {stats?.hotel_specific_count || 0} cơ sở lưu trú
+            </span>
           </div>
         </div>
       </div>

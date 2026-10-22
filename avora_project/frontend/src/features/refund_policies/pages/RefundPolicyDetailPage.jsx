@@ -35,8 +35,9 @@ const formatDateTime = (dateStr) => {
 const stripInternalMeta = (text) => {
   if (!text || typeof text !== 'string') return '';
   return text
-    .replace(/<!--META:.*?-->/g, '')
+    .replace(/<!--[\s\S]*?-->/g, '')
     .replace(/^\[.*?\]\s*/g, '')
+    .replace(/(?:\r?\n)?Điều kiện:\s*[\s\S]*$/i, '')
     .trim();
 };
 
@@ -395,19 +396,11 @@ const RefundPolicyDetailPage = () => {
               </div>
             </div>
 
-            {/* Conditions Block */}
-            <div className="rpd-section-block">
-              <div className="rpd-section-label">Điều kiện chi tiết áp dụng:</div>
-              <div className="rpd-text-box">
-                {stripInternalMeta(policy.refund_conditions) || 'Theo quy chế tiêu chuẩn hủy đặt phòng và bảo đảm quyền lợi khách hàng của AVORA.'}
-              </div>
-            </div>
-
             {/* Description Block */}
             <div className="rpd-section-block">
-              <div className="rpd-section-label">Mô tả nghiệp vụ &amp; Ghi chú:</div>
+              <div className="rpd-section-label">Mô tả quy định hủy &amp; hoàn tiền:</div>
               <div className="rpd-text-box">
-                {stripInternalMeta(policy.description) || 'Chính sách tiêu chuẩn áp dụng cho các đơn đặt phòng thuộc phân khúc được cấu hình.'}
+                {stripInternalMeta(policy.description) || 'Theo quy định hủy đặt phòng và bảo đảm quyền lợi khách hàng của AVORA.'}
               </div>
             </div>
           </div>
@@ -520,7 +513,7 @@ const RefundPolicyDetailPage = () => {
             </div>
           </div>
 
-          {/* Card 4: Hiệu lực & Kiểm toán hệ thống */}
+          {/* Card 4: Khởi tạo & Kiểm toán hệ thống */}
           <div className="rpd-card">
             <div className="rpd-card__header">
               <div className="rpd-card__title-box">
@@ -528,24 +521,11 @@ const RefundPolicyDetailPage = () => {
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                <h3 className="rpd-card__title">Hiệu lực &amp; Kiểm toán</h3>
+                <h3 className="rpd-card__title">Khởi tạo &amp; Kiểm toán</h3>
               </div>
             </div>
 
             <div className="rpd-info-list">
-              <div className="rpd-info-item">
-                <span className="rpd-info-item__label">Hiệu lực từ</span>
-                <span className="rpd-info-item__val">
-                  {policy.effective_from ? formatDate(policy.effective_from) : 'Từ thời điểm tạo'}
-                </span>
-              </div>
-
-              <div className="rpd-info-item">
-                <span className="rpd-info-item__label">Hiệu lực đến</span>
-                <span className="rpd-info-item__val">
-                  {policy.effective_to ? formatDate(policy.effective_to) : 'Không giới hạn thời gian'}
-                </span>
-              </div>
 
               <div className="rpd-info-item">
                 <span className="rpd-info-item__label">Đơn đặt phòng liên kết</span>

@@ -846,8 +846,8 @@ export const exportRefundPoliciesToExcel = async (policies = [], customFilename)
       { key: 'hotel', width: 30 },       // D: Cơ sở áp dụng
       { key: 'rate', width: 16 },        // E: Tỷ lệ hoàn (%)
       { key: 'hours', width: 22 },       // F: Hạn hủy trước check-in
-      { key: 'conditions', width: 38 },  // G: Điều kiện hoàn trả
-      { key: 'validity', width: 26 },    // H: Thời hạn hiệu lực
+      { key: 'description', width: 42 }, // G: Mô tả quy định hủy & hoàn tiền
+      { key: 'updated_at', width: 20 },  // H: Cập nhật lần cuối
       { key: 'bookings', width: 16 },    // I: Đơn áp dụng
       { key: 'status', width: 18 },      // J: Trạng thái
       { key: 'created_at', width: 18 },  // K: Ngày tạo
@@ -913,8 +913,8 @@ export const exportRefundPoliciesToExcel = async (policies = [], customFilename)
       'Cơ sở áp dụng',
       'Tỷ lệ hoàn (%)',
       'Hạn hủy trước check-in',
-      'Điều kiện hoàn trả',
-      'Thời hạn hiệu lực',
+      'Mô tả quy định hủy & hoàn tiền',
+      'Cập nhật lần cuối',
       'Đơn áp dụng',
       'Trạng thái',
       'Ngày tạo',
@@ -956,8 +956,6 @@ export const exportRefundPoliciesToExcel = async (policies = [], customFilename)
       const isEven = idx % 2 === 0;
       const baseBg = isEven ? 'FFFFFFFF' : 'FFF8FAFC';
 
-      const fromStr = p.effective_from ? new Date(p.effective_from).toLocaleDateString('vi-VN') : 'Từ khi tạo';
-      const toStr = p.effective_to ? new Date(p.effective_to).toLocaleDateString('vi-VN') : 'Vô thời hạn';
       const hours = Number(p.minimum_cancellation_hours || p.free_cancel_before_hours || 0);
       const isAct = p.status === 'ACTIVE';
       const rateVal = Number(p.refund_percentage || 0);
@@ -1019,17 +1017,24 @@ export const exportRefundPoliciesToExcel = async (policies = [], customFilename)
       c6.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
       c6.border = thinBorder;
 
-      // Cell 7: Điều kiện hoàn trả
+      // Cell 7: Mô tả quy định hủy & hoàn tiền
       const c7 = row.getCell(7);
-      c7.value = p.refund_conditions || p.description || 'Theo quy chuẩn nền tảng AVORA';
+      const cleanDesc = (p.description || '')
+        .replace(/<!--[\s\S]*?-->/g, '')
+        .replace(/^\[.*?\]\s*/g, '')
+        .replace(/(?:\r?\n)?Điều kiện:\s*[\s\S]*$/i, '')
+        .trim();
+      c7.value = cleanDesc || 'Theo quy chuẩn nền tảng AVORA';
       c7.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
       c7.font = { name: 'Segoe UI', size: 9, color: { argb: 'FF475569' } };
       c7.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };
       c7.border = thinBorder;
 
-      // Cell 8: Thời hạn hiệu lực
+      // Cell 8: Cập nhật lần cuối
       const c8 = row.getCell(8);
-      c8.value = `${fromStr} - ${toStr}`;
+      c8.value = p.updated_at
+        ? new Date(p.updated_at).toLocaleDateString('vi-VN')
+        : (p.created_at ? new Date(p.created_at).toLocaleDateString('vi-VN') : '—');
       c8.alignment = { horizontal: 'center', vertical: 'middle' };
       c8.font = { name: 'Segoe UI', size: 9, color: { argb: 'FF64748B' } };
       c8.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: baseBg } };

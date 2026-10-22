@@ -60,20 +60,29 @@ const verifyHotelExists = async (hotelId) => {
   return hotel;
 };
 
+const sanitizeDescription = (text) => {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/^\[.*?\]\s*/g, "")
+    .replace(/(?:\r?\n)?Điều kiện:\s*[\s\S]*$/i, "")
+    .trim();
+};
+
 /**
- * Check if a policy with the same name already exists in the same scope
+ * Check if a policy with the same cancellation hours already exists in the same scope
  */
-const checkDuplicatePolicyName = async (policyName, hotelId, excludePolicyId = null) => {
+const checkDuplicatePolicy = async (hotelId, freeCancelHours, excludePolicyId = null) => {
   ensureClient();
   const isDedicatedTable = await checkRefundPolicyTable();
-  const cleanName = String(policyName || "").trim().toLowerCase();
-  if (!cleanName) return;
+  const hours = Number(freeCancelHours || 0);
 
   if (isDedicatedTable) {
     let query = supabase
       .from("m_refund_policy")
-      .select("policy_id, policy_name, hotel_id")
-      .eq("is_deleted", false);
+      .select("policy_id, hotel_id, minimum_cancellation_hours")
+      .eq("is_deleted", false)
+      .eq("minimum_cancellation_hours", hours);
 
     if (hotelId) {
       query = query.eq("hotel_id", hotelId);
@@ -86,11 +95,10 @@ const checkDuplicatePolicyName = async (policyName, hotelId, excludePolicyId = n
     }
 
     const { data: list, error } = await query;
-    if (error) throwDatabaseError("Lỗi khi kiểm tra trùng lặp tên chính sách.", error);
-    const dup = (list || []).find((p) => (p.policy_name || "").trim().toLowerCase() === cleanName);
-    if (dup) {
+    if (error) throwDatabaseError("Lỗi khi kiểm tra trùng lặp chính sách.", error);
+    if (list && list.length > 0) {
       const scopeLabel = hotelId ? "cho khách sạn này" : "cho toàn hệ thống AVORA";
-      const conflictErr = new Error(`Chính sách hoàn tiền có tên "${policyName}" đã tồn tại ${scopeLabel}. Vui lòng chọn tên khác.`);
+      const conflictErr = new Error(`Chính sách hoàn tiền với mốc hủy ${hours}h đã tồn tại ${scopeLabel}. Vui lòng chọn mốc thời gian khác.`);
       conflictErr.statusCode = 409;
       throw conflictErr;
     }
@@ -100,7 +108,8 @@ const checkDuplicatePolicyName = async (policyName, hotelId, excludePolicyId = n
   // Use m_cancellation_policy
   let query = supabase
     .from("m_cancellation_policy")
-    .select("cancellation_policy_id, hotel_id, description, free_cancel_before_hours");
+    .select("cancellation_policy_id, hotel_id, free_cancel_before_hours")
+    .eq("free_cancel_before_hours", hours);
 
   if (hotelId) {
     query = query.eq("hotel_id", hotelId);
@@ -108,23 +117,20 @@ const checkDuplicatePolicyName = async (policyName, hotelId, excludePolicyId = n
     query = query.is("hotel_id", null);
   }
 
+  if (excludePolicyId) {
+    query = query.neq("cancellation_policy_id", excludePolicyId);
+  }
+
   const { data: list, error } = await query;
-  if (error) throwDatabaseError("Lỗi khi kiểm tra trùng lặp tên chính sách.", error);
+  if (error) throwDatabaseError("Lỗi khi kiểm tra trùng lặp chính sách.", error);
 
-  const dup = (list || []).find((p) => {
-    if (excludePolicyId && p.cancellation_policy_id === excludePolicyId) return false;
-    const parsed = parseCancellationPolicyRecord(p);
-    return parsed.policy_name.trim().toLowerCase() === cleanName;
-  });
-
-  if (dup) {
+  if (list && list.length > 0) {
     const scopeLabel = hotelId ? "cho khách sạn này" : "cho toàn hệ thống AVORA";
-    const conflictErr = new Error(`Chính sách hoàn tiền có tên "${policyName}" đã tồn tại ${scopeLabel}. Vui lòng chọn tên khác.`);
+    const conflictErr = new Error(`Chính sách hoàn tiền với mốc hủy ${hours}h đã tồn tại ${scopeLabel}. Vui lòng chọn mốc thời gian khác.`);
     conflictErr.statusCode = 409;
     throw conflictErr;
   }
 };
-
 
 // Cache whether m_refund_policy exists in Supabase
 let _isRefundPolicyTableAvailable = null;
@@ -144,119 +150,14 @@ const checkRefundPolicyTable = async () => {
 };
 
 /**
- * Format description and metadata for storage in m_cancellation_policy
- */
-const encodePolicyDescription = ({
-  policy_code = null,
-  policy_name,
-  description,
-  refund_conditions,
-  status = "ACTIVE",
-  effective_from = null,
-  effective_to = null,
-}) => {
-  const parts = [];
-
-  // Sanitize policy_name: strip brackets and META
-  const cleanName = (policy_name || "")
-    .replace(/<!--META:.*?-->/g, "")
-    .replace(/^\[(.*?)\]$/, "$1")
-    .trim();
-
-  // Sanitize description: strip META, brackets, conditions
-  const cleanDesc = (description || "")
-    .replace(/<!--META:.*?-->/g, "")
-    .replace(/^\[.*?\]\s*/g, "")
-    .replace(/Điều kiện:\s*.*$/i, "")
-    .trim();
-
-  // Sanitize refund_conditions: strip META and leading label
-  const cleanCond = (refund_conditions || "")
-    .replace(/<!--META:.*?-->/g, "")
-    .replace(/^Điều kiện:\s*/i, "")
-    .trim();
-
-  if (cleanName) parts.push(`[${cleanName}]`);
-  if (cleanDesc) parts.push(cleanDesc);
-  if (cleanCond) parts.push(`Điều kiện: ${cleanCond}`);
-
-  const metaObj = {
-    policy_code: policy_code || null,
-    status: status || "ACTIVE",
-    effective_from: effective_from || null,
-    effective_to: effective_to || null,
-  };
-  const metaStr = `<!--META:${JSON.stringify(metaObj)}-->`;
-
-  return `${parts.join(" ")} ${metaStr}`.trim();
-};
-
-/**
- * Parse policy data from m_cancellation_policy record
+ * Parse policy data from m_cancellation_policy record strictly adhering to DB columns
  */
 const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = {}) => {
   const hotel = record.m_hotel || hotelMap[record.hotel_id] || null;
   const rawDesc = record.description || "";
 
-  // Extract meta if present
-  let status = "ACTIVE";
-  let effective_from = record.created_at || null;
-  let effective_to = null;
-  let storedPolicyCode = null;
-
-  // Extract all <!--META:...--> tags (supporting multiple/malformed if any)
-  const metaRegex = /<!--META:(.*?)-->/g;
-  let metaMatch;
-  while ((metaMatch = metaRegex.exec(rawDesc)) !== null) {
-    try {
-      const parsedMeta = JSON.parse(metaMatch[1]);
-      if (parsedMeta.status) status = parsedMeta.status;
-      if (parsedMeta.effective_from) effective_from = parsedMeta.effective_from;
-      if (parsedMeta.effective_to) effective_to = parsedMeta.effective_to;
-      if (parsedMeta.policy_code) storedPolicyCode = parsedMeta.policy_code;
-    } catch {
-      // ignore JSON parse error
-    }
-  }
-
-  // Strip all <!--META:...-->
-  let cleanDesc = rawDesc.replace(/<!--META:.*?-->/g, "").trim();
-
-  // Extract policy name from [brackets] if present
-  let policyName = "";
-  while (/^\[(.*?)\]\s*/.test(cleanDesc)) {
-    const nameMatch = cleanDesc.match(/^\[(.*?)\]\s*/);
-    if (!policyName && nameMatch) {
-      policyName = nameMatch[1].trim();
-    }
-    cleanDesc = cleanDesc.replace(/^\[(.*?)\]\s*/, "").trim();
-  }
-
-  if (!policyName) {
-    if (hotel?.name) {
-      policyName = `Chính sách hoàn tiền - ${hotel.name}`;
-    } else {
-      policyName = `Chính sách hoàn tiền chuẩn AVORA (${record.free_cancel_before_hours}h)`;
-    }
-  }
-
-  // Extract refund conditions
-  let refundConditions = "";
-  const condMatch = cleanDesc.match(/Điều kiện:\s*(.*)$/i);
-  if (condMatch) {
-    refundConditions = condMatch[1].trim();
-    cleanDesc = cleanDesc.replace(/Điều kiện:\s*.*$/i, "").trim();
-  } else {
-    const penaltyRate = Number(record.penalty_rate || 0);
-    const refundRate = Math.max(0, 100 - penaltyRate);
-    refundConditions = `Miễn phí hủy phòng trước ${record.free_cancel_before_hours} giờ (hoàn 100%). Hủy sau thời hạn áp dụng phí phạt ${penaltyRate}% (hoàn ${refundRate}%).`;
-  }
-
-  // Final cleanup on cleanDesc to ensure no leftover brackets or metadata
-  cleanDesc = cleanDesc
-    .replace(/<!--META:.*?-->/g, "")
-    .replace(/^\[.*?\]\s*/g, "")
-    .trim();
+  // Strip any legacy <!--META:...-->, [bracket names], or "Điều kiện:" leftovers if present
+  const cleanDesc = sanitizeDescription(rawDesc);
 
   const penaltyRate = Number(record.penalty_rate || 0);
   const refundPercentage = Math.max(0, 100 - penaltyRate);
@@ -264,13 +165,17 @@ const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = 
   const bookingCount = bookingUsageMap[record.cancellation_policy_id] || 0;
   const generatedCode = `RP-${record.cancellation_policy_id.replace(/-/g, "").substring(0, 8).toUpperCase()}`;
 
+  const policyName = hotel?.name
+    ? `Chính sách hoàn tiền - ${hotel.name}`
+    : `Chính sách hoàn tiền toàn hệ thống (${minHours}h)`;
+
   return {
     policy_id: record.cancellation_policy_id,
     cancellation_policy_id: record.cancellation_policy_id,
-    policy_code: storedPolicyCode || generatedCode,
+    policy_code: generatedCode,
     policy_name: policyName,
     description: cleanDesc,
-    refund_conditions: refundConditions,
+    refund_conditions: cleanDesc || `Miễn phí hủy phòng trước ${minHours} giờ (hoàn tiền ${refundPercentage}%).`,
     refund_percentage: refundPercentage,
     penalty_rate: penaltyRate,
     minimum_cancellation_hours: minHours,
@@ -284,13 +189,13 @@ const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = 
           star_rating: hotel.star_rating,
         }
       : null,
-    hotel_name: hotel?.name || "Toàn hệ thống (Mặc định)",
+    hotel_name: hotel?.name || "Toàn hệ thống AVORA",
     scope: record.hotel_id ? "HOTEL" : "SYSTEM",
     scope_label: record.hotel_id ? (hotel?.name || "Khách sạn cụ thể") : "Toàn hệ thống AVORA",
-    effective_from,
-    effective_to,
-    status,
-    status_label: status === "ACTIVE" ? "Đang áp dụng" : "Tạm dừng",
+    effective_from: record.created_at,
+    effective_to: null,
+    status: "ACTIVE",
+    status_label: "Đang áp dụng",
     associated_bookings_count: bookingCount,
     created_at: record.created_at,
     updated_at: record.updated_at,
@@ -569,8 +474,13 @@ const createRefundPolicy = async (payload) => {
     await verifyHotelExists(payload.hotel_id);
   }
 
-  // 2. Validate duplicate policy name in the same scope
-  await checkDuplicatePolicyName(payload.policy_name, payload.hotel_id);
+  const freeHours = Number(payload.free_cancel_before_hours ?? payload.minimum_cancellation_hours ?? 24);
+  const penaltyRate = payload.penalty_rate !== undefined
+    ? Number(payload.penalty_rate)
+    : Math.max(0, 100 - Number(payload.refund_percentage || 0));
+
+  // 2. Validate duplicate policy in the same scope
+  await checkDuplicatePolicy(payload.hotel_id, freeHours);
 
   const isDedicatedTable = await checkRefundPolicyTable();
   const policyId = randomUUID();
@@ -580,11 +490,11 @@ const createRefundPolicy = async (payload) => {
     const newRecord = {
       policy_id: policyId,
       policy_code: policyCode,
-      policy_name: payload.policy_name,
+      policy_name: payload.policy_name || `Chính sách hoàn tiền (${freeHours}h)`,
       description: payload.description || "",
       refund_conditions: payload.refund_conditions || "",
-      refund_percentage: payload.refund_percentage,
-      minimum_cancellation_hours: payload.minimum_cancellation_hours,
+      refund_percentage: 100 - penaltyRate,
+      minimum_cancellation_hours: freeHours,
       hotel_id: payload.hotel_id || null,
       effective_from: payload.effective_from || null,
       effective_to: payload.effective_to || null,
@@ -602,25 +512,15 @@ const createRefundPolicy = async (payload) => {
     return data;
   }
 
-  // Save into m_cancellation_policy with unique UUID
-  const penaltyRate = Math.max(0, 100 - payload.refund_percentage);
-
-  const encodedDesc = encodePolicyDescription({
-    policy_code: policyCode,
-    policy_name: payload.policy_name,
-    description: payload.description,
-    refund_conditions: payload.refund_conditions,
-    status: payload.status,
-    effective_from: payload.effective_from,
-    effective_to: payload.effective_to,
-  });
+  // Save into m_cancellation_policy with unique UUID strictly matching DB columns
+  const cleanDesc = sanitizeDescription(payload.description);
 
   const insertData = {
     cancellation_policy_id: policyId,
     hotel_id: payload.hotel_id || null,
-    free_cancel_before_hours: payload.minimum_cancellation_hours,
+    free_cancel_before_hours: freeHours,
     penalty_rate: penaltyRate,
-    description: encodedDesc,
+    description: cleanDesc,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -667,21 +567,6 @@ const updateRefundPolicy = async (id, payload) => {
       await verifyHotelExists(payload.hotel_id);
     }
 
-    // 3. Check duplicate name if changed
-    const targetHotelId = payload.hotel_id !== undefined ? payload.hotel_id : existing.hotel_id;
-    if (payload.policy_name && payload.policy_name.trim().toLowerCase() !== (existing.policy_name || "").trim().toLowerCase()) {
-      await checkDuplicatePolicyName(payload.policy_name, targetHotelId, cleanId);
-    }
-
-    // 4. Validate effective dates chronology
-    const finalFrom = payload.effective_from !== undefined ? payload.effective_from : existing.effective_from;
-    const finalTo = payload.effective_to !== undefined ? payload.effective_to : existing.effective_to;
-    if (finalFrom && finalTo && new Date(finalTo) < new Date(finalFrom)) {
-      const dateErr = new Error("Ngày kết thúc hiệu lực không được sớm hơn ngày bắt đầu hiệu lực.");
-      dateErr.statusCode = 400;
-      throw dateErr;
-    }
-
     const updateObj = {
       ...payload,
       updated_at: new Date().toISOString(),
@@ -713,55 +598,36 @@ const updateRefundPolicy = async (id, payload) => {
     throw notFound;
   }
 
-  const currentParsed = parseCancellationPolicyRecord(current);
+  const freeHours = payload.free_cancel_before_hours !== undefined
+    ? Number(payload.free_cancel_before_hours)
+    : payload.minimum_cancellation_hours !== undefined
+    ? Number(payload.minimum_cancellation_hours)
+    : current.free_cancel_before_hours;
 
-  const merged = {
-    policy_code: currentParsed.policy_code,
-    policy_name: payload.policy_name !== undefined ? payload.policy_name : currentParsed.policy_name,
-    description: payload.description !== undefined ? payload.description : currentParsed.description,
-    refund_conditions:
-      payload.refund_conditions !== undefined ? payload.refund_conditions : currentParsed.refund_conditions,
-    refund_percentage:
-      payload.refund_percentage !== undefined ? payload.refund_percentage : currentParsed.refund_percentage,
-    minimum_cancellation_hours:
-      payload.minimum_cancellation_hours !== undefined
-        ? payload.minimum_cancellation_hours
-        : currentParsed.minimum_cancellation_hours,
-    hotel_id: payload.hotel_id !== undefined ? payload.hotel_id : current.hotel_id,
-    effective_from:
-      payload.effective_from !== undefined ? payload.effective_from : currentParsed.effective_from,
-    effective_to:
-      payload.effective_to !== undefined ? payload.effective_to : currentParsed.effective_to,
-    status: payload.status !== undefined ? payload.status : currentParsed.status,
-  };
+  const targetHotelId = payload.hotel_id !== undefined ? (payload.hotel_id || null) : current.hotel_id;
 
-  // Validate hotel if changed/specified
-  if (payload.hotel_id && payload.hotel_id !== current.hotel_id) {
-    await verifyHotelExists(payload.hotel_id);
+  if (freeHours !== current.free_cancel_before_hours || targetHotelId !== current.hotel_id) {
+    await checkDuplicatePolicy(targetHotelId, freeHours, cleanId);
   }
 
-  // Check duplicate name if changed
-  if (payload.policy_name && payload.policy_name.trim().toLowerCase() !== (currentParsed.policy_name || "").trim().toLowerCase()) {
-    await checkDuplicatePolicyName(payload.policy_name, merged.hotel_id, cleanId);
+  if (targetHotelId && targetHotelId !== current.hotel_id) {
+    await verifyHotelExists(targetHotelId);
   }
 
-  // Validate effective dates chronology
-  if (merged.effective_from && merged.effective_to) {
-    if (new Date(merged.effective_to) < new Date(merged.effective_from)) {
-      const dateErr = new Error("Ngày kết thúc hiệu lực không được sớm hơn ngày bắt đầu hiệu lực.");
-      dateErr.statusCode = 400;
-      throw dateErr;
-    }
-  }
+  const penaltyRate = payload.penalty_rate !== undefined
+    ? Number(payload.penalty_rate)
+    : payload.refund_percentage !== undefined
+    ? Math.max(0, 100 - Number(payload.refund_percentage))
+    : current.penalty_rate;
 
-  const penaltyRate = Math.max(0, 100 - merged.refund_percentage);
-  const encodedDesc = encodePolicyDescription(merged);
+  const rawDesc = payload.description !== undefined ? payload.description : current.description;
+  const cleanDesc = sanitizeDescription(rawDesc);
 
   const updateData = {
-    hotel_id: merged.hotel_id,
-    free_cancel_before_hours: merged.minimum_cancellation_hours,
+    hotel_id: targetHotelId,
+    free_cancel_before_hours: freeHours,
     penalty_rate: penaltyRate,
-    description: encodedDesc,
+    description: cleanDesc,
     updated_at: new Date().toISOString(),
   };
 

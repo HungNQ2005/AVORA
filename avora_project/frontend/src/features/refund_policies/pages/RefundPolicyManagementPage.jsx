@@ -124,7 +124,6 @@ const RefundPolicyManagementPage = () => {
           p.policy_id?.toLowerCase().includes(term) ||
           p.hotel_name?.toLowerCase().includes(term) ||
           p.description?.toLowerCase().includes(term) ||
-          p.refund_conditions?.toLowerCase().includes(term) ||
           String(p.refund_percentage || '').includes(term) ||
           String(p.minimum_cancellation_hours || '').includes(term)
       );
@@ -533,7 +532,7 @@ const RefundPolicyManagementPage = () => {
           <input
             type="text"
             className="rp-filter-bar__input"
-            placeholder="Tìm theo tên chính sách, mã, khách sạn, điều kiện hoàn..."
+            placeholder="Tìm theo tên chính sách, mã, khách sạn, mô tả quy định..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
@@ -656,7 +655,7 @@ const RefundPolicyManagementPage = () => {
                   <th>CƠ SỞ ÁP DỤNG</th>
                   <th style={{ textAlign: 'center' }}>TỶ LỆ HOÀN TIỀN</th>
                   <th>HẠN HỦY TỐI THIỂU</th>
-                  <th>THỜI GIAN HIỆU LỰC</th>
+                  <th>CẬP NHẬT LẦN CUỐI</th>
                   <th style={{ textAlign: 'center' }}>ĐƠN ÁP DỤNG</th>
                   <th style={{ textAlign: 'center' }}>TRẠNG THÁI</th>
                   <th style={{ textAlign: 'center', width: '120px' }}>THAO TÁC</th>
@@ -723,11 +722,11 @@ const RefundPolicyManagementPage = () => {
                         </div>
                       </td>
 
-                      {/* 5. Thời gian hiệu lực */}
+                      {/* 5. Cập nhật lần cuối */}
                       <td>
                         <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4 }}>
-                          <div>{formatDate(p.effective_from)}</div>
-                          <div>→ {p.effective_to ? formatDate(p.effective_to) : 'Vô thời hạn'}</div>
+                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{formatDate(p.updated_at || p.created_at)}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Tạo: {formatDate(p.created_at)}</div>
                         </div>
                       </td>
 
