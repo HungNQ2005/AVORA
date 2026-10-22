@@ -381,13 +381,13 @@ const Header = ({
                 type="button"
                 className={`avora-header__saved-btn ${(currentTab === 'favorites' || currentPath === '/watchlist' || currentPath === '/wishlist' || currentPath === '/favorites' || currentPath === '/saved' || (location.pathname === '/myaccount' && location.search.includes('tab=favorites'))) ? 'is-active' : ''}`}
                 onClick={handleAction('favorites')}
-                title="WatchList - Chỗ nghỉ đã lưu"
-                aria-label="Xem WatchList"
+                title="Danh sách yêu thích - Chỗ nghỉ đã lưu"
+                aria-label="Xem danh sách yêu thích"
               >
                 <HeartIcon />
                 <span className="avora-header__two-line">
-                  <span>Watch</span>
-                  <span>List</span>
+                  <span>Yêu</span>
+                  <span>thích</span>
                 </span>
                 <span className="avora-header__count-badge">{internalSavedCount}</span>
               </button>

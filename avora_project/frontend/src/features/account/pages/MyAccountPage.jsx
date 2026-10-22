@@ -7,7 +7,7 @@ import DeactivateOtpModal from '../components/DeactivateOtpModal';
 import AvatarUploadModal from '../components/AvatarUploadModal';
 import AvatarContent from '../../../common/components/AvatarContent';
 import { codeNameParser } from '../../../utils/codeNameParser';
-import { getSavedFavorites, removeFavoriteHotel } from '../../../utils/favoritesStorage';
+import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
 import './MyAccountPage.css';
 
@@ -193,8 +193,14 @@ const MyAccountPage = () => {
     return getSavedFavorites();
   });
 
-  // Reactive listener for saved accommodations updates across storage and custom events
+  // Sync with database table t_wishlist and reactive listener for updates
   useEffect(() => {
+    syncFavoritesWithServer().then((res) => {
+      if (Array.isArray(res)) {
+        setSavedAccommodations(res);
+      }
+    });
+
     const handleFavoritesUpdate = () => {
       const stored = getSavedFavorites();
       setSavedAccommodations(stored);
@@ -447,7 +453,7 @@ const MyAccountPage = () => {
             <span className="breadcrumb-link" onClick={() => switchTab('info')}>Tài khoản của tôi</span>
             <span className="breadcrumb-separator">&gt;</span>
             <span className="breadcrumb-current">
-              {activeTab === 'favorites' ? 'WatchList' : activeTab === 'security' ? 'Bảo mật tài khoản' : 'Quản lý hồ sơ'}
+              {activeTab === 'favorites' ? 'Danh sách yêu thích' : activeTab === 'security' ? 'Bảo mật tài khoản' : 'Quản lý hồ sơ'}
             </span>
           </nav>
 
@@ -615,7 +621,7 @@ const MyAccountPage = () => {
               >
                 <div className="profile-nav-item__left">
                   <HeartIcon />
-                  <span>WatchList</span>
+                  <span>Danh sách yêu thích</span>
                 </div>
                 <span className="profile-nav-badge">{savedAccommodations.length}</span>
               </button>
@@ -861,7 +867,7 @@ const MyAccountPage = () => {
                 <div className="profile-card__header">
                   <div>
                     <div className="profile-card__title-row">
-                      <h2 className="profile-card__title">WatchList - Chỗ nghỉ đã lưu</h2>
+                      <h2 className="profile-card__title">Danh sách yêu thích - Chỗ nghỉ đã lưu</h2>
                       <span className="saved-count-pill">{savedAccommodations.length} chỗ nghỉ</span>
                     </div>
                     <p className="profile-card__subtitle">
@@ -925,8 +931,8 @@ const MyAccountPage = () => {
                                 type="button"
                                 className="saved-hotel-card__remove-btn"
                                 onClick={(e) => handleRemoveSaved(hotelId, e)}
-                                title="Xóa khỏi WatchList"
-                                aria-label="Xóa khỏi WatchList"
+                                title="Xóa khỏi danh sách yêu thích"
+                                aria-label="Xóa khỏi danh sách yêu thích"
                               >
                                 <TrashIcon />
                               </button>
@@ -977,9 +983,9 @@ const MyAccountPage = () => {
                     <div className="saved-empty-state__icon">
                       <HeartIcon />
                     </div>
-                    <div className="saved-empty-state__title">WatchList trống</div>
+                    <div className="saved-empty-state__title">Danh sách yêu thích trống</div>
                     <p className="saved-empty-state__desc">
-                      Bạn chưa có chỗ nghỉ nào trong WatchList. Hãy khám phá và bấm biểu tượng trái tim để theo dõi các khách sạn yêu thích!
+                      Bạn chưa có chỗ nghỉ nào trong danh sách yêu thích. Hãy khám phá và bấm biểu tượng trái tim để theo dõi các khách sạn yêu thích!
                     </p>
                     <button
                       type="button"

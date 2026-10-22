@@ -2,6 +2,7 @@
 
 const supabase = require('../../config/supabaseClient');
 const { searchHotels } = require('../hotels/hotel.service');
+const { randomUUID } = require('crypto');
 
 const ensureClient = () => {
   if (!supabase) {
@@ -25,9 +26,8 @@ const getUserWishlist = async (userId) => {
   try {
     const { data: wishlistRecords, error } = await supabase
       .from('t_wishlist')
-      .select('wishlist_id, user_id, hotel_id, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .select('*')
+      .eq('user_id', userId);
 
     if (error) {
       // If table doesn't exist yet in Supabase (PostgREST error 42P01), fail softly
@@ -124,37 +124,51 @@ const addToWishlist = async (userId, hotelId) => {
     return {
       success: true,
       alreadyExists: true,
-      message: `Khách sạn "${hotel.name}" đã có trong WatchList của bạn.`,
+      message: `Khách sạn "${hotel.name}" đã có trong danh sách yêu thích của bạn.`,
       wishlist_id: existing.wishlist_id,
     };
   }
 
   // 3. Insert into t_wishlist
-  const { data: inserted, error: insertErr } = await supabase
+  let toInsert = {
+    wishlist_id: randomUUID(),
+    user_id: userId,
+    hotel_id: hotelId,
+  };
+
+  let { data: inserted, error: insertErr } = await supabase
     .from('t_wishlist')
-    .insert({
-      user_id: userId,
-      hotel_id: hotelId,
-    })
+    .insert(toInsert)
     .select()
     .single();
+
+  if (insertErr && (insertErr.code === '42703' || insertErr.message?.includes('wishlist_id'))) {
+    delete toInsert.wishlist_id;
+    const retry = await supabase
+      .from('t_wishlist')
+      .insert(toInsert)
+      .select()
+      .single();
+    inserted = retry.data;
+    insertErr = retry.error;
+  }
 
   if (insertErr) {
     if (insertErr.code === '23505') {
       return {
         success: true,
         alreadyExists: true,
-        message: `Khách sạn "${hotel.name}" đã có trong WatchList của bạn.`,
+        message: `Khách sạn "${hotel.name}" đã có trong danh sách yêu thích của bạn.`,
       };
     }
-    const error = new Error(`Không thể lưu khách sạn vào WatchList: ${insertErr.message}`);
+    const error = new Error(`Không thể lưu khách sạn vào danh sách yêu thích: ${insertErr.message}`);
     error.statusCode = 500;
     throw error;
   }
 
   return {
     success: true,
-    message: `Đã lưu "${hotel.name}" vào WatchList thành công.`,
+    message: `Đã lưu "${hotel.name}" vào danh sách yêu thích thành công.`,
     wishlist_id: inserted?.wishlist_id,
     hotel_id: hotelId,
   };
@@ -180,14 +194,14 @@ const removeFromWishlist = async (userId, hotelId) => {
     .eq('hotel_id', hotelId);
 
   if (error && error.code !== '42P01') {
-    const err = new Error(`Lỗi khi xóa khỏi WatchList: ${error.message}`);
+    const err = new Error(`Lỗi khi xóa khỏi danh sách yêu thích: ${error.message}`);
     err.statusCode = 500;
     throw err;
   }
 
   return {
     success: true,
-    message: 'Đã xóa chỗ nghỉ khỏi WatchList thành công.',
+    message: 'Đã xóa chỗ nghỉ khỏi danh sách yêu thích thành công.',
     hotel_id: hotelId,
   };
 };

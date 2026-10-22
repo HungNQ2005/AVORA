@@ -125,8 +125,8 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
             type="button"
             className="hotel-card__favorite-btn"
             onClick={handleFavoriteClick}
-            title={isFavorite ? "Đã lưu vào WatchList" : "Thêm vào WatchList"}
-            aria-label={isFavorite ? "Xóa khỏi WatchList" : "Thêm vào WatchList"}
+            title={isFavorite ? "Đã lưu vào danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
+            aria-label={isFavorite ? "Xóa khỏi danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
           >
             <HeartIcon filled={isFavorite} />
           </button>

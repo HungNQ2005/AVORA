@@ -282,7 +282,7 @@ const HomePage = () => {
     const hotelObj = hotels.find((h) => String(h.hotel_id) === String(id)) || { hotel_id: id };
     const nextState = toggleFavoriteHotel(hotelObj);
     setFavorites(prev => ({ ...prev, [id]: nextState }));
-    triggerToast(nextState ? 'Đã thêm chỗ nghỉ vào WatchList' : 'Đã xóa chỗ nghỉ khỏi WatchList');
+    triggerToast(nextState ? 'Đã thêm chỗ nghỉ vào danh sách yêu thích' : 'Đã xóa chỗ nghỉ khỏi danh sách yêu thích');
   };
 
   const handleFilterToggle = (key) => {

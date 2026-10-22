@@ -11,11 +11,11 @@ const handleGetWishlist = async (req, res, next) => {
   try {
     const userId = req.user?.user_id;
     if (!userId) {
-      return sendError(res, 401, 'Vui lòng đăng nhập để xem WatchList của bạn.');
+      return sendError(res, 401, 'Vui lòng đăng nhập để xem danh sách yêu thích của bạn.');
     }
 
     const result = await wishlistService.getUserWishlist(userId);
-    return sendSuccess(res, 200, 'Lấy danh sách WatchList thành công.', result);
+    return sendSuccess(res, 200, 'Lấy danh sách yêu thích thành công.', result);
   } catch (error) {
     return next(error);
   }
@@ -31,7 +31,7 @@ const handleAddToWishlist = async (req, res, next) => {
     const hotelId = req.body.hotel_id || req.body.hotelId;
 
     if (!userId) {
-      return sendError(res, 401, 'Vui lòng đăng nhập để lưu chỗ nghỉ vào WatchList.');
+      return sendError(res, 401, 'Vui lòng đăng nhập để lưu chỗ nghỉ vào danh sách yêu thích.');
     }
     if (!hotelId) {
       return sendError(res, 400, 'Mã khách sạn (hotel_id) là bắt buộc.');

@@ -4,6 +4,12 @@
  * All hotel data is sourced strictly from the database.
  */
 
+import {
+  addToWishlistApi,
+  removeFromWishlistApi,
+  fetchWishlist,
+} from '../services/wishlistApi';
+
 const FAVORITES_KEY = 'avora_user_favorites';
 
 /**
@@ -102,6 +108,14 @@ export const saveFavoriteHotel = (hotel) => {
   } catch (e) {
     console.error('Error saving favorite to localStorage:', e);
   }
+
+  // Sync to database table t_wishlist if user is logged in
+  if (hotelId) {
+    addToWishlistApi(String(hotelId)).catch((err) => {
+      console.warn('[Wishlist] Sync to DB t_wishlist failed:', err.message);
+    });
+  }
+
   return nextList;
 };
 
@@ -125,6 +139,14 @@ export const removeFavoriteHotel = (hotelId) => {
   } catch (e) {
     console.error('Error removing favorite from localStorage:', e);
   }
+
+  // Sync delete to database table t_wishlist if user is logged in
+  if (hotelId) {
+    removeFromWishlistApi(String(hotelId)).catch((err) => {
+      console.warn('[Wishlist] Delete from DB t_wishlist failed:', err.message);
+    });
+  }
+
   return nextList;
 };
 
@@ -142,4 +164,27 @@ export const toggleFavoriteHotel = (hotel) => {
     saveFavoriteHotel(hotel);
     return true;
   }
+};
+
+/**
+ * Fetch and sync all user favorites directly from database table t_wishlist.
+ * @returns {Promise<Array>} List of hotels from database
+ */
+export const syncFavoritesWithServer = async () => {
+  const token = localStorage.getItem('avora_token');
+  if (!token) return getSavedFavorites();
+
+  try {
+    const data = await fetchWishlist();
+    if (Array.isArray(data?.hotels)) {
+      const dbHotels = data.hotels.map(sanitizeDbHotel);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(dbHotels));
+      window.dispatchEvent(new Event('avora_favorites_updated'));
+      window.dispatchEvent(new Event('avora_watchlist_updated'));
+      return dbHotels;
+    }
+  } catch (err) {
+    console.warn('[Wishlist] Syncing favorites from DB t_wishlist failed:', err.message);
+  }
+  return getSavedFavorites();
 };

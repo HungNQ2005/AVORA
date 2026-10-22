@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { getSavedFavorites, removeFavoriteHotel } from '../../../utils/favoritesStorage';
+import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
 import MapModal from '../../hotels/components/MapModal';
 import './FavoritesPage.css';
@@ -144,10 +144,16 @@ const FavoritesPage = () => {
   const [folderName, setFolderName] = useState('');
   const [toastMessage, setToastMessage] = useState(null);
 
-  // 1. Fetch real database hotels on mount
+  // 1. Fetch real database hotels on mount & sync favorites from t_wishlist in database
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
+
+    syncFavoritesWithServer().then((res) => {
+      if (isMounted && Array.isArray(res)) {
+        setSavedIds(res);
+      }
+    });
 
     fetch(`${API_ENDPOINTS.HOTELS}?destination=Vi%E1%BB%87t%20Nam`)
       .then((res) => res.json())
@@ -271,12 +277,12 @@ const FavoritesPage = () => {
     e.stopPropagation();
     const updated = removeFavoriteHotel(hotelId);
     setSavedIds(updated);
-    setToastMessage(`Đã xóa "${hotelName || 'chỗ nghỉ'}" khỏi WatchList.`);
+    setToastMessage(`Đã xóa "${hotelName || 'chỗ nghỉ'}" khỏi danh sách yêu thích.`);
   };
 
   const handleShareList = () => {
     navigator.clipboard?.writeText(window.location.href);
-    setToastMessage('Đã sao chép liên kết chia sẻ WatchList vào clipboard!');
+    setToastMessage('Đã sao chép liên kết chia sẻ danh sách yêu thích vào clipboard!');
   };
 
   const handleCreateFolder = (e) => {
@@ -367,7 +373,7 @@ const FavoritesPage = () => {
           <span className="fav-breadcrumb-sep">/</span>
           <Link to="/myaccount" className="fav-breadcrumb-link">Tài khoản của tôi</Link>
           <span className="fav-breadcrumb-sep">/</span>
-          <span className="fav-breadcrumb-current">WatchList</span>
+          <span className="fav-breadcrumb-current">Danh sách yêu thích</span>
         </nav>
 
         {/* ─── 2. HERO BANNER CARD ────────────────────────────────────── */}
@@ -377,7 +383,7 @@ const FavoritesPage = () => {
               <span className="favorites-hero-heart-icon">
                 <HeartOutlineIcon />
               </span>
-              <h1 className="favorites-hero-title">WatchList - Chỗ nghỉ đã lưu</h1>
+              <h1 className="favorites-hero-title">Danh sách yêu thích - Chỗ nghỉ đã lưu</h1>
               <span className="favorites-hero-count-pill">{savedHotels.length} chỗ nghỉ</span>
             </div>
             <p className="favorites-hero-subtitle">
@@ -519,8 +525,8 @@ const FavoritesPage = () => {
                         type="button"
                         className="fav-card__trash-btn"
                         onClick={(e) => handleRemove(hotelId, hotel.name, e)}
-                        title="Xóa khỏi WatchList"
-                        aria-label="Xóa khỏi WatchList"
+                        title="Xóa khỏi danh sách yêu thích"
+                        aria-label="Xóa khỏi danh sách yêu thích"
                       >
                         <TrashIcon />
                       </button>
@@ -664,12 +670,12 @@ const FavoritesPage = () => {
                 </div>
                 <h3 className="fav-empty-title">
                   {savedHotels.length === 0
-                    ? 'WatchList của bạn đang trống'
+                    ? 'Danh sách yêu thích của bạn đang trống'
                     : 'Không tìm thấy chỗ nghỉ nào phù hợp bộ lọc'}
                 </h3>
                 <p className="fav-empty-desc">
                   {savedHotels.length === 0
-                    ? 'Hãy khám phá các điểm lưu trú tuyệt vời trên Avora và bấm biểu tượng trái tim để lưu vào WatchList theo dõi giá bất cứ lúc nào!'
+                    ? 'Hãy khám phá các điểm lưu trú tuyệt vời trên Avora và bấm biểu tượng trái tim để lưu vào danh sách yêu thích theo dõi giá bất cứ lúc nào!'
                     : 'Hãy thử chọn tất cả các thành phố hoặc tắt bộ lọc chỉ xem phòng còn trống.'}
                 </p>
                 {savedHotels.length === 0 ? (
