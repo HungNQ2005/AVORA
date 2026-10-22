@@ -76,6 +76,26 @@ export const fetchRefundPolicies = async (params = {}) => {
     return p.is_active !== false && !softDeletedIds.includes(pId);
   });
 
+  const total = filteredPolicies.length;
+  const activeCount = filteredPolicies.filter((p) => (p.status ? p.status === 'ACTIVE' : p.is_active !== false)).length;
+  const inactiveCount = total - activeCount;
+  const sumRate = filteredPolicies.reduce((acc, p) => acc + (Number(p.refund_percentage) || 0), 0);
+  const avgRate = total > 0 ? Math.round((sumRate / total) * 10) / 10 : 0;
+  const freeCancel = filteredPolicies.filter((p) => Number(p.minimum_cancellation_hours || 0) > 0).length;
+  const totalBookings = filteredPolicies.reduce((acc, p) => acc + (p.associated_bookings_count || 0), 0);
+
+  const updatedStats = json.data?.stats
+    ? {
+        ...json.data.stats,
+        total_policies: total,
+        active_policies: activeCount,
+        inactive_policies: inactiveCount,
+        avg_refund_rate: avgRate,
+        free_cancel_count: freeCancel,
+        total_associated_bookings: totalBookings,
+      }
+    : null;
+
   if (Array.isArray(json.data)) {
     return filteredPolicies;
   }
@@ -83,6 +103,7 @@ export const fetchRefundPolicies = async (params = {}) => {
   return {
     ...json.data,
     policies: filteredPolicies,
+    stats: updatedStats,
   };
 };
 

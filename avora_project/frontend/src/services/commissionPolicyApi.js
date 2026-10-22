@@ -79,6 +79,24 @@ export const fetchCommissionPolicies = async (params = {}) => {
     return !softDeletedIds.includes(pId) && p.is_active !== false;
   });
 
+  const total = filteredPolicies.length;
+  const activeCount = filteredPolicies.filter((p) => (p.status ? p.status === 'ACTIVE' : p.is_active !== false)).length;
+  const upcomingCount = filteredPolicies.filter((p) => p.status === 'UPCOMING').length;
+  const expiredCount = filteredPolicies.filter((p) => p.status === 'EXPIRED').length;
+  const sumRate = filteredPolicies.reduce((acc, p) => acc + (Number(p.commission_rate) || 0), 0);
+  const avgRate = total > 0 ? Math.round((sumRate / total) * 10) / 10 : 0;
+
+  const updatedStats = json.data?.stats
+    ? {
+        ...json.data.stats,
+        total_policies: total,
+        active_policies: activeCount,
+        upcoming_policies: upcomingCount,
+        expired_policies: expiredCount,
+        avg_commission_rate: avgRate,
+      }
+    : null;
+
   if (Array.isArray(json.data)) {
     return filteredPolicies;
   }
@@ -86,6 +104,7 @@ export const fetchCommissionPolicies = async (params = {}) => {
   return {
     ...json.data,
     policies: filteredPolicies,
+    stats: updatedStats,
   };
 };
 

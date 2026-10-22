@@ -176,15 +176,9 @@ const UserTable = ({
     <div className="user-table-wrapper">
       {/* Table Sub-header (Bulk selection & Quick status summary) */}
       <div className="user-table-subheader">
-        <label className="user-table-bulk-select">
-          <input
-            type="checkbox"
-            className="user-checkbox"
-            checked={allSelected}
-            onChange={handleSelectAll}
-          />
-          <span>Chọn tất cả {users.length} bản ghi trên trang</span>
-        </label>
+        <div style={{ color: '#64748b', fontSize: '0.84rem' }}>
+          Hiển thị <strong>{users.length}</strong> / <strong>{totalItems}</strong> người dùng
+        </div>
 
         <div className="user-table-quick-stats">
           <span className="user-table-stat-dot user-table-stat-dot--active">

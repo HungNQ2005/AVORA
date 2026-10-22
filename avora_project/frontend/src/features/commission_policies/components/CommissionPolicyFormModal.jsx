@@ -10,6 +10,7 @@ const EMPTY_FORM = {
   priority_level: 0,
   valid_from: '',
   valid_to: '',
+  is_active: true,
 };
 
 const CommissionPolicyFormModal = ({
@@ -46,6 +47,7 @@ const CommissionPolicyFormModal = ({
             initialData.priority_level !== undefined ? initialData.priority_level : 0,
           valid_from: initialData.valid_from ? initialData.valid_from.substring(0, 10) : '',
           valid_to: initialData.valid_to ? initialData.valid_to.substring(0, 10) : '',
+          is_active: initialData.is_active !== undefined ? Boolean(initialData.is_active) : true,
         });
       } else {
         setForm(EMPTY_FORM);
@@ -72,17 +74,16 @@ const CommissionPolicyFormModal = ({
   };
 
   const validate = () => {
+    const errs = {};
     const cleanName = form.policy_name.trim();
+
+    // 1. Tên chính sách phí hoa hồng (Bắt buộc cho cả tạo mới và cập nhật)
     if (!cleanName) {
-      errs.policy_name = 'Vui lòng nhập tên chính sách hoa hồng.';
-    } else if (cleanName.length < 3) {
-      errs.policy_name = 'Tên chính sách phải có ít nhất 3 ký tự.';
+      errs.policy_name = 'Vui lòng nhập tên chính sách phí hoa hồng.';
     } else if (cleanName.length > 255) {
       errs.policy_name = 'Tên chính sách không được vượt quá 255 ký tự.';
-    } else if (!/[\p{L}]/u.test(cleanName)) {
-      errs.policy_name = 'Tên chính sách không được chỉ tồn tại với ký tự đặc biệt hoặc chữ số (phải bao gồm chữ cái).';
-    } else if (!/^[\p{L}\p{N}\s(),./%_-]+$/u.test(cleanName)) {
-      errs.policy_name = 'Tên chính sách không được chứa các ký tự đặc biệt (chỉ cho phép chữ cái, chữ số, khoảng trắng và các dấu (), . - / % _).';
+    } else if (!/[\p{L}\p{N}]/u.test(cleanName)) {
+      errs.policy_name = 'Tên chính sách không được chỉ bao gồm ký tự đặc biệt (phải có ít nhất một chữ cái hoặc chữ số).';
     }
 
     const rate = Number(form.commission_rate);
@@ -125,6 +126,7 @@ const CommissionPolicyFormModal = ({
       hotel_id: form.scope_type === 'HOTEL' && form.hotel_id ? form.hotel_id : null,
       valid_from: form.valid_from || null,
       valid_to: form.valid_to || null,
+      is_active: isEdit ? Boolean(form.is_active) : true,
     };
 
     onSubmit(payload);
@@ -185,7 +187,7 @@ const CommissionPolicyFormModal = ({
             <input
               type="text"
               className={`cp-form-input ${errors.policy_name ? 'cp-form-input--error' : ''}`}
-              placeholder="Ví dụ: Chính sách hoa hồng mặc định 2026, Đối tác chiến lược 5 sao..."
+              placeholder="Ví dụ: Chính sách hoa hồng 2026, [CP-VIP] Đối tác 5★ & Resort..."
               value={form.policy_name}
               onChange={(e) => handleChange('policy_name', e.target.value)}
               disabled={loading}
@@ -376,6 +378,47 @@ const CommissionPolicyFormModal = ({
               )}
             </div>
           </div>
+
+          {/* Trạng thái hoạt động (is_active) - Khi tạo mới mặc định luôn là true, chỉ hiển thị chọn khi Chỉnh sửa */}
+          {isEdit && (
+            <div className="cp-form-group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', marginTop: '10px' }}>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#1e293b' }}>
+                  Kích hoạt chính sách (is_active)
+                </div>
+                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                  {form.is_active ? 'Chính sách đang BẬT và sẵn sàng áp dụng tính hoa hồng' : 'Chính sách đang TẮT (vô hiệu hóa tạm thời)'}
+                </div>
+              </div>
+              <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={Boolean(form.is_active)}
+                  onChange={(e) => handleChange('is_active', e.target.checked)}
+                  style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                />
+                <span style={{
+                  position: 'absolute',
+                  top: 0, left: 0, right: 0, bottom: 0,
+                  backgroundColor: form.is_active ? '#003580' : '#cbd5e1',
+                  transition: '.25s',
+                  borderRadius: 24,
+                }}>
+                  <span style={{
+                    position: 'absolute',
+                    height: 18,
+                    width: 18,
+                    left: form.is_active ? 23 : 3,
+                    bottom: 3,
+                    backgroundColor: '#ffffff',
+                    transition: '.25s',
+                    borderRadius: '50%',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+                  }} />
+                </span>
+              </label>
+            </div>
+          )}
         </div>
 
         {/* Footer */}

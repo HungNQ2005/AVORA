@@ -23,20 +23,17 @@ const validateCommissionPolicyPayload = (body, { partial = false } = {}) => {
   const payload = {};
   const isPresent = (field) => body[field] !== undefined;
 
-  // 1. policy_name (Tên chính sách hoa hồng)
+  // 1. policy_name (Bắt buộc cho cả tạo mới và cập nhật; cho phép số hoặc chữ đứng riêng, cấm chỉ có ký tự đặc biệt đứng một mình)
   if (!partial || isPresent("policy_name")) {
     const name = String(body.policy_name || "").trim();
     if (!name) {
-      return { error: "Tên chính sách hoa hồng không được để trống." };
+      return { error: "Vui lòng nhập tên chính sách phí hoa hồng." };
     }
-    if (name.length < 3 || name.length > 255) {
-      return { error: "Tên chính sách hoa hồng phải từ 3 đến 255 ký tự." };
+    if (name.length > 255) {
+      return { error: "Tên chính sách hoa hồng không được vượt quá 255 ký tự." };
     }
-    if (!/[\p{L}]/u.test(name)) {
-      return { error: "Tên chính sách hoa hồng không được chỉ tồn tại với ký tự đặc biệt hoặc chữ số (phải bao gồm chữ cái)." };
-    }
-    if (!/^[\p{L}\p{N}\s(),./%_-]+$/u.test(name)) {
-      return { error: "Tên chính sách hoa hồng không được chứa các ký tự đặc biệt (chỉ cho phép chữ cái, chữ số, khoảng trắng và các dấu (), . - / % _)." };
+    if (!/[\p{L}\p{N}]/u.test(name)) {
+      return { error: "Tên chính sách hoa hồng không được chỉ bao gồm ký tự đặc biệt (phải có ít nhất một chữ cái hoặc chữ số)." };
     }
     payload.policy_name = name;
   }
@@ -129,9 +126,11 @@ const validateCommissionPolicyPayload = (body, { partial = false } = {}) => {
     }
   }
 
-  // 9. is_active (Trạng thái hoạt động / xóa mềm)
+  // 9. is_active (Trạng thái hoạt động / xóa mềm - Mặc định là true khi tạo mới)
   if (isPresent("is_active")) {
     payload.is_active = Boolean(body.is_active);
+  } else if (!partial) {
+    payload.is_active = true;
   }
 
   return { payload };
