@@ -110,22 +110,6 @@ const AmenityDetailModal = ({ isOpen, onClose, amenity, onEdit }) => {
                   <span className="stat-unit">Kênh bán OTA</span>
                 </div>
               </div>
-
-              {/* <div className="amenity-meta-box">
-                <h5 className="amenity-meta-title">Cơ sở dữ liệu Cloud</h5>
-                <div className="amenity-meta-row">
-                  <span>Bảng dữ liệu:</span>
-                  <code>m_facility</code>
-                </div>
-                <div className="amenity-meta-row">
-                  <span>Khóa chính (facility_id):</span>
-                  <code>{amenity.facility_id}</code>
-                </div>
-                <div className="amenity-meta-row">
-                  <span>Bảng quan hệ ánh xạ:</span>
-                  <code>m_room_facility_map</code>
-                </div> */}
-              {/* </div> */}
             </div>
           </div>
         </div>

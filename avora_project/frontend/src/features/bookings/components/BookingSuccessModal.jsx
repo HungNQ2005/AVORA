@@ -50,7 +50,7 @@ const BookingSuccessModal = ({ bookingData, onClose, onViewMyBookings }) => {
         <div className="booking-modal-success-icon">✓</div>
         <h3 className="booking-modal-title">Đặt phòng thành công!</h3>
         <p className="booking-modal-desc">
-          Đơn đặt chỗ của bạn đã được lưu vào cơ sở dữ liệu với trạng thái chờ thanh toán.
+          Đơn đặt chỗ của bạn đã được tiếp nhận thành công với trạng thái chờ thanh toán.
         </p>
 
         {countdown && (

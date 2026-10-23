@@ -155,7 +155,7 @@ const FavoritesPage = () => {
       }
     });
 
-    fetch(`${API_ENDPOINTS.HOTELS}?destination=Vi%E1%BB%87t%20Nam`)
+    fetch(API_ENDPOINTS.HOTELS)
       .then((res) => res.json())
       .then((json) => {
         if (!isMounted) return;
@@ -314,7 +314,7 @@ const FavoritesPage = () => {
         isOpen={isMapModalOpen}
         onClose={() => setIsMapModalOpen(false)}
         hotels={filteredHotels}
-        destination={selectedCity !== 'all' ? selectedCity : 'Việt Nam'}
+        destination={selectedCity !== 'all' ? selectedCity : ''}
       />
 
       {/* Create Folder Modal */}
@@ -387,7 +387,7 @@ const FavoritesPage = () => {
               <span className="favorites-hero-count-pill">{savedHotels.length} chỗ nghỉ</span>
             </div>
             <p className="favorites-hero-subtitle">
-              Lưu trữ các điểm dừng chân theo dõi, cập nhật thông tin phòng trống, chính sách và giá phòng thực tế từ cơ sở dữ liệu.
+              Lưu trữ các điểm dừng chân yêu thích, cập nhật thông tin phòng trống và giá phòng tốt nhất theo thời gian thực.
             </p>
           </div>
 
@@ -486,7 +486,7 @@ const FavoritesPage = () => {
             {loading ? (
               <div className="fav-empty-state" style={{ padding: '60px 20px' }}>
                 <div style={{ fontSize: '15px', color: '#003580', fontWeight: 600 }}>
-                  Đang đồng bộ dữ liệu chỗ nghỉ từ cơ sở dữ liệu...
+                  Đang tải danh sách chỗ nghỉ yêu thích...
                 </div>
               </div>
             ) : filteredHotels.length > 0 ? (
@@ -620,7 +620,7 @@ const FavoritesPage = () => {
                           </div>
                           <div className="fav-room-highlight__guarantee">
                             <CheckIcon />
-                            <span>Giá niêm yết chuẩn theo cơ sở dữ liệu</span>
+                            <span>Giá niêm yết tiêu chuẩn minh bạch</span>
                           </div>
                         </div>
                       )}

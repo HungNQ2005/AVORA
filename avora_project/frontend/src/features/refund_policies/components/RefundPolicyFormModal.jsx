@@ -312,7 +312,7 @@ const RefundPolicyFormModal = ({
               disabled={loading}
             ></textarea>
             <span className="rp-form-hint">
-              Nội dung mô tả quy định được lưu trực tiếp vào cơ sở dữ liệu, không chèn metadata hay ghép cột khác.
+              Nội dung mô tả chi tiết điều khoản hoàn tiền áp dụng cho khách hàng và đối tác.
             </span>
             {errors.description && (
               <span className="rp-form-error-msg">{errors.description}</span>

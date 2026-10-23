@@ -228,7 +228,7 @@ const MyAccountPage = () => {
     );
 
     if (needsEnrichment) {
-      fetch(`${API_ENDPOINTS.HOTELS}?destination=Vi%E1%BB%87t%20Nam`)
+      fetch(API_ENDPOINTS.HOTELS)
         .then((res) => res.json())
         .then((json) => {
           if (!isMounted) return;

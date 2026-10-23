@@ -23,10 +23,10 @@ const throwDatabaseError = (message, databaseError) => {
     error.message = "Không thể thực hiện thao tác do vi phạm ràng buộc dữ liệu liên quan trong hệ thống.";
   } else if (code === "22P02") {
     error.statusCode = 400;
-    error.message = "Định dạng dữ liệu không hợp lệ (mã UUID hoặc kiểu số không đúng chuẩn).";
+    error.message = "Định dạng dữ liệu không hợp lệ.";
   } else if (code === "42P01" || databaseError?.message?.includes("fetch failed") || databaseError?.message?.includes("connect")) {
     error.statusCode = 503;
-    error.message = "Không thể kết nối đến máy chủ cơ sở dữ liệu. Vui lòng thử lại sau.";
+    error.message = "Không thể kết nối đến máy chủ hệ thống. Vui lòng thử lại sau.";
   } else {
     error.statusCode = databaseError?.statusCode || 500;
     if (databaseError?.message && process.env.NODE_ENV !== "production") {
@@ -847,7 +847,7 @@ const deleteRefundPolicy = async (id) => {
         .delete()
         .eq("cancellation_policy_id", cleanId);
       if (delErr) {
-        throwDatabaseError("Không thể xóa chính sách hoàn tiền khỏi cơ sở dữ liệu.", delErr);
+        throwDatabaseError("Không thể xóa chính sách hoàn tiền. Vui lòng thử lại sau.", delErr);
       }
     } else {
       throwDatabaseError("Không thể xóa mềm chính sách hoàn tiền.", updateErr);

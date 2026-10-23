@@ -125,7 +125,7 @@ const UserManagementPage = () => {
       }
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError(err.message || 'Không thể tải danh sách người dùng từ cơ sở dữ liệu.');
+      setError(err.message || 'Không thể tải danh sách người dùng. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }

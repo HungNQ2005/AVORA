@@ -107,7 +107,7 @@ const UserTable = ({
       <div className="user-table-card">
         <div className="user-table-loading">
           <div className="user-table-spinner"></div>
-          <p>Đang tải danh sách người dùng từ cơ sở dữ liệu...</p>
+          <p>Đang tải danh sách người dùng...</p>
         </div>
       </div>
     );

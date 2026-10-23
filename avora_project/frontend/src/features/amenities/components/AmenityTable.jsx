@@ -47,7 +47,7 @@ const AmenityTable = ({
       <div className="amenity-table-card">
         <div className="amenity-loading-state">
           <div className="amenity-spinner"></div>
-          <p>Đang tải danh sách tiện ích từ hệ thống cơ sở dữ liệu Cloud...</p>
+          <p>Đang tải danh sách tiện ích...</p>
         </div>
       </div>
     );

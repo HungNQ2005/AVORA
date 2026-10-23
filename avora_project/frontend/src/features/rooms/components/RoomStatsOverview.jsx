@@ -1,4 +1,5 @@
 import React from 'react';
+import { BuildingIcon, ShieldCheckIcon, ActivityIcon, DollarSignIcon } from '../../../common/components/icons';
 import './RoomStatsOverview.css';
 
 const formatCurrency = (val) => {
@@ -23,9 +24,7 @@ const RoomStatsOverview = ({ stats, loading }) => {
         <div className="room-stat-card__top">
           <span className="room-stat-card__label">TỔNG BUỒNG QUẢN LÝ</span>
           <div className="room-stat-card__icon room-stat-card__icon--blue">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path>
-            </svg>
+            <BuildingIcon size={18} />
           </div>
         </div>
         <div className="room-stat-card__value-row">
@@ -52,10 +51,7 @@ const RoomStatsOverview = ({ stats, loading }) => {
         <div className="room-stat-card__top">
           <span className="room-stat-card__label">ĐANG MỞ BÁN TRỰC TUYẾN</span>
           <div className="room-stat-card__icon room-stat-card__icon--green">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              <polyline points="9 12 11 14 15 10"></polyline>
-            </svg>
+            <ShieldCheckIcon size={18} />
           </div>
         </div>
         <div className="room-stat-card__value-row">
@@ -83,9 +79,7 @@ const RoomStatsOverview = ({ stats, loading }) => {
         <div className="room-stat-card__top">
           <span className="room-stat-card__label">CÔNG SUẤT PHÒNG THỰC TẾ</span>
           <div className="room-stat-card__icon room-stat-card__icon--orange">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-            </svg>
+            <ActivityIcon size={18} />
           </div>
         </div>
         <div className="room-stat-card__value-row">
@@ -123,10 +117,7 @@ const RoomStatsOverview = ({ stats, loading }) => {
         <div className="room-stat-card__top">
           <span className="room-stat-card__label">GIÁ TRUNG BÌNH ĐÊM (ADR)</span>
           <div className="room-stat-card__icon room-stat-card__icon--purple">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="1" x2="12" y2="23"></line>
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-            </svg>
+            <DollarSignIcon size={18} />
           </div>
         </div>
         <div className="room-stat-card__value-row">

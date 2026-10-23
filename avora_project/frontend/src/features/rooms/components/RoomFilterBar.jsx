@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { SearchIcon, CloseIcon, BuildingIcon, ChevronDownIcon, CheckIcon, ListIcon, GridIcon } from '../../../common/components/icons';
 import './RoomFilterBar.css';
 
 const RoomFilterBar = ({
@@ -44,10 +45,7 @@ const RoomFilterBar = ({
     <div className="room-filter-bar">
       {/* Search Input */}
       <div className="room-search-box">
-        <svg className="room-search-box__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
+        <SearchIcon size={16} className="room-search-box__icon" />
         <input
           type="text"
           className="room-search-box__input"
@@ -62,7 +60,7 @@ const RoomFilterBar = ({
             onClick={() => onSearchChange('')}
             title="Xóa tìm kiếm"
           >
-            ×
+            <CloseIcon size={14} />
           </button>
         )}
       </div>
@@ -80,15 +78,11 @@ const RoomFilterBar = ({
             aria-haspopup="listbox"
             aria-expanded={isHotelOpen}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16"></path>
-            </svg>
+            <BuildingIcon size={14} />
             <span className="room-hotel-selector__text" title={currentHotelName}>
               {currentHotelName}
             </span>
-            <svg className={`room-chevron ${isHotelOpen ? 'room-chevron--up' : ''}`} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
+            <ChevronDownIcon size={12} className={`room-chevron ${isHotelOpen ? 'room-chevron--up' : ''}`} />
           </button>
 
           {isHotelOpen && (
@@ -122,9 +116,7 @@ const RoomFilterBar = ({
                 >
                   <span>Tất cả cơ sở ({hotels.length} khách sạn)</span>
                   {selectedHotelId === 'ALL' && (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <polyline points="20 6 9 17 4 12"></polyline>
-                    </svg>
+                    <CheckIcon size={13} strokeWidth={2.5} />
                   )}
                 </button>
               )}
@@ -142,9 +134,7 @@ const RoomFilterBar = ({
                   >
                     <span title={h.name}>{h.name}</span>
                     {selectedHotelId === h.hotel_id && (
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
+                      <CheckIcon size={13} strokeWidth={2.5} />
                     )}
                   </button>
                 ))
@@ -198,14 +188,7 @@ const RoomFilterBar = ({
             onClick={() => onViewModeChange('TABLE')}
             title="Dạng bảng danh sách"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="8" y1="6" x2="21" y2="6"></line>
-              <line x1="8" y1="12" x2="21" y2="12"></line>
-              <line x1="8" y1="18" x2="21" y2="18"></line>
-              <line x1="3" y1="6" x2="3.01" y2="6"></line>
-              <line x1="3" y1="12" x2="3.01" y2="12"></line>
-              <line x1="3" y1="18" x2="3.01" y2="18"></line>
-            </svg>
+            <ListIcon size={15} />
           </button>
           <button
             type="button"
@@ -213,12 +196,7 @@ const RoomFilterBar = ({
             onClick={() => onViewModeChange('MATRIX')}
             title="Sơ đồ buồng phòng theo tầng"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7"></rect>
-              <rect x="14" y="3" width="7" height="7"></rect>
-              <rect x="14" y="14" width="7" height="7"></rect>
-              <rect x="3" y="14" width="7" height="7"></rect>
-            </svg>
+            <GridIcon size={15} />
           </button>
         </div>
       </div>

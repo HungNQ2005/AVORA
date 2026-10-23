@@ -41,7 +41,7 @@ const BookingPage = () => {
         : 'Rất tiếc, phòng đã hết trong thời gian bạn chọn. Vui lòng chọn ngày khác hoặc giảm số phòng.';
     }
 
-    return error?.message || 'Không thể lưu đơn đặt phòng vào cơ sở dữ liệu.';
+    return error?.message || 'Không thể hoàn tất đơn đặt phòng. Vui lòng thử lại.';
   };
 
   const formatDateLabel = (dateStr) => {
@@ -291,9 +291,9 @@ const BookingPage = () => {
           setCouponMessage(null);
         }
       } catch (err) {
-        console.warn('[BookingPage] Không thể đồng bộ biểu giá CSDL:', err.message);
+        console.warn('[BookingPage] Không thể đồng bộ biểu giá:', err.message);
         if (!stateData.hotel && !pricing.hotel) {
-          setErrorMessage(err.message || 'Không thể tải dữ liệu giá phòng từ cơ sở dữ liệu.');
+          setErrorMessage(err.message || 'Không thể tải thông tin giá phòng. Vui lòng thử lại.');
         }
       } finally {
         setIsApplyingCoupon(false);
@@ -345,7 +345,7 @@ const BookingPage = () => {
       return;
     }
     if (!activeHotel?.hotel_id || !activeRoom?.room_type_id) {
-      setErrorMessage('Không tìm thấy thông tin khách sạn hoặc hạng phòng hợp lệ trong CSDL.');
+      setErrorMessage('Không tìm thấy thông tin khách sạn hoặc hạng phòng hợp lệ.');
       return;
     }
 
@@ -469,7 +469,7 @@ const BookingPage = () => {
 
       {isLoadingPricing && !activeHotel ? (
         <div style={{ padding: '48px 16px', textAlign: 'center', color: '#475569' }}>
-          Đang tải thông tin khách sạn và bảng giá từ cơ sở dữ liệu...
+          Đang tải thông tin phòng và bảng giá...
         </div>
       ) : (
         <div className="booking-layout-grid">

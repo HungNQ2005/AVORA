@@ -18,7 +18,7 @@ const HOTEL_SELECT = `
 
 const ensureClient = () => {
   if (!supabase) {
-    const err = new Error('Kết nối cơ sở dữ liệu chưa được khởi tạo.');
+    const err = new Error('Không thể kết nối đến hệ thống. Vui lòng thử lại sau.');
     err.statusCode = 503;
     throw err;
   }

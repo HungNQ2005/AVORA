@@ -35,10 +35,10 @@ const AmenityDeleteModal = ({
 
         <div className="rt-delete-modal-body">
           <p>
-            Bạn có chắc chắn muốn xóa tiện nghi <strong>"{displayName}"</strong> khỏi hệ thống cơ sở dữ liệu không?
+            Bạn có chắc chắn muốn xóa tiện nghi <strong>"{displayName}"</strong> khỏi hệ thống không?
           </p>
           <p className="rt-delete-modal-warning">
-            Hành động này sẽ xóa dữ liệu tiện ích vĩnh viễn trên cơ sở dữ liệu cloud.
+            Hành động này sẽ xóa tiện ích vĩnh viễn và không thể hoàn tác.
           </p>
           {error && <p className="rt-delete-modal-warning" role="alert">{error}</p>}
         </div>

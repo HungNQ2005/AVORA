@@ -95,7 +95,7 @@ const OrderSummarySidebar = ({
               fontSize: 13,
             }}
           >
-            🏨 Ảnh khách sạn từ CSDL
+            🏨 Hình ảnh khách sạn
           </div>
         )}
 

@@ -11,7 +11,7 @@ const GeniusBanner = ({ user, availableCoupons = [] }) => {
           ? `${topCoupon.discount_value}%`
           : `${Number(topCoupon.discount_value).toLocaleString('vi-VN')} đ`
       })`
-    : 'Hỗ trợ đặt phòng trực tuyến và giữ chỗ tức thì từ cơ sở dữ liệu.';
+    : 'Hỗ trợ đặt phòng trực tuyến và giữ chỗ tức thì trên AVORA.';
 
   return (
     <div className="genius-banner">

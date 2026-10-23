@@ -336,7 +336,7 @@ const MyBookingsPage = () => {
   // Open Refund Receipt modal
   const handleOpenRefundReceipt = (booking) => {
     if (!booking.refund) {
-      alert('Đơn đặt phòng này chưa có bản ghi yêu cầu hoàn tiền trong bảng t_refund_request.');
+      alert('Đơn đặt phòng này chưa có thông tin yêu cầu hoàn tiền.');
       return;
     }
     setRefundModalData({

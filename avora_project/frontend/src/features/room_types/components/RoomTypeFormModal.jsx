@@ -158,7 +158,7 @@ const RoomTypeFormModal = ({
                 {initialData ? 'Chỉnh sửa hạng phòng' : 'Thêm hạng phòng'}
               </h2>
               <p className="rt-modal-subtitle">
-                Thông tin được lưu trực tiếp vào cơ sở dữ liệu hạng phòng.
+                Cập nhật thông tin chi tiết và định giá cho hạng phòng.
               </p>
             </div>
           </div>

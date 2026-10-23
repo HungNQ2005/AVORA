@@ -24,63 +24,6 @@ const throwDatabaseError = (message, databaseError) => {
   throw error;
 };
 
-// In-memory fallback cache in case m_commission_policy table isn't created in Supabase yet
-let _fallbackPolicies = null;
-
-const getInitialFallbackPolicies = () => [
-  {
-    policy_id: "00000000-0000-0000-0000-000000000001",
-    policy_name: "Chính sách hoa hồng cơ sở toàn chuỗi AVORA",
-    commission_rate: 12.0,
-    priority_level: 0,
-    star_quality: null,
-    hotel_id: null,
-    valid_from: "2024-01-01",
-    valid_to: null,
-    created_at: new Date("2024-01-01T00:00:00Z").toISOString(),
-    updated_at: new Date("2024-01-01T00:00:00Z").toISOString(),
-  },
-  {
-    policy_id: "00000000-0000-0000-0000-000000000002",
-    policy_name: "Chính sách ưu đãi phân khúc khách sạn 5 sao",
-    commission_rate: 15.0,
-    priority_level: 2,
-    star_quality: 5,
-    hotel_id: null,
-    valid_from: "2024-01-01",
-    valid_to: null,
-    created_at: new Date("2024-01-02T00:00:00Z").toISOString(),
-    updated_at: new Date("2024-01-02T00:00:00Z").toISOString(),
-  },
-  {
-    policy_id: "00000000-0000-0000-0000-000000000003",
-    policy_name: "Chính sách phân khúc khách sạn 3 & 4 sao",
-    commission_rate: 10.0,
-    priority_level: 2,
-    star_quality: 4,
-    hotel_id: null,
-    valid_from: "2024-01-01",
-    valid_to: null,
-    created_at: new Date("2024-01-03T00:00:00Z").toISOString(),
-    updated_at: new Date("2024-01-03T00:00:00Z").toISOString(),
-  },
-];
-
-let _isCommissionTableAvailable = null;
-const checkCommissionTable = async () => {
-  if (_isCommissionTableAvailable !== null) return _isCommissionTableAvailable;
-  try {
-    const { error } = await supabase.from("m_commission_policy").select("policy_id").limit(1);
-    if (!error) {
-      _isCommissionTableAvailable = true;
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-  _isCommissionTableAvailable = false;
-  return false;
-};
 
 /**
  * Determine dynamic status of a policy based on validity dates
@@ -194,73 +137,60 @@ const getHotelsList = async () => {
  */
 const getCommissionPolicies = async (filters = {}) => {
   ensureClient();
-  const isTableAvailable = await checkCommissionTable();
   const hotels = await getHotelsList();
   const hotelMap = {};
   hotels.forEach((h) => {
     hotelMap[h.hotel_id] = h;
   });
 
-  let rawList = [];
+  let query = supabase
+    .from("m_commission_policy")
+    .select("*, m_hotel(hotel_id, name, address, star_rating)")
+    .order("priority_level", { ascending: false })
+    .order("created_at", { ascending: false });
 
-  if (isTableAvailable) {
-    let query = supabase
+  if (filters.hotel_id && filters.hotel_id !== "ALL") {
+    if (filters.hotel_id === "SYSTEM") {
+      query = query.is("hotel_id", null).is("star_quality", null);
+    } else if (filters.hotel_id.startsWith("STAR_")) {
+      const star = Number(filters.hotel_id.replace("STAR_", ""));
+      query = query.eq("star_quality", star);
+    } else {
+      query = query.eq("hotel_id", filters.hotel_id);
+    }
+  }
+
+  // Lọc bỏ các bản ghi đã xóa mềm (is_active = false)
+  query = query.or("is_active.eq.true,is_active.is.null");
+
+  let { data, error } = await query;
+  if (error && (error.code === "42703" || error.message?.includes("star_rating"))) {
+    let retryQuery = supabase
       .from("m_commission_policy")
-      .select("*, m_hotel(hotel_id, name, address, star_rating)")
+      .select("*, m_hotel(hotel_id, name, address, star_quality)")
       .order("priority_level", { ascending: false })
       .order("created_at", { ascending: false });
-
     if (filters.hotel_id && filters.hotel_id !== "ALL") {
       if (filters.hotel_id === "SYSTEM") {
-        query = query.is("hotel_id", null).is("star_quality", null);
+        retryQuery = retryQuery.is("hotel_id", null).is("star_quality", null);
       } else if (filters.hotel_id.startsWith("STAR_")) {
         const star = Number(filters.hotel_id.replace("STAR_", ""));
-        query = query.eq("star_quality", star);
+        retryQuery = retryQuery.eq("star_quality", star);
       } else {
-        query = query.eq("hotel_id", filters.hotel_id);
+        retryQuery = retryQuery.eq("hotel_id", filters.hotel_id);
       }
     }
-
-    // Lọc bỏ các bản ghi đã xóa mềm (is_active = false)
-    query = query.or("is_active.eq.true,is_active.is.null");
-
-    let { data, error } = await query;
-    if (error && (error.code === "42703" || error.message?.includes("star_rating"))) {
-      let retryQuery = supabase
-        .from("m_commission_policy")
-        .select("*, m_hotel(hotel_id, name, address, star_quality)")
-        .order("priority_level", { ascending: false })
-        .order("created_at", { ascending: false });
-      if (filters.hotel_id && filters.hotel_id !== "ALL") {
-        if (filters.hotel_id === "SYSTEM") {
-          retryQuery = retryQuery.is("hotel_id", null).is("star_quality", null);
-        } else if (filters.hotel_id.startsWith("STAR_")) {
-          const star = Number(filters.hotel_id.replace("STAR_", ""));
-          retryQuery = retryQuery.eq("star_quality", star);
-        } else {
-          retryQuery = retryQuery.eq("hotel_id", filters.hotel_id);
-        }
-      }
-      retryQuery = retryQuery.or("is_active.eq.true,is_active.is.null");
-      const retry = await retryQuery;
-      data = retry.data;
-      error = retry.error;
-    }
-    if (error) {
-      throwDatabaseError("Không thể tải danh sách chính sách phí hoa hồng.", error);
-    }
-    rawList = (data || []).filter(
-      (record) => record.is_active !== false && record.is_deleted !== true
-    );
-  } else {
-    // Fallback in-memory
-    if (!_fallbackPolicies) {
-      _fallbackPolicies = getInitialFallbackPolicies();
-    }
-    rawList = _fallbackPolicies.filter(
-      (record) => record.is_active !== false && record.is_deleted !== true
-    );
+    retryQuery = retryQuery.or("is_active.eq.true,is_active.is.null");
+    const retry = await retryQuery;
+    data = retry.data;
+    error = retry.error;
   }
+  if (error) {
+    throwDatabaseError("Không thể tải danh sách chính sách phí hoa hồng.", error);
+  }
+  const rawList = (data || []).filter(
+    (record) => record.is_active !== false && record.is_deleted !== true
+  );
 
   let policies = rawList.map((record) => formatCommissionPolicyRecord(record, hotelMap));
 
@@ -342,48 +272,31 @@ const getCommissionPolicies = async (filters = {}) => {
 const getCommissionPolicyById = async (id) => {
   ensureClient();
   const cleanId = String(id || "").trim();
-  const isTableAvailable = await checkCommissionTable();
-  if (isTableAvailable) {
-    let { data, error } = await supabase
+  let { data, error } = await supabase
+    .from("m_commission_policy")
+    .select("*, m_hotel(hotel_id, name, address, star_rating)")
+    .eq("policy_id", cleanId)
+    .maybeSingle();
+
+  if (error && (error.code === "42703" || error.message?.includes("star_rating"))) {
+    const retry = await supabase
       .from("m_commission_policy")
-      .select("*, m_hotel(hotel_id, name, address, star_rating)")
+      .select("*, m_hotel(hotel_id, name, address, star_quality)")
       .eq("policy_id", cleanId)
       .maybeSingle();
-
-    if (error && (error.code === "42703" || error.message?.includes("star_rating"))) {
-      const retry = await supabase
-        .from("m_commission_policy")
-        .select("*, m_hotel(hotel_id, name, address, star_quality)")
-        .eq("policy_id", cleanId)
-        .maybeSingle();
-      data = retry.data;
-      error = retry.error;
-    }
-
-    if (error) {
-      throwDatabaseError("Lỗi khi tải thông tin chi tiết chính sách hoa hồng.", error);
-    }
-    if (!data || data.is_active === false || data.is_deleted === true) {
-      const err = new Error("Không tìm thấy chính sách hoa hồng yêu cầu hoặc chính sách đã bị xóa.");
-      err.statusCode = 404;
-      throw err;
-    }
-    return formatCommissionPolicyRecord(data);
+    data = retry.data;
+    error = retry.error;
   }
 
-  // Fallback
-  if (!_fallbackPolicies) _fallbackPolicies = getInitialFallbackPolicies();
-  const record = _fallbackPolicies.find(
-    (p) => p.policy_id === cleanId && p.is_active !== false && p.is_deleted !== true
-  );
-  if (!record) {
+  if (error) {
+    throwDatabaseError("Lỗi khi tải thông tin chi tiết chính sách hoa hồng.", error);
+  }
+  if (!data || data.is_active === false || data.is_deleted === true) {
     const err = new Error("Không tìm thấy chính sách hoa hồng yêu cầu hoặc chính sách đã bị xóa.");
     err.statusCode = 404;
     throw err;
   }
-  const hotels = await getHotelsList();
-  const hotel = hotels.find((h) => h.hotel_id === record.hotel_id) || null;
-  return formatCommissionPolicyRecord({ ...record, m_hotel: hotel });
+  return formatCommissionPolicyRecord(data);
 };
 
 /**
@@ -391,7 +304,6 @@ const getCommissionPolicyById = async (id) => {
  */
 const createCommissionPolicy = async (payload) => {
   ensureClient();
-  const isTableAvailable = await checkCommissionTable();
   const policyId = randomUUID();
   const policyCode = `CP-${policyId.replace(/-/g, "").substring(0, 8).toUpperCase()}`;
 
@@ -433,57 +345,50 @@ const createCommissionPolicy = async (payload) => {
     recordToInsert.policy_code = payload.policy_code || policyCode;
   }
 
-  if (isTableAvailable) {
-    let toInsert = { ...recordToInsert };
-    let { data, error } = await supabase
+  let toInsert = { ...recordToInsert };
+  let { data, error } = await supabase
+    .from("m_commission_policy")
+    .insert(toInsert)
+    .select("*")
+    .single();
+
+  if (error && (error.code === "42703" || error.message?.includes("policy_code"))) {
+    delete toInsert.policy_code;
+    const retry = await supabase
       .from("m_commission_policy")
       .insert(toInsert)
       .select("*")
       .single();
-
-    if (error && (error.code === "42703" || error.message?.includes("policy_code"))) {
-      delete toInsert.policy_code;
-      const retry = await supabase
-        .from("m_commission_policy")
-        .insert(toInsert)
-        .select("*")
-        .single();
-      data = retry.data;
-      error = retry.error;
-    }
-
-    if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
-      delete toInsert.is_active;
-      const retry = await supabase
-        .from("m_commission_policy")
-        .insert(toInsert)
-        .select("*")
-        .single();
-      data = retry.data;
-      error = retry.error;
-    }
-
-    if (error) {
-      throwDatabaseError("Không thể tạo mới chính sách phí hoa hồng.", error);
-    }
-
-    let hotel = null;
-    if (data.hotel_id) {
-      const { data: hData } = await supabase
-        .from("m_hotel")
-        .select("hotel_id, name, address, star_rating")
-        .eq("hotel_id", data.hotel_id)
-        .maybeSingle();
-      hotel = hData;
-    }
-
-    return formatCommissionPolicyRecord(data, hotel ? { [hotel.hotel_id]: hotel } : {});
+    data = retry.data;
+    error = retry.error;
   }
 
-  // Fallback in-memory
-  if (!_fallbackPolicies) _fallbackPolicies = getInitialFallbackPolicies();
-  _fallbackPolicies.unshift(recordToInsert);
-  return formatCommissionPolicyRecord(recordToInsert);
+  if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+    delete toInsert.is_active;
+    const retry = await supabase
+      .from("m_commission_policy")
+      .insert(toInsert)
+      .select("*")
+      .single();
+    data = retry.data;
+    error = retry.error;
+  }
+
+  if (error) {
+    throwDatabaseError("Không thể tạo mới chính sách phí hoa hồng.", error);
+  }
+
+  let hotel = null;
+  if (data.hotel_id) {
+    const { data: hData } = await supabase
+      .from("m_hotel")
+      .select("hotel_id, name, address, star_rating")
+      .eq("hotel_id", data.hotel_id)
+      .maybeSingle();
+    hotel = hData;
+  }
+
+  return formatCommissionPolicyRecord(data, hotel ? { [hotel.hotel_id]: hotel } : {});
 };
 
 /**
@@ -492,7 +397,6 @@ const createCommissionPolicy = async (payload) => {
 const updateCommissionPolicy = async (id, payload) => {
   ensureClient();
   const cleanId = String(id || "").trim();
-  const isTableAvailable = await checkCommissionTable();
 
   const updateFields = {
     ...payload,
@@ -510,49 +414,33 @@ const updateCommissionPolicy = async (id, payload) => {
     }
   }
 
-  if (isTableAvailable) {
-    const { data, error } = await supabase
-      .from("m_commission_policy")
-      .update(updateFields)
-      .eq("policy_id", cleanId)
-      .select("*")
-      .maybeSingle();
+  const { data, error } = await supabase
+    .from("m_commission_policy")
+    .update(updateFields)
+    .eq("policy_id", cleanId)
+    .select("*")
+    .maybeSingle();
 
-    if (error) {
-      throwDatabaseError("Không thể cập nhật chính sách phí hoa hồng.", error);
-    }
-    if (!data) {
-      const err = new Error("Không tìm thấy chính sách phí hoa hồng để cập nhật.");
-      err.statusCode = 404;
-      throw err;
-    }
-
-    let hotel = null;
-    if (data.hotel_id) {
-      const { data: hData } = await supabase
-        .from("m_hotel")
-        .select("hotel_id, name, address, star_rating")
-        .eq("hotel_id", data.hotel_id)
-        .maybeSingle();
-      hotel = hData;
-    }
-
-    return formatCommissionPolicyRecord(data, hotel ? { [hotel.hotel_id]: hotel } : {});
+  if (error) {
+    throwDatabaseError("Không thể cập nhật chính sách phí hoa hồng.", error);
   }
-
-  // Fallback in-memory
-  if (!_fallbackPolicies) _fallbackPolicies = getInitialFallbackPolicies();
-  const idx = _fallbackPolicies.findIndex((p) => p.policy_id === cleanId);
-  if (idx === -1) {
+  if (!data) {
     const err = new Error("Không tìm thấy chính sách phí hoa hồng để cập nhật.");
     err.statusCode = 404;
     throw err;
   }
-  _fallbackPolicies[idx] = {
-    ..._fallbackPolicies[idx],
-    ...updateFields,
-  };
-  return formatCommissionPolicyRecord(_fallbackPolicies[idx]);
+
+  let hotel = null;
+  if (data.hotel_id) {
+    const { data: hData } = await supabase
+      .from("m_hotel")
+      .select("hotel_id, name, address, star_rating")
+      .eq("hotel_id", data.hotel_id)
+      .maybeSingle();
+    hotel = hData;
+  }
+
+  return formatCommissionPolicyRecord(data, hotel ? { [hotel.hotel_id]: hotel } : {});
 };
 
 /**
@@ -561,41 +449,27 @@ const updateCommissionPolicy = async (id, payload) => {
 const deleteCommissionPolicy = async (id) => {
   ensureClient();
   const cleanId = String(id || "").trim();
-  const isTableAvailable = await checkCommissionTable();
 
-  if (isTableAvailable) {
-    // Xóa mềm: Cập nhật is_active = false và updated_at trong DB
-    const { data, error } = await supabase
-      .from("m_commission_policy")
-      .update({
-        is_active: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("policy_id", cleanId)
-      .select("policy_id")
-      .maybeSingle();
+  // Xóa mềm: Cập nhật is_active = false và updated_at trong DB
+  const { data, error } = await supabase
+    .from("m_commission_policy")
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("policy_id", cleanId)
+    .select("policy_id")
+    .maybeSingle();
 
-    if (error) {
-      throwDatabaseError("Không thể xóa mềm chính sách phí hoa hồng.", error);
-    }
-    if (!data) {
-      const err = new Error("Không tìm thấy chính sách phí hoa hồng để xóa.");
-      err.statusCode = 404;
-      throw err;
-    }
-    return { success: true, policy_id: cleanId, message: "Đã xóa chính sách phí hoa hồng thành công." };
+  if (error) {
+    throwDatabaseError("Không thể xóa mềm chính sách phí hoa hồng.", error);
   }
-
-  // Fallback
-  if (!_fallbackPolicies) _fallbackPolicies = getInitialFallbackPolicies();
-  const idx = _fallbackPolicies.findIndex((p) => p.policy_id === cleanId);
-  if (idx === -1) {
+  if (!data) {
     const err = new Error("Không tìm thấy chính sách phí hoa hồng để xóa.");
     err.statusCode = 404;
     throw err;
   }
-  _fallbackPolicies[idx].is_active = false;
-  return { success: true, policy_id: cleanId };
+  return { success: true, policy_id: cleanId, message: "Đã xóa chính sách phí hoa hồng thành công." };
 };
 
 module.exports = {

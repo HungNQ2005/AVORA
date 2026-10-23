@@ -16,9 +16,7 @@ const FACILITY_TYPE_LABELS = {
 };
 
 const getDatabaseError = (message, databaseError) => {
-  const error = new Error(
-    `${message} do lỗi cơ sở dữ liệu (${databaseError?.code || databaseError?.message || 'không xác định'}).`
-  );
+  const error = new Error(`${message}. Vui lòng thử lại sau.`);
   error.statusCode = 500;
   return error;
 };
