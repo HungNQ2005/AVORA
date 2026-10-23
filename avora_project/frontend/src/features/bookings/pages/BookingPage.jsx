@@ -475,11 +475,8 @@ const BookingPage = () => {
         <div className="booking-layout-grid">
           {/* Left Column: Form & Details */}
           <div className="booking-main-col">
-            {/* 1. User & Active Coupons Banner */}
-            <GeniusBanner
-              user={user}
-              availableCoupons={pricing.available_coupons}
-            />
+            {/* 1. Customer greeting */}
+            <GeniusBanner user={user} />
 
             {/* 3. Contact Information Card */}
             <ContactInfoCard form={contactForm} onChange={handleContactChange} />
