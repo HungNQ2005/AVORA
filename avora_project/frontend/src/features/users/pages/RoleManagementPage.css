@@ -110,13 +110,15 @@
 }
 
 .role-btn--primary-gold {
-  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  background: #003580;
+  border: 1px solid #003580;
   color: #ffffff;
-  box-shadow: 0 2px 4px rgba(217, 119, 6, 0.25);
+  box-shadow: 0 2px 4px rgba(0, 53, 128, 0.2);
 }
 
 .role-btn--primary-gold:hover {
-  background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+  background: #00224f;
+  border-color: #00224f;
 }
 
 /* Security Notice Box on Page */

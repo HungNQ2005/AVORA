@@ -98,7 +98,7 @@ const AmenityManagementPage = () => {
       }
     } catch (err) {
       console.error('Error loading amenities:', err);
-      setError(err.message || 'Không thể tải danh sách tiện ích từ cơ sở dữ liệu Cloud.');
+      setError(err.message || 'Không thể tải danh sách tiện ích. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
@@ -228,7 +228,7 @@ const AmenityManagementPage = () => {
   };
 
   const handleAuditClick = () => {
-    showToast(`Hệ thống kiểm toán CMS: ${stats?.totalFacilities ?? 0} tiện ích đồng bộ chính xác với cơ sở dữ liệu OTA.`);
+    showToast(`Hệ thống: ${stats?.totalFacilities ?? 0} tiện ích đã được đồng bộ chuẩn xác.`);
   };
 
   return (

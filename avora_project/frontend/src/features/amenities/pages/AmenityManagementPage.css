@@ -231,8 +231,8 @@
   display: flex;
   align-items: center;
   gap: 0.45rem;
-  background: #0b1e3f;
-  border: 1px solid #0b1e3f;
+  background: #003580;
+  border: 1px solid #003580;
   color: #ffffff;
   padding: 0.55rem 1.15rem;
   border-radius: 8px;
@@ -240,11 +240,11 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
-  box-shadow: 0 2px 4px rgba(11, 30, 63, 0.15);
+  box-shadow: 0 2px 4px rgba(0, 53, 128, 0.2);
 }
 
 .amenity-btn-primary-cta:hover {
-  background: #132a52;
-  border-color: #132a52;
-  box-shadow: 0 4px 8px rgba(11, 30, 63, 0.25);
+  background: #00224f;
+  border-color: #00224f;
+  box-shadow: 0 4px 8px rgba(0, 53, 128, 0.3);
 }

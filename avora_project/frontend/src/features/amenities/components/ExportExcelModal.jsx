@@ -12,6 +12,8 @@ const ExportExcelModal = ({
   totalRecords = 0,
   filename = 'AVORA_Danh_muc_tien_nghi.xlsx',
   isExporting = false,
+  title = 'Xuất Danh Mục Tiện Nghi',
+  unitLabel = 'tiện nghi',
 }) => {
   if (!isOpen) return null;
 
@@ -50,7 +52,7 @@ const ExportExcelModal = ({
             </svg>
           </div>
           <h2 id="export-modal-title" className="avora-export-modal__title">
-            Xuất Danh Mục Tiện Nghi
+            {title}
           </h2>
           <p className="avora-export-modal__subtitle">
             Hệ thống quản lý lưu trú & khách sạn cao cấp AVORA
@@ -74,7 +76,7 @@ const ExportExcelModal = ({
             <div className="avora-export-detail-item">
               <span className="avora-export-detail-label">Số lượng bản ghi:</span>
               <span className="avora-export-detail-val avora-export-badge-count">
-                <strong>{totalRecords}</strong> tiện nghi
+                <strong>{totalRecords}</strong> {unitLabel}
               </span>
             </div>
 
@@ -88,7 +90,7 @@ const ExportExcelModal = ({
             <div className="avora-export-detail-item">
               <span className="avora-export-detail-label">Trạng thái dữ liệu:</span>
               <span className="avora-export-detail-val text-success">
-                ● Đã đồng bộ từ Cloud Database
+                ● Sẵn sàng xuất dữ liệu
               </span>
             </div>
           </div>

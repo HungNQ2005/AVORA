@@ -18,9 +18,14 @@ const UserManagementPage = () => {
   const navigate = useNavigate();
 
 
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1';
+
   // Guard: Only System Admin (ADM) can access
-  if (!authLoading && user && user.role_code_name !== 'ADM') {
-    return <Navigate to="/admin" replace />;
+  if (!authLoading && user && !isAdmin) {
+    return <Navigate to="/forbidden" replace />;
   }
 
   // Main Data States
@@ -120,7 +125,7 @@ const UserManagementPage = () => {
       }
     } catch (err) {
       console.error('Error fetching users:', err);
-      setError(err.message || 'Không thể tải danh sách người dùng từ cơ sở dữ liệu.');
+      setError(err.message || 'Không thể tải danh sách người dùng. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
@@ -368,22 +373,6 @@ const UserManagementPage = () => {
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
             <span>Phân quyền vai trò (RBAC)</span>
-          </button>
-
-          {/* Nút 3: + Thêm người dùng mới */}
-          <button
-            type="button"
-            className="user-btn user-btn--primary-gold"
-            onClick={() => showToast('Tính năng thêm người dùng mới qua Form quản trị.', 'info')}
-            title="Thêm tài khoản người dùng mới"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-              <circle cx="8.5" cy="7" r="4" />
-              <line x1="20" y1="8" x2="20" y2="14" />
-              <line x1="23" y1="11" x2="17" y2="11" />
-            </svg>
-            <span>Thêm người dùng mới</span>
           </button>
         </div>
       </div>

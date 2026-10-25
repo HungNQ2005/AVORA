@@ -374,7 +374,15 @@ const getSpecificHotelDetails = async (args = {}, ctx = {}) => {
                 room_size: r.room_size,
                 price_per_night: toNumber(r.default_price),
             })),
-            cancellation_policy: policyRes.data || null,
+            cancellation_policy: policyRes.data ? {
+                free_cancel_before_hours: policyRes.data.free_cancel_before_hours,
+                penalty_rate: policyRes.data.penalty_rate,
+                description: String(policyRes.data.description || '')
+                    .replace(/<!--META:[\s\S]*?-->/g, '')
+                    .replace(/^\[.*?\]\s*/g, '')
+                    .replace(/Điều kiện:\s*.*$/i, '')
+                    .trim() || `Miễn phí hủy phòng trước ${policyRes.data.free_cancel_before_hours || 48}h`,
+            } : null,
             link: `/hotel/${hotel.hotel_id}`,
         };
     } catch (err) {

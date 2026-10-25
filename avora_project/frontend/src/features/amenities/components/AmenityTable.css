@@ -374,7 +374,7 @@
 }
 
 .amenity-retry-btn {
-  background: #0f2942;
+  background: #003580;
   color: #ffffff;
   border: none;
   border-radius: 6px;
@@ -386,7 +386,7 @@
 }
 
 .amenity-retry-btn:hover {
-  background: #1e3a8a;
+  background: #00224f;
 }
 
 /* Footer bar & Pagination */

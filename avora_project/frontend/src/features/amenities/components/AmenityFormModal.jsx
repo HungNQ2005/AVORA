@@ -97,7 +97,7 @@ const AmenityFormModal = ({
                 {isEdit ? 'Chỉnh sửa tiện ích' : 'Thêm tiện nghi'}
               </h2>
               <p className="rt-modal-subtitle">
-                Thông tin được lưu trực tiếp vào cơ sở dữ liệu tiện ích.
+                Quản lý thông tin và biểu tượng hiển thị của tiện nghi.
               </p>
             </div>
           </div>
@@ -173,10 +173,6 @@ const AmenityFormModal = ({
                 </div>
                 <small>Biểu tượng được tự động gán theo loại tiện ích.</small>
               </div>
-
-              {/* <div className="amenity-rt-notice">
-                Mã ID (<strong>facility_id</strong>) sẽ do cơ sở dữ liệu PostgreSQL tự động sinh (UUID).
-              </div> */}
             </div>
           </div>
 

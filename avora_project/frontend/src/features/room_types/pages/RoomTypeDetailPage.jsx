@@ -327,7 +327,7 @@ const RoomTypeDetailPage = () => {
               </div>
             ) : (
               <div className="rtd-empty-text">
-                Chưa có buồng phòng vật lý nào được liên kết trong cơ sở dữ liệu.
+                Chưa có buồng phòng nào được liên kết với hạng phòng này.
               </div>
             )}
           </section>
@@ -368,7 +368,7 @@ const RoomTypeDetailPage = () => {
             )}
           </section>
 
-          {/* Card: Thông tin cơ sở dữ liệu & Kiểm toán */}
+          {/* Card: Thông tin hệ thống & Kiểm toán */}
           <section className="rtd-card rtd-card--muted">
             <h2 className="rtd-card__title">Thông tin hệ thống & Kiểm toán</h2>
             <div className="rtd-audit-list">

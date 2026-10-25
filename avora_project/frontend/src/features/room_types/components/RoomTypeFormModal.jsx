@@ -32,7 +32,7 @@ const getInitialBedDetails = (bedType) => {
 
 const getInitialRoomSize = (roomSize) => (
   typeof roomSize === 'string'
-    ? roomSize.replace(/\s*m(?:²|2)\s*$/i, '').trim()
+    ? roomSize.replace(/(?:\s*m(?:²|2))+\s*$/gi, '').trim()
     : ''
 );
 
@@ -131,7 +131,9 @@ const RoomTypeFormModal = ({
       max_adults: maxAdults,
       max_children: maxChildren,
       bed_type: `${bedCount} x ${formData.bed_type}`,
-      room_size: formData.room_size.trim() ? `${formData.room_size.trim()} m²` : null,
+      room_size: formData.room_size.replace(/(?:\s*m(?:²|2))+\s*$/gi, '').trim()
+        ? `${formData.room_size.replace(/(?:\s*m(?:²|2))+\s*$/gi, '').trim()} m²`
+        : null,
       default_price: price,
       is_deleted: formData.is_deleted,
       facility_ids: formData.facility_ids,
@@ -156,7 +158,7 @@ const RoomTypeFormModal = ({
                 {initialData ? 'Chỉnh sửa hạng phòng' : 'Thêm hạng phòng'}
               </h2>
               <p className="rt-modal-subtitle">
-                Thông tin được lưu trực tiếp vào cơ sở dữ liệu hạng phòng.
+                Cập nhật thông tin chi tiết và định giá cho hạng phòng.
               </p>
             </div>
           </div>
