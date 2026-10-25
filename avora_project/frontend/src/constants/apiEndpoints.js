@@ -41,6 +41,8 @@ export const API_ENDPOINTS = {
   BOOKING_INVOICE: (id) => `${API_BASE_URL}/api/bookings/${id}/invoice`,
   BOOKING_CANCEL: (id) => `${API_BASE_URL}/api/bookings/${id}/cancel`,
   BOOKING_DATES: (id) => `${API_BASE_URL}/api/bookings/${id}/dates`,
+  PAYMENT_CREATE_QR: `${API_BASE_URL}/api/payment/create-qr`,
+  PAYMENT_STATUS: (bookingId) => `${API_BASE_URL}/api/payment/status/${bookingId}`,
   WISHLIST: `${API_BASE_URL}/api/wishlist`,
   WATCHLIST: `${API_BASE_URL}/api/watchlist`,
   WISHLIST_CHECK: (id) => `${API_BASE_URL}/api/wishlist/check/${id}`,

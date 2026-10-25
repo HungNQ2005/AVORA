@@ -533,6 +533,7 @@ const BookingPage = () => {
           onViewMyBookings={() => {
             navigate('/my-bookings');
           }}
+          onPayNow={() => navigate(`/payment/${createdBookingResult.booking_id}`)}
         />
       )}
       <BookingErrorModal

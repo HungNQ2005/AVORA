@@ -35,6 +35,8 @@ import BookingPage from './features/bookings/pages/BookingPage';
 import MyBookingsPage from './features/bookings/pages/MyBookingsPage';
 import ReviewPage from './features/reviews/pages/ReviewPage';
 import AdminReviewManagementPage from './features/reviews/pages/AdminReviewManagementPage';
+import PaymentQRScreen from './features/payments/pages/PaymentQRScreen';
+import PaymentSuccessScreen from './features/payments/pages/PaymentSuccessScreen';
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -240,6 +242,8 @@ function App() {
             <Route path="/my-bookings" element={<MyBookingsPage />} />
             <Route path="/myaccount/bookings" element={<MyBookingsPage />} />
             <Route path="/my-reviews" element={<ReviewPage />} />
+            <Route path="/payment/success/:bookingId" element={<PaymentSuccessScreen />} />
+            <Route path="/payment/:bookingId" element={<PaymentQRScreen />} />
             <Route path="/search" element={<HotelSearchPage />} />
 
             <Route path="/forbidden" element={<section style={{ padding: '3rem 1rem', textAlign: 'center' }}><h1>403 - Truy cập bị từ chối</h1><p>Tài khoản của bạn không có quyền truy cập trang quản lý này.</p></section>} />

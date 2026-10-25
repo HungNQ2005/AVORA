@@ -16,7 +16,7 @@ const parseIsoToDate = (dateStr) => {
 /**
  * Handover Modal shown after booking creation succeeds in DB.
  */
-const BookingSuccessModal = ({ bookingData, onClose, onViewMyBookings }) => {
+const BookingSuccessModal = ({ bookingData, onClose, onViewMyBookings, onPayNow }) => {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -118,9 +118,18 @@ const BookingSuccessModal = ({ bookingData, onClose, onViewMyBookings }) => {
           >
             Đóng
           </button>
+          {onPayNow && !countdown?.expired && (
+            <button
+              type="button"
+              className="booking-modal-btn-primary"
+              onClick={onPayNow}
+            >
+              Thanh toán ngay
+            </button>
+          )}
           <button
             type="button"
-            className="booking-modal-btn-primary"
+            className={onPayNow && !countdown?.expired ? 'booking-modal-btn-secondary' : 'booking-modal-btn-primary'}
             onClick={onViewMyBookings}
           >
             Xem đơn đặt chỗ của tôi
