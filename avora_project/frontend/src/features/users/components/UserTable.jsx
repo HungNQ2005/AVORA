@@ -1,4 +1,3 @@
-import React from 'react';
 import React, { useState } from 'react';
 import AvatarContent from '../../../common/components/AvatarContent';
 import './UserTable.css';
@@ -322,8 +321,8 @@ const UserTable = ({
                             isSelf
                               ? 'Xem thông tin tài khoản của bạn (Không thể tự khóa)'
                               : isProtectedAdmin(u)
-                              ? 'Chỉnh sửa tài khoản (Vai trò System Admin không thể bị khóa)'
-                              : 'Chỉnh sửa thông tin'
+                                ? 'Chỉnh sửa tài khoản (Vai trò System Admin không thể bị khóa)'
+                                : 'Chỉnh sửa thông tin'
                           }
                           onClick={() => onEditUser?.(u)}
                         >
@@ -374,8 +373,8 @@ const UserTable = ({
                               u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED'
                                 ? 'Tài khoản đang bị khóa'
                                 : u.account_status === 'VERIFYING' || u.account_status === 'PENDING'
-                                ? 'Tài khoản đang chờ duyệt'
-                                : 'Tài khoản đang hoạt động'
+                                  ? 'Tài khoản đang chờ duyệt'
+                                  : 'Tài khoản đang hoạt động'
                             }
                             aria-label="Trạng thái tài khoản"
                           >
