@@ -36,6 +36,7 @@ const UpcomingBookingCard = ({
   onOpenEditGuest,
   onOpenDateChange,
   onOpenCancel,
+  onPayNow,
 }) => {
   const countdown = (booking.status_badge_variant === 'amber' || booking.status_badge_variant === 'pending') &&
     booking.payment?.is_paid !== true
@@ -265,6 +266,15 @@ const UpcomingBookingCard = ({
 
         {/* Action Buttons Bar */}
         <div className="my-bookings-hero-actions">
+          {countdown && !countdown.expired && onPayNow && (
+            <button
+              type="button"
+              className="my-bookings-btn-primary"
+              onClick={() => onPayNow(booking)}
+            >
+              <span>Thanh toán ngay ({countdown.label})</span>
+            </button>
+          )}
           <button
             type="button"
             className="my-bookings-btn-primary"
