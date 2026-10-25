@@ -247,6 +247,7 @@ const deactivateHotel = async ({ hotelId, access, options = {} }) => {
 };
 
 const HOTEL_IMAGE_BUCKET = 'hotel_images';
+const HOTEL_IMAGE_LIMIT = 5;
 
 // Confirms the hotel exists and belongs to the Vendor performing the image operation.
 const assertHotelAccess = async (hotelId, access) => {
@@ -261,6 +262,17 @@ const assertHotelAccess = async (hotelId, access) => {
 const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbnail }, access) => {
   ensureClient();
   if (!(await assertHotelAccess(hotelId, access))) return null;
+
+  const { count, error: countError } = await supabase
+    .from('m_hotel_image')
+    .select('image_id', { count: 'exact', head: true })
+    .eq('hotel_id', hotelId);
+  checkQuery(countError);
+  if (count >= HOTEL_IMAGE_LIMIT) {
+    const err = new Error('Mỗi khách sạn chỉ được tải lên tối đa 5 hình ảnh.');
+    err.statusCode = 409;
+    throw err;
+  }
 
   const fileExt = (originalName?.split('.').pop() || 'jpg').toLowerCase();
   const objectPath = `${hotelId}/${Date.now()}-${Math.round(Math.random() * 1e6)}.${fileExt}`;
@@ -286,15 +298,6 @@ const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbn
       .update({ is_thumbnail: false })
       .eq('hotel_id', hotelId);
     checkQuery(resetError);
-  }
-
-  const { count, error: countError } = await supabase
-    .from('m_hotel_image')
-    .select('image_id', { count: 'exact', head: true })
-    .eq('hotel_id', hotelId);
-  if (countError) {
-    await supabase.storage.from(HOTEL_IMAGE_BUCKET).remove([objectPath]);
-    checkQuery(countError);
   }
 
   const { data, error } = await supabase
