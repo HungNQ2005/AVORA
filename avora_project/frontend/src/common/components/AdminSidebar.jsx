@@ -109,7 +109,7 @@ const AdminSidebar = () => {
               <span className="admin-sidebar__label">Vai trò & Quyền hạn (RBAC)</span>
             </NavLink>
           </div>
-        )}
+        </div>
 
         {/* HỆ THỐNG KHÁCH SẠN */}
         <div className="admin-sidebar__group">
