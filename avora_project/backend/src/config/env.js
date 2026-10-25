@@ -9,6 +9,12 @@ const env = {
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
   JWT_SECRET: process.env.JWT_SECRET || 'avora_jwt_secret_dev_key_change_in_prod',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '7d',
+  SEPAY_API_KEY: process.env.SEPAY_API_KEY || '',
+  SEPAY_HMAC_SECRET: process.env.SEPAY_HMAC_SECRET || '',
+  WEBHOOK_URL: process.env.WEBHOOK_URL || '',
+  BANK_CODE: process.env.BANK_CODE || '',
+  ACCOUNT_NUMBER: process.env.ACCOUNT_NUMBER || '',
+  ACCOUNT_HOLDER_NAME: process.env.ACCOUNT_HOLDER_NAME || '',
 };
 
 // Validate required env vars on startup

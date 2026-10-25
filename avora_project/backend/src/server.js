@@ -24,12 +24,18 @@ const wishlistRoute = require('./features/wishlist/wishlist.route');
 const env = require("./config/env");
 const bookingRoute = require('./features/bookings/booking.route');
 const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
+const paymentRoute = require('./features/payments/payment.route');
 
 const app = express();
 
 // ─── Global Middlewares ───────────────────────────────────────────────────────
 app.use(cors({ origin: "*" }));
-app.use(express.json());
+// rawBody is required to verify the SePay HMAC-SHA256 webhook signature.
+app.use(express.json({
+  verify: (req, _res, buf) => {
+    req.rawBody = buf.toString();
+  },
+}));
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Request Logger (dev only) ────────────────────────────────────────────────
@@ -43,6 +49,15 @@ if (env.NODE_ENV === "development") {
 }
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
+app.get("/", (_req, res) => {
+  res.json({
+    status: "success",
+    message: "AVORA Backend is running 🚀",
+    webhook: "/api/payment/webhook",
+    health: "/api/health",
+  });
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({ status: "success", message: "AVORA Backend is running 🚀" });
 });
@@ -64,6 +79,7 @@ app.use("/api", refundPolicyRoute);
 app.use("/api", commissionPolicyRoute);
 app.use("/api", bookingRoute);
 app.use("/api", wishlistRoute);
+app.use("/api", paymentRoute);
 
 app.use((_req, _res, next) => {
   const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');

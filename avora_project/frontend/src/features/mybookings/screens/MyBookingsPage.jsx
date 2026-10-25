@@ -434,6 +434,7 @@ const MyBookingsPage = () => {
                     onOpenEditGuest={handleOpenEditGuest}
                     onOpenDateChange={handleOpenDateChange}
                     onOpenCancel={handleOpenCancel}
+                    onPayNow={(b) => navigate(`/payment/${b.booking_id}`)}
                   />
                 ))}
               </section>
