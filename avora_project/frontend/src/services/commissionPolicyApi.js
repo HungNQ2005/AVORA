@@ -76,8 +76,26 @@ export const fetchCommissionPolicies = async (params = {}) => {
 
   const filteredPolicies = rawPolicies.filter((p) => {
     const pId = String(p.policy_id || '').trim();
-    return !softDeletedIds.includes(pId);
+    return !softDeletedIds.includes(pId) && p.is_active !== false;
   });
+
+  const total = filteredPolicies.length;
+  const activeCount = filteredPolicies.filter((p) => (p.status ? p.status === 'ACTIVE' : p.is_active !== false)).length;
+  const upcomingCount = filteredPolicies.filter((p) => p.status === 'UPCOMING').length;
+  const expiredCount = filteredPolicies.filter((p) => p.status === 'EXPIRED').length;
+  const sumRate = filteredPolicies.reduce((acc, p) => acc + (Number(p.commission_rate) || 0), 0);
+  const avgRate = total > 0 ? Math.round((sumRate / total) * 10) / 10 : 0;
+
+  const updatedStats = json.data?.stats
+    ? {
+        ...json.data.stats,
+        total_policies: total,
+        active_policies: activeCount,
+        upcoming_policies: upcomingCount,
+        expired_policies: expiredCount,
+        avg_commission_rate: avgRate,
+      }
+    : null;
 
   if (Array.isArray(json.data)) {
     return filteredPolicies;
@@ -86,6 +104,7 @@ export const fetchCommissionPolicies = async (params = {}) => {
   return {
     ...json.data,
     policies: filteredPolicies,
+    stats: updatedStats,
   };
 };
 
@@ -172,7 +191,16 @@ export const updateCommissionPolicy = async (id, payload) => {
  * @param {string} id
  */
 export const deleteCommissionPolicy = async (id) => {
-  // CHẮP VÁ: Xóa mềm phía FE bằng localStorage, không gọi xóa cứng xuống DB.
   addSoftDeletedCommissionPolicyId(id);
-  return { success: true, policy_id: id, message: 'Đã xóa chính sách phí hoa hồng thành công.' };
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.COMMISSION_POLICIES}/${encodeURIComponent(id)}`,
+    {
+      method: 'DELETE',
+    }
+  );
+  const json = await response.json();
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể xóa chính sách phí hoa hồng.');
+  }
+  return json.data || { success: true, policy_id: id };
 };

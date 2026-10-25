@@ -170,15 +170,16 @@
 }
 
 .room-btn-action--primary {
-  background: #d97706;
-  border: 1px solid #d97706;
+  background: #003580;
+  border: 1px solid #003580;
   color: #ffffff;
-  box-shadow: 0 1px 2px rgba(217, 119, 6, 0.2);
+  box-shadow: 0 2px 4px rgba(0, 53, 128, 0.2);
 }
 
 .room-btn-action--primary:hover {
-  background: #b45309;
-  border-color: #b45309;
+  background: #00224f;
+  border-color: #00224f;
+  box-shadow: 0 4px 10px rgba(0, 53, 128, 0.28);
 }
 
 /* Luxury Hotel Style - Navy & Gold Excel Button (Synchronized with Amenities) */

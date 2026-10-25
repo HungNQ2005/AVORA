@@ -2,7 +2,11 @@
 
 const refundPolicyService = require("./refund_policy.service");
 const { sendSuccess, sendError } = require("../../utils/responseHelper");
-const { validateRefundPolicyPayload, isValidUuid } = require("./refund_policy.validation");
+const {
+  validateRefundPolicyPayload,
+  validateRefundPolicyFilters,
+  isValidUuid,
+} = require("./refund_policy.validation");
 
 /**
  * GET /api/refund-policies
@@ -10,19 +14,9 @@ const { validateRefundPolicyPayload, isValidUuid } = require("./refund_policy.va
  */
 const getAllRefundPolicies = async (req, res, next) => {
   try {
-    const filters = {
-      search: typeof req.query.search === "string" ? req.query.search : "",
-      status: req.query.status || "ALL",
-      hotel_id: req.query.hotel_id || "ALL",
-      sort_by: req.query.sort_by || "PERCENT_DESC",
-    };
-
-    if (filters.search && filters.search.length > 200) {
-      return sendError(res, 400, "Từ khóa tìm kiếm không được vượt quá 200 ký tự.");
-    }
-
-    if (filters.status !== "ALL" && !["ACTIVE", "INACTIVE"].includes(filters.status)) {
-      return sendError(res, 400, "Bộ lọc trạng thái không hợp lệ.");
+    const { filters, error } = validateRefundPolicyFilters(req.query);
+    if (error) {
+      return sendError(res, 400, error);
     }
 
     const result = await refundPolicyService.getRefundPolicies(filters);
@@ -54,7 +48,10 @@ const getRefundPolicyById = async (req, res, next) => {
     const { id } = req.params;
     const cleanId = String(id || "").trim();
     if (!cleanId) {
-      return sendError(res, 400, "Mã chính sách hoàn tiền không được để trống.");
+      return sendError(res, 400, "Mã định danh chính sách hoàn tiền không được để trống.");
+    }
+    if (cleanId.length > 100) {
+      return sendError(res, 400, "Mã định danh chính sách hoàn tiền không hợp lệ.");
     }
 
     const policy = await refundPolicyService.getRefundPolicyById(cleanId);
@@ -90,8 +87,9 @@ const createRefundPolicy = async (req, res, next) => {
 const updateRefundPolicy = async (req, res, next) => {
   try {
     const { id } = req.params;
-    if (!id || !isValidUuid(id)) {
-      return sendError(res, 400, "Mã chính sách hoàn tiền không hợp lệ.");
+    const cleanId = String(id || "").trim();
+    if (!cleanId || !isValidUuid(cleanId)) {
+      return sendError(res, 400, "Mã chính sách hoàn tiền không đúng định dạng UUID.");
     }
 
     const { payload, error } = validateRefundPolicyPayload(req.body, {
@@ -101,7 +99,7 @@ const updateRefundPolicy = async (req, res, next) => {
       return sendError(res, 400, error);
     }
 
-    const updated = await refundPolicyService.updateRefundPolicy(id, payload);
+    const updated = await refundPolicyService.updateRefundPolicy(cleanId, payload);
     return sendSuccess(res, 200, "Cập nhật chính sách hoàn tiền thành công.", updated);
   } catch (err) {
     next(err);
@@ -110,16 +108,17 @@ const updateRefundPolicy = async (req, res, next) => {
 
 /**
  * DELETE /api/refund-policies/:id
- * Deletes a refund policy with booking constraint check.
+ * Deletes a refund policy with booking and assignment constraint check.
  */
 const deleteRefundPolicy = async (req, res, next) => {
   try {
     const { id } = req.params;
-    if (!id || !isValidUuid(id)) {
-      return sendError(res, 400, "Mã chính sách hoàn tiền không hợp lệ.");
+    const cleanId = String(id || "").trim();
+    if (!cleanId || !isValidUuid(cleanId)) {
+      return sendError(res, 400, "Mã chính sách hoàn tiền không đúng định dạng UUID.");
     }
 
-    const result = await refundPolicyService.deleteRefundPolicy(id);
+    const result = await refundPolicyService.deleteRefundPolicy(cleanId);
     return sendSuccess(res, 200, result.message || "Xóa chính sách hoàn tiền thành công.", result);
   } catch (err) {
     next(err);
@@ -134,3 +133,4 @@ module.exports = {
   updateRefundPolicy,
   deleteRefundPolicy,
 };
+

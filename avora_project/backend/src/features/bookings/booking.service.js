@@ -1,7 +1,11 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
-const { normalizeGuestPhone, validateStayDates } = require('./booking.validation');
+const {
+  normalizeGuestPhone,
+  normalizeSpecialRequest,
+  validateStayDates,
+} = require('./booking.validation');
 const {
   getOperationalRoomCount,
   isOperationalRoom,
@@ -27,11 +31,11 @@ const ensureClient = () => {
 /**
  * Load system codes from m_system_code for dynamic code_cd <-> code_name resolution.
  */
-const loadSystemCodes = async (businessCds = ['BOOKING_STS', 'REFUND_STS', 'PAYMENT_METHOD', 'USER_ACTION']) => {
-  const { data: rows } = await supabase
+const loadSystemCodes = async () => {
+  const { data: rows, error } = await supabase
     .from('m_system_code')
-    .select('business_cd, code_cd, code_name, sort_no')
-    .in('business_cd', businessCds);
+    .select('business_cd, code_cd, code_name, sort_no');
+  if (error) throw createError(`Không thể tải mã hệ thống: ${error.message}`);
 
   const byBusiness = new Map();
   (rows || []).forEach((r) => {
@@ -48,9 +52,13 @@ const loadSystemCodes = async (businessCds = ['BOOKING_STS', 'REFUND_STS', 'PAYM
     group.list.push(r);
   });
 
-  const getCodeCd = (businessCd, codeName, fallback) => {
+  const getCodeCd = (businessCd, codeName) => {
     const group = byBusiness.get(String(businessCd).toUpperCase());
-    return group?.byName.get(String(codeName).toUpperCase()) || fallback;
+    const codeCd = group?.byName.get(String(codeName).toUpperCase());
+    if (!codeCd) {
+      throw createError(`Không tìm thấy mã "${codeName}" trong nhóm "${businessCd}".`, 500);
+    }
+    return codeCd;
   };
 
   const getCodeName = (businessCd, rawCodeOrName, fallback = '') => {
@@ -112,11 +120,11 @@ const getStayDates = (checkInStr, checkOutStr) => {
 };
 
 const getBookingStatusCodes = async () => {
-  const sysCodes = await loadSystemCodes(['BOOKING_STS']);
+  const sysCodes = await loadSystemCodes();
   return {
     sysCodes,
-    pending: sysCodes.getCodeCd('BOOKING_STS', 'PND', '1'),
-    confirmed: sysCodes.getCodeCd('BOOKING_STS', 'CFM', '2'),
+    pending: sysCodes.getCodeCd('BOOKING_STS', 'PND'),
+    confirmed: sysCodes.getCodeCd('BOOKING_STS', 'CFM'),
   };
 };
 
@@ -124,6 +132,23 @@ const hasBookingStatus = (booking, codeName, codeCd, sysCodes) => (
   sysCodes.getCodeName('BOOKING_STS', booking.booking_status_cd) === codeName ||
   String(booking.booking_status_cd) === String(codeCd)
 );
+
+const hasSuccessfulPayment = (booking) => (
+  Array.isArray(booking?.t_payment_transaction) &&
+  booking.t_payment_transaction.some((transaction) => (
+    Number(transaction.amount_paid) > 0 || Boolean(transaction.paid_at)
+  ))
+);
+
+const assertBookingCanBeEdited = (booking, statusCodes) => {
+  const statusName = statusCodes.sysCodes.getCodeName('BOOKING_STS', booking.booking_status_cd);
+  if (statusName !== 'PND') {
+    throw createError('Chỉ được cập nhật đơn đặt phòng đang ở trạng thái chờ thanh toán.', 400);
+  }
+  if (hasSuccessfulPayment(booking)) {
+    throw createError('Đơn đặt phòng đã thanh toán không thể chỉnh sửa.', 400);
+  }
+};
 
 const loadActiveBookingHolds = async (roomTypeIds, checkInStr, checkOutStr, excludeBookingId = null) => {
   if (roomTypeIds.length === 0) return new Map();
@@ -174,16 +199,17 @@ const getExcludedBookingQuantity = (details, roomTypeId, date) => (details || []
     : sum;
 }, 0);
 
-const ensureBookingAccess = async (booking, currentUser) => {
+const ensureBookingAccess = async (booking, currentUser, { allowHotelOwner = false } = {}) => {
   if (!currentUser?.user_id) {
     throw createError('Vui lòng đăng nhập để tiếp tục.', 401);
   }
   if (String(booking.user_id) === String(currentUser.user_id)) return;
 
-  const tokenRoleName = String(currentUser.role_code_name || currentUser.role_name || '').toUpperCase();
-  if (tokenRoleName === 'ADM') return;
+  let roleName = String(
+    currentUser.role_code_name || currentUser.role_name || ''
+  ).trim().toUpperCase();
 
-  if (currentUser.role_cd) {
+  if (!roleName && currentUser.role_cd) {
     const { data: role, error } = await supabase
       .from('m_system_code')
       .select('code_name')
@@ -191,10 +217,22 @@ const ensureBookingAccess = async (booking, currentUser) => {
       .eq('code_cd', currentUser.role_cd)
       .maybeSingle();
     if (error) throw createError(`Không thể kiểm tra quyền người dùng: ${error.message}`);
-    if (String(role?.code_name || '').toUpperCase() === 'ADM') return;
+    roleName = String(role?.code_name || '').trim().toUpperCase();
   }
 
-  throw createError('Bạn không có quyền truy cập đơn đặt phòng này.', 403);
+  if (roleName === 'ADM') return;
+
+  if (allowHotelOwner && roleName === 'VEN') {
+    const { data: hotel, error } = await supabase
+      .from('m_hotel')
+      .select('owner_id')
+      .eq('hotel_id', booking.hotel_id)
+      .maybeSingle();
+    if (error) throw createError(`Không thể kiểm tra quyền khách sạn: ${error.message}`);
+    if (hotel && String(hotel.owner_id) === String(currentUser.user_id)) return;
+  }
+
+  throw createError('Không tìm thấy thông tin đơn đặt phòng.', 404);
 };
 
 /**
@@ -453,19 +491,22 @@ const calculatePricing = async ({
         if (dbCoupon.usage_limit != null) {
           const { pending, confirmed } = await getBookingStatusCodes();
           const cutoff = new Date(Date.now() - PENDING_BOOKING_TTL_MS).toISOString();
-          const [confirmedCount, pendingCount] = await Promise.all([
-            supabase
-              .from('t_booking')
-              .select('booking_id', { count: 'exact', head: true })
-              .eq('coupon_id', dbCoupon.coupon_id)
-              .eq('booking_status_cd', confirmed),
-            supabase
-              .from('t_booking')
-              .select('booking_id', { count: 'exact', head: true })
-              .eq('coupon_id', dbCoupon.coupon_id)
-              .eq('booking_status_cd', pending)
-              .gt('created_at', cutoff),
-          ]);
+          let confirmedQuery = supabase
+            .from('t_booking')
+            .select('booking_id', { count: 'exact', head: true })
+            .eq('coupon_id', dbCoupon.coupon_id)
+            .eq('booking_status_cd', confirmed);
+          let pendingQuery = supabase
+            .from('t_booking')
+            .select('booking_id', { count: 'exact', head: true })
+            .eq('coupon_id', dbCoupon.coupon_id)
+            .eq('booking_status_cd', pending)
+            .gt('created_at', cutoff);
+          if (exclude_booking_id) {
+            confirmedQuery = confirmedQuery.neq('booking_id', exclude_booking_id);
+            pendingQuery = pendingQuery.neq('booking_id', exclude_booking_id);
+          }
+          const [confirmedCount, pendingCount] = await Promise.all([confirmedQuery, pendingQuery]);
           if (confirmedCount.error || pendingCount.error) {
             throw createError(`Lỗi kiểm tra lượt sử dụng coupon: ${(confirmedCount.error || pendingCount.error).message}`);
           }
@@ -569,6 +610,11 @@ const createSoldOutError = (dates) => createError(
   `SOLD_OUT: Không đủ phòng trong các đêm: ${[...new Set(dates)].sort().join(', ')}.`,
   409,
   'SOLD_OUT'
+);
+
+const requiresCouponRemovalConfirmation = (booking, pricing) => (
+  Boolean(booking.coupon_id) &&
+  String(pricing.coupon?.coupon_id || '') !== String(booking.coupon_id)
 );
 
 const loadInventoryFallback = async (rooms, checkInStr, checkOutStr, excludeBookingId = null) => {
@@ -776,7 +822,7 @@ const adjustInventoryForStay = async (
 const activeBookingLocks = new Set();
 
 /**
- * Create a new booking in t_booking and t_booking_detail using m_system_code ('1' = PND).
+ * Create a new booking in t_booking and t_booking_detail using the configured pending status.
  * Đã tích hợp bảo vệ chống duplicate booking: Concurrency Lock (Mutex) + Idempotency Check 60s.
  */
 const createBooking = async (payload, currentUser = null) => {
@@ -812,11 +858,11 @@ const createBooking = async (payload, currentUser = null) => {
         check_out_date: payload.check_out_date,
         coupon_code: payload.coupon_code,
       }),
-      loadSystemCodes(['BOOKING_STS', 'USER_ACTION']),
+      loadSystemCodes(),
     ]);
 
-    const pendingStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'PND', '1');
-    const bookingActionCd = sysCodes.getCodeCd('USER_ACTION', 'BOK', '4');
+    const pendingStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'PND');
+    const bookingActionCd = sysCodes.getCodeCd('USER_ACTION', 'BOK');
 
     // Kiểm tra đơn trùng lặp trong vòng 60 giây gần nhất (Idempotency)
     const recentWindow = new Date(Date.now() - 60 * 1000).toISOString();
@@ -874,7 +920,7 @@ const createBooking = async (payload, currentUser = null) => {
           booking_id: duplicate.booking_id,
           booking_code: formatBookingCode(duplicate.booking_id, duplicate.created_at),
           booking_status_cd: duplicate.booking_status_cd,
-          status_code_name: sysCodes.getCodeName('BOOKING_STS', duplicate.booking_status_cd, 'PND'),
+          status_code_name: sysCodes.getCodeName('BOOKING_STS', duplicate.booking_status_cd),
           hotel_id: duplicate.hotel_id,
           guest_name: duplicate.guest_name,
           guest_phone: duplicate.guest_phone,
@@ -903,7 +949,7 @@ const createBooking = async (payload, currentUser = null) => {
       }
       formattedSpecialRequest = requestParts.length > 0 ? requestParts.join('; ') : null;
     }
-
+    formattedSpecialRequest = normalizeSpecialRequest(formattedSpecialRequest);
     const normalizedPhone = normalizeGuestPhone(payload.guest_phone);
 
     // Insert into t_booking
@@ -978,7 +1024,7 @@ const createBooking = async (payload, currentUser = null) => {
       throw inventoryError;
     }
 
-    // Log user behavior (USER_ACTION = '4' / BOK)
+    // Log user behavior using the configured booking action.
     try {
       if (userId) {
         await supabase.from('h_user_behavior').insert({
@@ -1001,7 +1047,7 @@ const createBooking = async (payload, currentUser = null) => {
       booking_id: createdBooking.booking_id,
       booking_code: formatBookingCode(createdBooking.booking_id, createdBooking.created_at),
       booking_status_cd: createdBooking.booking_status_cd,
-      status_code_name: sysCodes.getCodeName('BOOKING_STS', createdBooking.booking_status_cd, 'PND'),
+      status_code_name: sysCodes.getCodeName('BOOKING_STS', createdBooking.booking_status_cd),
       hotel_id: createdBooking.hotel_id,
       guest_name: createdBooking.guest_name,
       guest_phone: createdBooking.guest_phone,
@@ -1020,7 +1066,7 @@ const createBooking = async (payload, currentUser = null) => {
 /**
  * Fetch a booking with all its relations from DB.
  */
-const getBookingById = async (bookingId) => {
+const getBookingById = async (bookingId, currentUser, options = {}) => {
   ensureClient();
 
   const { data: booking, error } = await supabase
@@ -1106,11 +1152,11 @@ const getBookingById = async (bookingId) => {
       )
     `)
     .eq('booking_id', bookingId)
-    .single();
+    .maybeSingle();
 
-  if (error || !booking) {
-    throw createError('Không tìm thấy thông tin đơn đặt phòng.', 404);
-  }
+  if (error) throw createError(`Không thể tải thông tin đơn đặt phòng: ${error.message}`);
+  if (!booking) throw createError('Không tìm thấy thông tin đơn đặt phòng.', 404);
+  await ensureBookingAccess(booking, currentUser, options);
 
   return booking;
 };
@@ -1119,11 +1165,9 @@ const getBookingById = async (bookingId) => {
  * Helper to determine category of booking: 'upcoming' | 'completed' | 'cancelled'
  */
 const getBookingCategory = (b, sysCodes) => {
-  const codeName = sysCodes
-    ? sysCodes.getCodeName('BOOKING_STS', b.booking_status_cd)
-    : String(b.booking_status_cd || '').toUpperCase();
+  const codeName = sysCodes.getCodeName('BOOKING_STS', b.booking_status_cd);
 
-  if (codeName === 'CAN' || String(b.booking_status_cd) === '3') return 'cancelled';
+  if (codeName === 'CAN') return 'cancelled';
 
   const details = b.t_booking_detail || [];
   const latestCheckOut = details.reduce((max, d) => (!max || d.check_out_date > max ? d.check_out_date : max), null);
@@ -1139,13 +1183,27 @@ const getBookingCategory = (b, sysCodes) => {
  * Fetch and format customer's bookings with tabs counts and 100% real database relationships.
  */
 const getMyBookings = async ({
-  userId = null,
-  guestPhone = null,
+  currentUser,
   search = '',
   status = 'all',
   timeRange = 'all',
+  page = 1,
+  limit = 20,
+  requireVatOnly = false,
 }) => {
   ensureClient();
+  const userId = currentUser?.user_id;
+  if (!userId) throw createError('Vui lòng đăng nhập để tiếp tục.', 401);
+  if (
+    !Number.isSafeInteger(page) ||
+    page < 1 ||
+    !Number.isSafeInteger(limit) ||
+    limit < 1 ||
+    limit > 50 ||
+    !Number.isSafeInteger((page - 1) * limit)
+  ) {
+    throw createError('Thông tin phân trang không hợp lệ.', 400);
+  }
 
   let query = supabase
     .from('t_booking')
@@ -1231,17 +1289,12 @@ const getMyBookings = async ({
         created_at
       )
     `)
+    .eq('user_id', userId)
     .order('created_at', { ascending: false });
-
-  if (userId) {
-    query = query.eq('user_id', userId);
-  } else if (guestPhone && String(guestPhone).trim()) {
-    query = query.ilike('guest_phone', `%${String(guestPhone).trim()}%`);
-  }
 
   const [bookingsRes, sysCodes] = await Promise.all([
     query,
-    loadSystemCodes(['BOOKING_STS', 'REFUND_STS', 'PAYMENT_METHOD']),
+    loadSystemCodes(),
   ]);
 
   if (bookingsRes.error) {
@@ -1313,7 +1366,7 @@ const getMyBookings = async ({
   });
 
   const getStatusDisplayInfo = (statusCode, category, hasPaymentTxn) => {
-    const resolvedCodeName = sysCodes.getCodeName('BOOKING_STS', statusCode, 'PND');
+    const resolvedCodeName = sysCodes.getCodeName('BOOKING_STS', statusCode);
 
     if (resolvedCodeName === 'CAN' || category === 'cancelled') {
       return {
@@ -1328,7 +1381,7 @@ const getMyBookings = async ({
     if (category === 'completed') {
       return {
         status_code: statusCode,
-        status_code_name: resolvedCodeName || 'CFM',
+        status_code_name: resolvedCodeName,
         status_name: 'Đã hoàn thành lưu trú',
         status_name_en: 'Completed',
         badge_variant: 'success',
@@ -1347,7 +1400,7 @@ const getMyBookings = async ({
 
     return {
       status_code: statusCode,
-      status_code_name: resolvedCodeName || 'CFM',
+      status_code_name: resolvedCodeName,
       status_name: hasPaymentTxn ? 'Đã xác nhận & Đã thanh toán' : 'Đã xác nhận đặt chỗ',
       status_name_en: 'Confirmed',
       badge_variant: 'confirmed',
@@ -1518,6 +1571,8 @@ const getMyBookings = async ({
       booking_status_cd: b.booking_status_cd,
       status_code: statusInfo.status_code,
       status_code_name: statusInfo.status_code_name,
+      can_edit: sysCodes.getCodeName('BOOKING_STS', b.booking_status_cd) === 'PND' &&
+        !hasSuccessfulPayment(b),
       status_name: statusInfo.status_name,
       status_badge_variant: statusInfo.badge_variant,
       total_amount: Number(b.total_amount || 0),
@@ -1596,7 +1651,7 @@ const getMyBookings = async ({
         }
         : null,
       payment: {
-        is_paid: paymentTxns.length > 0 && Boolean(latestPayment?.paid_at || latestPayment?.amount_paid),
+        is_paid: hasSuccessfulPayment(b),
         transaction_id: latestPayment?.transaction_id || null,
         amount_paid: latestPayment ? Number(latestPayment.amount_paid) : 0,
         payment_method_cd: latestPayment?.payment_method_cd || null,
@@ -1671,12 +1726,25 @@ const getMyBookings = async ({
     });
   }
 
+  if (requireVatOnly) {
+    filtered = filtered.filter((booking) => booking.payment.has_vat_invoice || booking.category === 'completed');
+  }
+
+  const total = filtered.length;
+  const startIndex = (page - 1) * limit;
+  const paginatedBookings = filtered.slice(startIndex, startIndex + limit);
   const availableYears = [...availableYearsSet].sort((a, b) => b - a);
 
   return {
-    bookings: filtered,
+    bookings: paginatedBookings,
     counts,
     available_years: availableYears,
+    pagination: {
+      page,
+      limit,
+      total,
+      total_pages: Math.ceil(total / limit),
+    },
   };
 };
 
@@ -1685,8 +1753,9 @@ const getMyBookings = async ({
  */
 const updateBookingGuestInfo = async (bookingId, { guest_name, guest_phone, special_request }, currentUser) => {
   ensureClient();
-  const booking = await getBookingById(bookingId);
-  await ensureBookingAccess(booking, currentUser);
+  const booking = await getBookingById(bookingId, currentUser);
+  const statusCodes = await getBookingStatusCodes();
+  assertBookingCanBeEdited(booking, statusCodes);
 
   const updatePayload = {
     updated_at: new Date().toISOString(),
@@ -1696,7 +1765,7 @@ const updateBookingGuestInfo = async (bookingId, { guest_name, guest_phone, spec
     updatePayload.guest_phone = normalizeGuestPhone(guest_phone);
   }
   if (special_request !== undefined) {
-    updatePayload.special_request = special_request === null ? null : special_request.trim();
+    updatePayload.special_request = normalizeSpecialRequest(special_request);
   }
 
   const { data, error } = await supabase
@@ -1716,9 +1785,16 @@ const updateBookingGuestInfo = async (bookingId, { guest_name, guest_phone, spec
 /**
  * Change stay dates for a booking and recalculate total_amount, discount_amount, and t_inventory.
  */
-const changeBookingDates = async (bookingId, { check_in_date, check_out_date }, currentUser) => {
+const changeBookingDates = async (
+  bookingId,
+  { check_in_date, check_out_date, confirm_coupon_removal = false },
+  currentUser
+) => {
   ensureClient();
 
+  if (typeof confirm_coupon_removal !== 'boolean') {
+    throw createError('Xác nhận gỡ coupon không hợp lệ.', 400);
+  }
   if (!check_in_date || !check_out_date) {
     throw createError('Vui lòng cung cấp ngày nhận và trả phòng hợp lệ.', 400);
   }
@@ -1728,15 +1804,9 @@ const changeBookingDates = async (bookingId, { check_in_date, check_out_date }, 
   const dateErrors = validateStayDates(newCheckIn, newCheckOut);
   if (dateErrors.length > 0) throw createError(dateErrors[0], 400);
 
-  const existingBooking = await getBookingById(bookingId);
-  await ensureBookingAccess(existingBooking, currentUser);
+  const existingBooking = await getBookingById(bookingId, currentUser);
   const statusCodes = await getBookingStatusCodes();
-  if (
-    !hasBookingStatus(existingBooking, 'PND', statusCodes.pending, statusCodes.sysCodes) &&
-    !hasBookingStatus(existingBooking, 'CFM', statusCodes.confirmed, statusCodes.sysCodes)
-  ) {
-    throw createError('Chỉ được đổi ngày cho đơn đang chờ hoặc đã xác nhận.', 400);
-  }
+  assertBookingCanBeEdited(existingBooking, statusCodes);
   const oldDetails = existingBooking.t_booking_detail || [];
   const roomsInput = oldDetails.map((d) => ({
     room_type_id: d.room_type_id,
@@ -1752,6 +1822,25 @@ const changeBookingDates = async (bookingId, { check_in_date, check_out_date }, 
     exclude_booking_id: bookingId,
     excluded_details: oldDetails,
   });
+
+  if (
+    requiresCouponRemovalConfirmation(existingBooking, recalculated) &&
+    !confirm_coupon_removal
+  ) {
+    const error = createError(
+      'Giá trị đơn hàng sau khi đổi ngày không còn đủ điều kiện sử dụng voucher. Nếu tiếp tục, voucher hiện tại sẽ bị gỡ khỏi đơn.',
+      409,
+      'COUPON_REMOVAL_CONFIRMATION_REQUIRED'
+    );
+    error.data = {
+      coupon_code: existingBooking.m_coupon?.code || null,
+      current_total: Number(existingBooking.total_amount || 0),
+      proposed_total: Number(recalculated.total_amount || 0),
+      current_discount: Number(existingBooking.discount_amount || 0),
+      reason: recalculated.coupon_message,
+    };
+    throw error;
+  }
 
   const availability = await loadNightlyAvailability(
     recalculated.rooms,
@@ -1811,6 +1900,7 @@ const changeBookingDates = async (bookingId, { check_in_date, check_out_date }, 
         .update({
           total_amount: existingBooking.total_amount,
           discount_amount: existingBooking.discount_amount || 0,
+          coupon_id: existingBooking.coupon_id || null,
         })
         .eq('booking_id', bookingId);
       if (error) rollbackFailure = error;
@@ -1871,6 +1961,7 @@ const changeBookingDates = async (bookingId, { check_in_date, check_out_date }, 
       .update({
         total_amount: recalculated.total_amount,
         discount_amount: recalculated.discount_amount || 0,
+        coupon_id: recalculated.coupon?.coupon_id || null,
         updated_at: new Date().toISOString(),
       })
       .eq('booking_id', bookingId)
@@ -1895,6 +1986,7 @@ const changeBookingDates = async (bookingId, { check_in_date, check_out_date }, 
       nights: recalculated.nights,
       total_amount: Number(updatedBooking.total_amount),
       discount_amount: Number(updatedBooking.discount_amount || 0),
+      coupon_code: recalculated.coupon?.code || null,
       message: 'Đổi ngày lưu trú và cập nhật chi phí thành công!',
     };
   } catch (error) {
@@ -1904,20 +1996,19 @@ const changeBookingDates = async (bookingId, { check_in_date, check_out_date }, 
 };
 
 /**
- * Cancel a booking using m_system_code ('3' = CAN), restore inventory, and record refund request based on policy.
+ * Cancel a booking using the configured cancellation status, restore inventory, and record refund request based on policy.
  */
 const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phòng' } = {}, currentUser) => {
   ensureClient();
 
   const [booking, sysCodes] = await Promise.all([
-    getBookingById(bookingId),
-    loadSystemCodes(['BOOKING_STS', 'REFUND_STS']),
+    getBookingById(bookingId, currentUser),
+    loadSystemCodes(),
   ]);
-  await ensureBookingAccess(booking, currentUser);
 
-  const cancelledStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'CAN', '3');
+  const cancelledStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'CAN');
 
-  // Update status to code_cd for 'CAN' ('3')
+  // Persist the cancellation code configured in m_system_code.
   const { error: updateErr } = await supabase
     .from('t_booking')
     .update({
@@ -1975,7 +2066,7 @@ const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phò
 
   const paymentTxns = Array.isArray(booking.t_payment_transaction) ? booking.t_payment_transaction : [];
   const latestPayment = paymentTxns[0] || null;
-  const refundStatusCd = sysCodes.getCodeCd('REFUND_STS', latestPayment ? 'PND' : 'PND', '1');
+  const refundStatusCd = sysCodes.getCodeCd('REFUND_STS', 'PND');
   const refundRef = `REF-${bookingId.substring(0, 8).toUpperCase()}`;
 
   const { data: refundRecord } = await supabase
@@ -2010,18 +2101,17 @@ const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phò
 /**
  * Get detailed voucher / E-ticket info strictly from DB records.
  */
-const getBookingVoucher = async (bookingId) => {
+const getBookingVoucher = async (bookingId, currentUser) => {
   const [booking, sysCodes] = await Promise.all([
-    getBookingById(bookingId),
-    loadSystemCodes(['BOOKING_STS', 'PAYMENT_METHOD']),
+    getBookingById(bookingId, currentUser, { allowHotelOwner: true }),
+    loadSystemCodes(),
   ]);
 
   const details = booking.t_booking_detail || [];
   const firstDetail = details[0] || {};
   const coupon = booking.m_coupon || null;
-  const statusCodeName = sysCodes.getCodeName('BOOKING_STS', booking.booking_status_cd, 'PND');
-  const paymentTxns = Array.isArray(booking.t_payment_transaction) ? booking.t_payment_transaction : [];
-  const isPaid = paymentTxns.length > 0 && Boolean(paymentTxns[0]?.paid_at || paymentTxns[0]?.amount_paid);
+  const statusCodeName = sysCodes.getCodeName('BOOKING_STS', booking.booking_status_cd);
+  const isPaid = hasSuccessfulPayment(booking);
 
   const bookingDateFormatted = booking.created_at
     ? new Date(booking.created_at).toLocaleDateString('vi-VN', {
@@ -2089,13 +2179,13 @@ const getBookingVoucher = async (bookingId) => {
 /**
  * Get booking receipt / invoice summary derived from actual booking & hotel records in DB.
  */
-const getBookingInvoice = async (bookingId) => {
+const getBookingInvoice = async (bookingId, currentUser) => {
   const [booking, sysCodes] = await Promise.all([
-    getBookingById(bookingId),
-    loadSystemCodes(['BOOKING_STS', 'PAYMENT_METHOD']),
+    getBookingById(bookingId, currentUser, { allowHotelOwner: true }),
+    loadSystemCodes(),
   ]);
 
-  const statusCodeName = sysCodes.getCodeName('BOOKING_STS', booking.booking_status_cd, 'PND');
+  const statusCodeName = sysCodes.getCodeName('BOOKING_STS', booking.booking_status_cd);
   const paymentTxns = Array.isArray(booking.t_payment_transaction) ? booking.t_payment_transaction : [];
   const latestPayment = paymentTxns[0] || null;
   const details = booking.t_booking_detail || [];
@@ -2147,4 +2237,5 @@ module.exports = {
   getBookingInvoice,
   adjustInventoryForStay,
   loadActiveBookingHolds,
+  requiresCouponRemovalConfirmation,
 };

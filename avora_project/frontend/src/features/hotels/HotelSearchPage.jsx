@@ -7,69 +7,21 @@ import MapModal from './components/MapModal';
 import { getMinRoomsRequired, validateGuestRoomCapacity, MAX_ROOM_CAPACITY } from '../../utils/roomCapacityHelper';
 import './HotelSearchPage.css';
 
-/* Custom SVG Icons */
-const PinIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
+import {
+  PinIcon,
+  BedIcon,
+  CalendarIcon,
+  UsersIcon,
+  SearchIcon,
+  MapIcon as MapViewIcon,
+  InfoIcon as InfoCircleIcon,
+  ChevronRightIcon,
+  LightbulbIcon,
+  CloseIcon,
+  BuildingIcon,
+  AlertTriangleIcon,
+} from '../../common/components/icons';
 
-const BedIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M2 4v16" />
-    <path d="M2 8h18a2 2 0 0 1 2 2v10" />
-    <path d="M2 17h20" />
-    <circle cx="7" cy="11" r="2" />
-  </svg>
-);
-
-const CalendarIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
-
-const UsersIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-
-const MapViewIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" />
-    <line x1="8" y1="2" x2="8" y2="18" />
-    <line x1="16" y1="6" x2="16" y2="22" />
-  </svg>
-);
-
-const InfoCircleIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <line x1="12" y1="8" x2="12" y2="12" />
-    <line x1="12" y1="16" x2="12.01" y2="16" />
-  </svg>
-);
-
-const ChevronRightIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
 
 // Sorting tabs config
 const SORT_TABS = [
@@ -422,7 +374,7 @@ const HotelSearchPage = () => {
       }
     } catch (err) {
       console.error('Fetch hotels error:', err);
-      setErrorMsg(err.message || 'Lỗi kết nối cơ sở dữ liệu');
+      setErrorMsg(err.message || 'Không thể tải danh sách chỗ nghỉ. Vui lòng thử lại sau.');
     } finally {
       setIsLoading(false);
     }
@@ -678,7 +630,9 @@ const HotelSearchPage = () => {
                   <div className="avora-guest-popover" onClick={(e) => e.stopPropagation()}>
                     {/* Capacity rule helper note */}
                     <div className="compact-popover__capacity-rule">
-                      <span className="compact-popover__rule-icon">💡</span>
+                      <span className="compact-popover__rule-icon">
+                        <LightbulbIcon size={16} color="#d97706" />
+                      </span>
                       <span>
                         2 giường tiêu chuẩn = 4 người • Có thêm 1 giường phụ = tối đa 5 người/phòng.
                       </span>
@@ -906,15 +860,19 @@ const HotelSearchPage = () => {
               </div>
             ) : isDbEmpty ? (
               <div className="hotel-empty-state">
-                <div className="hotel-empty-state__icon">🏨</div>
+                <div className="hotel-empty-state__icon">
+                  <BuildingIcon size={32} />
+                </div>
                 <h3 className="hotel-empty-state__title">Không tìm thấy phòng</h3>
                 <p className="hotel-empty-state__desc">
-                  Hiện tại chưa có thông tin phòng nào được lưu trữ trong cơ sở dữ liệu.
+                  Hiện tại chưa có phòng phù hợp với yêu cầu tìm kiếm của bạn.
                 </p>
               </div>
             ) : (capacityNotice || guestsPerRoom > 5) ? (
               <div className="hotel-empty-state hotel-empty-state--capacity">
-                <div className="hotel-empty-state__icon">⚠️</div>
+                <div className="hotel-empty-state__icon">
+                  <AlertTriangleIcon size={32} color="#d97706" />
+                </div>
                 <h3 className="hotel-empty-state__title">Không có loại phòng như vậy!</h3>
                 <div className="hotel-capacity-rule-box">
                   <p className="hotel-capacity-rule-title">Quy chuẩn sức chứa phòng:</p>

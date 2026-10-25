@@ -39,8 +39,8 @@ const requireCommissionPolicyManager = async (req, res, next) => {
       );
     }
 
-    // Role check: '3' is BMR, '1' is ADM
-    if (["3", "1"].includes(String(user.role_cd))) {
+    // Role check: '3' is BMR
+    if (String(user.role_cd) === "3") {
       return next();
     }
 
@@ -52,11 +52,11 @@ const requireCommissionPolicyManager = async (req, res, next) => {
       .maybeSingle();
 
     if (roleError) return next(roleError);
-    if (!["BMR", "ADM"].includes(role?.code_name)) {
+    if (role?.code_name !== "BMR") {
       return sendError(
         res,
         403,
-        "Bạn không có quyền quản lý chính sách phí hoa hồng. Chỉ dành cho Business Manager hoặc Quản trị viên."
+        "Bạn không có quyền quản lý chính sách phí hoa hồng. Chỉ dành cho Business Manager."
       );
     }
 

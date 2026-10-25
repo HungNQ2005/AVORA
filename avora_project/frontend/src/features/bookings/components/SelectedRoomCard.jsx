@@ -33,7 +33,7 @@ const SelectedRoomCard = ({ room, quantity = 1 }) => {
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              Còn {availableRooms} phòng trống trong CSDL
+              Còn {availableRooms} phòng trống
             </span>
           )}
           {facilities.map((fac) => (
@@ -45,9 +45,11 @@ const SelectedRoomCard = ({ room, quantity = 1 }) => {
             </span>
           ))}
         </div>
-        <div className="room-capacity-badge">
-          {quantity > 1 ? `${quantity} phòng đặt` : '1 phòng đặt'}
-        </div>
+        {quantity > 1 && (
+          <div className="room-capacity-badge">
+            {quantity} phòng đặt
+          </div>
+        )}
       </div>
 
       <h3 className="selected-room-title">{roomName}</h3>

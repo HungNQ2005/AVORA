@@ -23,6 +23,7 @@ import {
   formatVnStayDate,
   getBookingCountdown,
   parseIsoToDate,
+  canEditBooking,
 } from './bookingCardHelpers';
 
 /**
@@ -38,8 +39,9 @@ const UpcomingBookingCard = ({
 }) => {
   const countdown = (booking.status_badge_variant === 'amber' || booking.status_badge_variant === 'pending') &&
     booking.payment?.is_paid !== true
-      ? getBookingCountdown(booking, nowMs)
-      : null;
+    ? getBookingCountdown(booking, nowMs)
+    : null;
+  const canEdit = canEditBooking(booking);
 
   return (
     <div className="my-bookings-hero-card">
@@ -112,7 +114,7 @@ const UpcomingBookingCard = ({
                   </div>
                   <div className="my-bookings-rating-text-count">
                     {booking.hotel.review_count > 0
-                      ? `${booking.hotel.review_count} đánh giá (t_review)`
+                      ? `${booking.hotel.review_count} đánh giá `
                       : ' '}
                   </div>
                 </div>
@@ -272,23 +274,27 @@ const UpcomingBookingCard = ({
             <span>Xem chi tiết &amp; Voucher</span>
           </button>
 
-          <button
-            type="button"
-            className="my-bookings-btn-secondary"
-            onClick={() => onOpenEditGuest(booking)}
-          >
-            <GuestEditIcon width="15" height="15" />
-            <span>Cập nhật thông tin booking</span>
-          </button>
+          {canEdit && (
+            <>
+              <button
+                type="button"
+                className="my-bookings-btn-secondary"
+                onClick={() => onOpenEditGuest(booking)}
+              >
+                <GuestEditIcon width="15" height="15" />
+                <span>Cập nhật thông tin booking</span>
+              </button>
 
-          <button
-            type="button"
-            className="my-bookings-btn-secondary"
-            onClick={() => onOpenDateChange(booking)}
-          >
-            <CalendarEditIcon width="15" height="15" />
-            <span>Đổi ngày nhận/trả phòng</span>
-          </button>
+              <button
+                type="button"
+                className="my-bookings-btn-secondary"
+                onClick={() => onOpenDateChange(booking)}
+              >
+                <CalendarEditIcon width="15" height="15" />
+                <span>Đổi ngày nhận/trả phòng</span>
+              </button>
+            </>
+          )}
 
           <button
             type="button"

@@ -6,7 +6,7 @@ const { codeNameParser } = require('../../utils/codeNameParser');
 
 const authorizeHotelManagement = async (req, res, next) => {
   if (!supabase) {
-    return sendError(res, 503, 'Kết nối cơ sở dữ liệu chưa được khởi tạo.');
+    return sendError(res, 503, 'Không thể kết nối đến hệ thống. Vui lòng thử lại sau.');
   }
 
   try {

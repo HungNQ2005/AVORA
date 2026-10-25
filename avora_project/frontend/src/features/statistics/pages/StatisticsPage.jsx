@@ -182,7 +182,7 @@ const StatisticsPage = () => {
 
       {/* Breadcrumb */}
       <nav className="st-page__breadcrumb">
-        <span>Doanh thu & Booking</span>
+        <span>Báo cáo doanh thu</span>
         <span className="st-page__breadcrumb-sep">&gt;</span>
         <span className="st-page__breadcrumb-active">Bảng thống kê</span>
       </nav>
@@ -459,7 +459,7 @@ const StatisticsPage = () => {
               </div>
             </div>
 
-            {overview && !loading && chartData.items.length > 0 && chartData.items.length <= 12 && (
+            {overview && !loading && chartData.items.length > 0 && (dataset !== 'TIME' || chartData.items.length <= 15) && (
               <div className="st-control">
                 <span className="st-control__label">CHÚ GIẢI</span>
                 <ul className="st-legend">

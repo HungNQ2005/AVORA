@@ -41,7 +41,7 @@ const BookingPage = () => {
         : 'Rất tiếc, phòng đã hết trong thời gian bạn chọn. Vui lòng chọn ngày khác hoặc giảm số phòng.';
     }
 
-    return error?.message || 'Không thể lưu đơn đặt phòng vào cơ sở dữ liệu.';
+    return error?.message || 'Không thể hoàn tất đơn đặt phòng. Vui lòng thử lại.';
   };
 
   const formatDateLabel = (dateStr) => {
@@ -83,7 +83,7 @@ const BookingPage = () => {
   const MAX_STAY_NIGHTS = 30; // Tiêu chuẩn OTA: đặt trực tuyến tối đa 30 đêm
   const MAX_ADVANCE_DAYS = 365; // Đặt phòng trước tối đa 365 ngày (1 năm)
   const MAX_ROOMS_PER_BOOKING = 8; // Tối đa 8 phòng/lần đặt (tránh đầu cơ)
-  const GUEST_NAME_REGEX = /^[\p{L}\s'.-]{2,}$/u;
+  const GUEST_NAME_REGEX = /^\p{L}[\p{L}\p{M}]*(?:(?:\p{Zs}+|['\u2019.-])\p{L}[\p{L}\p{M}]*)*$/u;
 
   // Real-time current day (cannot book earlier than today)
   const todayStr = useMemo(() => {
@@ -291,9 +291,9 @@ const BookingPage = () => {
           setCouponMessage(null);
         }
       } catch (err) {
-        console.warn('[BookingPage] Không thể đồng bộ biểu giá CSDL:', err.message);
+        console.warn('[BookingPage] Không thể đồng bộ biểu giá:', err.message);
         if (!stateData.hotel && !pricing.hotel) {
-          setErrorMessage(err.message || 'Không thể tải dữ liệu giá phòng từ cơ sở dữ liệu.');
+          setErrorMessage(err.message || 'Không thể tải thông tin giá phòng. Vui lòng thử lại.');
         }
       } finally {
         setIsApplyingCoupon(false);
@@ -345,7 +345,7 @@ const BookingPage = () => {
       return;
     }
     if (!activeHotel?.hotel_id || !activeRoom?.room_type_id) {
-      setErrorMessage('Không tìm thấy thông tin khách sạn hoặc hạng phòng hợp lệ trong CSDL.');
+      setErrorMessage('Không tìm thấy thông tin khách sạn hoặc hạng phòng hợp lệ.');
       return;
     }
 
@@ -363,8 +363,12 @@ const BookingPage = () => {
       .filter(Boolean)
       .join(' ');
 
-    if (!GUEST_NAME_REGEX.test(fullName)) {
-      setErrorMessage('Họ và tên người nhận phòng không hợp lệ (tối thiểu 2 ký tự, chỉ chứa chữ cái và không chứa số hay ký tự đặc biệt).');
+    if (
+      !GUEST_NAME_REGEX.test(fullName) ||
+      (fullName.match(/\p{L}/gu) || []).length < 2 ||
+      fullName.length > 100
+    ) {
+      setErrorMessage('Họ và tên người nhận phòng phải có ít nhất 2 chữ cái, tối đa 100 ký tự; chỉ dùng chữ cái, khoảng trắng, dấu nháy đơn, dấu gạch nối hoặc dấu chấm.');
       return;
     }
 
@@ -465,17 +469,14 @@ const BookingPage = () => {
 
       {isLoadingPricing && !activeHotel ? (
         <div style={{ padding: '48px 16px', textAlign: 'center', color: '#475569' }}>
-          Đang tải thông tin khách sạn và bảng giá từ cơ sở dữ liệu...
+          Đang tải thông tin phòng và bảng giá...
         </div>
       ) : (
         <div className="booking-layout-grid">
           {/* Left Column: Form & Details */}
           <div className="booking-main-col">
-            {/* 1. User & Active Coupons Banner */}
-            <GeniusBanner
-              user={user}
-              availableCoupons={pricing.available_coupons}
-            />
+            {/* 1. Customer greeting */}
+            <GeniusBanner user={user} />
 
             {/* 3. Contact Information Card */}
             <ContactInfoCard form={contactForm} onChange={handleContactChange} />

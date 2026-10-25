@@ -60,33 +60,28 @@ const cleanCancellationDescription = (rawDesc, freeBeforeHours = 48, penaltyRate
     return defaultText;
   }
 
-  // Remove <!--META:...--> tags
-  let clean = rawDesc.replace(/<!--META:.*?-->/g, '').trim();
+  // Remove <!--META:...--> tags (supporting multiline comments if any)
+  let clean = rawDesc.replace(/<!--META:[\s\S]*?-->/g, '').trim();
+
+  // Strip leading [Policy Name] brackets
+  clean = clean.replace(/^\[.*?\]\s*/, '').trim();
 
   const condMatch = clean.match(/Điều kiện:\s*(.*)$/i);
-  const nameMatch = clean.match(/^\[(.*?)\]\s*/);
 
   let descText = clean;
-  if (nameMatch) {
-    descText = descText.replace(/^\[(.*?)\]\s*/, '').trim();
-  }
   if (condMatch) {
     descText = descText.replace(/Điều kiện:\s*.*$/i, '').trim();
-  }
-
-  if (condMatch && condMatch[1] && condMatch[1].trim()) {
-    return condMatch[1].trim();
   }
 
   if (descText) {
     return descText;
   }
 
-  if (nameMatch && nameMatch[1] && nameMatch[1].trim()) {
-    return `${nameMatch[1].trim()} - ${defaultText}`;
+  if (condMatch && condMatch[1] && condMatch[1].trim()) {
+    return condMatch[1].trim();
   }
 
-  return clean || defaultText;
+  return defaultText;
 };
 
 /**
@@ -257,6 +252,11 @@ const searchHotels = async (params = {}) => {
   // Filter by star quality if specified
   if (Array.isArray(starRatings) && starRatings.length > 0) {
     query = query.in('star_quality', starRatings);
+  }
+
+  // Filter by explicit hotelIds if provided (for WatchList / Wishlist)
+  if (Array.isArray(params.hotelIds) && params.hotelIds.length > 0) {
+    query = query.in('hotel_id', params.hotelIds);
   }
 
   const { data: rawHotels, error: hotelError } = await query;
@@ -1032,7 +1032,11 @@ const getHotelById = async (hotelId, options = {}) => {
       price: price,
       original_price: origPrice,
       available_rooms: available,
-      policy_description: policy?.description || 'Miễn phí hủy phòng theo chính sách khách sạn',
+      policy_description: cleanCancellationDescription(
+        policy?.description,
+        policy?.free_cancel_before_hours,
+        policy?.penalty_rate ?? policy?.cancellation_penalty_rate
+      ),
       is_vip: idx === 2 || rt.type_name?.toLowerCase().includes('suite') || rt.type_name?.toLowerCase().includes('tổng thống'),
     };
   });
@@ -1076,11 +1080,11 @@ const getHotelById = async (hotelId, options = {}) => {
     thumbnail: thumbnail,
     cancellation_policy: policy ? {
       free_cancel_before_hours: policy.free_cancel_before_hours,
-      penalty_rate: policy.penalty_rate,
+      penalty_rate: policy.penalty_rate ?? policy.cancellation_penalty_rate,
       description: cleanCancellationDescription(
         policy.description,
         policy.free_cancel_before_hours,
-        policy.penalty_rate
+        policy.penalty_rate ?? policy.cancellation_penalty_rate
       ),
     } : null,
     rooms: rooms,

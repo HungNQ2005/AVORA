@@ -27,6 +27,7 @@ import CancelBookingModal from '../components/CancelBookingModal';
 import InvoiceModal from '../components/InvoiceModal';
 import RefundReceiptModal from '../components/RefundReceiptModal';
 import GalleryModal from '../components/GalleryModal';
+import { getValidBookingPage } from '../components/bookingCardHelpers';
 
 /**
  * Main "Quản lý Đặt Chỗ & Lịch Sử Kỳ Nghỉ" Page Component
@@ -34,8 +35,7 @@ import GalleryModal from '../components/GalleryModal';
 const MyBookingsPage = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, loading: authLoading } = useAuth();
-  const userId = user?.user_id;
+  const { loading: authLoading } = useAuth();
 
   // Active status tab: 'all' | 'upcoming' | 'completed' | 'cancelled'
   const activeTab = searchParams.get('status') || 'all';
@@ -44,6 +44,7 @@ const MyBookingsPage = () => {
   // Search input & filter state
   const [searchInput, setSearchInput] = useState('');
   const searchInputRef = useRef('');
+  const bookingRequestIdRef = useRef(0);
   const [timeRange, setTimeRange] = useState('all');
   const [requireVatOnly, setRequireVatOnly] = useState(false);
 
@@ -52,6 +53,8 @@ const MyBookingsPage = () => {
   const [bookings, setBookings] = useState([]);
   const [counts, setCounts] = useState({ all: 0, upcoming: 0, completed: 0, cancelled: 0 });
   const [availableYears, setAvailableYears] = useState([]);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, total_pages: 0 });
   const [errorMsg, setErrorMsg] = useState('');
   const [nowMs, setNowMs] = useState(() => Date.now());
 
@@ -72,6 +75,7 @@ const MyBookingsPage = () => {
   const [dateChangeModalBooking, setDateChangeModalBooking] = useState(null);
   const [newCheckIn, setNewCheckIn] = useState('');
   const [newCheckOut, setNewCheckOut] = useState('');
+  const [couponRemovalNotice, setCouponRemovalNotice] = useState(null);
   const [isChangingDates, setIsChangingDates] = useState(false);
 
   const [cancelModalBooking, setCancelModalBooking] = useState(null);
@@ -85,7 +89,13 @@ const MyBookingsPage = () => {
   const [galleryModalImages, setGalleryModalImages] = useState(null);
 
   // Load bookings from database
-  const loadBookings = useCallback(async (overrideStatus = activeTab, keyword = searchInputRef.current) => {
+  const loadBookings = useCallback(async (
+    overrideStatus = activeTab,
+    keyword = searchInputRef.current,
+    requestedPage = page
+  ) => {
+    const requestId = ++bookingRequestIdRef.current;
+    let willRedirectToValidPage = false;
     setLoading(true);
     setErrorMsg('');
     try {
@@ -93,20 +103,40 @@ const MyBookingsPage = () => {
         status: overrideStatus,
         search: keyword,
         timeRange,
-        userId: userId || undefined,
+        page: requestedPage,
+        limit: 20,
+        requireVatOnly,
       });
+      if (requestId !== bookingRequestIdRef.current) return;
+
+      const totalPages = data.pagination?.total_pages || 0;
+      const validPage = getValidBookingPage(requestedPage, totalPages);
+      if (validPage !== requestedPage) {
+        willRedirectToValidPage = true;
+        setPage(validPage);
+        return;
+      }
+
       setBookings(data.bookings || []);
       setCounts(data.counts || { all: 0, upcoming: 0, completed: 0, cancelled: 0 });
+      setPagination(data.pagination || { page: requestedPage, limit: 20, total: 0, total_pages: 0 });
       if (Array.isArray(data.available_years)) {
         setAvailableYears(data.available_years);
       }
     } catch (err) {
+      if (requestId !== bookingRequestIdRef.current) return;
       console.error('Error fetching bookings:', err);
       setErrorMsg(err.message || 'Không thể tải danh sách đơn đặt phòng.');
     } finally {
-      setLoading(false);
+      if (requestId === bookingRequestIdRef.current && !willRedirectToValidPage) {
+        setLoading(false);
+      }
     }
-  }, [activeTab, timeRange, userId]);
+  }, [activeTab, page, requireVatOnly, timeRange]);
+
+  useEffect(() => () => {
+    bookingRequestIdRef.current += 1;
+  }, []);
 
   useEffect(() => {
     if (authLoading) return;
@@ -121,7 +151,18 @@ const MyBookingsPage = () => {
 
   // Tab switch handler
   const handleTabChange = (statusKey) => {
+    setPage(1);
     setSearchParams({ status: statusKey });
+  };
+
+  const handleTimeRangeChange = (nextTimeRange) => {
+    setPage(1);
+    setTimeRange(nextTimeRange);
+  };
+
+  const handleVatOnlyChange = (nextRequireVatOnly) => {
+    setPage(1);
+    setRequireVatOnly(nextRequireVatOnly);
   };
 
   // Search submit
@@ -133,6 +174,7 @@ const MyBookingsPage = () => {
   const handleSearchInputChange = (e) => {
     searchInputRef.current = e.target.value;
     setSearchInput(e.target.value);
+    setPage(1);
   };
 
   // Apply client-side filter for VAT / Invoice eligible bookings if toggled
@@ -209,24 +251,36 @@ const MyBookingsPage = () => {
     setDateChangeModalBooking(booking);
     setNewCheckIn(booking.stay.check_in_date);
     setNewCheckOut(booking.stay.check_out_date);
+    setCouponRemovalNotice(null);
   };
 
-  const handleSaveDateChange = async (e) => {
-    e.preventDefault();
+  const handleSaveDateChange = async (e, confirmCouponRemoval = false) => {
+    e?.preventDefault();
     if (!dateChangeModalBooking) return;
     setIsChangingDates(true);
     try {
       await changeBookingDates(dateChangeModalBooking.booking_id, {
         check_in_date: newCheckIn,
         check_out_date: newCheckOut,
+        confirm_coupon_removal: confirmCouponRemoval,
       });
       setDateChangeModalBooking(null);
+      setCouponRemovalNotice(null);
       await loadBookings();
     } catch (err) {
+      if (err.code === 'COUPON_REMOVAL_CONFIRMATION_REQUIRED' && err.data) {
+        setCouponRemovalNotice(err.data);
+        return;
+      }
       alert(`Lỗi đổi ngày: ${err.message}`);
     } finally {
       setIsChangingDates(false);
     }
+  };
+
+  const handleCancelCouponRemoval = () => {
+    setCouponRemovalNotice(null);
+    setDateChangeModalBooking(null);
   };
 
   // Open cancel modal
@@ -282,7 +336,7 @@ const MyBookingsPage = () => {
   // Open Refund Receipt modal
   const handleOpenRefundReceipt = (booking) => {
     if (!booking.refund) {
-      alert('Đơn đặt phòng này chưa có bản ghi yêu cầu hoàn tiền trong bảng t_refund_request.');
+      alert('Đơn đặt phòng này chưa có thông tin yêu cầu hoàn tiền.');
       return;
     }
     setRefundModalData({
@@ -315,11 +369,11 @@ const MyBookingsPage = () => {
           onSearchInputChange={handleSearchInputChange}
           onSearchSubmit={handleSearchSubmit}
           timeRange={timeRange}
-          setTimeRange={setTimeRange}
+          setTimeRange={handleTimeRangeChange}
           availableYears={availableYears}
           currentYear={currentYear}
           requireVatOnly={requireVatOnly}
-          setRequireVatOnly={setRequireVatOnly}
+          setRequireVatOnly={handleVatOnlyChange}
         />
 
         {/* ─── 3. BOOKINGS LIST OR EMPTY/LOADING STATES ─────────────────── */}
@@ -436,6 +490,32 @@ const MyBookingsPage = () => {
           </>
         )}
 
+        {!loading && !errorMsg && pagination.total_pages > 1 && (
+          <nav className="my-bookings-pagination" aria-label="Phân trang lịch sử đặt phòng">
+            <span>
+              Trang {pagination.page} / {pagination.total_pages} ({pagination.total} đơn)
+            </span>
+            <div className="my-bookings-pagination-actions">
+              <button
+                type="button"
+                className="my-bookings-pagination-btn"
+                disabled={page <= 1}
+                onClick={() => setPage((currentPage) => currentPage - 1)}
+              >
+                Trang trước
+              </button>
+              <button
+                type="button"
+                className="my-bookings-pagination-btn"
+                disabled={page >= pagination.total_pages}
+                onClick={() => setPage((currentPage) => currentPage + 1)}
+              >
+                Trang sau
+              </button>
+            </div>
+          </nav>
+        )}
+
         {/* ─── 4. BOTTOM 24/7 SUPPORT BANNER ────────────────────────────── */}
         <BookingSupportBanner />
       </div>
@@ -460,11 +540,20 @@ const MyBookingsPage = () => {
       <DateChangeModal
         booking={dateChangeModalBooking}
         newCheckIn={newCheckIn}
-        setNewCheckIn={setNewCheckIn}
+        setNewCheckIn={(value) => {
+          setNewCheckIn(value);
+          setCouponRemovalNotice(null);
+        }}
         newCheckOut={newCheckOut}
-        setNewCheckOut={setNewCheckOut}
+        setNewCheckOut={(value) => {
+          setNewCheckOut(value);
+          setCouponRemovalNotice(null);
+        }}
+        couponRemovalNotice={couponRemovalNotice}
         isChanging={isChangingDates}
         onSave={handleSaveDateChange}
+        onConfirmCouponRemoval={() => handleSaveDateChange(null, true)}
+        onCancelCouponRemoval={handleCancelCouponRemoval}
         onClose={() => setDateChangeModalBooking(null)}
       />
 

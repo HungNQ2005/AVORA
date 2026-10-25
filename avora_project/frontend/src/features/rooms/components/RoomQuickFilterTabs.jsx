@@ -1,4 +1,5 @@
 import React from 'react';
+import { GridIcon } from '../../../common/components/icons';
 import './RoomQuickFilterTabs.css';
 
 const RoomQuickFilterTabs = ({
@@ -16,12 +17,7 @@ const RoomQuickFilterTabs = ({
         onClick={() => onTabChange('ALL')}
       >
         <span className="room-quick-tab__icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <rect x="3" y="3" width="7" height="7"></rect>
-            <rect x="14" y="3" width="7" height="7"></rect>
-            <rect x="14" y="14" width="7" height="7"></rect>
-            <rect x="3" y="14" width="7" height="7"></rect>
-          </svg>
+          <GridIcon size={14} />
         </span>
         <span>Tất cả buồng phòng</span>
         <span className="room-quick-tab__count">{counts.total || 0}</span>

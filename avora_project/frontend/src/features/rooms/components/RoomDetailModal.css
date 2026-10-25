@@ -36,20 +36,21 @@
 
 .room-detail-modal__header {
   padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 2px solid #c9a227;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
-  background: #f8fafc;
+  background: #003580;
+  color: #ffffff;
 }
 
 .room-detail-modal__badge {
   display: inline-block;
   font-size: 10px;
   font-weight: 800;
-  color: #2563eb;
-  background: #eff6ff;
+  color: #003580;
+  background: #ffffff;
   padding: 2px 8px;
   border-radius: 4px;
   letter-spacing: 0.05em;
@@ -60,31 +61,32 @@
   margin: 0;
   font-size: 18px;
   font-weight: 800;
-  color: #0f172a;
+  color: #ffffff;
 }
 
 .room-detail-modal__sku {
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: #bfdbfe;
   margin-top: 2px;
   display: inline-block;
 }
 
 .room-detail-modal__close {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.15);
   border: none;
-  font-size: 24px;
-  color: #64748b;
+  font-size: 22px;
+  color: #ffffff;
   cursor: pointer;
   line-height: 1;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
 }
 
 .room-detail-modal__close:hover {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
 }
 
 .room-detail-modal__body {
@@ -264,11 +266,13 @@
 }
 
 .room-detail-btn--edit {
-  background: #2563eb;
-  border: 1px solid #2563eb;
+  background: #003580;
+  border: 1px solid #003580;
   color: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 53, 128, 0.2);
 }
 
 .room-detail-btn--edit:hover {
-  background: #1d4ed8;
+  background: #00224f;
+  border-color: #00224f;
 }

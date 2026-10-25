@@ -57,9 +57,6 @@ const UserTable = ({
   onEditUser,
   onChangeRole,
 }) => {
-  const [selectedIds, setSelectedIds] = useState(new Set());
-
-  // Checkbox handlers (exclude self and System Admin from bulk actions)
   const isUserSelf = (u) =>
     Boolean(
       (currentUserId && String(u.user_id) === String(currentUserId)) ||
@@ -74,28 +71,6 @@ const UserTable = ({
         String(u.role_cd) === 'ADM'
       )
     );
-
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      const selectable = users.filter((u) => !isUserSelf(u) && !isProtectedAdmin(u));
-      setSelectedIds(new Set(selectable.map((u) => u.user_id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  };
-
-  const handleSelectOne = (id) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
-  const selectableUsers = users.filter((u) => !isUserSelf(u) && !isProtectedAdmin(u));
-  const allSelected =
-    selectableUsers.length > 0 && selectableUsers.every((u) => selectedIds.has(u.user_id));
 
   // Quick stats for current page
   const activeCount = users.filter((u) => u.account_status === 'ACTIVE').length;
@@ -132,7 +107,7 @@ const UserTable = ({
       <div className="user-table-card">
         <div className="user-table-loading">
           <div className="user-table-spinner"></div>
-          <p>Đang tải danh sách người dùng từ cơ sở dữ liệu...</p>
+          <p>Đang tải danh sách người dùng...</p>
         </div>
       </div>
     );
@@ -174,17 +149,11 @@ const UserTable = ({
 
   return (
     <div className="user-table-wrapper">
-      {/* Table Sub-header (Bulk selection & Quick status summary) */}
+      {/* Quick status summary */}
       <div className="user-table-subheader">
-        <label className="user-table-bulk-select">
-          <input
-            type="checkbox"
-            className="user-checkbox"
-            checked={allSelected}
-            onChange={handleSelectAll}
-          />
-          <span>Chọn tất cả {users.length} bản ghi trên trang</span>
-        </label>
+        <div style={{ color: '#64748b', fontSize: '0.84rem' }}>
+          Hiển thị <strong>{users.length}</strong> / <strong>{totalItems}</strong> người dùng
+        </div>
 
         <div className="user-table-quick-stats">
           <span className="user-table-stat-dot user-table-stat-dot--active">
@@ -205,14 +174,6 @@ const UserTable = ({
           <table className="user-table">
             <thead>
               <tr>
-                <th style={{ width: '42px', textAlign: 'center' }}>
-                  <input
-                    type="checkbox"
-                    className="user-checkbox"
-                    checked={allSelected}
-                    onChange={handleSelectAll}
-                  />
-                </th>
                 <th>NGƯỜI DÙNG & MÃ NV</th>
                 <th>LIÊN HỆ & XÁC THỰC</th>
                 <th>VAI TRÒ & CẤP BẬC</th>
@@ -225,29 +186,10 @@ const UserTable = ({
             <tbody>
               {users.map((u) => {
                 const activity = formatActivityTime(u);
-                const isSelected = selectedIds.has(u.user_id);
                 const isSelf = isUserSelf(u);
 
                 return (
-                  <tr key={u.user_id} className={isSelected ? 'user-table-row--selected' : ''}>
-                    {/* Checkbox */}
-                    <td style={{ textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        className="user-checkbox"
-                        checked={isSelected}
-                        disabled={isSelf || isProtectedAdmin(u)}
-                        title={
-                          isSelf
-                            ? 'Không thể chọn tài khoản của chính mình'
-                            : isProtectedAdmin(u)
-                            ? 'Tài khoản Quản trị viên hệ thống (Được bảo vệ toàn quyền - Không thể khóa)'
-                            : undefined
-                        }
-                        onChange={() => !isSelf && !isProtectedAdmin(u) && handleSelectOne(u.user_id)}
-                      />
-                    </td>
-
+                  <tr key={u.user_id}>
                     {/* Người dùng & Mã NV */}
                     <td>
                       <div className="user-cell-profile">
@@ -372,20 +314,6 @@ const UserTable = ({
                     {/* Thao tác */}
                     <td>
                       <div className="user-action-buttons">
-                        {!isSelf && !isProtectedAdmin(u) && (u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED') && (
-                          <button
-                            type="button"
-                            className="user-btn-quick-unlock"
-                            title="Mở khóa tài khoản"
-                            onClick={() => onToggleStatus(u)}
-                          >
-                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                            </svg>
-                            <span>Mở khóa</span>
-                          </button>
-                        )}
                         <button
                           type="button"
                           className="user-action-btn"
@@ -393,8 +321,8 @@ const UserTable = ({
                             isSelf
                               ? 'Xem thông tin tài khoản của bạn (Không thể tự khóa)'
                               : isProtectedAdmin(u)
-                              ? 'Chỉnh sửa tài khoản (Vai trò System Admin không thể bị khóa)'
-                              : 'Chỉnh sửa thông tin'
+                                ? 'Chỉnh sửa tài khoản (Vai trò System Admin không thể bị khóa)'
+                                : 'Chỉnh sửa thông tin'
                           }
                           onClick={() => onEditUser?.(u)}
                         >
@@ -422,8 +350,9 @@ const UserTable = ({
                             title="Tài khoản hiện tại của bạn (Được bảo vệ - Không thể tự khóa)"
                             aria-label="Tài khoản đang đăng nhập"
                           >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="2.2">
-                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
                             </svg>
                           </span>
                         ) : isProtectedAdmin(u) ? (
@@ -432,8 +361,9 @@ const UserTable = ({
                             title="Tài khoản Quản trị viên hệ thống (Được bảo vệ toàn quyền - Không ai có quyền khóa)"
                             aria-label="Tài khoản System Admin được bảo vệ"
                           >
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1e40af" strokeWidth="2.2">
-                              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0 1 9.9-1" />
                             </svg>
                           </span>
                         ) : (
@@ -443,8 +373,8 @@ const UserTable = ({
                               u.account_status === 'DEACTIVATED' || u.account_status === 'LOCKED'
                                 ? 'Tài khoản đang bị khóa'
                                 : u.account_status === 'VERIFYING' || u.account_status === 'PENDING'
-                                ? 'Tài khoản đang chờ duyệt'
-                                : 'Tài khoản đang hoạt động'
+                                  ? 'Tài khoản đang chờ duyệt'
+                                  : 'Tài khoản đang hoạt động'
                             }
                             aria-label="Trạng thái tài khoản"
                           >
@@ -453,13 +383,8 @@ const UserTable = ({
                                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
                               </svg>
-                            ) : u.account_status === 'VERIFYING' || u.account_status === 'PENDING' ? (
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2">
-                                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                                <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-                              </svg>
                             ) : (
-                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2">
+                              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2">
                                 <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
                                 <path d="M7 11V7a5 5 0 0 1 9.9-1" />
                               </svg>

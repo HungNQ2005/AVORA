@@ -38,6 +38,12 @@ export const formatVnStayDate = (dateStr) => {
 
 export const PAYMENT_HOLD_MS = 10 * 60 * 1000;
 
+export const canEditBooking = (booking) => booking?.can_edit === true;
+
+export const getValidBookingPage = (requestedPage, totalPages) => (
+  totalPages > 0 ? Math.min(Math.max(1, requestedPage), totalPages) : 1
+);
+
 export const getBookingPaymentDeadline = (booking) => {
   if (!booking?.created_at) return null;
   const createdAt = parseIsoToDate(booking.created_at);

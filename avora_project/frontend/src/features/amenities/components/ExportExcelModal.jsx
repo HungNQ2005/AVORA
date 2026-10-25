@@ -90,7 +90,7 @@ const ExportExcelModal = ({
             <div className="avora-export-detail-item">
               <span className="avora-export-detail-label">Trạng thái dữ liệu:</span>
               <span className="avora-export-detail-val text-success">
-                ● Đã đồng bộ từ Cloud Database
+                ● Sẵn sàng xuất dữ liệu
               </span>
             </div>
           </div>

@@ -54,7 +54,6 @@
   line-height: 1.5;
 }
 
-<<<<<<< HEAD:avora_project/frontend/src/features/bookings/pages/MyBookingsPage.css
 .my-bookings-history-link {
   margin-top: 10px;
   padding: 0;
@@ -114,8 +113,6 @@
   gap: 4px;
 }
 
-=======
->>>>>>> origin/main:avora_project/frontend/src/features/mybookings/screens/MyBookingsPage.css
 /* ─── 2. TABS & SEARCH FILTER BAR ─────────────────────────────────────── */
 .my-bookings-tabs-bar {
   display: flex;
@@ -244,6 +241,62 @@
   color: #334155;
   cursor: pointer;
   user-select: none;
+}
+
+.my-bookings-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 24px 0;
+  color: #475569;
+  font-size: 13px;
+}
+
+.my-bookings-pagination-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.my-bookings-pagination-btn {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #334155;
+  padding: 8px 12px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.my-bookings-pagination-btn:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+.my-bookings-pagination-btn:disabled {
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.date-change-coupon-warning {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #f59e0b;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #78350f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.date-change-coupon-warning p {
+  margin: 6px 0 0;
+}
+
+.date-change-coupon-warning small {
+  display: block;
+  margin-top: 8px;
+  color: #92400e;
 }
 
 .my-bookings-filter-vat-toggle input {

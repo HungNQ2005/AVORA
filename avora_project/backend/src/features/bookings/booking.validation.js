@@ -7,18 +7,53 @@ const MAX_SPECIAL_REQUEST_OPTIONS = 10;
 const MAX_STAY_NIGHTS = 30; // Tiêu chuẩn OTA: đặt trực tuyến tối đa 30 đêm
 const MAX_ADVANCE_BOOKING_DAYS = 365; // Đặt phòng trước tối đa 365 ngày (1 năm)
 const MAX_ROOMS_PER_BOOKING = 8; // Tối đa 8 phòng/lần đặt (trên 8 phòng tính là khách đoàn)
+const MAX_BOOKING_PAGE_SIZE = 50;
+const MAX_BOOKING_SEARCH_LENGTH = 200;
+const BOOKING_LIST_STATUSES = new Set(['all', 'upcoming', 'completed', 'cancelled']);
+const BOOKING_LIST_TIME_RANGES = new Set([
+  'all',
+  'last_30_days',
+  'last_90_days',
+  'this_month',
+  'last_month',
+  'this_year',
+]);
+const BOOKING_DATE_CHANGE_FIELDS = new Set([
+  'check_in_date',
+  'check_out_date',
+  'confirm_coupon_removal',
+]);
 
-// Regex kiểm tra họ tên hợp lệ: Hỗ trợ mọi chữ cái Unicode (bao gồm 100% tiếng Việt có dấu), khoảng trắng, dấu nháy đơn, gạch nối và dấu chấm
-const GUEST_NAME_REGEX = /^[\p{L}\s'.-]{2,}$/u;
+const BOOKING_PAYLOAD_FIELDS = new Set([
+  'hotel_id',
+  'rooms',
+  'room_type_id',
+  'quantity',
+  'check_in_date',
+  'check_out_date',
+  'guest_name',
+  'guest_phone',
+  'special_request',
+  'special_request_options',
+  'estimated_arrival_time',
+  'coupon_code',
+]);
+const GUEST_INFO_FIELDS = new Set(['guest_name', 'guest_phone', 'special_request']);
+
+const GUEST_NAME_REGEX = /^\p{L}[\p{L}\p{M}]*(?:(?:\p{Zs}+|['\u2019.-])\p{L}[\p{L}\p{M}]*)*$/u;
 
 const isValidGuestName = (name) => {
   if (typeof name !== 'string') return false;
   const trimmed = name.trim();
-  if (trimmed.length < 2 || trimmed.length > MAX_GUEST_NAME_LENGTH) return false;
-  return GUEST_NAME_REGEX.test(trimmed);
+  if (trimmed.length > MAX_GUEST_NAME_LENGTH || !GUEST_NAME_REGEX.test(trimmed)) return false;
+  return (trimmed.match(/\p{L}/gu) || []).length >= 2;
 };
 
 const isObject = (value) => value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const getUnexpectedFields = (body, allowedFields) => (
+  Object.keys(body).filter((field) => !allowedFields.has(field))
+);
 
 const isIdentifier = (value) => (
   (typeof value === 'string' && value.trim().length > 0) ||
@@ -153,6 +188,9 @@ const validateRoomSelection = (body, errors) => {
       errors.push(`Hạng phòng thứ ${index + 1} không hợp lệ.`);
       return;
     }
+    if (Object.keys(room).some((field) => field !== 'room_type_id' && field !== 'quantity')) {
+      errors.push(`Hạng phòng thứ ${index + 1} chứa trường không được hỗ trợ.`);
+    }
 
     const quantity = typeof room.quantity === 'number'
       ? room.quantity
@@ -194,10 +232,15 @@ const validateBookingPayload = (body) => {
     return { isValid: false, errors };
   }
 
+  const unexpectedFields = getUnexpectedFields(body, BOOKING_PAYLOAD_FIELDS);
+  if (unexpectedFields.length > 0) {
+    errors.push(`Các trường không được hỗ trợ: ${unexpectedFields.join(', ')}.`);
+  }
+
   if (typeof body.guest_name !== 'string' || !body.guest_name.trim()) {
     errors.push('Họ và tên người nhận phòng là bắt buộc.');
   } else if (!isValidGuestName(body.guest_name)) {
-    errors.push(`Họ và tên người nhận phòng không hợp lệ (tối thiểu 2 ký tự, chỉ chứa chữ cái và không chứa số hay ký tự đặc biệt).`);
+    errors.push(`Họ và tên người nhận phòng phải có ít nhất 2 chữ cái, tối đa ${MAX_GUEST_NAME_LENGTH} ký tự; chỉ dùng chữ cái, khoảng trắng, dấu nháy đơn, dấu gạch nối hoặc dấu chấm.`);
   }
 
   if (!isValidGuestPhone(body.guest_phone)) {
@@ -247,7 +290,12 @@ const validateGuestInfoPayload = (body) => {
     return { isValid: false, errors: ['Dữ liệu cập nhật thông tin khách không hợp lệ.'] };
   }
 
-  const fields = ['guest_name', 'guest_phone', 'special_request'];
+  const fields = [...GUEST_INFO_FIELDS];
+  const unexpectedFields = getUnexpectedFields(body, GUEST_INFO_FIELDS);
+  if (unexpectedFields.length > 0) {
+    errors.push(`Các trường không được phép cập nhật: ${unexpectedFields.join(', ')}.`);
+  }
+
   if (!fields.some((field) => body[field] !== undefined)) {
     errors.push('Vui lòng cung cấp ít nhất một thông tin cần cập nhật.');
   }
@@ -256,7 +304,7 @@ const validateGuestInfoPayload = (body) => {
     if (typeof body.guest_name !== 'string' || !body.guest_name.trim()) {
       errors.push('Họ và tên người nhận phòng không được để trống.');
     } else if (!isValidGuestName(body.guest_name)) {
-      errors.push('Họ và tên người nhận phòng không hợp lệ (tối thiểu 2 ký tự, chỉ chứa chữ cái và không chứa số hay ký tự đặc biệt).');
+      errors.push(`Họ và tên người nhận phòng phải có ít nhất 2 chữ cái, tối đa ${MAX_GUEST_NAME_LENGTH} ký tự; chỉ dùng chữ cái, khoảng trắng, dấu nháy đơn, dấu gạch nối hoặc dấu chấm.`);
     }
   }
 
@@ -275,10 +323,115 @@ const validateGuestInfoPayload = (body) => {
   return { isValid: errors.length === 0, errors };
 };
 
+const validateBookingDateChangePayload = (body) => {
+  if (!isObject(body)) {
+    return { isValid: false, errors: ['Dữ liệu đổi ngày lưu trú không hợp lệ.'] };
+  }
+
+  const errors = [];
+  const unexpectedFields = getUnexpectedFields(body, BOOKING_DATE_CHANGE_FIELDS);
+  if (unexpectedFields.length > 0) {
+    errors.push(`Các trường không được hỗ trợ khi đổi ngày: ${unexpectedFields.join(', ')}.`);
+  }
+
+  errors.push(...validateStayDates(body.check_in_date, body.check_out_date));
+  if (
+    body.confirm_coupon_removal !== undefined &&
+    typeof body.confirm_coupon_removal !== 'boolean'
+  ) {
+    errors.push('Xác nhận gỡ coupon phải là true hoặc false.');
+  }
+
+  return { isValid: errors.length === 0, errors };
+};
+
+const validateBookingListQuery = (query) => {
+  const errors = [];
+  let search = '';
+  if (query.search !== undefined) {
+    if (typeof query.search !== 'string') {
+      errors.push('search phải là văn bản.');
+    } else if (query.search.trim().length > MAX_BOOKING_SEARCH_LENGTH) {
+      errors.push(`search không được vượt quá ${MAX_BOOKING_SEARCH_LENGTH} ký tự.`);
+    } else {
+      search = query.search.trim();
+    }
+  }
+
+  let status = 'all';
+  if (query.status !== undefined) {
+    if (typeof query.status !== 'string' || !BOOKING_LIST_STATUSES.has(query.status)) {
+      errors.push('status không hợp lệ.');
+    } else {
+      status = query.status;
+    }
+  }
+
+  let timeRange = 'all';
+  if (query.timeRange !== undefined) {
+    if (
+      typeof query.timeRange !== 'string' ||
+      (!BOOKING_LIST_TIME_RANGES.has(query.timeRange) && !/^\d{4}$/.test(query.timeRange))
+    ) {
+      errors.push('timeRange không hợp lệ.');
+    } else {
+      timeRange = query.timeRange;
+    }
+  }
+
+  const parsePositiveInteger = (value, field, fallback, maximum = Number.MAX_SAFE_INTEGER) => {
+    if (value === undefined) return fallback;
+    if (typeof value !== 'string' || !/^[1-9]\d*$/.test(value)) {
+      errors.push(`${field} phải là số nguyên dương.`);
+      return fallback;
+    }
+
+    const parsed = Number(value);
+    if (!Number.isSafeInteger(parsed) || parsed > maximum) {
+      errors.push(`${field} vượt quá giới hạn cho phép.`);
+      return fallback;
+    }
+    return parsed;
+  };
+
+  const page = parsePositiveInteger(query.page, 'page', 1);
+  const limit = parsePositiveInteger(query.limit, 'limit', 20, MAX_BOOKING_PAGE_SIZE);
+  if (!Number.isSafeInteger((page - 1) * limit)) {
+    errors.push('page vượt quá giới hạn cho phép.');
+  }
+
+  let requireVatOnly = false;
+  if (query.requireVatOnly !== undefined) {
+    if (query.requireVatOnly !== 'true' && query.requireVatOnly !== 'false') {
+      errors.push('requireVatOnly phải là true hoặc false.');
+    } else {
+      requireVatOnly = query.requireVatOnly === 'true';
+    }
+  }
+
+  return {
+    isValid: errors.length === 0,
+    errors,
+    page,
+    limit,
+    requireVatOnly,
+    search,
+    status,
+    timeRange,
+  };
+};
+
+const normalizeSpecialRequest = (value) => (
+  value === null || value === undefined ? null : String(value).trim()
+);
+
 module.exports = {
   isValidGuestPhone,
+  normalizeSpecialRequest,
   normalizeGuestPhone,
   validateBookingPayload,
+  validateBookingDateChangePayload,
+  validateBookingListQuery,
   validateBookingSelection,
   validateGuestInfoPayload,
   validateStayDates,

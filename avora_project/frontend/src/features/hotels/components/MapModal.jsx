@@ -1,24 +1,14 @@
 import React from 'react';
 
-const CloseIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
+import { CloseIcon, StarIcon } from '../../../common/components/icons';
 
-const StarIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 24 24" fill="#f59e0b">
-    <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1L12 16.6 5.8 21l2.3-7.1L2 9.4h7.6z" />
-  </svg>
-);
 
 const formatPrice = (val) => {
   if (!val && val !== 0) return '0 VND';
   return `${new Intl.NumberFormat('vi-VN').format(val)} VND`;
 };
 
-const MapModal = ({ isOpen, onClose, hotels = [], destination = 'Đà Nẵng' }) => {
+const MapModal = ({ isOpen, onClose, hotels = [], destination = '' }) => {
   const [activeHotel, setActiveHotel] = React.useState(hotels[0] || null);
 
   React.useEffect(() => {
@@ -35,7 +25,7 @@ const MapModal = ({ isOpen, onClose, hotels = [], destination = 'Đà Nẵng' })
         {/* Header */}
         <div className="map-modal-header">
           <div>
-            <h3 className="map-modal-title">Bản đồ khách sạn tại {destination}</h3>
+            <h3 className="map-modal-title">Bản đồ khách sạn{destination ? ` tại ${destination}` : ''}</h3>
             <span className="map-modal-subtitle">
               Hiển thị {hotels.length} chỗ nghỉ có sẵn trong khu vực
             </span>

@@ -7,7 +7,7 @@ import DeactivateOtpModal from '../components/DeactivateOtpModal';
 import AvatarUploadModal from '../components/AvatarUploadModal';
 import AvatarContent from '../../../common/components/AvatarContent';
 import { codeNameParser } from '../../../utils/codeNameParser';
-import { getSavedFavorites, removeFavoriteHotel } from '../../../utils/favoritesStorage';
+import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
 import './MyAccountPage.css';
 
@@ -193,8 +193,14 @@ const MyAccountPage = () => {
     return getSavedFavorites();
   });
 
-  // Reactive listener for saved accommodations updates across storage and custom events
+  // Sync with database table t_wishlist and reactive listener for updates
   useEffect(() => {
+    syncFavoritesWithServer().then((res) => {
+      if (Array.isArray(res)) {
+        setSavedAccommodations(res);
+      }
+    });
+
     const handleFavoritesUpdate = () => {
       const stored = getSavedFavorites();
       setSavedAccommodations(stored);
@@ -202,10 +208,12 @@ const MyAccountPage = () => {
 
     window.addEventListener('storage', handleFavoritesUpdate);
     window.addEventListener('avora_favorites_updated', handleFavoritesUpdate);
+    window.addEventListener('avora_watchlist_updated', handleFavoritesUpdate);
 
     return () => {
       window.removeEventListener('storage', handleFavoritesUpdate);
       window.removeEventListener('avora_favorites_updated', handleFavoritesUpdate);
+      window.removeEventListener('avora_watchlist_updated', handleFavoritesUpdate);
     };
   }, []);
 
@@ -220,7 +228,7 @@ const MyAccountPage = () => {
     );
 
     if (needsEnrichment) {
-      fetch(`${API_ENDPOINTS.HOTELS}?destination=Vi%E1%BB%87t%20Nam`)
+      fetch(API_ENDPOINTS.HOTELS)
         .then((res) => res.json())
         .then((json) => {
           if (!isMounted) return;
@@ -445,7 +453,7 @@ const MyAccountPage = () => {
             <span className="breadcrumb-link" onClick={() => switchTab('info')}>Tài khoản của tôi</span>
             <span className="breadcrumb-separator">&gt;</span>
             <span className="breadcrumb-current">
-              {activeTab === 'favorites' ? 'Chỗ nghỉ yêu thích' : activeTab === 'security' ? 'Bảo mật tài khoản' : 'Quản lý hồ sơ'}
+              {activeTab === 'favorites' ? 'Danh sách yêu thích' : activeTab === 'security' ? 'Bảo mật tài khoản' : 'Quản lý hồ sơ'}
             </span>
           </nav>
 
@@ -613,7 +621,7 @@ const MyAccountPage = () => {
               >
                 <div className="profile-nav-item__left">
                   <HeartIcon />
-                  <span>Chỗ nghỉ yêu thích</span>
+                  <span>Danh sách yêu thích</span>
                 </div>
                 <span className="profile-nav-badge">{savedAccommodations.length}</span>
               </button>
@@ -853,17 +861,17 @@ const MyAccountPage = () => {
               </div>
             )}
 
-            {/* ════ TAB 2: CHỖ NGHỈ YÊU THÍCH ════ */}
+            {/* ════ TAB 2: WATCHLIST (CHỖ NGHỈ ĐÃ LƯU) ════ */}
             {activeTab === 'favorites' && (
               <div className="profile-card profile-favorites-card">
                 <div className="profile-card__header">
                   <div>
                     <div className="profile-card__title-row">
-                      <h2 className="profile-card__title">Chỗ nghỉ yêu thích</h2>
+                      <h2 className="profile-card__title">Danh sách yêu thích - Chỗ nghỉ đã lưu</h2>
                       <span className="saved-count-pill">{savedAccommodations.length} chỗ nghỉ</span>
                     </div>
                     <p className="profile-card__subtitle">
-                      Các khách sạn và khu nghỉ dưỡng bạn yêu thích để chuẩn bị cho kỳ nghỉ tiếp theo.
+                      Các khách sạn và khu nghỉ dưỡng bạn theo dõi để chuẩn bị cho kỳ nghỉ tiếp theo.
                     </p>
                   </div>
 
@@ -885,10 +893,10 @@ const MyAccountPage = () => {
                       const city = hotel.city_name || hotel.city || 'Việt Nam';
                       const address = hotel.address || 'Địa chỉ đang cập nhật';
                       const starCount = Math.max(1, Math.min(5, Number(hotel.star_quality || hotel.star_rating || 4)));
-                      const scoreNum = Number(hotel.star_rating || hotel.review_score || hotel.rating || 9.0);
-                      const scoreFormatted = Number(scoreNum).toFixed(1);
-                      const scoreLabel = hotel.score_label || (scoreNum >= 9.0 ? 'Tuyệt hảo' : scoreNum >= 8.5 ? 'Tuyệt vời' : scoreNum >= 8.0 ? 'Rất tốt' : 'Tốt');
-                      const reviewCount = hotel.reviews_count || hotel.review_count || '1.842';
+                      const scoreNum = hotel.star_rating !== undefined && hotel.star_rating !== null ? Number(hotel.star_rating) : null;
+                      const scoreFormatted = scoreNum !== null ? scoreNum.toFixed(1) : null;
+                      const scoreLabel = hotel.score_label || (scoreNum && scoreNum >= 9.0 ? 'Tuyệt hảo' : scoreNum && scoreNum >= 8.5 ? 'Tuyệt vời' : scoreNum && scoreNum >= 8.0 ? 'Rất tốt' : 'Tốt');
+                      const reviewCount = Number(hotel.reviews_count || hotel.review_count || 0);
                       const price = Number(hotel.price || hotel.min_price || 0);
                       const img = hotel.thumbnail || hotel.images?.[0] || hotel.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
 
@@ -923,8 +931,8 @@ const MyAccountPage = () => {
                                 type="button"
                                 className="saved-hotel-card__remove-btn"
                                 onClick={(e) => handleRemoveSaved(hotelId, e)}
-                                title="Xóa khỏi danh sách lưu"
-                                aria-label="Xóa khỏi danh sách lưu"
+                                title="Xóa khỏi danh sách yêu thích"
+                                aria-label="Xóa khỏi danh sách yêu thích"
                               >
                                 <TrashIcon />
                               </button>
@@ -938,9 +946,10 @@ const MyAccountPage = () => {
                             </div>
 
                             <div className="saved-hotel-card__rating">
-                              <span className="rating-badge">{scoreFormatted}</span>
+                              {scoreFormatted && <span className="rating-badge">{scoreFormatted}</span>}
                               <span className="rating-text">
-                                {scoreLabel} • {reviewCount} đánh giá
+                                {scoreLabel ? `${scoreLabel} • ` : ''}
+                                {reviewCount > 0 ? `${reviewCount.toLocaleString('vi-VN')} đánh giá` : 'Chưa có đánh giá'}
                               </span>
                             </div>
 
@@ -974,9 +983,9 @@ const MyAccountPage = () => {
                     <div className="saved-empty-state__icon">
                       <HeartIcon />
                     </div>
-                    <div className="saved-empty-state__title">Chưa có</div>
+                    <div className="saved-empty-state__title">Danh sách yêu thích trống</div>
                     <p className="saved-empty-state__desc">
-                      Bạn chưa có chỗ nghỉ nào trong danh sách yêu thích. Hãy khám phá và thêm vào danh sách yêu thích!
+                      Bạn chưa có chỗ nghỉ nào trong danh sách yêu thích. Hãy khám phá và bấm biểu tượng trái tim để theo dõi các khách sạn yêu thích!
                     </p>
                     <button
                       type="button"

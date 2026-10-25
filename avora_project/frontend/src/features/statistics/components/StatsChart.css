@@ -30,6 +30,13 @@
   fill: #64748b;
 }
 
+.st-chart__tick--rotated {
+  font-size: 10.5px;
+  fill: #334155;
+  font-weight: 600;
+  transition: fill 0.15s ease;
+}
+
 .st-chart__center-value {
   font-size: 18px;
   font-weight: 800;
@@ -41,6 +48,71 @@
   fill: #64748b;
   letter-spacing: 0.05em;
   text-transform: uppercase;
+}
+
+.st-chart__center-hover-title {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.st-chart__center-hover-val {
+  font-size: 15px;
+  font-weight: 800;
+  fill: #0f172a;
+}
+
+.st-chart__center-hover-pct {
+  font-size: 11px;
+  font-weight: 700;
+  fill: #64748b;
+}
+
+.st-chart__slice-wedge {
+  transition: opacity 0.2s ease;
+  cursor: pointer;
+}
+
+.st-chart__callout {
+  transition: opacity 0.2s ease;
+}
+
+.st-chart__slice-name {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.st-chart__slice-val {
+  font-size: 10px;
+  font-weight: 500;
+  fill: #64748b;
+}
+
+.st-chart__bar-group {
+  transition: opacity 0.2s ease;
+}
+
+.st-chart__bar-rect {
+  transition: opacity 0.2s ease;
+}
+
+.st-chart__bar-val {
+  font-size: 10.5px;
+  font-weight: 700;
+  fill: #1e293b;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.st-chart__tooltip-rect {
+  fill: #0f172a;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
+}
+
+.st-chart__tooltip-text {
+  fill: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .st-chart__readout {

@@ -73,8 +73,28 @@ export const fetchRefundPolicies = async (params = {}) => {
 
   const filteredPolicies = rawPolicies.filter((p) => {
     const pId = String(p.policy_id || p.cancellation_policy_id || '').trim();
-    return !softDeletedIds.includes(pId);
+    return p.is_active !== false && !softDeletedIds.includes(pId);
   });
+
+  const total = filteredPolicies.length;
+  const activeCount = filteredPolicies.filter((p) => (p.status ? p.status === 'ACTIVE' : p.is_active !== false)).length;
+  const inactiveCount = total - activeCount;
+  const sumRate = filteredPolicies.reduce((acc, p) => acc + (Number(p.refund_percentage) || 0), 0);
+  const avgRate = total > 0 ? Math.round((sumRate / total) * 10) / 10 : 0;
+  const freeCancel = filteredPolicies.filter((p) => Number(p.minimum_cancellation_hours || 0) > 0).length;
+  const totalBookings = filteredPolicies.reduce((acc, p) => acc + (p.associated_bookings_count || 0), 0);
+
+  const updatedStats = json.data?.stats
+    ? {
+        ...json.data.stats,
+        total_policies: total,
+        active_policies: activeCount,
+        inactive_policies: inactiveCount,
+        avg_refund_rate: avgRate,
+        free_cancel_count: freeCancel,
+        total_associated_bookings: totalBookings,
+      }
+    : null;
 
   if (Array.isArray(json.data)) {
     return filteredPolicies;
@@ -83,6 +103,7 @@ export const fetchRefundPolicies = async (params = {}) => {
   return {
     ...json.data,
     policies: filteredPolicies,
+    stats: updatedStats,
   };
 };
 
@@ -107,7 +128,7 @@ export const fetchRefundPolicyHotels = async () => {
 export const fetchRefundPolicyById = async (id) => {
   const softDeletedIds = getSoftDeletedRefundPolicyIds();
   if (softDeletedIds.includes(String(id).trim())) {
-    throw new Error('Chính sách hoàn tiền không tồn tại hoặc đã bị xóa.');
+    throw new Error('Chính sách hoàn tiền không tồn tại hoặc đã bị ẩn.');
   }
 
   const response = await authenticatedFetch(
@@ -115,7 +136,7 @@ export const fetchRefundPolicyById = async (id) => {
   );
   const json = await response.json();
 
-  if (!response.ok || json.status === 'error') {
+  if (!response.ok || json.status === 'error' || json.data?.is_active === false) {
     throw new Error(json.message || 'Không thể tải thông tin chi tiết chính sách hoàn tiền.');
   }
 
@@ -169,7 +190,20 @@ export const updateRefundPolicy = async (id, payload) => {
  * @param {string} id
  */
 export const deleteRefundPolicy = async (id) => {
-  // CHẮP VÁ: Xóa mềm phía FE bằng localStorage, không gọi xóa cứng xuống DB.
-  addSoftDeletedRefundPolicyId(id);
-  return { success: true, policy_id: id, message: 'Đã xóa chính sách hoàn tiền thành công.' };
+  const cleanId = String(id || '').trim();
+  const response = await authenticatedFetch(
+    `${API_ENDPOINTS.REFUND_POLICIES}/${encodeURIComponent(cleanId)}`,
+    {
+      method: 'DELETE',
+    }
+  );
+  const json = await response.json().catch(() => ({}));
+
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể xóa chính sách hoàn tiền.');
+  }
+
+  addSoftDeletedRefundPolicyId(cleanId);
+  return json.data || { success: true, policy_id: cleanId, message: json.message || 'Đã xóa chính sách hoàn tiền thành công.' };
 };
+

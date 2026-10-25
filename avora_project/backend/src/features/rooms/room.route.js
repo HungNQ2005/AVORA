@@ -15,17 +15,16 @@ const { sendError } = require('../../utils/responseHelper');
 
 const router = Router();
 
-// Only Hotel Manager (VEN) and System Admin (ADM) are authorized
+// Hotel Manager (VEN) and System Admin (ADM) are authorized to view
 router.use('/rooms', authenticate, requireRole('VEN', 'ADM'));
 
 /**
- * System Admin (ADM) is read-only for rooms.
  * Write operations (create / update / delete) are restricted to Hotel Manager (VEN).
- * Relies on req.user.role_code_name resolved by requireRole above.
+ * System Admin (ADM) has read-only access (can view, but cannot modify).
  */
 const requireVendorWrite = (req, res, next) => {
   if (req.user?.role_code_name !== 'VEN') {
-    return sendError(res, 403, 'Quản trị viên hệ thống chỉ có quyền xem buồng phòng.');
+    return sendError(res, 403, 'Bạn không có quyền chỉnh sửa buồng phòng. Quản trị viên chỉ có quyền xem.');
   }
   return next();
 };

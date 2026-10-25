@@ -108,7 +108,7 @@ const getUsersList = async ({
 
   if (error) {
     console.error('Error fetching users:', error);
-    throw new Error('Không thể tải danh sách người dùng từ cơ sở dữ liệu.');
+    throw new Error('Không thể tải danh sách người dùng. Vui lòng thử lại sau.');
   }
 
   // Fetch all hotels to map ownership / affiliated branch
@@ -565,7 +565,7 @@ const confirmRoleChange = async ({ adminUser, targetUserId, newRole, otpCode }) 
 
   if (updateErr) {
     console.error('Error applying role update:', updateErr);
-    const err = new Error('Không thể lưu cập nhật vai trò mới vào cơ sở dữ liệu.');
+    const err = new Error('Không thể lưu cập nhật vai trò mới vào hệ thống.');
     err.statusCode = 500;
     throw err;
   }

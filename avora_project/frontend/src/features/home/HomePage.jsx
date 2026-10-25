@@ -5,117 +5,26 @@ import { getSavedFavorites, toggleFavoriteHotel } from '../../utils/favoritesSto
 import { getMinRoomsRequired, MAX_ROOM_CAPACITY } from '../../utils/roomCapacityHelper';
 import './HomePage.css';
 
-/* Custom SVG Icons */
-const PinIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
+import {
+  PinIcon,
+  CalendarIcon,
+  UsersIcon,
+  SearchIcon,
+  HeartIcon,
+  CompassIcon,
+  PiggyBankIcon,
+  HeadsetIcon,
+  ShieldCheckIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CheckIcon,
+  NavigationIcon,
+  CreditCardIcon,
+  StarIcon,
+  AwardIcon,
+  LightbulbIcon,
+} from '../../common/components/icons';
 
-const CalendarIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-    <line x1="16" y1="2" x2="16" y2="6" />
-    <line x1="8" y1="2" x2="8" y2="6" />
-    <line x1="3" y1="10" x2="21" y2="10" />
-  </svg>
-);
-
-const UsersIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-    <circle cx="9" cy="7" r="4" />
-    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-  </svg>
-);
-
-const SearchIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-  </svg>
-);
-
-const HeartIcon = ({ filled }) => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill={filled ? "#FF4D4F" : "none"} stroke={filled ? "#FF4D4F" : "#ffffff"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-  </svg>
-);
-
-const MapCompassIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-  </svg>
-);
-
-const PiggyBankIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#003580" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M19 5c-1.5 0-2.8 1.4-3 2-3.5-1.5-11-.3-11 5 0 1.8 0 3 2 4.5V20h4v-2h3v2h4v-3.5c1-.5 2-1 2-2.5V9c0-.8-.7-1.5-1.5-1.5H19V5z" />
-    <circle cx="15" cy="10" r="1" />
-  </svg>
-);
-
-const Support24Icon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#003580" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
-  </svg>
-);
-
-const ShieldCheckIcon = () => (
-  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#003580" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    <polyline points="9 12 11 14 15 10" />
-  </svg>
-);
-
-const ChevronLeftIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="15 18 9 12 15 6" />
-  </svg>
-);
-
-const ChevronRightIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="9 18 15 12 9 6" />
-  </svg>
-);
-
-const FilterCheckmarkIcon = () => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12" />
-  </svg>
-);
-
-const FilterNearMeIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-    <circle cx="12" cy="10" r="3" />
-  </svg>
-);
-
-const FilterFreeCancelIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-    <polyline points="9 12 11 14 15 10" />
-  </svg>
-);
-
-const FilterPayAtPropertyIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="5" width="20" height="14" rx="3" />
-    <line x1="2" y1="10" x2="22" y2="10" />
-    <circle cx="7" cy="15" r="1.2" fill="currentColor" />
-  </svg>
-);
-
-const FilterGeniusIcon = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2l2.4 7.4h7.6l-6.1 4.5 2.3 7.1L12 16.6 5.8 21l2.3-7.1L2 9.4h7.6z" />
-  </svg>
-);
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -223,9 +132,11 @@ const HomePage = () => {
     };
     window.addEventListener('storage', syncFavs);
     window.addEventListener('avora_favorites_updated', syncFavs);
+    window.addEventListener('avora_watchlist_updated', syncFavs);
     return () => {
       window.removeEventListener('storage', syncFavs);
       window.removeEventListener('avora_favorites_updated', syncFavs);
+      window.removeEventListener('avora_watchlist_updated', syncFavs);
     };
   }, []);
 
@@ -432,7 +343,7 @@ const HomePage = () => {
     navigate(`/hotels?${queryParams.toString()}`);
   };
 
-  const region = destination ? destination.split(',')[0].trim() : 'Đà Nẵng';
+  const region = destination ? destination.split(',')[0].trim() : '';
 
   // Check if there are promotional hotels for this region in the DB
   const regionalPromoHotels = useMemo(() => {
@@ -455,16 +366,18 @@ const HomePage = () => {
 
   const handlePromoClick = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    const cleanDest = destination ? destination.split(',')[0].trim() : 'Đà Nẵng';
+    const cleanDest = destination ? destination.split(',')[0].trim() : '';
     const checkInStr = formatDateISO(checkInDate);
     const checkOutStr = formatDateISO(checkOutDate || (checkInDate ? new Date(checkInDate.getTime() + 2 * 86400000) : today));
 
     if (!hasRegionalPromo) {
-      triggerToast(`Hiện chưa có ưu đãi tại ${cleanDest}`);
+      triggerToast(cleanDest ? `Hiện chưa có ưu đãi tại ${cleanDest}` : 'Hiện chưa có ưu đãi');
     }
 
     const queryParams = new URLSearchParams();
-    queryParams.set('destination', cleanDest);
+    if (cleanDest) {
+      queryParams.set('destination', cleanDest);
+    }
     queryParams.set('checkIn', checkInStr);
     queryParams.set('checkOut', checkOutStr);
     queryParams.set('adults', adults);
@@ -502,7 +415,9 @@ const HomePage = () => {
         <div className="avora-homepage__container">
           {/* Top Guarantee Badge: Black semi-transparent border & background, fully opaque bold text */}
           <div className="avora-hero__guarantee-badge">
-            <span className="avora-hero__badge-icon">✪</span>
+            <span className="avora-hero__badge-icon">
+              <AwardIcon size={14} color="#f59e0b" />
+            </span>
             <span className="avora-hero__badge-text">Cam kết giá tốt nhất thị trường Việt Nam</span>
           </div>
 
@@ -661,7 +576,9 @@ const HomePage = () => {
                   <div className="avora-guest-popover" onClick={(e) => e.stopPropagation()}>
                     {/* Capacity rule helper note */}
                     <div className="compact-popover__capacity-rule">
-                      <span className="compact-popover__rule-icon">💡</span>
+                      <span className="compact-popover__rule-icon">
+                        <LightbulbIcon size={16} color="#d97706" />
+                      </span>
                       <span>
                         2 giường tiêu chuẩn = 4 người • Có thêm 1 giường phụ = tối đa 5 người/phòng.
                       </span>
@@ -776,10 +693,10 @@ const HomePage = () => {
               aria-pressed={filters.nearby}
             >
               <span className={`avora-filter-box__checkbox ${filters.nearby ? 'is-checked' : ''}`}>
-                {filters.nearby && <FilterCheckmarkIcon />}
+                {filters.nearby && <CheckIcon size={10} strokeWidth={3} />}
               </span>
               <span className="avora-filter-box__icon avora-filter-box__icon--nearby">
-                <FilterNearMeIcon />
+                <NavigationIcon size={15} />
               </span>
               <span className="avora-filter-box__label">Gần vị trí hiện tại</span>
             </button>
@@ -791,10 +708,10 @@ const HomePage = () => {
               aria-pressed={filters.freeCancel}
             >
               <span className={`avora-filter-box__checkbox ${filters.freeCancel ? 'is-checked' : ''}`}>
-                {filters.freeCancel && <FilterCheckmarkIcon />}
+                {filters.freeCancel && <CheckIcon size={10} strokeWidth={3} />}
               </span>
               <span className="avora-filter-box__icon avora-filter-box__icon--cancel">
-                <FilterFreeCancelIcon />
+                <ShieldCheckIcon size={15} />
               </span>
               <span className="avora-filter-box__label">Miễn phí hủy phòng</span>
             </button>
@@ -806,10 +723,10 @@ const HomePage = () => {
               aria-pressed={filters.payAtProperty}
             >
               <span className={`avora-filter-box__checkbox ${filters.payAtProperty ? 'is-checked' : ''}`}>
-                {filters.payAtProperty && <FilterCheckmarkIcon />}
+                {filters.payAtProperty && <CheckIcon size={10} strokeWidth={3} />}
               </span>
               <span className="avora-filter-box__icon avora-filter-box__icon--payment">
-                <FilterPayAtPropertyIcon />
+                <CreditCardIcon size={15} />
               </span>
               <span className="avora-filter-box__label">Thanh toán tại chỗ nghỉ</span>
             </button>
@@ -821,10 +738,10 @@ const HomePage = () => {
               aria-pressed={filters.geniusOffer}
             >
               <span className={`avora-filter-box__checkbox ${filters.geniusOffer ? 'is-checked' : ''}`}>
-                {filters.geniusOffer && <FilterCheckmarkIcon />}
+                {filters.geniusOffer && <CheckIcon size={10} strokeWidth={3} />}
               </span>
               <span className="avora-filter-box__icon avora-filter-box__icon--genius">
-                <FilterGeniusIcon />
+                <StarIcon size={15} filled={true} color="#f59e0b" fill="#f59e0b" />
               </span>
               <span className="avora-filter-box__label">Ưu đãi Genius</span>
             </button>
@@ -1011,7 +928,7 @@ const HomePage = () => {
               ))
             ) : hotels.length === 0 ? (
               <div className="avora-hotels-empty">
-                <p>Không có chỗ nghỉ nào trong cơ sở dữ liệu.</p>
+                <p>Không tìm thấy chỗ nghỉ phù hợp.</p>
               </div>
             ) : (
               hotels.slice(carouselIdx, carouselIdx + 4).map((hotel) => {
@@ -1134,7 +1051,7 @@ const HomePage = () => {
           <div className="avora-map-card">
             <div className="avora-map-card__content">
               <div className="avora-map-card__tag">
-                <MapCompassIcon />
+                <CompassIcon size={18} />
                 <span>Bản đồ du lịch tương tác</span>
               </div>
 
@@ -1180,7 +1097,7 @@ const HomePage = () => {
                 className="avora-map-card__open-btn"
                 onClick={() => handleDestinationClick('Việt Nam')}
               >
-                <MapCompassIcon />
+                <CompassIcon size={18} />
                 <span>Mở xem trên bản đồ</span>
               </button>
             </div>
@@ -1195,7 +1112,7 @@ const HomePage = () => {
             {/* Feature 1 */}
             <div className="avora-feature-box">
               <div className="avora-feature-box__icon">
-                <PiggyBankIcon />
+                <PiggyBankIcon size={24} color="#003580" />
               </div>
               <div className="avora-feature-box__content">
                 <h3>Giá tốt không phí ẩn</h3>
@@ -1208,7 +1125,7 @@ const HomePage = () => {
             {/* Feature 2 */}
             <div className="avora-feature-box">
               <div className="avora-feature-box__icon">
-                <Support24Icon />
+                <HeadsetIcon size={24} color="#003580" />
               </div>
               <div className="avora-feature-box__content">
                 <h3>Hỗ trợ tiếng Việt 24/7</h3>
@@ -1221,7 +1138,7 @@ const HomePage = () => {
             {/* Feature 3 */}
             <div className="avora-feature-box">
               <div className="avora-feature-box__icon">
-                <ShieldCheckIcon />
+                <ShieldCheckIcon size={24} color="#003580" />
               </div>
               <div className="avora-feature-box__content">
                 <h3>Xác nhận đặt phòng tức thì</h3>

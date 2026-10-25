@@ -48,8 +48,10 @@ const RefundPolicyManagementPage = () => {
   // Modals
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [editingPolicy, setEditingPolicy] = useState(null);
+  const [formServerError, setFormServerError] = useState(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deletingPolicy, setDeletingPolicy] = useState(null);
+  const [deleteServerError, setDeleteServerError] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
@@ -101,16 +103,17 @@ const RefundPolicyManagementPage = () => {
 
   // Tab counts
   const tabCounts = useMemo(() => {
+    const activeList = policies.filter((p) => p.is_active !== false);
     return {
-      ALL: policies.length,
-      ACTIVE: policies.filter((p) => p.status === 'ACTIVE').length,
-      INACTIVE: policies.filter((p) => p.status === 'INACTIVE').length,
+      ALL: activeList.length,
+      ACTIVE: activeList.filter((p) => p.status === 'ACTIVE').length,
+      INACTIVE: activeList.filter((p) => p.status === 'INACTIVE').length,
     };
   }, [policies]);
 
   // Filter & Sort Logic (Client-side for instant responsiveness)
   const filtered = useMemo(() => {
-    let result = [...policies];
+    let result = policies.filter((p) => p.is_active !== false);
 
     // Search filter using debouncedSearch (matches all fields like Admin User Management)
     if (debouncedSearch.trim()) {
@@ -122,7 +125,6 @@ const RefundPolicyManagementPage = () => {
           p.policy_id?.toLowerCase().includes(term) ||
           p.hotel_name?.toLowerCase().includes(term) ||
           p.description?.toLowerCase().includes(term) ||
-          p.refund_conditions?.toLowerCase().includes(term) ||
           String(p.refund_percentage || '').includes(term) ||
           String(p.minimum_cancellation_hours || '').includes(term)
       );
@@ -197,6 +199,7 @@ const RefundPolicyManagementPage = () => {
   // Open Create Modal
   const openCreateModal = () => {
     setEditingPolicy(null);
+    setFormServerError(null);
     setFormModalOpen(true);
   };
 
@@ -204,6 +207,7 @@ const RefundPolicyManagementPage = () => {
   const openEditModal = (policy, e) => {
     if (e) e.stopPropagation();
     setEditingPolicy(policy);
+    setFormServerError(null);
     setFormModalOpen(true);
   };
 
@@ -211,12 +215,14 @@ const RefundPolicyManagementPage = () => {
   const openDeleteModal = (policy, e) => {
     if (e) e.stopPropagation();
     setDeletingPolicy(policy);
+    setDeleteServerError(null);
     setDeleteModalOpen(true);
   };
 
   // Submit Create / Edit
   const handleFormSubmit = async (formData) => {
     setFormLoading(true);
+    setFormServerError(null);
     try {
       if (editingPolicy) {
         await updateRefundPolicy(editingPolicy.policy_id, formData);
@@ -226,8 +232,10 @@ const RefundPolicyManagementPage = () => {
         showToast('Tạo mới chính sách hoàn tiền thành công!', 'success');
       }
       setFormModalOpen(false);
+      setEditingPolicy(null);
       loadData();
     } catch (err) {
+      setFormServerError(err.message || 'Có lỗi xảy ra khi lưu chính sách.');
       showToast(err.message || 'Có lỗi xảy ra khi lưu chính sách.', 'error');
     } finally {
       setFormLoading(false);
@@ -238,6 +246,7 @@ const RefundPolicyManagementPage = () => {
   const handleDeleteConfirm = async () => {
     if (!deletingPolicy) return;
     setDeleteLoading(true);
+    setDeleteServerError(null);
     try {
       await deleteRefundPolicy(deletingPolicy.policy_id);
       showToast(`Đã xóa thành công chính sách "${deletingPolicy.policy_name}".`, 'success');
@@ -245,6 +254,7 @@ const RefundPolicyManagementPage = () => {
       setDeletingPolicy(null);
       loadData();
     } catch (err) {
+      setDeleteServerError(err.message || 'Không thể xóa chính sách hoàn tiền.');
       showToast(err.message || 'Không thể xóa chính sách hoàn tiền.', 'error');
     } finally {
       setDeleteLoading(false);
@@ -523,7 +533,7 @@ const RefundPolicyManagementPage = () => {
           <input
             type="text"
             className="rp-filter-bar__input"
-            placeholder="Tìm theo tên chính sách, mã, khách sạn, điều kiện hoàn..."
+            placeholder="Tìm theo tên chính sách, mã, khách sạn, mô tả quy định..."
             value={searchTerm}
             onChange={(e) => handleSearchChange(e.target.value)}
           />
@@ -646,7 +656,7 @@ const RefundPolicyManagementPage = () => {
                   <th>CƠ SỞ ÁP DỤNG</th>
                   <th style={{ textAlign: 'center' }}>TỶ LỆ HOÀN TIỀN</th>
                   <th>HẠN HỦY TỐI THIỂU</th>
-                  <th>THỜI GIAN HIỆU LỰC</th>
+                  <th>CẬP NHẬT LẦN CUỐI</th>
                   <th style={{ textAlign: 'center' }}>ĐƠN ÁP DỤNG</th>
                   <th style={{ textAlign: 'center' }}>TRẠNG THÁI</th>
                   <th style={{ textAlign: 'center', width: '120px' }}>THAO TÁC</th>
@@ -713,11 +723,11 @@ const RefundPolicyManagementPage = () => {
                         </div>
                       </td>
 
-                      {/* 5. Thời gian hiệu lực */}
+                      {/* 5. Cập nhật lần cuối */}
                       <td>
                         <div style={{ fontSize: '0.78rem', color: '#64748b', lineHeight: 1.4 }}>
-                          <div>{formatDate(p.effective_from)}</div>
-                          <div>→ {p.effective_to ? formatDate(p.effective_to) : 'Vô thời hạn'}</div>
+                          <div style={{ fontWeight: 600, color: '#1e293b' }}>{formatDate(p.updated_at || p.created_at)}</div>
+                          <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Tạo: {formatDate(p.created_at)}</div>
                         </div>
                       </td>
 
@@ -857,20 +867,28 @@ const RefundPolicyManagementPage = () => {
       {/* Form Modal (Create / Edit) */}
       <RefundPolicyFormModal
         isOpen={formModalOpen}
-        onClose={() => setFormModalOpen(false)}
+        onClose={() => {
+          setFormModalOpen(false);
+          setFormServerError(null);
+        }}
         onSubmit={handleFormSubmit}
         initialData={editingPolicy}
         hotels={hotels}
         loading={formLoading}
+        serverError={formServerError}
       />
 
       {/* Delete Confirmation Modal */}
       <RefundPolicyDeleteModal
         isOpen={deleteModalOpen}
-        onClose={() => setDeleteModalOpen(false)}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setDeleteServerError(null);
+        }}
         onConfirm={handleDeleteConfirm}
         policy={deletingPolicy}
         loading={deleteLoading}
+        serverError={deleteServerError}
       />
     </div>
   );

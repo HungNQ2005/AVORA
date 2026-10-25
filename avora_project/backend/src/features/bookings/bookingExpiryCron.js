@@ -1,11 +1,12 @@
-'use strict';
+"use strict";
 
-const supabase = require('../../config/supabaseClient');
-const bookingService = require('./booking.service');
+const supabase = require("../../config/supabaseClient");
+const bookingService = require("./booking.service");
 
 const EXPIRY_MINUTES = 10;
 const CHECK_INTERVAL_MS = 10 * 1000;
-const EXPIRY_REASON = 'Đơn bị hệ thống tự động hủy do quá hạn thanh toán 10 phút.';
+const EXPIRY_REASON =
+  "Đơn bị hệ thống tự động hủy do quá hạn thanh toán 10 phút.";
 
 let timer = null;
 let isRunning = false;
@@ -22,23 +23,33 @@ const cancelExpiredPendingBookings = async () => {
 
   isRunning = true;
   try {
-    const cutoffTime = new Date(Date.now() - EXPIRY_MINUTES * 60 * 1000).toISOString();
+    const cutoffTime = new Date(
+      Date.now() - EXPIRY_MINUTES * 60 * 1000,
+    ).toISOString();
     const { data: statusCodes, error: codeErr } = await supabase
-      .from('m_system_code')
-      .select('code_cd, code_name')
-      .eq('business_cd', 'BOOKING_STS');
+      .from("m_system_code")
+      .select("code_cd, code_name")
+      .eq("business_cd", "BOOKING_STS");
 
     if (codeErr) {
       throw new Error(`Không thể đọc m_system_code: ${codeErr.message}`);
     }
 
-    const pndCd = statusCodes?.find((c) => String(c.code_name).toUpperCase() === 'PND')?.code_cd || '1';
-    const canCd = statusCodes?.find((c) => String(c.code_name).toUpperCase() === 'CAN')?.code_cd || '3';
+    const pndCd = statusCodes?.find(
+      (c) => String(c.code_name).toUpperCase() === "PND",
+    )?.code_cd;
+    const canCd = statusCodes?.find(
+      (c) => String(c.code_name).toUpperCase() === "CAN",
+    )?.code_cd;
+    if (!pndCd || !canCd) {
+      throw new Error("Không tìm thấy mã trạng thái PND hoặc CAN ");
+    }
 
     // 2. Lấy các đơn PND được tạo trước mốc 10 phút
     const { data: expiredBookings, error: bookingErr } = await supabase
-      .from('t_booking')
-      .select(`
+      .from("t_booking")
+      .select(
+        `
         booking_id,
         created_at,
         booking_status_cd,
@@ -55,9 +66,10 @@ const cancelExpiredPendingBookings = async () => {
           amount_paid,
           paid_at
         )
-      `)
-      .eq('booking_status_cd', pndCd)
-      .lte('created_at', cutoffTime);
+      `,
+      )
+      .eq("booking_status_cd", pndCd)
+      .lte("created_at", cutoffTime);
 
     if (bookingErr) {
       throw new Error(`Lỗi truy vấn đơn hết hạn: ${bookingErr.message}`);
@@ -67,25 +79,32 @@ const cancelExpiredPendingBookings = async () => {
 
     for (const booking of expiredBookings) {
       const txns = booking.t_payment_transaction || [];
-      const hasSuccessfulPayment = txns.some((t) => Number(t.amount_paid) > 0 || t.paid_at);
+      const hasSuccessfulPayment = txns.some(
+        (t) => Number(t.amount_paid) > 0 || t.paid_at,
+      );
       if (hasSuccessfulPayment) {
         continue;
       }
 
       const { data: cancelledBooking, error: updateErr } = await supabase
-        .from('t_booking')
+        .from("t_booking")
         .update({
           booking_status_cd: canCd,
-          special_request: [booking.special_request, EXPIRY_REASON].filter(Boolean).join('\n'),
+          special_request: [booking.special_request, EXPIRY_REASON]
+            .filter(Boolean)
+            .join("\n"),
           updated_at: new Date().toISOString(),
         })
-        .eq('booking_id', booking.booking_id)
-        .eq('booking_status_cd', pndCd)
-        .select('booking_id')
+        .eq("booking_id", booking.booking_id)
+        .eq("booking_status_cd", pndCd)
+        .select("booking_id")
         .maybeSingle();
 
       if (updateErr) {
-        console.error(`[BookingExpiryCron] Không thể hủy đơn ${booking.booking_id}:`, updateErr.message);
+        console.error(
+          `[BookingExpiryCron] Không thể hủy đơn ${booking.booking_id}:`,
+          updateErr.message,
+        );
         continue;
       }
       if (!cancelledBooking) {
@@ -100,30 +119,32 @@ const cancelExpiredPendingBookings = async () => {
             details,
             firstDetail.check_in_date,
             firstDetail.check_out_date,
-            -1
+            -1,
           );
         } catch (inventoryError) {
           const { error: rollbackError } = await supabase
-            .from('t_booking')
+            .from("t_booking")
             .update({
               booking_status_cd: pndCd,
               special_request: booking.special_request,
               updated_at: new Date().toISOString(),
             })
-            .eq('booking_id', booking.booking_id)
-            .eq('booking_status_cd', canCd);
+            .eq("booking_id", booking.booking_id)
+            .eq("booking_status_cd", canCd);
 
           console.error(
             `[BookingExpiryCron] Không thể hoàn tồn kho cho đơn ${booking.booking_id}; trạng thái đã được ${
-              rollbackError ? 'giữ nguyên' : 'hoàn tác về chờ thanh toán'
+              rollbackError ? "giữ nguyên" : "hoàn tác về chờ thanh toán"
             }.`,
-            rollbackError ? `${inventoryError.message}; lỗi hoàn tác trạng thái: ${rollbackError.message}` : inventoryError
+            rollbackError
+              ? `${inventoryError.message}; lỗi hoàn tác trạng thái: ${rollbackError.message}`
+              : inventoryError,
           );
         }
       }
     }
   } catch (error) {
-    console.error('[BookingExpiryCron] Lỗi khi xử lý đơn hết hạn:', error);
+    console.error("[BookingExpiryCron] Lỗi khi xử lý đơn hết hạn:", error);
   } finally {
     isRunning = false;
   }

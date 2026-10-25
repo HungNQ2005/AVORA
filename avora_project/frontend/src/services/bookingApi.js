@@ -54,7 +54,9 @@ export const fetchMyBookings = async (params = {}) => {
   if (params.status && params.status !== 'all') query.append('status', params.status);
   if (params.search) query.append('search', params.search);
   if (params.timeRange && params.timeRange !== 'all') query.append('timeRange', params.timeRange);
-  if (params.userId) query.append('user_id', params.userId);
+  if (params.page) query.append('page', String(params.page));
+  if (params.limit) query.append('limit', String(params.limit));
+  if (params.requireVatOnly) query.append('requireVatOnly', 'true');
 
   const qs = query.toString();
   const url = `${API_ENDPOINTS.BOOKINGS_MY}${qs ? `?${qs}` : ''}`;
@@ -94,7 +96,10 @@ export const changeBookingDates = async (id, payload) => {
   const json = await response.json();
 
   if (!response.ok || json.status === 'error') {
-    throw new Error(json.message || 'Không thể đổi ngày lưu trú.');
+    const error = new Error(json.message || 'Không thể đổi ngày lưu trú.');
+    error.code = json.code;
+    error.data = json.data;
+    throw error;
   }
 
   return json.data;

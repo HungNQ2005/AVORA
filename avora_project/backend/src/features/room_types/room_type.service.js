@@ -17,7 +17,7 @@ const roomTypeFields = `
 `;
 
 const getDatabaseError = (message, databaseError) => {
-  const error = new Error(`${message} do lỗi cơ sở dữ liệu (${databaseError.code || 'không xác định'}).`);
+  const error = new Error(`${message}. Vui lòng thử lại sau.`);
   error.statusCode = databaseError.code === '23505'
     ? 409
     : databaseError.code === '23503'

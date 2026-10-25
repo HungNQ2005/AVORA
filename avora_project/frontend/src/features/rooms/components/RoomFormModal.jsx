@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchRoomTypesForHotel } from '../../../services/roomApi';
+import { CloseIcon, InfoIcon } from '../../../common/components/icons';
 import './RoomFormModal.css';
 
 const COMMON_FLOORS = [
@@ -158,7 +159,7 @@ const RoomFormModal = ({
             </p>
           </div>
           <button type="button" className="room-form-modal__close" onClick={onClose}>
-            ×
+            <CloseIcon size={18} />
           </button>
         </div>
 
@@ -167,11 +168,7 @@ const RoomFormModal = ({
           {/* Error Alert */}
           {(validationError || error) && (
             <div className="room-form-alert room-form-alert--error">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <line x1="12" y1="8" x2="12" y2="12"></line>
-                <line x1="12" y1="16" x2="12.01" y2="16"></line>
-              </svg>
+              <InfoIcon size={16} />
               <span>{validationError || error}</span>
             </div>
           )}

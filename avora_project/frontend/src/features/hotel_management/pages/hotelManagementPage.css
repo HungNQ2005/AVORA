@@ -1,5 +1,5 @@
 .hotel-management {
-  --hm-blue: #0052cc;
+  --hm-blue: #003580;
   --hm-bright: #1890ff;
   --hm-ink: #1e293b;
   --hm-muted: #64748b;
@@ -16,10 +16,10 @@
 .hotel-management__header h1 { color: var(--hm-ink); font-size: 1.75rem; }
 .hotel-management__lede { margin-top: .35rem; color: var(--hm-muted); font-size: .9rem; }
 .hotel-button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: .4rem; padding: .55rem .9rem; border: 1px solid transparent; border-radius: 8px; cursor: pointer; font: inherit; font-size: .82rem; font-weight: 700; transition: background .16s ease, border-color .16s ease, box-shadow .16s ease; }
-.hotel-button:focus-visible { outline: 3px solid rgba(24, 144, 255, .24); outline-offset: 2px; }
+.hotel-button:focus-visible { outline: 3px solid rgba(0, 53, 128, .24); outline-offset: 2px; }
 .hotel-button:disabled { cursor: wait; opacity: .58; }
-.hotel-button--primary { border-color: var(--hm-blue); background: var(--hm-blue); color: #fff; }
-.hotel-button--primary:hover:not(:disabled) { border-color: #003d99; background: #003d99; }
+.hotel-button--primary { border-color: var(--hm-blue); background: var(--hm-blue); color: #fff; box-shadow: 0 2px 4px rgba(0, 53, 128, 0.2); }
+.hotel-button--primary:hover:not(:disabled) { border-color: #00224f; background: #00224f; }
 .hotel-button--quiet { border-color: #cbd5e1; background: #fff; color: #334155; }
 .hotel-button--quiet:hover:not(:disabled) { border-color: #94a3b8; background: #f8fafc; }
 .hotel-button--danger { border-color: #dc2626; background: #dc2626; color: #fff; }

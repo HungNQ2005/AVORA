@@ -12,14 +12,138 @@ const ensureClient = () => {
 };
 
 const throwDatabaseError = (message, databaseError) => {
-  const error = new Error(message);
-  error.statusCode = databaseError?.code === "23505" ? 409 : 500;
-  if (databaseError?.code === "23505") {
-    error.message = "Chính sách hoàn tiền đã tồn tại.";
-  } else if (databaseError?.code === "23503") {
-    error.message = "Không thể thao tác vì vi phạm ràng buộc dữ liệu liên quan.";
+  const error = new Error(message || "Có lỗi xảy ra khi xử lý dữ liệu chính sách hoàn tiền.");
+  const code = databaseError?.code;
+
+  if (code === "23505") {
+    error.statusCode = 409;
+    error.message = "Chính sách hoàn tiền hoặc mã chính sách đã tồn tại trong hệ thống.";
+  } else if (code === "23503") {
+    error.statusCode = 409;
+    error.message = "Không thể thực hiện thao tác do vi phạm ràng buộc dữ liệu liên quan trong hệ thống.";
+  } else if (code === "22P02") {
+    error.statusCode = 400;
+    error.message = "Định dạng dữ liệu không hợp lệ.";
+  } else if (code === "42P01" || databaseError?.message?.includes("fetch failed") || databaseError?.message?.includes("connect")) {
+    error.statusCode = 503;
+    error.message = "Không thể kết nối đến máy chủ hệ thống. Vui lòng thử lại sau.";
+  } else {
+    error.statusCode = databaseError?.statusCode || 500;
+    if (databaseError?.message && process.env.NODE_ENV !== "production") {
+      error.message = `${message}: ${databaseError.message}`;
+    }
   }
   throw error;
+};
+
+/**
+ * Verify hotel exists and is active in database
+ */
+const verifyHotelExists = async (hotelId) => {
+  if (!hotelId) return null;
+  ensureClient();
+  const { data: hotel, error } = await supabase
+    .from("m_hotel")
+    .select("hotel_id, name")
+    .eq("hotel_id", hotelId)
+    .eq("is_deleted", false)
+    .maybeSingle();
+
+  if (error) {
+    throwDatabaseError("Lỗi khi kiểm tra thông tin khách sạn.", error);
+  }
+  if (!hotel) {
+    const notFound = new Error(`Khách sạn với mã ID "${hotelId}" không tồn tại hoặc đã bị xóa.`);
+    notFound.statusCode = 404;
+    throw notFound;
+  }
+  return hotel;
+};
+
+const sanitizeDescription = (text) => {
+  if (!text || typeof text !== "string") return "";
+  return text
+    .replace(/<!--[\s\S]*?-->/g, "")
+    .replace(/^\[.*?\]\s*/g, "")
+    .replace(/(?:\r?\n)?Điều kiện:\s*[\s\S]*$/i, "")
+    .trim();
+};
+
+/**
+ * Check if a policy with the same cancellation hours already exists in the same scope
+ */
+const checkDuplicatePolicy = async (hotelId, freeCancelHours, excludePolicyId = null) => {
+  ensureClient();
+  const isDedicatedTable = await checkRefundPolicyTable();
+  const hours = Number(freeCancelHours || 0);
+
+  if (isDedicatedTable) {
+    let query = supabase
+      .from("m_refund_policy")
+      .select("policy_id, hotel_id, minimum_cancellation_hours, is_active")
+      .eq("is_deleted", false)
+      .eq("minimum_cancellation_hours", hours);
+
+    if (hotelId) {
+      query = query.eq("hotel_id", hotelId);
+    } else {
+      query = query.is("hotel_id", null);
+    }
+
+    if (excludePolicyId) {
+      query = query.neq("policy_id", excludePolicyId);
+    }
+
+    const { data: rawList, error } = await query;
+    if (error) throwDatabaseError("Lỗi khi kiểm tra trùng lặp chính sách.", error);
+    const list = (rawList || []).filter((p) => p.is_active !== false);
+    if (list && list.length > 0) {
+      const scopeLabel = hotelId ? "cho khách sạn này" : "cho toàn hệ thống AVORA";
+      const conflictErr = new Error(`Chính sách hoàn tiền với mốc hủy ${hours}h đã tồn tại ${scopeLabel}. Vui lòng chọn mốc thời gian khác.`);
+      conflictErr.statusCode = 409;
+      throw conflictErr;
+    }
+    return;
+  }
+
+  // Use m_cancellation_policy
+  let query = supabase
+    .from("m_cancellation_policy")
+    .select("cancellation_policy_id, hotel_id, free_cancel_before_hours, is_active")
+    .eq("free_cancel_before_hours", hours);
+
+  if (hotelId) {
+    query = query.eq("hotel_id", hotelId);
+  } else {
+    query = query.is("hotel_id", null);
+  }
+
+  if (excludePolicyId) {
+    query = query.neq("cancellation_policy_id", excludePolicyId);
+  }
+
+  let { data: rawList, error } = await query;
+  if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+    let retryQuery = supabase
+      .from("m_cancellation_policy")
+      .select("cancellation_policy_id, hotel_id, free_cancel_before_hours")
+      .eq("free_cancel_before_hours", hours);
+    if (hotelId) retryQuery = retryQuery.eq("hotel_id", hotelId);
+    else retryQuery = retryQuery.is("hotel_id", null);
+    if (excludePolicyId) retryQuery = retryQuery.neq("cancellation_policy_id", excludePolicyId);
+    const retry = await retryQuery;
+    rawList = retry.data;
+    error = retry.error;
+  }
+  if (error) throwDatabaseError("Lỗi khi kiểm tra trùng lặp chính sách.", error);
+
+  const list = (rawList || []).filter((p) => p.is_active !== false);
+  if (list && list.length > 0) {
+    const scopeLabel = hotelId ? "cho khách sạn này" : "cho toàn hệ thống AVORA";
+    const conflictErr = new Error(`Chính sách hoàn tiền với mốc hủy ${hours}h đã tồn tại ${scopeLabel}. Vui lòng chọn mốc thời gian khác.`);
+    conflictErr.statusCode = 409;
+    throw conflictErr;
+  }
 };
 
 // Cache whether m_refund_policy exists in Supabase
@@ -40,119 +164,14 @@ const checkRefundPolicyTable = async () => {
 };
 
 /**
- * Format description and metadata for storage in m_cancellation_policy
- */
-const encodePolicyDescription = ({
-  policy_code = null,
-  policy_name,
-  description,
-  refund_conditions,
-  status = "ACTIVE",
-  effective_from = null,
-  effective_to = null,
-}) => {
-  const parts = [];
-
-  // Sanitize policy_name: strip brackets and META
-  const cleanName = (policy_name || "")
-    .replace(/<!--META:.*?-->/g, "")
-    .replace(/^\[(.*?)\]$/, "$1")
-    .trim();
-
-  // Sanitize description: strip META, brackets, conditions
-  const cleanDesc = (description || "")
-    .replace(/<!--META:.*?-->/g, "")
-    .replace(/^\[.*?\]\s*/g, "")
-    .replace(/Điều kiện:\s*.*$/i, "")
-    .trim();
-
-  // Sanitize refund_conditions: strip META and leading label
-  const cleanCond = (refund_conditions || "")
-    .replace(/<!--META:.*?-->/g, "")
-    .replace(/^Điều kiện:\s*/i, "")
-    .trim();
-
-  if (cleanName) parts.push(`[${cleanName}]`);
-  if (cleanDesc) parts.push(cleanDesc);
-  if (cleanCond) parts.push(`Điều kiện: ${cleanCond}`);
-
-  const metaObj = {
-    policy_code: policy_code || null,
-    status: status || "ACTIVE",
-    effective_from: effective_from || null,
-    effective_to: effective_to || null,
-  };
-  const metaStr = `<!--META:${JSON.stringify(metaObj)}-->`;
-
-  return `${parts.join(" ")} ${metaStr}`.trim();
-};
-
-/**
- * Parse policy data from m_cancellation_policy record
+ * Parse policy data from m_cancellation_policy record strictly adhering to DB columns
  */
 const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = {}) => {
   const hotel = record.m_hotel || hotelMap[record.hotel_id] || null;
   const rawDesc = record.description || "";
 
-  // Extract meta if present
-  let status = "ACTIVE";
-  let effective_from = record.created_at || null;
-  let effective_to = null;
-  let storedPolicyCode = null;
-
-  // Extract all <!--META:...--> tags (supporting multiple/malformed if any)
-  const metaRegex = /<!--META:(.*?)-->/g;
-  let metaMatch;
-  while ((metaMatch = metaRegex.exec(rawDesc)) !== null) {
-    try {
-      const parsedMeta = JSON.parse(metaMatch[1]);
-      if (parsedMeta.status) status = parsedMeta.status;
-      if (parsedMeta.effective_from) effective_from = parsedMeta.effective_from;
-      if (parsedMeta.effective_to) effective_to = parsedMeta.effective_to;
-      if (parsedMeta.policy_code) storedPolicyCode = parsedMeta.policy_code;
-    } catch {
-      // ignore JSON parse error
-    }
-  }
-
-  // Strip all <!--META:...-->
-  let cleanDesc = rawDesc.replace(/<!--META:.*?-->/g, "").trim();
-
-  // Extract policy name from [brackets] if present
-  let policyName = "";
-  while (/^\[(.*?)\]\s*/.test(cleanDesc)) {
-    const nameMatch = cleanDesc.match(/^\[(.*?)\]\s*/);
-    if (!policyName && nameMatch) {
-      policyName = nameMatch[1].trim();
-    }
-    cleanDesc = cleanDesc.replace(/^\[(.*?)\]\s*/, "").trim();
-  }
-
-  if (!policyName) {
-    if (hotel?.name) {
-      policyName = `Chính sách hoàn tiền - ${hotel.name}`;
-    } else {
-      policyName = `Chính sách hoàn tiền chuẩn AVORA (${record.free_cancel_before_hours}h)`;
-    }
-  }
-
-  // Extract refund conditions
-  let refundConditions = "";
-  const condMatch = cleanDesc.match(/Điều kiện:\s*(.*)$/i);
-  if (condMatch) {
-    refundConditions = condMatch[1].trim();
-    cleanDesc = cleanDesc.replace(/Điều kiện:\s*.*$/i, "").trim();
-  } else {
-    const penaltyRate = Number(record.penalty_rate || 0);
-    const refundRate = Math.max(0, 100 - penaltyRate);
-    refundConditions = `Miễn phí hủy phòng trước ${record.free_cancel_before_hours} giờ (hoàn 100%). Hủy sau thời hạn áp dụng phí phạt ${penaltyRate}% (hoàn ${refundRate}%).`;
-  }
-
-  // Final cleanup on cleanDesc to ensure no leftover brackets or metadata
-  cleanDesc = cleanDesc
-    .replace(/<!--META:.*?-->/g, "")
-    .replace(/^\[.*?\]\s*/g, "")
-    .trim();
+  // Strip any legacy <!--META:...-->, [bracket names], or "Điều kiện:" leftovers if present
+  const cleanDesc = sanitizeDescription(rawDesc);
 
   const penaltyRate = Number(record.penalty_rate || 0);
   const refundPercentage = Math.max(0, 100 - penaltyRate);
@@ -160,13 +179,19 @@ const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = 
   const bookingCount = bookingUsageMap[record.cancellation_policy_id] || 0;
   const generatedCode = `RP-${record.cancellation_policy_id.replace(/-/g, "").substring(0, 8).toUpperCase()}`;
 
+  const policyName = hotel?.name
+    ? `Chính sách hoàn tiền - ${hotel.name}`
+    : `Chính sách hoàn tiền toàn hệ thống (${minHours}h)`;
+
+  const isActive = record.is_active !== false;
+
   return {
     policy_id: record.cancellation_policy_id,
     cancellation_policy_id: record.cancellation_policy_id,
-    policy_code: storedPolicyCode || generatedCode,
+    policy_code: generatedCode,
     policy_name: policyName,
     description: cleanDesc,
-    refund_conditions: refundConditions,
+    refund_conditions: cleanDesc || `Miễn phí hủy phòng trước ${minHours} giờ (hoàn tiền ${refundPercentage}%).`,
     refund_percentage: refundPercentage,
     penalty_rate: penaltyRate,
     minimum_cancellation_hours: minHours,
@@ -180,13 +205,14 @@ const parseCancellationPolicyRecord = (record, hotelMap = {}, bookingUsageMap = 
           star_rating: hotel.star_rating,
         }
       : null,
-    hotel_name: hotel?.name || "Toàn hệ thống (Mặc định)",
+    hotel_name: hotel?.name || "Toàn hệ thống AVORA",
     scope: record.hotel_id ? "HOTEL" : "SYSTEM",
     scope_label: record.hotel_id ? (hotel?.name || "Khách sạn cụ thể") : "Toàn hệ thống AVORA",
-    effective_from,
-    effective_to,
-    status,
-    status_label: status === "ACTIVE" ? "Đang áp dụng" : "Tạm dừng",
+    effective_from: record.created_at,
+    effective_to: null,
+    is_active: isActive,
+    status: isActive ? "ACTIVE" : "INACTIVE",
+    status_label: isActive ? "Đang áp dụng" : "Đã tạm dừng / Ẩn",
     associated_bookings_count: bookingCount,
     created_at: record.created_at,
     updated_at: record.updated_at,
@@ -245,6 +271,7 @@ const getHotelsList = async () => {
 
 /**
  * GET all refund policies with filters, search, and KPI metrics.
+ * Note: Only active policies (is_active = true) are returned per UC requirement.
  */
 const getRefundPolicies = async (filters = {}) => {
   ensureClient();
@@ -255,6 +282,7 @@ const getRefundPolicies = async (filters = {}) => {
     let query = supabase
       .from("m_refund_policy")
       .select("*, m_hotel(hotel_id, name, address, star_rating)")
+      .eq("is_active", true)
       .eq("is_deleted", false)
       .order("created_at", { ascending: false });
 
@@ -265,10 +293,27 @@ const getRefundPolicies = async (filters = {}) => {
       query = query.eq("hotel_id", filters.hotel_id);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+    if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+      let fallbackQuery = supabase
+        .from("m_refund_policy")
+        .select("*, m_hotel(hotel_id, name, address, star_rating)")
+        .eq("is_deleted", false)
+        .order("created_at", { ascending: false });
+      if (filters.status && filters.status !== "ALL") {
+        fallbackQuery = fallbackQuery.eq("status", filters.status);
+      }
+      if (filters.hotel_id && filters.hotel_id !== "ALL") {
+        fallbackQuery = fallbackQuery.eq("hotel_id", filters.hotel_id);
+      }
+      const retry = await fallbackQuery;
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) throwDatabaseError("Không thể tải danh sách chính sách hoàn tiền.", error);
 
-    let list = data || [];
+    let list = (data || []).filter((p) => p.is_active !== false && p.is_deleted !== true);
     if (filters.search) {
       const term = filters.search.trim().toLowerCase();
       list = list.filter(
@@ -282,7 +327,7 @@ const getRefundPolicies = async (filters = {}) => {
 
     // Compute stats
     const total = list.length;
-    const active = list.filter((p) => p.status === "ACTIVE").length;
+    const active = list.filter((p) => p.status === "ACTIVE" && p.is_active !== false).length;
     const sumRate = list.reduce((acc, p) => acc + Number(p.refund_percentage || 0), 0);
     const avgRate = total > 0 ? Math.round((sumRate / total) * 10) / 10 : 0;
     const freeCancel = list.filter((p) => Number(p.minimum_cancellation_hours || 0) > 0).length;
@@ -300,10 +345,11 @@ const getRefundPolicies = async (filters = {}) => {
     };
   }
 
-  // Use m_cancellation_policy
+  // Use m_cancellation_policy - Only view policies where is_active = true
   let query = supabase
     .from("m_cancellation_policy")
     .select("*, m_hotel(hotel_id, name, address, star_rating)")
+    .eq("is_active", true)
     .order("created_at", { ascending: false });
 
   if (filters.hotel_id && filters.hotel_id !== "ALL") {
@@ -314,12 +360,31 @@ const getRefundPolicies = async (filters = {}) => {
     }
   }
 
-  const { data: rawPolicies, error } = await query;
+  let { data: rawPolicies, error } = await query;
+  if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+    let fallbackQuery = supabase
+      .from("m_cancellation_policy")
+      .select("*, m_hotel(hotel_id, name, address, star_rating)")
+      .order("created_at", { ascending: false });
+
+    if (filters.hotel_id && filters.hotel_id !== "ALL") {
+      if (filters.hotel_id === "SYSTEM") {
+        fallbackQuery = fallbackQuery.is("hotel_id", null);
+      } else {
+        fallbackQuery = fallbackQuery.eq("hotel_id", filters.hotel_id);
+      }
+    }
+    const retry = await fallbackQuery;
+    rawPolicies = retry.data;
+    error = retry.error;
+  }
+
   if (error) {
     throwDatabaseError("Không thể tải danh sách chính sách hoàn tiền.", error);
   }
 
-  const rawList = rawPolicies || [];
+  // Filter only active policies (is_active !== false)
+  const rawList = (rawPolicies || []).filter((p) => p.is_active !== false);
   const policyIds = rawList.map((p) => p.cancellation_policy_id);
   const bookingUsageMap = await getPolicyBookingStats(policyIds);
 
@@ -368,7 +433,7 @@ const getRefundPolicies = async (filters = {}) => {
 
   // Calculate summary metrics
   const total = policies.length;
-  const active = policies.filter((p) => p.status === "ACTIVE").length;
+  const active = policies.filter((p) => p.status === "ACTIVE" && p.is_active !== false).length;
   const inactive = total - active;
   const sumRate = policies.reduce((acc, p) => acc + Number(p.refund_percentage || 0), 0);
   const avgRate = total > 0 ? Math.round((sumRate / total) * 10) / 10 : 0;
@@ -397,16 +462,29 @@ const getRefundPolicyById = async (id) => {
   const isDedicatedTable = await checkRefundPolicyTable();
 
   if (isDedicatedTable) {
-    const { data, error } = await supabase
+    let query = supabase
       .from("m_refund_policy")
       .select("*, m_hotel(hotel_id, name, address, star_rating)")
       .eq("policy_id", cleanId)
+      .eq("is_active", true)
       .eq("is_deleted", false)
       .maybeSingle();
 
+    let { data, error } = await query;
+    if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+      const retry = await supabase
+        .from("m_refund_policy")
+        .select("*, m_hotel(hotel_id, name, address, star_rating)")
+        .eq("policy_id", cleanId)
+        .eq("is_deleted", false)
+        .maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) throwDatabaseError("Lỗi khi tải chi tiết chính sách.", error);
-    if (!data) {
-      const notFound = new Error("Không tìm thấy chính sách hoàn tiền yêu cầu.");
+    if (!data || data.is_active === false || data.is_deleted === true) {
+      const notFound = new Error("Không tìm thấy chính sách hoàn tiền yêu cầu hoặc chính sách đã bị ẩn.");
       notFound.statusCode = 404;
       throw notFound;
     }
@@ -416,11 +494,22 @@ const getRefundPolicyById = async (id) => {
   let record = null;
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId);
   if (isUuid) {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("m_cancellation_policy")
       .select("*, m_hotel(hotel_id, name, address, star_rating)")
       .eq("cancellation_policy_id", cleanId)
+      .eq("is_active", true)
       .maybeSingle();
+
+    if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+      const retry = await supabase
+        .from("m_cancellation_policy")
+        .select("*, m_hotel(hotel_id, name, address, star_rating)")
+        .eq("cancellation_policy_id", cleanId)
+        .maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) throwDatabaseError("Lỗi khi tải chi tiết chính sách.", error);
     record = data;
@@ -434,6 +523,7 @@ const getRefundPolicyById = async (id) => {
     if (listErr) throwDatabaseError("Lỗi khi tải chi tiết chính sách.", listErr);
     if (allRecords) {
       record = allRecords.find((r) => {
+        if (r.is_active === false) return false;
         const parsed = parseCancellationPolicyRecord(r);
         return (
           parsed.policy_code.toLowerCase() === cleanId.toLowerCase() ||
@@ -444,8 +534,8 @@ const getRefundPolicyById = async (id) => {
     }
   }
 
-  if (!record) {
-    const notFound = new Error("Không tìm thấy chính sách hoàn tiền yêu cầu.");
+  if (!record || record.is_active === false) {
+    const notFound = new Error("Không tìm thấy chính sách hoàn tiền yêu cầu hoặc chính sách đã bị ẩn.");
     notFound.statusCode = 404;
     throw notFound;
   }
@@ -459,64 +549,92 @@ const getRefundPolicyById = async (id) => {
  */
 const createRefundPolicy = async (payload) => {
   ensureClient();
+
+  // 1. Validate hotel existence if hotel_id is specified
+  if (payload.hotel_id) {
+    await verifyHotelExists(payload.hotel_id);
+  }
+
+  const freeHours = Number(payload.free_cancel_before_hours ?? payload.minimum_cancellation_hours ?? 24);
+  const penaltyRate = payload.penalty_rate !== undefined
+    ? Number(payload.penalty_rate)
+    : Math.max(0, 100 - Number(payload.refund_percentage || 0));
+
+  // 2. Validate duplicate policy in the same scope
+  await checkDuplicatePolicy(payload.hotel_id, freeHours);
+
   const isDedicatedTable = await checkRefundPolicyTable();
   const policyId = randomUUID();
+  const policyCode = `RP-${policyId.replace(/-/g, "").substring(0, 8).toUpperCase()}`;
 
   if (isDedicatedTable) {
     const newRecord = {
       policy_id: policyId,
-      policy_code: `RP-${policyId.replace(/-/g, "").substring(0, 8).toUpperCase()}`,
-      policy_name: payload.policy_name,
+      policy_code: policyCode,
+      policy_name: payload.policy_name || `Chính sách hoàn tiền (${freeHours}h)`,
       description: payload.description || "",
       refund_conditions: payload.refund_conditions || "",
-      refund_percentage: payload.refund_percentage,
-      minimum_cancellation_hours: payload.minimum_cancellation_hours,
+      refund_percentage: 100 - penaltyRate,
+      minimum_cancellation_hours: freeHours,
       hotel_id: payload.hotel_id || null,
       effective_from: payload.effective_from || null,
       effective_to: payload.effective_to || null,
       status: payload.status || "ACTIVE",
+      is_active: payload.is_active !== undefined ? Boolean(payload.is_active) : true,
       is_deleted: false,
     };
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from("m_refund_policy")
       .insert(newRecord)
       .select("*, m_hotel(hotel_id, name, address, star_rating)")
       .single();
 
+    if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+      delete newRecord.is_active;
+      const retry = await supabase
+        .from("m_refund_policy")
+        .insert(newRecord)
+        .select("*, m_hotel(hotel_id, name, address, star_rating)")
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) throwDatabaseError("Không thể tạo mới chính sách hoàn tiền.", error);
     return data;
   }
 
-  // Save into m_cancellation_policy with unique UUID
-  const penaltyRate = Math.max(0, 100 - payload.refund_percentage);
-  const policyCode = `RP-${policyId.replace(/-/g, "").substring(0, 8).toUpperCase()}`;
-
-  const encodedDesc = encodePolicyDescription({
-    policy_code: policyCode,
-    policy_name: payload.policy_name,
-    description: payload.description,
-    refund_conditions: payload.refund_conditions,
-    status: payload.status,
-    effective_from: payload.effective_from,
-    effective_to: payload.effective_to,
-  });
+  // Save into m_cancellation_policy with unique UUID strictly matching DB columns
+  const cleanDesc = sanitizeDescription(payload.description);
 
   const insertData = {
     cancellation_policy_id: policyId,
     hotel_id: payload.hotel_id || null,
-    free_cancel_before_hours: payload.minimum_cancellation_hours,
+    free_cancel_before_hours: freeHours,
     penalty_rate: penaltyRate,
-    description: encodedDesc,
+    description: cleanDesc,
+    is_active: payload.is_active !== undefined ? Boolean(payload.is_active) : true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
 
-  const { data: created, error } = await supabase
+  let { data: created, error } = await supabase
     .from("m_cancellation_policy")
     .insert(insertData)
     .select("*, m_hotel(hotel_id, name, address, star_rating)")
     .single();
+
+  if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+    delete insertData.is_active;
+    const retry = await supabase
+      .from("m_cancellation_policy")
+      .insert(insertData)
+      .select("*, m_hotel(hotel_id, name, address, star_rating)")
+      .single();
+    created = retry.data;
+    error = retry.error;
+  }
 
   if (error) {
     throwDatabaseError("Không thể tạo mới chính sách hoàn tiền.", error);
@@ -534,24 +652,53 @@ const updateRefundPolicy = async (id, payload) => {
   const isDedicatedTable = await checkRefundPolicyTable();
 
   if (isDedicatedTable) {
+    // 1. Verify existence
+    const { data: existing, error: checkErr } = await supabase
+      .from("m_refund_policy")
+      .select("policy_id, policy_name, hotel_id, effective_from, effective_to, is_active, is_deleted")
+      .eq("policy_id", cleanId)
+      .maybeSingle();
+
+    if (checkErr) throwDatabaseError("Lỗi khi kiểm tra chính sách hoàn tiền.", checkErr);
+    if (!existing || existing.is_active === false || existing.is_deleted === true) {
+      const notFound = new Error("Không tìm thấy chính sách hoàn tiền để cập nhật.");
+      notFound.statusCode = 404;
+      throw notFound;
+    }
+
+    // 2. Validate hotel existence if hotel_id changed
+    if (payload.hotel_id && payload.hotel_id !== existing.hotel_id) {
+      await verifyHotelExists(payload.hotel_id);
+    }
+
     const updateObj = {
       ...payload,
       updated_at: new Date().toISOString(),
     };
-    const { data, error } = await supabase
+    if (payload.is_active !== undefined) {
+      updateObj.is_active = Boolean(payload.is_active);
+    }
+
+    let { data, error } = await supabase
       .from("m_refund_policy")
       .update(updateObj)
       .eq("policy_id", cleanId)
-      .eq("is_deleted", false)
       .select("*, m_hotel(hotel_id, name, address, star_rating)")
       .single();
 
-    if (error) throwDatabaseError("Không thể cập nhật chính sách hoàn tiền.", error);
-    if (!data) {
-      const err = new Error("Không tìm thấy chính sách để cập nhật.");
-      err.statusCode = 404;
-      throw err;
+    if (error && (error.code === "42703" || error.message?.includes("is_active"))) {
+      delete updateObj.is_active;
+      const retry = await supabase
+        .from("m_refund_policy")
+        .update(updateObj)
+        .eq("policy_id", cleanId)
+        .select("*, m_hotel(hotel_id, name, address, star_rating)")
+        .single();
+      data = retry.data;
+      error = retry.error;
     }
+
+    if (error) throwDatabaseError("Không thể cập nhật chính sách hoàn tiền.", error);
     return data;
   }
 
@@ -564,51 +711,67 @@ const updateRefundPolicy = async (id, payload) => {
     .maybeSingle();
 
   if (fetchErr) throwDatabaseError("Lỗi khi kiểm tra chính sách hoàn tiền.", fetchErr);
-  if (!current) {
+  if (!current || current.is_active === false) {
     const notFound = new Error("Không tìm thấy chính sách hoàn tiền để cập nhật.");
     notFound.statusCode = 404;
     throw notFound;
   }
 
-  const currentParsed = parseCancellationPolicyRecord(current);
+  const freeHours = payload.free_cancel_before_hours !== undefined
+    ? Number(payload.free_cancel_before_hours)
+    : payload.minimum_cancellation_hours !== undefined
+    ? Number(payload.minimum_cancellation_hours)
+    : current.free_cancel_before_hours;
 
-  const merged = {
-    policy_code: currentParsed.policy_code,
-    policy_name: payload.policy_name !== undefined ? payload.policy_name : currentParsed.policy_name,
-    description: payload.description !== undefined ? payload.description : currentParsed.description,
-    refund_conditions:
-      payload.refund_conditions !== undefined ? payload.refund_conditions : currentParsed.refund_conditions,
-    refund_percentage:
-      payload.refund_percentage !== undefined ? payload.refund_percentage : currentParsed.refund_percentage,
-    minimum_cancellation_hours:
-      payload.minimum_cancellation_hours !== undefined
-        ? payload.minimum_cancellation_hours
-        : currentParsed.minimum_cancellation_hours,
-    hotel_id: payload.hotel_id !== undefined ? payload.hotel_id : current.hotel_id,
-    effective_from:
-      payload.effective_from !== undefined ? payload.effective_from : currentParsed.effective_from,
-    effective_to:
-      payload.effective_to !== undefined ? payload.effective_to : currentParsed.effective_to,
-    status: payload.status !== undefined ? payload.status : currentParsed.status,
-  };
+  const targetHotelId = payload.hotel_id !== undefined ? (payload.hotel_id || null) : current.hotel_id;
 
-  const penaltyRate = Math.max(0, 100 - merged.refund_percentage);
-  const encodedDesc = encodePolicyDescription(merged);
+  if (freeHours !== current.free_cancel_before_hours || targetHotelId !== current.hotel_id) {
+    await checkDuplicatePolicy(targetHotelId, freeHours, cleanId);
+  }
+
+  if (targetHotelId && targetHotelId !== current.hotel_id) {
+    await verifyHotelExists(targetHotelId);
+  }
+
+  const penaltyRate = payload.penalty_rate !== undefined
+    ? Number(payload.penalty_rate)
+    : payload.refund_percentage !== undefined
+    ? Math.max(0, 100 - Number(payload.refund_percentage))
+    : current.penalty_rate;
+
+  const rawDesc = payload.description !== undefined ? payload.description : current.description;
+  const cleanDesc = sanitizeDescription(rawDesc);
 
   const updateData = {
-    hotel_id: merged.hotel_id,
-    free_cancel_before_hours: merged.minimum_cancellation_hours,
+    hotel_id: targetHotelId,
+    free_cancel_before_hours: freeHours,
     penalty_rate: penaltyRate,
-    description: encodedDesc,
+    description: cleanDesc,
     updated_at: new Date().toISOString(),
   };
 
-  const { data: updated, error: updateErr } = await supabase
+  if (payload.is_active !== undefined) {
+    updateData.is_active = Boolean(payload.is_active);
+  }
+
+  let { data: updated, error: updateErr } = await supabase
     .from("m_cancellation_policy")
     .update(updateData)
     .eq("cancellation_policy_id", cleanId)
     .select("*, m_hotel(hotel_id, name, address, star_rating)")
     .single();
+
+  if (updateErr && (updateErr.code === "42703" || updateErr.message?.includes("is_active"))) {
+    delete updateData.is_active;
+    const retry = await supabase
+      .from("m_cancellation_policy")
+      .update(updateData)
+      .eq("cancellation_policy_id", cleanId)
+      .select("*, m_hotel(hotel_id, name, address, star_rating)")
+      .single();
+    updated = retry.data;
+    updateErr = retry.error;
+  }
 
   if (updateErr) {
     throwDatabaseError("Không thể cập nhật chính sách hoàn tiền.", updateErr);
@@ -618,7 +781,7 @@ const updateRefundPolicy = async (id, payload) => {
 };
 
 /**
- * DELETE a refund policy with database integrity verification
+ * DELETE a refund policy - Soft delete by updating is_active = false
  */
 const deleteRefundPolicy = async (id) => {
   ensureClient();
@@ -627,59 +790,71 @@ const deleteRefundPolicy = async (id) => {
 
   if (isDedicatedTable) {
     // Check if soft delete
+    const { data: existing, error: checkErr } = await supabase
+      .from("m_refund_policy")
+      .select("policy_id, hotel_id, is_active, is_deleted")
+      .eq("policy_id", cleanId)
+      .maybeSingle();
+
+    if (checkErr) throwDatabaseError("Lỗi khi kiểm tra chính sách hoàn tiền.", checkErr);
+    if (!existing || existing.is_active === false || existing.is_deleted === true) {
+      const notFound = new Error("Chính sách hoàn tiền không tồn tại hoặc đã bị xóa.");
+      notFound.statusCode = 404;
+      throw notFound;
+    }
+
     const { error } = await supabase
       .from("m_refund_policy")
-      .update({ is_deleted: true, status: "INACTIVE", updated_at: new Date().toISOString() })
+      .update({
+        is_active: false,
+        is_deleted: true,
+        status: "INACTIVE",
+        updated_at: new Date().toISOString(),
+      })
       .eq("policy_id", cleanId);
     if (error) throwDatabaseError("Không thể xóa chính sách hoàn tiền.", error);
-    return { success: true };
+    return { success: true, policy_id: cleanId, message: "Đã xóa chính sách hoàn tiền thành công (xóa mềm)." };
   }
 
-  // Check existence with hotel relation
+  // Soft delete in m_cancellation_policy
   const { data: existing, error: checkErr } = await supabase
     .from("m_cancellation_policy")
-    .select("cancellation_policy_id, hotel_id, m_hotel(name)")
+    .select("cancellation_policy_id, hotel_id, is_active, m_hotel(name)")
     .eq("cancellation_policy_id", cleanId)
     .maybeSingle();
 
   if (checkErr) throwDatabaseError("Lỗi khi kiểm tra chính sách hoàn tiền.", checkErr);
-  if (!existing) {
+  if (!existing || existing.is_active === false) {
     const notFound = new Error("Chính sách hoàn tiền không tồn tại hoặc đã bị xóa.");
     notFound.statusCode = 404;
     throw notFound;
   }
 
-  // 1. Business Rule: Prevent deletion if policy is assigned to any hotel
-  if (existing.hotel_id) {
-    const hotelName = existing.m_hotel?.name ? ` "${existing.m_hotel.name}"` : "";
-    const forbidden = new Error(
-      `Không thể xóa chính sách hoàn tiền vì đang được chỉ định cho khách sạn${hotelName}. Chỉ có thể xóa các chính sách không thuộc khách sạn nào (hoặc chuyển trạng thái sang "Tạm dừng").`
-    );
-    forbidden.statusCode = 400;
-    throw forbidden;
-  }
-
-  // 2. Business Rule: Prevent deletion if policy is linked to any bookings
-  const { count: bookingCount, error: countErr } = await supabase
-    .from("t_booking")
-    .select("booking_id", { count: "exact", head: true })
+  // Xóa MỀM: Cập nhật is_active = false và updated_at trong DB
+  let { error: updateErr } = await supabase
+    .from("m_cancellation_policy")
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
     .eq("cancellation_policy_id", cleanId);
 
-  if (countErr) {
-    throwDatabaseError("Lỗi kiểm tra ràng buộc đơn đặt phòng liên quan.", countErr);
+  if (updateErr) {
+    if (updateErr.code === "42703" || updateErr.message?.includes("is_active")) {
+      // Fallback nếu bảng chưa có cột is_active
+      const { error: delErr } = await supabase
+        .from("m_cancellation_policy")
+        .delete()
+        .eq("cancellation_policy_id", cleanId);
+      if (delErr) {
+        throwDatabaseError("Không thể xóa chính sách hoàn tiền. Vui lòng thử lại sau.", delErr);
+      }
+    } else {
+      throwDatabaseError("Không thể xóa mềm chính sách hoàn tiền.", updateErr);
+    }
   }
 
-  if (bookingCount && bookingCount > 0) {
-    const conflict = new Error(
-      `Không thể xóa chính sách hoàn tiền này vì đang được áp dụng trong ${bookingCount} đơn đặt phòng (Booking). Để bảo toàn tính toàn vẹn dữ liệu kế toán và lịch sử giao dịch, vui lòng chuyển trạng thái sang "Tạm dừng" thay vì xóa hẳn.`
-    );
-    conflict.statusCode = 409;
-    throw conflict;
-  }
-
-  // 3. Safe to delete: Tạm thời không xóa cứng trong DB để bảo toàn dữ liệu lịch sử
-  // (Đợi bổ sung 2 cột is_deleted và deleted_at vào DB sau)
-  return { success: true, message: "Đã xóa chính sách hoàn tiền thành công." };
+  return { success: true, policy_id: cleanId, message: "Đã xóa chính sách hoàn tiền thành công (xóa mềm)." };
 };
 
 module.exports = {

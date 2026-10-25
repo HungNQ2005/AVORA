@@ -4,7 +4,9 @@ const bookingService = require('./booking.service');
 const {
   validateBookingPayload,
   validateBookingSelection,
+  validateBookingListQuery,
   validateGuestInfoPayload,
+  validateBookingDateChangePayload,
 } = require('./booking.validation');
 
 /**
@@ -57,7 +59,7 @@ const createBooking = async (req, res, next) => {
 const getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const booking = await bookingService.getBookingById(id);
+    const booking = await bookingService.getBookingById(id, req.user, { allowHotelOwner: true });
     return res.status(200).json({
       status: 'success',
       data: booking,
@@ -69,18 +71,32 @@ const getBookingById = async (req, res, next) => {
 
 const getMyBookings = async (req, res, next) => {
   try {
-    const userId = req.user?.user_id || req.query.user_id || null;
-    const guestPhone = req.query.guest_phone || null;
-    const search = req.query.search || '';
-    const status = req.query.status || 'all';
-    const timeRange = req.query.timeRange || 'all';
-
-    const result = await bookingService.getMyBookings({
-      userId,
-      guestPhone,
+    const {
+      isValid,
+      errors,
+      page,
+      limit,
+      requireVatOnly,
       search,
       status,
       timeRange,
+    } = validateBookingListQuery(req.query);
+    if (!isValid) {
+      return res.status(400).json({
+        status: 'error',
+        message: errors[0],
+        errors,
+      });
+    }
+
+    const result = await bookingService.getMyBookings({
+      currentUser: req.user,
+      search,
+      status,
+      timeRange,
+      page,
+      limit,
+      requireVatOnly,
     });
 
     return res.status(200).json({
@@ -117,6 +133,15 @@ const updateBookingGuestInfo = async (req, res, next) => {
 
 const changeBookingDates = async (req, res, next) => {
   try {
+    const { isValid, errors } = validateBookingDateChangePayload(req.body);
+    if (!isValid) {
+      return res.status(400).json({
+        status: 'error',
+        message: errors[0],
+        errors,
+      });
+    }
+
     const { id } = req.params;
     const result = await bookingService.changeBookingDates(id, req.body, req.user);
     return res.status(200).json({
@@ -125,6 +150,14 @@ const changeBookingDates = async (req, res, next) => {
       data: result,
     });
   } catch (error) {
+    if (error.code === 'COUPON_REMOVAL_CONFIRMATION_REQUIRED') {
+      return res.status(409).json({
+        status: 'error',
+        code: error.code,
+        message: error.message,
+        data: error.data,
+      });
+    }
     next(error);
   }
 };
@@ -146,7 +179,7 @@ const cancelBooking = async (req, res, next) => {
 const getBookingVoucher = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const voucher = await bookingService.getBookingVoucher(id);
+    const voucher = await bookingService.getBookingVoucher(id, req.user);
     return res.status(200).json({
       status: 'success',
       data: voucher,
@@ -159,7 +192,7 @@ const getBookingVoucher = async (req, res, next) => {
 const getBookingInvoice = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const invoice = await bookingService.getBookingInvoice(id);
+    const invoice = await bookingService.getBookingInvoice(id, req.user);
     return res.status(200).json({
       status: 'success',
       data: invoice,

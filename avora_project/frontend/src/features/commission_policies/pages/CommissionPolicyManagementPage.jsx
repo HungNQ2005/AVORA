@@ -10,6 +10,19 @@ import {
 import CommissionPolicyFormModal from '../components/CommissionPolicyFormModal';
 import CommissionPolicyDeleteModal from '../components/CommissionPolicyDeleteModal';
 import { exportCommissionPoliciesToExcel } from '../../../utils/exportToExcel';
+import {
+  DownloadIcon,
+  RefreshCwIcon,
+  PlusIcon,
+  CreditCardIcon,
+  CheckCircleIcon,
+  InfoIcon,
+  BuildingIcon,
+  SearchIcon,
+  EyeIcon,
+  EditIcon,
+  TrashIcon,
+} from '../../../common/components/icons';
 import './CommissionPolicyManagementPage.css';
 
 /* ─── Helpers ─────────────────────────────────────────────────────────── */
@@ -296,11 +309,7 @@ const CommissionPolicyManagementPage = () => {
             disabled={exporting || policies.length === 0}
             title="Xuất danh sách chính sách phí hoa hồng ra file Excel"
           >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="7 10 12 15 17 10" />
-              <line x1="12" y1="15" x2="12" y2="3" />
-            </svg>
+            <DownloadIcon size={15} />
             <span>{exporting ? 'Đang xuất Excel...' : 'Xuất Excel'}</span>
           </button>
 
@@ -309,21 +318,12 @@ const CommissionPolicyManagementPage = () => {
             className="cp-btn cp-btn--outline"
             onClick={() => loadData(true)}
             disabled={refreshing || loading}
-            title="Làm mới dữ liệu từ CSDL"
+            title="Làm mới dữ liệu"
           >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.2"
+            <RefreshCwIcon
+              size={14}
               className={refreshing ? 'cp-btn-spinner' : ''}
-            >
-              <path d="M23 4v6h-6"></path>
-              <path d="M1 20v-6h6"></path>
-              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-            </svg>
+            />
             <span>Làm mới</span>
           </button>
 
@@ -333,10 +333,7 @@ const CommissionPolicyManagementPage = () => {
             onClick={openCreateModal}
             title="Tạo mới chính sách hoa hồng"
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
-              <line x1="12" y1="5" x2="12" y2="19"></line>
-              <line x1="5" y1="12" x2="19" y2="12"></line>
-            </svg>
+            <PlusIcon size={14} strokeWidth={2.2} />
             <span>Thêm chính sách</span>
           </button>
         </div>
@@ -345,71 +342,94 @@ const CommissionPolicyManagementPage = () => {
       {/* 4 Thẻ KPI Metrics Cards */}
       <div className="cp-stats-grid">
         {/* Card 1: Tổng chính sách */}
-        <div className="cp-stat-card cp-stat-card--total">
-          <div className="cp-stat-card__accent" />
-          <div className="cp-stat-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-            </svg>
+        <div className="cp-stat-card">
+          <div className="cp-stat-card__header">
+            <span className="cp-stat-card__title">TỔNG SỐ CHÍNH SÁCH</span>
+            <div className="cp-stat-card__icon-box cp-stat-card__icon-box--blue">
+              <CreditCardIcon size={18} />
+            </div>
           </div>
-          <div className="cp-stat-card__info">
-            <span className="cp-stat-card__label">Tổng chính sách</span>
-            <span className="cp-stat-card__value">{stats?.total_policies ?? policies.length}</span>
-            <span className="cp-stat-card__sub">Quy định hoa hồng hệ thống</span>
+          <div className="cp-stat-card__value-row">
+            <span className="cp-stat-card__main-value">
+              {loading ? '—' : stats?.total_policies ?? policies.length}
+            </span>
+            <span className="cp-stat-card__unit">chính sách</span>
+            <span className="cp-stat-card__badge cp-stat-card__badge--online">Hệ thống</span>
+          </div>
+          <div className="cp-stat-card__footer">
+            <span className="cp-stat-card__footer-left">Đang áp dụng</span>
+            <span className="cp-stat-card__footer-right">
+              {stats?.active_policies ?? tabCounts.ACTIVE} chính sách
+            </span>
           </div>
         </div>
 
-        {/* Card 2: Đang áp dụng */}
-        <div className="cp-stat-card cp-stat-card--active">
-          <div className="cp-stat-card__accent" />
-          <div className="cp-stat-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-              <polyline points="22 4 12 14.01 9 11.01" />
-            </svg>
+        {/* Card 2: Đang kích hoạt / áp dụng */}
+        <div className="cp-stat-card">
+          <div className="cp-stat-card__header">
+            <span className="cp-stat-card__title">ĐANG KÍCH HOẠT</span>
+            <div className="cp-stat-card__icon-box cp-stat-card__icon-box--green">
+              <CheckCircleIcon size={18} />
+            </div>
           </div>
-          <div className="cp-stat-card__info">
-            <span className="cp-stat-card__label">Đang áp dụng</span>
-            <span className="cp-stat-card__value" style={{ color: '#10b981' }}>
-              {stats?.active_policies ?? tabCounts.ACTIVE}
+          <div className="cp-stat-card__value-row">
+            <span className="cp-stat-card__main-value">
+              {loading ? '—' : stats?.active_policies ?? tabCounts.ACTIVE}
             </span>
-            <span className="cp-stat-card__sub">Có hiệu lực đối soát</span>
+            <span className="cp-stat-card__unit">hoạt động</span>
+            <span className="cp-stat-card__badge cp-stat-card__badge--growth">Hiệu lực</span>
+          </div>
+          <div className="cp-stat-card__footer">
+            <span className="cp-stat-card__footer-left">Chờ &amp; Hết hạn</span>
+            <span className="cp-stat-card__footer-right">
+              {(tabCounts.UPCOMING || 0) + (tabCounts.EXPIRED || 0)} chính sách
+            </span>
           </div>
         </div>
 
         {/* Card 3: Tỷ lệ hoa hồng trung bình */}
-        <div className="cp-stat-card cp-stat-card--rate">
-          <div className="cp-stat-card__accent" />
-          <div className="cp-stat-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
+        <div className="cp-stat-card">
+          <div className="cp-stat-card__header">
+            <span className="cp-stat-card__title">TỶ LỆ HOA HỒNG TRUNG BÌNH</span>
+            <div className="cp-stat-card__icon-box cp-stat-card__icon-box--amber">
+              <InfoIcon size={18} />
+            </div>
           </div>
-          <div className="cp-stat-card__info">
-            <span className="cp-stat-card__label">Tỷ lệ hoa hồng TB</span>
-            <span className="cp-stat-card__value" style={{ color: '#d97706' }}>
-              {stats?.avg_commission_rate ?? 0}%
+          <div className="cp-stat-card__value-row">
+            <span className="cp-stat-card__main-value">
+              {loading ? '—' : `${stats?.avg_commission_rate ?? 0}%`}
             </span>
-            <span className="cp-stat-card__sub">Trung bình chuỗi AVORA</span>
+            <span className="cp-stat-card__unit">toàn chuỗi</span>
+            <span className="cp-stat-card__badge cp-stat-card__badge--urgent">Mức thu</span>
+          </div>
+          <div className="cp-stat-card__footer">
+            <span className="cp-stat-card__footer-left">Đối tác nhận bình quân</span>
+            <span className="cp-stat-card__footer-right">
+              {100 - (Number(stats?.avg_commission_rate) || 0)}% doanh thu
+            </span>
           </div>
         </div>
 
         {/* Card 4: Đối tác & Khách sạn riêng */}
-        <div className="cp-stat-card cp-stat-card--hotel">
-          <div className="cp-stat-card__accent" />
-          <div className="cp-stat-card__icon">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M3 21h18M9 8h1m4 0h1M9 12h1m4 0h1M9 16h1m4 0h1M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
-            </svg>
+        <div className="cp-stat-card">
+          <div className="cp-stat-card__header">
+            <span className="cp-stat-card__title">CHÍNH SÁCH RIÊNG &amp; ĐỐI TÁC</span>
+            <div className="cp-stat-card__icon-box cp-stat-card__icon-box--purple">
+              <BuildingIcon size={18} />
+            </div>
           </div>
-          <div className="cp-stat-card__info">
-            <span className="cp-stat-card__label">Chính sách riêng</span>
-            <span className="cp-stat-card__value" style={{ color: '#6366f1' }}>
-              {(stats?.hotel_specific_count || 0) + (stats?.star_specific_count || 0)}
+          <div className="cp-stat-card__value-row">
+            <span className="cp-stat-card__main-value">
+              {loading ? '—' : (stats?.hotel_specific_count || 0) + (stats?.star_specific_count || 0)}
             </span>
-            <span className="cp-stat-card__sub">Theo khách sạn & Hạng sao</span>
+            <span className="cp-stat-card__unit">hợp đồng</span>
+            <span className="cp-stat-card__badge cp-stat-card__badge--secured">Phân cấp</span>
+          </div>
+          <div className="cp-stat-card__footer">
+            <span className="cp-stat-card__footer-left">Theo khách sạn riêng</span>
+            <span className="cp-stat-card__footer-right">
+              {stats?.hotel_specific_count || 0} cơ sở lưu trú
+            </span>
           </div>
         </div>
       </div>
@@ -457,10 +477,7 @@ const CommissionPolicyManagementPage = () => {
       <div className="cp-filter-bar">
         {/* Search */}
         <div className="cp-search-wrapper">
-          <svg className="cp-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          <SearchIcon size={14} className="cp-search-icon" strokeWidth={2.5} />
           <input
             type="text"
             className="cp-search-input"
@@ -643,10 +660,7 @@ const CommissionPolicyManagementPage = () => {
                             onClick={() => handleRowClick(p.policy_id)}
                             title="Xem chi tiết chính sách"
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                              <circle cx="12" cy="12" r="3" />
-                            </svg>
+                            <EyeIcon size={14} />
                           </button>
 
                           {/* Sửa */}
@@ -656,10 +670,7 @@ const CommissionPolicyManagementPage = () => {
                             onClick={(e) => openEditModal(p, e)}
                             title="Chỉnh sửa chính sách"
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
+                            <EditIcon size={14} />
                           </button>
 
                           {/* Xóa */}
@@ -669,10 +680,7 @@ const CommissionPolicyManagementPage = () => {
                             onClick={(e) => openDeleteModal(p, e)}
                             title="Xóa chính sách"
                           >
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                            </svg>
+                            <TrashIcon size={14} />
                           </button>
                         </div>
                       </td>

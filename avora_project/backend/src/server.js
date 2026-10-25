@@ -21,6 +21,7 @@ const reviewRoute = require('./features/review/review.route');
 const statisticsRoute = require("./features/statistics/statistics.route");
 const refundPolicyRoute = require("./features/refund_policies/refund_policy.route");
 const commissionPolicyRoute = require("./features/commission_policies/commission_policy.route");
+const wishlistRoute = require('./features/wishlist/wishlist.route');
 const env = require("./config/env");
 const bookingRoute = require('./features/bookings/booking.route');
 const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
@@ -64,6 +65,7 @@ app.use("/api", statisticsRoute);
 app.use("/api", refundPolicyRoute);
 app.use("/api", commissionPolicyRoute);
 app.use("/api", bookingRoute);
+app.use("/api", wishlistRoute);
 
 app.use((_req, _res, next) => {
   const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');

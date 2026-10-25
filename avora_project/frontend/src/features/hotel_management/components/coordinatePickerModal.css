@@ -27,29 +27,30 @@
   justify-content: space-between;
   gap: 1rem;
   padding: 0.8rem 1.1rem;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.24);
-  background: linear-gradient(135deg, #0f172a 0%, #173a73 100%);
-  color: #e2e8f0;
+  border-bottom: 2px solid #c9a227;
+  background: #003580;
+  color: #ffffff;
 }
 
 .coord-picker__header h2 {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 700;
+  color: #ffffff;
 }
 
 .coord-picker__header p {
   margin: .22rem 0 0;
-  color: rgba(226, 232, 240, 0.85);
+  color: #bfdbfe;
   font-size: .74rem;
 }
 
 .coord-picker__close {
   width: 34px;
   height: 34px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.12);
   color: #f8fafc;
   font-size: 1.3rem;
   cursor: pointer;
@@ -57,7 +58,7 @@
 }
 
 .coord-picker__close:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.22);
 }
 
 .coord-picker__map {

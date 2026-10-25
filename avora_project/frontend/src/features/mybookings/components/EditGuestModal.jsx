@@ -57,6 +57,7 @@ const EditGuestModal = ({
               <input
                 type="text"
                 required
+                maxLength={100}
                 className="modal-form-input"
                 value={form.guest_name}
                 onChange={(e) => setForm({ ...form, guest_name: e.target.value })}

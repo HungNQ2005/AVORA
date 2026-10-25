@@ -4,6 +4,30 @@ const formatCurrency = (val) => {
   return Number(val || 0).toLocaleString('vi-VN') + ' đ';
 };
 
+const getDailyCoupons = (coupons) => {
+  const dateParts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const dateKey = ['year', 'month', 'day']
+    .map((type) => dateParts.find((part) => part.type === type)?.value)
+    .join('-');
+  const getRank = (coupon) => {
+    const key = `${dateKey}:${coupon.coupon_id || coupon.code}`;
+    let hash = 2166136261;
+    for (let i = 0; i < key.length; i += 1) {
+      hash = Math.imul(hash ^ key.charCodeAt(i), 16777619);
+    }
+    return hash >>> 0;
+  };
+
+  return [...coupons]
+    .sort((a, b) => getRank(a) - getRank(b) || String(a.code).localeCompare(String(b.code)))
+    .slice(0, 5);
+};
+
 const formatDateLabel = (dateStr) => {
   if (!dateStr) return '—';
   try {
@@ -60,6 +84,7 @@ const OrderSummarySidebar = ({
   const totalAmount = Number(pricing?.total_amount ?? Math.max(0, subtotal - discountAmount));
   const appliedCoupon = pricing?.coupon || null;
   const availableCoupons = Array.isArray(pricing?.available_coupons) ? pricing.available_coupons : [];
+  const dailyCoupons = getDailyCoupons(availableCoupons);
 
   const getScoreLabel = (score) => {
     const num = Number(score);
@@ -95,7 +120,7 @@ const OrderSummarySidebar = ({
               fontSize: 13,
             }}
           >
-            🏨 Ảnh khách sạn từ CSDL
+            🏨 Hình ảnh khách sạn
           </div>
         )}
 
@@ -127,7 +152,7 @@ const OrderSummarySidebar = ({
               <div>
                 <div className="summary-review-text">{getScoreLabel(ratingScore)}</div>
                 <div className="summary-review-count">
-                  {reviewCount > 0 ? `${reviewCount} lượt đánh giá trong CSDL` : 'Điểm chất lượng từ CSDL'}
+                  {reviewCount > 0 ? `${reviewCount} lượt đánh giá` : 'Điểm chất lượng'}
                 </div>
               </div>
               <div className="summary-review-score">{ratingScore}</div>
@@ -240,32 +265,37 @@ const OrderSummarySidebar = ({
               )}
             </div>
 
-            {availableCoupons.length > 0 && (
-              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {availableCoupons.slice(0, 5).map((c) => (
-                  <button
-                    key={c.coupon_id || c.code}
-                    type="button"
-                    onClick={() => {
-                      onCouponChange(c.code);
-                      onApplyCoupon(c.code);
-                    }}
-                    style={{
-                      fontSize: 11,
-                      padding: '3px 8px',
-                      borderRadius: 4,
-                      border: appliedCoupon?.code === c.code ? '1px solid #059669' : '1px dashed #94a3b8',
-                      background: appliedCoupon?.code === c.code ? '#ecfdf5' : '#f8fafc',
-                      color: appliedCoupon?.code === c.code ? '#059669' : '#334155',
-                      cursor: 'pointer',
-                      fontWeight: 600,
-                    }}
-                    title={`Đơn tối thiểu: ${formatCurrency(c.min_order_amount || 0)}`}
-                  >
-                    🎟 {c.code} (-{c.discount_type === 'PERCENT' ? `${c.discount_value}%` : formatCurrency(c.discount_value)})
-                  </button>
-                ))}
-              </div>
+            {dailyCoupons.length > 0 && (
+              <>
+                <div style={{ marginTop: 8, marginBottom: 6, fontSize: 12, color: '#64748b' }}>
+                  Gợi ý ưu đãi hôm nay
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {dailyCoupons.map((c) => (
+                    <button
+                      key={c.coupon_id || c.code}
+                      type="button"
+                      onClick={() => {
+                        onCouponChange(c.code);
+                        onApplyCoupon(c.code);
+                      }}
+                      style={{
+                        fontSize: 11,
+                        padding: '3px 8px',
+                        borderRadius: 4,
+                        border: appliedCoupon?.code === c.code ? '1px solid #059669' : '1px dashed #94a3b8',
+                        background: appliedCoupon?.code === c.code ? '#ecfdf5' : '#f8fafc',
+                        color: appliedCoupon?.code === c.code ? '#059669' : '#334155',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                      }}
+                      title={`Đơn tối thiểu: ${formatCurrency(c.min_order_amount || 0)}`}
+                    >
+                      🎟 {c.code} (-{c.discount_type === 'PERCENT' ? `${c.discount_value}%` : formatCurrency(c.discount_value)})
+                    </button>
+                  ))}
+                </div>
+              </>
             )}
 
             {couponMessage && (

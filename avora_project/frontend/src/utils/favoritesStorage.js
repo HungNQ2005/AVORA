@@ -4,6 +4,12 @@
  * All hotel data is sourced strictly from the database.
  */
 
+import {
+  addToWishlistApi,
+  removeFromWishlistApi,
+  fetchWishlist,
+} from '../services/wishlistApi';
+
 const FAVORITES_KEY = 'avora_user_favorites';
 
 /**
@@ -37,7 +43,37 @@ export const isHotelSaved = (hotelId) => {
 };
 
 /**
- * Save a hotel to favorites.
+ * Normalize and sanitize hotel object strictly to real database attributes (m_hotel, m_city, etc.)
+ */
+const sanitizeDbHotel = (hotel) => {
+  if (!hotel || typeof hotel !== 'object') return hotel;
+  const hotelId = hotel.hotel_id || hotel.id;
+  if (!hotelId) return hotel;
+
+  return {
+    hotel_id: String(hotelId),
+    name: hotel.name || 'Chỗ nghỉ Avora',
+    address: hotel.address || '',
+    city_name: hotel.city_name || hotel.city || '',
+    city_id: hotel.city_id || '',
+    star_quality: Math.max(1, Math.min(5, Number(hotel.star_quality || hotel.star_rating || 4))),
+    star_rating: hotel.star_rating !== undefined && hotel.star_rating !== null ? Number(hotel.star_rating) : undefined,
+    reviews_count: Number(hotel.reviews_count || hotel.review_count || 0),
+    score_label: hotel.score_label || '',
+    price: Number(hotel.price || 0),
+    original_price: hotel.original_price ? Number(hotel.original_price) : undefined,
+    thumbnail: hotel.thumbnail || (Array.isArray(hotel.images) ? hotel.images[0] : '') || '',
+    images: Array.isArray(hotel.images) ? hotel.images : [],
+    facilities: Array.isArray(hotel.facilities) ? hotel.facilities : [],
+    room_highlight: hotel.room_highlight || null,
+    cancellation_policy: hotel.cancellation_policy || null,
+    available_rooms: hotel.available_rooms !== undefined ? Number(hotel.available_rooms) : undefined,
+    saved_at: hotel.saved_at || new Date().toISOString(),
+  };
+};
+
+/**
+ * Save a hotel to favorites / WatchList.
  * Accepts real database hotel object or hotel ID.
  * @param {Object|string|number} hotel
  * @returns {Array} Updated list of favorites
@@ -46,6 +82,7 @@ export const saveFavoriteHotel = (hotel) => {
   if (!hotel) return [];
   const list = getSavedFavorites();
   const hotelId = typeof hotel === 'object' && hotel !== null ? (hotel.hotel_id || hotel.id) : hotel;
+  const itemToStore = typeof hotel === 'object' && hotel !== null ? sanitizeDbHotel(hotel) : hotelId;
 
   const existingIdx = list.findIndex((item) => {
     const id = typeof item === 'object' && item !== null ? (item.hotel_id || item.id) : item;
@@ -54,22 +91,31 @@ export const saveFavoriteHotel = (hotel) => {
 
   let nextList;
   if (existingIdx >= 0) {
-    if (typeof hotel === 'object' && hotel !== null) {
+    if (typeof itemToStore === 'object' && itemToStore !== null) {
       nextList = [...list];
-      nextList[existingIdx] = { ...list[existingIdx], ...hotel };
+      nextList[existingIdx] = { ...list[existingIdx], ...itemToStore };
     } else {
       nextList = list;
     }
   } else {
-    nextList = [hotel, ...list];
+    nextList = [itemToStore, ...list];
   }
 
   try {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(nextList));
     window.dispatchEvent(new Event('avora_favorites_updated'));
+    window.dispatchEvent(new Event('avora_watchlist_updated'));
   } catch (e) {
     console.error('Error saving favorite to localStorage:', e);
   }
+
+  // Sync to database table t_wishlist if user is logged in
+  if (hotelId) {
+    addToWishlistApi(String(hotelId)).catch((err) => {
+      console.warn('[Wishlist] Sync to DB t_wishlist failed:', err.message);
+    });
+  }
+
   return nextList;
 };
 
@@ -89,9 +135,18 @@ export const removeFavoriteHotel = (hotelId) => {
   try {
     localStorage.setItem(FAVORITES_KEY, JSON.stringify(nextList));
     window.dispatchEvent(new Event('avora_favorites_updated'));
+    window.dispatchEvent(new Event('avora_watchlist_updated'));
   } catch (e) {
     console.error('Error removing favorite from localStorage:', e);
   }
+
+  // Sync delete to database table t_wishlist if user is logged in
+  if (hotelId) {
+    removeFromWishlistApi(String(hotelId)).catch((err) => {
+      console.warn('[Wishlist] Delete from DB t_wishlist failed:', err.message);
+    });
+  }
+
   return nextList;
 };
 
@@ -109,4 +164,27 @@ export const toggleFavoriteHotel = (hotel) => {
     saveFavoriteHotel(hotel);
     return true;
   }
+};
+
+/**
+ * Fetch and sync all user favorites directly from database table t_wishlist.
+ * @returns {Promise<Array>} List of hotels from database
+ */
+export const syncFavoritesWithServer = async () => {
+  const token = localStorage.getItem('avora_token');
+  if (!token) return getSavedFavorites();
+
+  try {
+    const data = await fetchWishlist();
+    if (Array.isArray(data?.hotels)) {
+      const dbHotels = data.hotels.map(sanitizeDbHotel);
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(dbHotels));
+      window.dispatchEvent(new Event('avora_favorites_updated'));
+      window.dispatchEvent(new Event('avora_watchlist_updated'));
+      return dbHotels;
+    }
+  } catch (err) {
+    console.warn('[Wishlist] Syncing favorites from DB t_wishlist failed:', err.message);
+  }
+  return getSavedFavorites();
 };
