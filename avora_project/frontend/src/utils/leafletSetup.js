@@ -12,8 +12,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-export const TILE_URL = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
-export const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const vietmapApiKey = import.meta.env.VITE_VIETMAP_TILE_KEY;
+
+export const TILE_URL = `https://maps.vietmap.vn/maps/tiles/tm/{z}/{x}/{y}.png?apikey=${vietmapApiKey}`;
+export const TILE_ATTRIBUTION = '&copy; <a href="https://vietmap.vn">VIETMAP</a>';
 
 export const toCoordinate = (value) => {
   if (value === '' || value === null || value === undefined) return null;
