@@ -78,6 +78,7 @@ const handleGetHotelById = async (req, res, next) => {
       adults: adults ? parseInt(adults, 10) : 2,
       children: children ? parseInt(children, 10) : 0,
       rooms: rooms ? parseInt(rooms, 10) : 1,
+      viewerId: req.user?.user_id,
     });
 
     if (!hotel) {

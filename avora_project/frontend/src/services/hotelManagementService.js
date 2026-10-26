@@ -15,6 +15,17 @@ api.interceptors.request.use((config) => {
 
 const unwrap = (response) => response.data.data;
 
+export const HOTEL_IMAGE_MAX_SIZE_BYTES = 2 * 1024 * 1024;
+export const HOTEL_IMAGE_MAX_COUNT = 5;
+export const HOTEL_IMAGE_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+export const validateHotelImageFile = (file) => {
+  if (!file) return 'Vui lòng chọn tệp hình ảnh.';
+  if (!HOTEL_IMAGE_ACCEPTED_TYPES.includes(file.type)) return 'Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF.';
+  if (file.size > HOTEL_IMAGE_MAX_SIZE_BYTES) return 'Ảnh vượt quá dung lượng tối đa 2 MB.';
+  return null;
+};
+
 export const getHotels = async (params) => {
   const query = Object.fromEntries(Object.entries(params).filter(([, value]) => value !== '' && value !== null && value !== undefined));
   return unwrap(await api.get('/hotels', { params: query }));
@@ -25,7 +36,12 @@ export const updateHotel = async (hotelId, payload) => unwrap(await api.put(`/ho
 export const approveHotel = async (hotelId) => unwrap(await api.post(`/hotels/${encodeURIComponent(hotelId)}/approve`));
 export const deleteHotel = async (hotelId) => unwrap(await api.delete(`/hotels/${encodeURIComponent(hotelId)}`));
 
-export const uploadHotelImage = async (hotelId, file) => {
+export const uploadHotelImage = async (hotelId, file, currentImageCount) => {
+  if (currentImageCount >= HOTEL_IMAGE_MAX_COUNT) {
+    throw new Error(`Mỗi khách sạn chỉ được tải lên tối đa ${HOTEL_IMAGE_MAX_COUNT} hình ảnh.`);
+  }
+  const validationError = validateHotelImageFile(file);
+  if (validationError) throw new Error(validationError);
   const body = new FormData();
   body.append('image', file);
   return unwrap(await api.post(`/hotels/${encodeURIComponent(hotelId)}/images`, body, {
@@ -38,4 +54,3 @@ export const setHotelImageThumbnail = async (hotelId, imageId) => unwrap(await a
 export const getCities = async () => unwrap(await api.get('/locations/cities'));
 export const getDistricts = async (cityId) => unwrap(await api.get('/locations/districts', { params: { city_id: cityId } }));
 export const getWards = async (districtId) => unwrap(await api.get('/locations/wards', { params: { district_id: districtId } }));
-

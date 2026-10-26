@@ -6,6 +6,8 @@ import MapModal from './components/MapModal';
 import { useAuth } from '../../context/AuthContext';
 import { isHotelSaved, toggleFavoriteHotel } from '../../utils/favoritesStorage';
 import { getRoomCapacityDetails } from '../../utils/roomCapacityHelper';
+import { authenticatedFetch } from '../../services/authenticatedFetch';
+import ReviewCard from './components/ReviewCard';
 import './HotelDetailPage.css';
 
 import {
@@ -137,6 +139,7 @@ const HotelDetailPage = () => {
 
   // Component state
   const [hotel, setHotel] = useState(null);
+  const [reviews, setReviews] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState(null);
   const [notFound, setNotFound] = useState(false);
@@ -168,7 +171,7 @@ const HotelDetailPage = () => {
     const fetchDetails = async () => {
       try {
         const url = `${API_ENDPOINTS.HOTEL_DETAIL(id || 1)}?checkIn=${checkIn}&checkOut=${checkOut}&adults=${adults}&children=${children}&rooms=${roomsCount}`;
-        const res = await fetch(url);
+        const res = await authenticatedFetch(url);
         const json = await res.json();
 
         if (res.status === 404) {
@@ -186,6 +189,7 @@ const HotelDetailPage = () => {
 
         if (isMounted) {
           setHotel(json.data);
+          setReviews(json.data.reviews || []);
         }
       } catch (err) {
         console.error('Error fetching hotel detail:', err);
@@ -319,8 +323,35 @@ const HotelDetailPage = () => {
     images = [],
     cancellation_policy = null,
     rooms = [],
-    reviews = [],
   } = hotel || {};
+
+  const handleReviewUpdated = (result) => {
+    if (result.review) {
+      setReviews((current) => current.map((review) => (
+        review.review_id === result.review.review_id ? result.review : review
+      )));
+    }
+    setHotel((current) => current && ({
+      ...current,
+      star_rating: result.star_rating === undefined ? current.star_rating : result.star_rating,
+      reviews_count: result.reviews_count ?? current.reviews_count,
+      score_label: result.star_rating >= 9
+        ? 'Xuất sắc'
+        : (result.star_rating >= 8 ? 'Tuyệt vời' : (result.star_rating > 0 ? 'Rất tốt' : 'Chưa có đánh giá')),
+    }));
+  };
+
+  const handleReviewDeleted = (reviewId, result) => {
+    setReviews((current) => current.filter((review) => review.review_id !== reviewId));
+    setHotel((current) => current && ({
+      ...current,
+      star_rating: result.star_rating === undefined ? current.star_rating : result.star_rating,
+      reviews_count: result.reviews_count ?? current.reviews_count,
+      score_label: result.star_rating >= 9
+        ? 'Xuất sắc'
+        : (result.star_rating >= 8 ? 'Tuyệt vời' : (result.star_rating > 0 ? 'Rất tốt' : 'Chưa có đánh giá')),
+    }));
+  };
 
   const roomTypes = [...new Map(
     rooms.map((room) => [room.room_type_id, room])
@@ -843,29 +874,18 @@ const HotelDetailPage = () => {
           {/* Customer Reviews Grid from DB */}
           {reviews.length > 0 ? (
             <div className="customer-reviews-grid">
-              {reviews.map((rev) => (
-                <article key={rev.review_id} className="customer-review-card">
-                  <div className="customer-review-header">
-                    <div className="customer-author-info">
-                      <div className="customer-avatar">
-                        {(rev.guest_name || 'K').charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <div className="customer-name">{rev.guest_name}</div>
-                        <div className="customer-trip-type">
-                          {rev.created_at ? new Date(rev.created_at).toLocaleDateString('vi-VN') : 'Khách đã lưu trú'}
-                        </div>
-                      </div>
-                    </div>
-                    <span className="customer-score-tag">{rev.score} / 10</span>
-                  </div>
-                  <p className="customer-comment">"{rev.comment}"</p>
-                </article>
+              {reviews.map((review) => (
+                <ReviewCard
+                  key={review.review_id}
+                  review={review}
+                  onUpdated={handleReviewUpdated}
+                  onDeleted={(result) => handleReviewDeleted(review.review_id, result)}
+                />
               ))}
             </div>
           ) : (
             <p style={{ color: '#6b7280', fontSize: '14px', padding: '10px 0' }}>
-              Chưa có đánh giá nào cho chỗ nghỉ này.
+              Hãy sử dụng dịch vụ của chúng tôi và chia sẻ trải nghiệm của bạn.
             </p>
           )}
         </section>

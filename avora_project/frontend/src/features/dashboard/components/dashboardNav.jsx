@@ -142,6 +142,20 @@ const DashboardNav = () => {
               <span className="admin-sidebar__label">Quản lý khách sạn</span>
             </div>
           )}
+          {isAdmin && (
+            <NavLink
+              to="/dashboard/reviews"
+              className={({ isActive }) => `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`}
+            >
+              <span className="admin-sidebar__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-4 3v-6.5A7.5 7.5 0 1 1 20 11.5Z" />
+                  <path d="m12 7 1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4L12 7Z" />
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý đánh giá</span>
+            </NavLink>
+          )}
           <div className="admin-sidebar__link disabled">
             <span className="admin-sidebar__icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

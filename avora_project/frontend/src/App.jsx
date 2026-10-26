@@ -33,6 +33,8 @@ import RoomManagementPage from './features/rooms/pages/RoomManagementPage';
 import AIChatWidget from './features/chatbot/AIChatWidget';
 import BookingPage from './features/bookings/pages/BookingPage';
 import MyBookingsPage from './features/mybookings/screens/MyBookingsPage';
+import ReviewPage from './features/reviews/pages/ReviewPage';
+import AdminReviewManagementPage from './features/reviews/pages/AdminReviewManagementPage';
 import PaymentQRScreen from './features/payments/pages/PaymentQRScreen';
 import PaymentSuccessScreen from './features/payments/pages/PaymentSuccessScreen';
 
@@ -239,6 +241,7 @@ function App() {
             <Route path="/booking/:id" element={<BookingPage />} />
             <Route path="/my-bookings" element={<MyBookingsPage />} />
             <Route path="/myaccount/bookings" element={<MyBookingsPage />} />
+            <Route path="/my-reviews" element={<ReviewPage />} />
             <Route path="/payment/success/:bookingId" element={<PaymentSuccessScreen />} />
             <Route path="/payment/:bookingId" element={<PaymentQRScreen />} />
             <Route path="/search" element={<HotelSearchPage />} />
@@ -257,6 +260,14 @@ function App() {
             }
           >
             <Route index element={<DashboardIndexRedirect />} />
+            <Route
+              path="reviews"
+              element={
+                <AdminRoute>
+                  <AdminReviewManagementPage />
+                </AdminRoute>
+              }
+            />
             <Route
               path="hotel-management"
               element={

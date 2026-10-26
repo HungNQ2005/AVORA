@@ -248,6 +248,7 @@ CREATE TABLE t_review (
     booking_id UUID REFERENCES t_booking(booking_id),
     rating_score INT CHECK (rating_score BETWEEN 1 AND 10),
     comment TEXT,
+    is_deleted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

@@ -26,6 +26,18 @@ const authenticate = (req, res, next) => {
   }
 };
 
+const optionalAuthenticate = (req, _res, next) => {
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      req.user = verifyJwt(authHeader.split(' ')[1]);
+    } catch {
+      req.user = null;
+    }
+  }
+  next();
+};
+
 /**
  * Middleware factory to authorize user by role code names (e.g. 'ADM', 'VEN', 'BMR').
  * @param {...string} allowedRoles
@@ -71,4 +83,4 @@ const requireRole = (...allowedRoles) => async (req, res, next) => {
   }
 };
 
-module.exports = { authenticate, requireRole };
+module.exports = { authenticate, optionalAuthenticate, requireRole };

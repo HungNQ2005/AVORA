@@ -151,7 +151,10 @@ const deleteHotel = async (hotelId, access) => {
 const uploadHotelImage = async (hotelId, file, access) => {
 	if (!access.isVendor) throw createError('Chỉ Nhà cung cấp sở hữu khách sạn mới được quản lý hình ảnh.', 403);
 	if (!file) throw createError('Vui lòng chọn tệp hình ảnh.', 400);
-	if (!file.mimetype?.startsWith('image/')) throw createError('Chỉ chấp nhận tệp hình ảnh.', 400);
+	if (!['image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(file.mimetype)) {
+		throw createError('Chỉ chấp nhận ảnh JPG, PNG, WEBP hoặc GIF.', 400);
+	}
+	if (file.size > 2 * 1024 * 1024) throw createError('Ảnh vượt quá dung lượng tối đa 2 MB.', 413);
 
 	const image = await hotelModel.addHotelImage(hotelId, {
 		buffer: file.buffer,
