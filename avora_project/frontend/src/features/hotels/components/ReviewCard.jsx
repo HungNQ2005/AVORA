@@ -51,7 +51,11 @@ const ReviewCard = ({ review, onUpdated, onDeleted }) => {
 			<div className="customer-review-header">
 				<div className="customer-author-info">
 					<div className="customer-avatar">
-						{(review.reviewer_name || 'K').charAt(0).toUpperCase()}
+						<AvatarContent
+							src={review.reviewer_avatar_url}
+							fallback={(review.reviewer_name || 'K').charAt(0).toUpperCase()}
+							alt={review.reviewer_name || 'Khách hàng Avora'}
+						/>
 					</div>
 					<div>
 						<div className="customer-name">{review.reviewer_name || 'Khách hàng Avora'}</div>

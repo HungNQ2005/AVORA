@@ -54,21 +54,6 @@
   line-height: 1.5;
 }
 
-.my-bookings-history-link {
-  margin-top: 10px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #15569a;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 750;
-  text-decoration: underline;
-  cursor: pointer;
-}
-
-.my-bookings-history-link:hover { color: #0d3e70; }
-
 .my-bookings-guarantee-card {
   display: flex;
   align-items: center;

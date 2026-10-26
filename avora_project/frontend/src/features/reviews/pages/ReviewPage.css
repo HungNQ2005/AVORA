@@ -5,10 +5,17 @@
 	color: #17263d;
 }
 
+.review-history-page--embedded {
+	min-height: 0;
+	padding: 0;
+	background: transparent;
+}
+
 .review-history-page__container { width: min(100%, 1040px); margin: 0 auto; }
+.review-history-page--embedded .review-history-page__container { width: 100%; }
 .review-history-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 24px; border-bottom: 1px solid #dbe4ef; }
 .review-history-eyebrow { margin: 0 0 8px; color: #15569a; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
-.review-history-header h1 { margin: 0; color: #112b4d; font-size: 29px; font-weight: 800; }
+.review-history-header h1, .review-history-header h2 { margin: 0; color: #112b4d; font-size: 29px; font-weight: 800; }
 .review-history-intro { margin: 8px 0 0; color: #63738a; font-size: 14px; }
 .review-history-bookings-link { flex: 0 0 auto; padding: 10px 14px; border: 1px solid #b8cce3; border-radius: 8px; background: #fff; color: #174a7e; font-size: 13px; font-weight: 700; text-decoration: none; }
 .review-history-bookings-link:hover { background: #edf5ff; }
@@ -33,9 +40,9 @@
 .review-history-clear--empty { margin-top: 6px; }
 
 @media (max-width: 700px) {
-	.review-history-page { padding: 30px 16px 54px; }
+	.review-history-page:not(.review-history-page--embedded) { padding: 30px 16px 54px; }
 	.review-history-header { align-items: flex-start; flex-direction: column; gap: 14px; }
-	.review-history-header h1 { font-size: 25px; }
+	.review-history-header h1, .review-history-header h2 { font-size: 25px; }
 	.review-history-filters { grid-template-columns: 1fr 1fr; }
 	.review-history-filters__hotel { grid-column: 1 / -1; }
 	.review-history-clear { justify-self: start; }

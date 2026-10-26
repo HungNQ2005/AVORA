@@ -78,12 +78,14 @@ const getHotelReviews = async (hotelId, viewerId = null) => {
     : { data: [], error: null };
   if (usersError) throw usersError;
 
-  const nameByUserId = new Map((users || []).map((user) => [user.user_id, user.full_name]));
+  const userById = new Map((users || []).map((user) => [user.user_id, user]));
   const shapedReviews = reviews.map((review) => {
     const booking = bookingById.get(review.booking_id);
+    const reviewer = userById.get(booking?.user_id);
     return {
       review_id: review.review_id,
-      reviewer_name: nameByUserId.get(booking?.user_id) || 'Khách hàng Avora',
+      reviewer_name: reviewer?.full_name || 'Khách hàng Avora',
+      reviewer_avatar_url: reviewer?.avatar_url || null,
       rating_score: Number(review.rating_score),
       comment: review.comment,
       created_at: review.created_at,

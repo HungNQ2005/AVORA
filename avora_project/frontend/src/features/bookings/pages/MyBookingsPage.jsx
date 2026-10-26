@@ -574,9 +574,6 @@ const MyBookingsPage = () => {
             <p className="my-bookings-subtitle">
               Tra cứu vé điện tử, thay đổi ngày lưu trú, xuất hóa đơn VAT điện tử và quản trị hoàn hủy theo thời gian thực.
             </p>
-            <button type="button" className="my-bookings-history-link" onClick={() => navigate('/my-reviews')}>
-              Xem lịch sử đánh giá
-            </button>
           </div>
 
           <div className="my-bookings-guarantee-card">
