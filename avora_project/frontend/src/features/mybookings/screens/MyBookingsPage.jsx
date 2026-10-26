@@ -28,6 +28,9 @@ import InvoiceModal from '../components/InvoiceModal';
 import RefundReceiptModal from '../components/RefundReceiptModal';
 import GalleryModal from '../components/GalleryModal';
 import { getValidBookingPage } from '../components/bookingCardHelpers';
+import ReviewModal from '../../bookings/components/ReviewModal';
+
+const isConfirmedBooking = (statusCode) => ['2', 'CFM'].includes(String(statusCode ?? '').trim().toUpperCase());
 
 /**
  * Main "Quản lý Đặt Chỗ & Lịch Sử Kỳ Nghỉ" Page Component
@@ -84,6 +87,8 @@ const MyBookingsPage = () => {
 
   const [invoiceModalBooking, setInvoiceModalBooking] = useState(null);
   const [invoiceData, setInvoiceData] = useState(null);
+
+  const [reviewModalBooking, setReviewModalBooking] = useState(null);
 
   const [refundModalData, setRefundModalData] = useState(null);
   const [galleryModalImages, setGalleryModalImages] = useState(null);
@@ -316,6 +321,10 @@ const MyBookingsPage = () => {
     }
   };
 
+  const handleOpenReview = (booking) => {
+    if (isConfirmedBooking(booking.booking_status_cd)) setReviewModalBooking(booking);
+  };
+
   // Close all modals on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
@@ -325,6 +334,7 @@ const MyBookingsPage = () => {
         setDateChangeModalBooking(null);
         setCancelModalBooking(null);
         setInvoiceModalBooking(null);
+        setReviewModalBooking(null);
         setRefundModalData(null);
         setGalleryModalImages(null);
       }
@@ -434,6 +444,7 @@ const MyBookingsPage = () => {
                     onOpenEditGuest={handleOpenEditGuest}
                     onOpenDateChange={handleOpenDateChange}
                     onOpenCancel={handleOpenCancel}
+                    onOpenReview={handleOpenReview}
                     onPayNow={(b) => navigate(`/payment/${b.booking_id}`)}
                   />
                 ))}
@@ -460,6 +471,7 @@ const MyBookingsPage = () => {
                     onRebook={() => navigate(`/hotels/${booking.hotel.hotel_id}`)}
                     onOpenInvoice={handleOpenInvoice}
                     onOpenVoucher={handleOpenVoucher}
+                    onOpenReview={handleOpenReview}
                   />
                 ))}
               </section>
@@ -582,6 +594,18 @@ const MyBookingsPage = () => {
         images={galleryModalImages}
         onClose={() => setGalleryModalImages(null)}
       />
+
+      {reviewModalBooking && (
+        <ReviewModal
+          booking={reviewModalBooking}
+          onClose={() => setReviewModalBooking(null)}
+          onSaved={() => loadBookings()}
+          onDeleted={() => {
+            setReviewModalBooking(null);
+            loadBookings();
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -36,6 +36,7 @@ const UpcomingBookingCard = ({
   onOpenEditGuest,
   onOpenDateChange,
   onOpenCancel,
+  onOpenReview,
   onPayNow,
 }) => {
   const countdown = (booking.status_badge_variant === 'amber' || booking.status_badge_variant === 'pending') &&
@@ -304,6 +305,17 @@ const UpcomingBookingCard = ({
                 <span>Đổi ngày nhận/trả phòng</span>
               </button>
             </>
+          )}
+
+          {['2', 'CFM'].includes(String(booking.booking_status_cd ?? '').trim().toUpperCase()) && onOpenReview && (
+            <button
+              type="button"
+              className="my-bookings-btn-secondary my-bookings-review-button"
+              onClick={() => onOpenReview(booking)}
+            >
+              <StarIcon width="14" height="14" />
+              <span>Đánh giá</span>
+            </button>
           )}
 
           <button
