@@ -22,12 +22,11 @@ const sanitizeHistory = (history) =>
 const isToolUseFailure = (err) =>
     err?.error?.error?.code === 'tool_use_failed' || String(err?.message || '').includes('tool_use_failed');
 
-const callGroq = (messages, toolChoice) =>
+const callGroq = (messages, toolChoice, withTools = true) =>
     groq.chat.completions.create({
         model: config.GROQ_MODEL,
         messages,
-        tools: TOOL_DEFINITIONS,
-        tool_choice: toolChoice,
+        ...(withTools ? { tools: TOOL_DEFINITIONS, tool_choice: toolChoice } : {}),
         temperature: config.TEMPERATURE,
         max_tokens: config.MAX_TOKENS,
         ...(isGptOss ? { reasoning_effort: 'low' } : {}),
@@ -85,9 +84,17 @@ const processChat = async ({ message, history, context = {}, userId }) => {
         }
     }
 
-    // Lượt cuối: ép model viết câu trả lời ngôn ngữ tự nhiên, không gọi thêm tool
-    const final = await callGroq(messages, 'none');
-    return { reply: final.choices?.[0]?.message?.content || FALLBACK_REPLY, toolsUsed };
+    // Lượt cuối: ép model viết câu trả lời ngôn ngữ tự nhiên, không truyền tools để tránh lỗi "Tool choice is none, but model called a tool"
+    try {
+        const final = await callGroq(messages, undefined, false);
+        return { reply: final.choices?.[0]?.message?.content || FALLBACK_REPLY, toolsUsed };
+    } catch (err) {
+        if (isToolUseFailure(err)) {
+            const retry = await callGroq(messages, 'auto');
+            return { reply: retry.choices?.[0]?.message?.content || FALLBACK_REPLY, toolsUsed };
+        }
+        throw err;
+    }
 };
 
 module.exports = { processChat };
