@@ -22,6 +22,7 @@ import RefundPolicyDetailPage from './features/refund_policies/pages/RefundPolic
 import CommissionPolicyManagementPage from './features/commission_policies/pages/CommissionPolicyManagementPage';
 import CommissionPolicyDetailPage from './features/commission_policies/pages/CommissionPolicyDetailPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
+import HotelWalletPage from './features/wallet/pages/HotelWalletPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
 import HotelManagerRoute from './common/components/HotelManagerRoute';
@@ -330,6 +331,14 @@ function App() {
               }
             />
             <Route
+              path="wallet"
+              element={
+                <VendorRoute>
+                  <HotelWalletPage />
+                </VendorRoute>
+              }
+            />
+            <Route
               path="coupons"
               element={
                 <CouponManagerRoute>
@@ -413,6 +422,8 @@ function App() {
           <Route path="/admin/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
           <Route path="/admin/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
+          <Route path="/admin/wallet" element={<Navigate to="/dashboard/wallet" replace />} />
+          <Route path="/wallet" element={<Navigate to="/dashboard/wallet" replace />} />
           <Route path="/admin/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/admin/roles" element={<Navigate to="/dashboard/roles" replace />} />
           <Route path="/room-types" element={<Navigate to="/dashboard/room-types" replace />} />

@@ -39,5 +39,9 @@ export const API_ENDPOINTS = {
   WISHLIST: `${API_BASE_URL}/api/wishlist`,
   WATCHLIST: `${API_BASE_URL}/api/watchlist`,
   WISHLIST_CHECK: (id) => `${API_BASE_URL}/api/wishlist/check/${id}`,
+  WALLET_BANKS: `${API_BASE_URL}/api/wallet/banks`,
+  WALLET_HOTELS: `${API_BASE_URL}/api/wallet/hotels`,
+  WALLET_HOTEL: (hotelId) => `${API_BASE_URL}/api/wallet/hotels/${hotelId}`,
+  WALLET_LINK_BANK: (hotelId) => `${API_BASE_URL}/api/wallet/hotels/${hotelId}/bank-account`,
 };
 
