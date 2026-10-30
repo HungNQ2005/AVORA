@@ -1,0 +1,677 @@
+/* ==========================================================================
+   HOTEL WALLET & BANK LINKING - AVORA THEME (Synchronized with Hotel Management)
+   ========================================================================== */
+
+.hw-page {
+  --hd-blue: #003580;
+  --hd-blue-deep: #0f172a;
+  --hd-blue-soft: #eaf2ff;
+  --hd-bright: #1890ff;
+  --hd-ink: #0f172a;
+  --hd-muted: #475569;
+  --hd-border: rgba(148, 163, 184, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Breadcrumb */
+.hw-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--hd-muted);
+  font-weight: 500;
+}
+
+.hw-breadcrumb-sep {
+  color: #94a3b8;
+}
+
+.hw-breadcrumb-active {
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* Header & Hotel Switcher */
+.hw-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: 0.6rem 0 1rem;
+  border-bottom: 1px solid var(--hd-border);
+  flex-wrap: wrap;
+}
+
+.hw-header__title h1 {
+  margin: 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  color: var(--hd-ink);
+  letter-spacing: -0.01em;
+}
+
+.hw-header__title p {
+  margin: 0.35rem 0 0;
+  font-size: 0.88rem;
+  color: var(--hd-muted);
+}
+
+.hw-hotel-select {
+  position: relative;
+  min-width: 280px;
+}
+
+.hw-hotel-select-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--hd-ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.hw-hotel-select-btn:hover {
+  border-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.hw-hotel-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  right: 0;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid var(--hd-border);
+  border-radius: 10px;
+  box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+  z-index: 60;
+  padding: 0.4rem 0;
+}
+
+.hw-hotel-dropdown-item {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 1rem;
+  background: none;
+  border: none;
+  font-size: 0.86rem;
+  color: #334155;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.hw-hotel-dropdown-item:hover {
+  background: #f1f5f9;
+}
+
+.hw-hotel-dropdown-item--active {
+  background: #eff6ff;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+/* Balance Cards Grid */
+.hw-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.hw-balance-card {
+  background: #ffffff;
+  border: 1px solid var(--hd-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.hw-balance-card--available {
+  border-left: 4px solid #10b981;
+}
+
+.hw-balance-card--pending {
+  border-left: 4px solid #f59e0b;
+}
+
+.hw-balance-card__label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--hd-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hw-balance-card__amount {
+  font-size: 1.7rem;
+  font-weight: 750;
+  color: var(--hd-ink);
+  letter-spacing: -0.02em;
+}
+
+.hw-balance-card__hint {
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Bank Section Panel (Synchronized with .hotel-detail__panel) */
+.hw-bank-section {
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--hd-border);
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+}
+
+.hw-bank-section__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.hw-bank-section__header h2 {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: var(--hd-ink);
+}
+
+.hw-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.hw-status-badge--linked {
+  background: #f0fdf4;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.hw-status-badge--unlinked {
+  background: #fffbeb;
+  color: #a16207;
+  border: 1px solid #fde68a;
+}
+
+/* ==========================================================================
+   FORM GRID (Synchronized with .hotel-detail__field-grid & .hotel-detail__field)
+   ========================================================================== */
+
+.hw-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.15rem;
+}
+
+.hw-alert-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: #f0f7ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.84rem;
+  color: #1e40af;
+  line-height: 1.5;
+}
+
+.hw-alert-box svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #2563eb;
+}
+
+/* Quick-Reuse Saved Bank Account Box */
+.hw-saved-accounts-box {
+  background: #f8fafc;
+  border: 1px dashed #94a3b8;
+  border-radius: 11px;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.hw-saved-accounts-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.81rem;
+  font-weight: 650;
+  color: #334155;
+}
+
+.hw-saved-accounts-header svg {
+  color: #0052cc;
+  flex-shrink: 0;
+}
+
+.hw-saved-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hw-saved-account-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.85rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  transition: all 0.2s ease;
+  flex-wrap: wrap;
+}
+
+.hw-saved-account-item--active {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.hw-saved-account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.hw-saved-account-info strong {
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.hw-saved-account-info span {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.hw-saved-account-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0052cc;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.hw-saved-account-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.hw-saved-account-item--active .hw-saved-account-btn {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
+.hw-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.95rem;
+}
+
+.hw-field {
+  display: grid;
+  min-width: 0;
+  gap: 0.35rem;
+  color: var(--hd-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.hw-field--wide {
+  grid-column: 1 / -1;
+}
+
+.hw-required {
+  color: #dc2626;
+}
+
+.hw-field input,
+.hw-field select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  outline: none;
+  background: #ffffff;
+  color: var(--hd-ink);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 450;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hw-field select {
+  cursor: pointer;
+}
+
+.hw-field input:focus,
+.hw-field select:focus {
+  border-color: #0052cc;
+  box-shadow: 0 0 0 3px rgba(0, 82, 204, 0.12);
+}
+
+.hw-field input::placeholder {
+  color: #94a3b8;
+}
+
+.hw-input--readonly {
+  background: #f8fafc !important;
+  color: #64748b !important;
+  cursor: not-allowed;
+}
+
+.hw-field small {
+  font-size: 0.74rem;
+  font-weight: 400;
+  color: #64748b;
+  margin-top: 0.15rem;
+}
+
+.hw-field small.hw-field__error {
+  color: #dc2626;
+  font-weight: 550;
+}
+
+.hw-field input.hw-input--invalid,
+.hw-field select.hw-input--invalid {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.hw-field input.hw-input--invalid:focus,
+.hw-field select.hw-input--invalid:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+}
+
+.hw-field input.hw-input--valid,
+.hw-field select.hw-input--valid {
+  border-color: #10b981;
+}
+
+/* Form Actions bar (Synchronized with .hotel-detail__form-actions) */
+.hw-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--hd-border);
+  border-radius: 12px;
+  background: #f8fafc;
+  flex-wrap: wrap;
+}
+
+.hw-form-actions__hint {
+  color: var(--hd-muted);
+  font-size: 0.78rem;
+}
+
+.hw-submit-btn {
+  min-height: 40px;
+  padding: 0.55rem 1.4rem;
+  border-radius: 9px;
+  font-size: 0.88rem;
+  font-weight: 650;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.hotel-button--primary {
+  background: linear-gradient(135deg, #0052cc 0%, #1d4ed8 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 82, 204, 0.2);
+}
+
+.hotel-button--primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0043a8 0%, #1e40af 100%);
+  box-shadow: 0 6px 16px rgba(0, 82, 204, 0.28);
+}
+
+.hotel-button--primary:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.hw-form-preview-area {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  padding: 0.25rem 0;
+}
+
+/* ==========================================================================
+   LINKED BANK CARD (Synchronized Luxury Card Presentation)
+   ========================================================================== */
+
+.hw-card-display {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.hw-card-visual {
+  flex: 1;
+  min-width: 320px;
+  max-width: 440px;
+  background: linear-gradient(135deg, #0b1e3f 0%, #1e3a8a 100%);
+  border-radius: 14px;
+  padding: 1.5rem 1.75rem;
+  color: #ffffff;
+  box-shadow: 0 10px 24px -4px rgba(11, 30, 63, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.hw-card-visual::after {
+  content: '';
+  position: absolute;
+  top: -40px;
+  right: -40px;
+  width: 140px;
+  height: 140px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.hw-card-visual__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.hw-card-visual__bank-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.hw-card-visual__logo {
+  height: 28px;
+  max-width: 72px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 5px;
+  padding: 2px 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.hw-card-visual__bank {
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #f8fafc;
+}
+
+.hw-card-visual__chip {
+  width: 38px;
+  height: 28px;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border-radius: 5px;
+}
+
+.hw-card-visual__number {
+  font-size: 1.35rem;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  margin-bottom: 1.25rem;
+  color: #ffffff;
+}
+
+.hw-card-visual__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.hw-card-visual__holder-label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: #93c5fd;
+  margin-bottom: 0.15rem;
+}
+
+.hw-card-visual__holder {
+  font-size: 0.95rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.hw-card-visual__branch {
+  font-size: 0.74rem;
+  color: #bfdbfe;
+  text-align: right;
+  max-width: 160px;
+}
+
+.hw-card-info-pane {
+  flex: 1;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hw-info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  border-bottom: 1px dashed #e2e8f0;
+  font-size: 0.86rem;
+}
+
+.hw-info-row span:first-child {
+  color: var(--hd-muted);
+}
+
+.hw-info-row span:last-child {
+  font-weight: 600;
+  color: var(--hd-ink);
+}
+
+.hw-locked-notice {
+  background: #f8fafc;
+  border: 1px solid var(--hd-border);
+  border-radius: 9px;
+  padding: 0.75rem 1rem;
+  font-size: 0.8rem;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.hw-card-actions {
+  display: flex;
+  margin-top: 0.5rem;
+}
+
+.hw-btn-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 1.15rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: var(--hd-ink);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.hw-btn-change:hover {
+  background: #f8fafc;
+  border-color: #0052cc;
+  color: #0052cc;
+  box-shadow: 0 2px 6px rgba(0, 82, 204, 0.12);
+}
+
+.hw-btn-change svg {
+  color: #2563eb;
+}
+
+.hw-notice-error {
+  padding: 0.75rem 1rem;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 9px;
+  color: #b91c1c;
+  font-size: 0.84rem;
+}
+
+.hw-empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--hd-muted);
+}
+
+@media (max-width: 768px) {
+  .hw-field-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -25,6 +25,7 @@ const env = require("./config/env");
 const bookingRoute = require('./features/bookings/booking.route');
 const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
 const paymentRoute = require('./features/payments/payment.route');
+const walletRoute = require('./features/wallet/wallet.route');
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use("/api", commissionPolicyRoute);
 app.use("/api", bookingRoute);
 app.use("/api", wishlistRoute);
 app.use("/api", paymentRoute);
+app.use("/api", walletRoute);
 
 app.use((_req, _res, next) => {
   const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');

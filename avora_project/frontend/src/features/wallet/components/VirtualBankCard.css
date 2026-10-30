@@ -1,0 +1,260 @@
+/* Luxury Virtual Bank Card */
+.virtual-bank-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  min-height: 230px;
+  border-radius: 16px;
+  padding: 1.5rem 1.65rem;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  user-select: none;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  box-sizing: border-box;
+}
+
+.virtual-bank-card:hover {
+  transform: translateY(-2px);
+}
+
+.virtual-bank-card--preview {
+  margin: 0 auto 1.5rem auto;
+}
+
+/* Background Effects */
+.virtual-bank-card__glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.virtual-bank-card__watermark {
+  position: absolute;
+  right: -10px;
+  bottom: -20px;
+  font-size: 5.5rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.05);
+  letter-spacing: 0.05em;
+  pointer-events: none;
+  line-height: 1;
+}
+
+/* Top Bar */
+.virtual-bank-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.virtual-bank-card__bank-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.virtual-bank-card__logo-wrapper {
+  background: #ffffff;
+  border-radius: 6px;
+  padding: 3px 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  height: 30px;
+}
+
+.virtual-bank-card__logo {
+  height: 24px;
+  max-width: 80px;
+  object-fit: contain;
+}
+
+.virtual-bank-card__logo-fallback {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.virtual-bank-card__bank-names {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.virtual-bank-card__bank-title {
+  font-size: 0.92rem;
+  font-weight: 750;
+  letter-spacing: 0.02em;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.virtual-bank-card__bin-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  opacity: 0.85;
+  letter-spacing: 0.04em;
+}
+
+.virtual-bank-card__contactless {
+  opacity: 0.75;
+  display: flex;
+  align-items: center;
+}
+
+/* Middle: Chip */
+.virtual-bank-card__middle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.85rem 0 0.5rem 0;
+  position: relative;
+  z-index: 2;
+}
+
+.virtual-bank-card__chip {
+  width: 44px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #ffd700 0%, #fef08a 40%, #b45309 100%);
+  border: 1px solid rgba(180, 83, 9, 0.5);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.virtual-bank-card__chip-inner {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 2px 4px;
+}
+
+.virtual-bank-card__chip-line {
+  display: block;
+  height: 1px;
+  background: rgba(180, 83, 9, 0.45);
+  width: 100%;
+}
+
+.virtual-bank-card__preview-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  color: #ffffff;
+}
+
+/* Card Number */
+.virtual-bank-card__number {
+  font-family: 'SF Mono', 'Courier New', Courier, monospace;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #ffffff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+  margin: 0.6rem 0;
+  position: relative;
+  z-index: 2;
+  white-space: nowrap;
+}
+
+/* Bottom Row */
+.virtual-bank-card__bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  position: relative;
+  z-index: 2;
+}
+
+.virtual-bank-card__holder-box {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  max-width: 70%;
+}
+
+.virtual-bank-card__label {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.virtual-bank-card__holder {
+  font-size: 0.95rem;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.virtual-bank-card__branch {
+  font-size: 0.7rem;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Authentic NAPAS 247 Badge */
+.virtual-bank-card__napas-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  background: rgba(255, 255, 255, 0.92);
+  padding: 3px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.virtual-bank-card__napas-text {
+  font-size: 0.76rem;
+  font-weight: 900;
+  color: #0052cc;
+  text-transform: lowercase;
+  letter-spacing: -0.03em;
+}
+
+.virtual-bank-card__napas-sub {
+  font-size: 0.62rem;
+  font-weight: 900;
+  color: #e65100;
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 480px) {
+  .virtual-bank-card {
+    padding: 1.25rem 1.25rem;
+    min-height: 200px;
+  }
+  .virtual-bank-card__number {
+    font-size: 1.05rem;
+    letter-spacing: 0.12em;
+  }
+}
+
