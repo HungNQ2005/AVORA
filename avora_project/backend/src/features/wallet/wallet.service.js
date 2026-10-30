@@ -1,6 +1,7 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const { codeNameParser } = require('../../utils/codeNameParser');
 
 const createError = (statusCode, message) => {
   const error = new Error(message);
@@ -19,48 +20,125 @@ const throwDatabaseError = (message, error) => {
   throw createError(500, message);
 };
 
-// BIN lookup by bank code name
-const BANK_BIN_MAP = {
-  VCB: '970436',
-  BID: '970418',
-  CTG: '970415',
-  VBA: '970405',
-  TCB: '970407',
-  MBB: '970422',
-  VPB: '970432',
-  ACB: '970416',
-  STB: '970403',
-  HDB: '970437',
-  SHB: '970443',
-  VIB: '970441',
-  TPB: '970423',
-  LPB: '970449',
-  EIB: '970431',
-  MSB: '970426',
-  OCB: '970448',
-  SSB: '970440',
-  NAB: '970428',
-  KLB: '970452',
+// In-memory cache for VietQR official banks API and Base64 logos (24 hours TTL)
+let cachedVietQrBanks = null;
+let lastFetchTime = 0;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const logoBase64Cache = new Map();
+
+/**
+ * Fetch logo as Base64 to bypass browser canvas CORS restrictions cleanly
+ */
+const fetchLogoBase64 = async (logoUrl) => {
+  if (!logoUrl) return null;
+  if (logoBase64Cache.has(logoUrl)) return logoBase64Cache.get(logoUrl);
+
+  try {
+    const res = await fetch(logoUrl, { signal: AbortSignal.timeout(3000) });
+    if (!res.ok) return null;
+    const buf = Buffer.from(await res.arrayBuffer());
+    const base64 = `data:image/png;base64,${buf.toString('base64')}`;
+    logoBase64Cache.set(logoUrl, base64);
+    return base64;
+  } catch {
+    return null;
+  }
+};
+
+/**
+ * Fetch dynamic banks list directly from VietQR official API
+ * Endpoint: https://api.vietqr.io/v2/banks
+ */
+const fetchVietQrBanks = async () => {
+  const now = Date.now();
+  if (cachedVietQrBanks && now - lastFetchTime < CACHE_TTL_MS) {
+    return cachedVietQrBanks;
+  }
+
+  try {
+    const response = await fetch('https://api.vietqr.io/v2/banks', {
+      headers: { 'Accept': 'application/json' },
+      signal: AbortSignal.timeout(5000), // 5s timeout
+    });
+
+    if (!response.ok) {
+      throw new Error(`VietQR API returned status ${response.status}`);
+    }
+
+    const json = await response.json();
+    if (Array.isArray(json?.data) && json.data.length > 0) {
+      cachedVietQrBanks = json.data;
+      lastFetchTime = now;
+      return cachedVietQrBanks;
+    }
+  } catch (err) {
+    console.warn('[Wallet] VietQR live API fetch warning (using cache/fallback):', err.message);
+  }
+
+  return cachedVietQrBanks || [];
+};
+
+/**
+ * Helper to match an Avora bank code (e.g. 'VCB', 'MBB', 'CTG') with a VietQR bank record
+ */
+const matchVietQrBank = (codeName, vietQrBanks = []) => {
+  if (!codeName || !vietQrBanks.length) return null;
+
+  const targetCode = String(codeName).trim().toUpperCase();
+  const fullName = String(codeNameParser(targetCode) || '').trim().toLowerCase();
+  const cleanFullName = fullName.replace(/\s+/g, '');
+
+  return vietQrBanks.find((v) => {
+    const vCode = String(v.code || '').trim().toUpperCase();
+    const vShort = String(v.shortName || v.short_name || '').trim().toLowerCase();
+    const vCleanShort = vShort.replace(/\s+/g, '');
+    const vName = String(v.name || '').trim().toLowerCase();
+
+    return (
+      vCode === targetCode ||
+      vShort === fullName ||
+      vCleanShort === cleanFullName ||
+      vName.includes(fullName)
+    );
+  }) || null;
 };
 
 /**
  * Get active banks list from m_system_code (business_cd = 'BANK_CD')
+ * Dynamically enriched with live BIN & Logo from https://api.vietqr.io/v2/banks
  */
 const getSupportedBanks = async () => {
   ensureClient();
-  const { data, error } = await supabase
-    .from('m_system_code')
-    .select('code_cd, code_name, sort_no')
-    .eq('business_cd', 'BANK_CD')
-    .order('sort_no', { ascending: true });
 
-  if (error) throwDatabaseError('Không thể tải danh sách ngân hàng.', error);
+  // Query DB and VietQR API concurrently
+  const [dbResult, vietQrBanks] = await Promise.all([
+    supabase
+      .from('m_system_code')
+      .select('code_cd, code_name, sort_no')
+      .eq('business_cd', 'BANK_CD')
+      .order('sort_no', { ascending: true }),
+    fetchVietQrBanks(),
+  ]);
 
-  return (data || []).map((b) => ({
-    bank_cd: b.code_cd,
-    code_name: b.code_name,
-    bin_code: BANK_BIN_MAP[b.code_name] || null,
-  }));
+  if (dbResult.error) {
+    throwDatabaseError('Không thể tải danh sách ngân hàng.', dbResult.error);
+  }
+
+  return Promise.all(
+    (dbResult.data || []).map(async (b) => {
+      const matched = matchVietQrBank(b.code_name, vietQrBanks);
+      const logoUrl = matched?.logo || null;
+      const logoBase64 = logoUrl ? await fetchLogoBase64(logoUrl) : null;
+      return {
+        bank_cd: b.code_cd,
+        code_name: b.code_name,
+        bin_code: matched?.bin || null,
+        logo_url: logoUrl,
+        logo_base64: logoBase64,
+        short_name: matched?.shortName || codeNameParser(b.code_name),
+      };
+    })
+  );
 };
 
 /**
@@ -89,10 +167,10 @@ const getVendorHotels = async (vendorId) => {
 const getHotelWalletAndBank = async (hotelId, vendorId) => {
   ensureClient();
 
-  // 1. Verify hotel ownership
+  // 1. Verify hotel ownership & active status
   let hotelQuery = supabase
     .from('m_hotel')
-    .select('hotel_id, name, owner_id')
+    .select('hotel_id, name, owner_id, hotel_status')
     .eq('hotel_id', hotelId)
     .eq('is_deleted', false);
 
@@ -104,6 +182,10 @@ const getHotelWalletAndBank = async (hotelId, vendorId) => {
   if (hotelErr) throwDatabaseError('Không thể kiểm tra thông tin khách sạn.', hotelErr);
   if (!hotel) {
     throw createError(404, 'Không tìm thấy khách sạn hoặc bạn không có quyền truy cập.');
+  }
+
+  if (hotel.hotel_status === 'INACTIVE') {
+    throw createError(400, 'Khách sạn này hiện đang tạm ngưng hoạt động. Không thể thực hiện thao tác ví.');
   }
 
   // 2. Get or initialize t_hotel_wallet
@@ -132,14 +214,42 @@ const getHotelWalletAndBank = async (hotelId, vendorId) => {
     wallet = newWallet;
   }
 
-  // 3. Get linked bank account from m_bank_account
+  // 3. Get active & verified linked bank account from m_bank_account (is_verify must be true)
   const { data: bankAccount, error: bankErr } = await supabase
     .from('m_bank_account')
     .select('*')
     .eq('hotel_id', hotelId)
+    .eq('is_verify', true)
+    .order('created_at', { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   if (bankErr) throwDatabaseError('Không thể lấy thông tin tài khoản ngân hàng.', bankErr);
+
+  // If bank account has bank_cd, attach dynamic logo from VietQR
+  let enrichedBank = bankAccount || null;
+  if (bankAccount?.bank_cd) {
+    const { data: sysCode } = await supabase
+      .from('m_system_code')
+      .select('code_name')
+      .eq('business_cd', 'BANK_CD')
+      .eq('code_cd', String(bankAccount.bank_cd))
+      .maybeSingle();
+
+    const lookupCode = sysCode?.code_name || bankAccount.bank_cd;
+    const vietQrBanks = await fetchVietQrBanks();
+    const matched = matchVietQrBank(lookupCode, vietQrBanks);
+    if (matched) {
+      const logoBase64 = matched.logo ? await fetchLogoBase64(matched.logo) : null;
+      enrichedBank = {
+        ...bankAccount,
+        code_name: lookupCode,
+        logo_url: matched.logo || null,
+        logo_base64: logoBase64,
+        bank_name: matched.shortName || null,
+      };
+    }
+  }
 
   return {
     hotel: {
@@ -149,12 +259,12 @@ const getHotelWalletAndBank = async (hotelId, vendorId) => {
     wallet: {
       wallet_id: wallet.wallet_id,
       hotel_id: wallet.hotel_id,
-      pending_balance: Number(wallet.pending_balance) || 0,
-      available_balance: Number(wallet.available_balance) || 0,
+      pending_balance: Math.max(0, Number(wallet.pending_balance) || 0),
+      available_balance: Math.max(0, Number(wallet.available_balance) || 0),
       created_at: wallet.created_at,
       updated_at: wallet.updated_at,
     },
-    bank_account: bankAccount || null,
+    bank_account: enrichedBank,
   };
 };
 
@@ -172,10 +282,10 @@ const linkBankAccount = async ({
 }) => {
   ensureClient();
 
-  // 1. Verify hotel ownership
+  // 1. Verify hotel ownership & operational status
   let hotelQuery = supabase
     .from('m_hotel')
-    .select('hotel_id, name, owner_id')
+    .select('hotel_id, name, owner_id, hotel_status')
     .eq('hotel_id', hotelId)
     .eq('is_deleted', false);
 
@@ -187,6 +297,10 @@ const linkBankAccount = async ({
   if (hotelErr) throwDatabaseError('Không thể kiểm tra khách sạn.', hotelErr);
   if (!hotel) {
     throw createError(404, 'Không tìm thấy khách sạn hoặc bạn không có quyền truy cập.');
+  }
+
+  if (hotel.hotel_status === 'INACTIVE') {
+    throw createError(400, 'Khách sạn này hiện đang tạm ngưng hoạt động. Không thể liên kết tài khoản ngân hàng.');
   }
 
   // 2. Ensure wallet exists
@@ -213,21 +327,30 @@ const linkBankAccount = async ({
     wallet = newWallet;
   }
 
-  // 3. Check if hotel already has a linked bank account
-  const { data: existingAccount, error: checkBankErr } = await supabase
+  // 3. Check if hotel already has an active, verified linked bank account (is_verify = true)
+  const { data: existingActiveAccount, error: checkBankErr } = await supabase
     .from('m_bank_account')
     .select('bank_account_id')
     .eq('hotel_id', hotelId)
+    .eq('is_verify', true)
+    .limit(1)
     .maybeSingle();
 
   if (checkBankErr) throwDatabaseError('Không thể kiểm tra tài khoản ngân hàng.', checkBankErr);
 
-  if (existingAccount) {
+  if (existingActiveAccount) {
     throw createError(
       409,
-      'Khách sạn này đã liên kết tài khoản ngân hàng cố định với ví. Mỗi khách sạn chỉ được liên kết 1 tài khoản duy nhất.'
+      'Khách sạn này đã liên kết tài khoản ngân hàng cố định với ví. Mỗi khách sạn chỉ được liên kết 1 tài khoản hoạt động duy nhất.'
     );
   }
+
+  // Clean up any old unverified / inactive bank records for this hotel
+  await supabase
+    .from('m_bank_account')
+    .delete()
+    .eq('hotel_id', hotelId)
+    .eq('is_verify', false);
 
   // 4. Validate bank_cd in m_system_code (business_cd = 'BANK_CD')
   const { data: validBank, error: bankCodeErr } = await supabase
@@ -241,9 +364,15 @@ const linkBankAccount = async ({
     throw createError(400, 'Ngân hàng được chọn không hợp lệ.');
   }
 
-  const resolvedBin = binCode || BANK_BIN_MAP[validBank.code_name] || null;
+  // 5. Resolve BIN dynamically from VietQR official API
+  let resolvedBin = binCode || null;
+  if (!resolvedBin) {
+    const vietQrBanks = await fetchVietQrBanks();
+    const matched = matchVietQrBank(validBank.code_name, vietQrBanks);
+    resolvedBin = matched?.bin || null;
+  }
 
-  // 5. Insert single bank account record
+  // 6. Insert single bank account record
   const { data: createdAccount, error: insertBankErr } = await supabase
     .from('m_bank_account')
     .insert({
@@ -271,4 +400,3 @@ module.exports = {
   getHotelWalletAndBank,
   linkBankAccount,
 };
-

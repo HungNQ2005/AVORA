@@ -1,5 +1,6 @@
 import React from 'react';
 import { codeNameParser } from '../../../utils/codeNameParser';
+import VirtualBankCard from './VirtualBankCard';
 
 const LinkBankForm = ({
   formData,
@@ -9,6 +10,8 @@ const LinkBankForm = ({
   onSubmit,
   isSubmitting,
 }) => {
+  const selectedBank = banks.find((b) => String(b.code_cd || b.bank_cd) === String(formData.bank_cd));
+
   return (
     <form className="hw-form" onSubmit={onSubmit}>
       {/* Alert Notice */}
@@ -21,6 +24,22 @@ const LinkBankForm = ({
         <div>
           <strong>Lưu ý bảo mật:</strong> Mỗi khách sạn chỉ được liên kết <strong>1 tài khoản ngân hàng duy nhất</strong>. Sau khi xác nhận, thông tin tài khoản sẽ được cố định với ví khách sạn để đảm bảo an toàn đối soát và chi trả doanh thu.
         </div>
+      </div>
+
+      {/* Live Interactive Virtual Bank Card Preview (Matches official bank branding in real-time with zero hardcoding) */}
+      <div className="hw-form-preview-area">
+        <VirtualBankCard
+          bankCd={selectedBank?.bank_cd || formData.bank_cd}
+          codeName={selectedBank?.code_name}
+          bankDisplayName={selectedBank ? codeNameParser(selectedBank.code_name) : 'CHỌN NGÂN HÀNG THỤ HƯỞNG'}
+          logoUrl={selectedBank?.logo_url}
+          logoBase64={selectedBank?.logo_base64}
+          accountNumber={formData.account_number}
+          accountHolder={formData.account_holder}
+          bankBranch={formData.bank_branch}
+          binCode={formData.bin_code || selectedBank?.bin_code}
+          isPreview={true}
+        />
       </div>
 
       {/* Field Grid matching Hotel Management theme */}
@@ -43,10 +62,10 @@ const LinkBankForm = ({
         </label>
 
         <label className="hw-field">
-          <span>Mã định danh ngân hàng (BIN Napas)</span>
+          <span>Mã định danh ngân hàng</span>
           <input
             type="text"
-            value={formData.bin_code ? `${formData.bin_code} (Chuẩn Napas)` : 'Tự động theo ngân hàng'}
+            value={formData.bin_code ? `${formData.bin_code}` : 'Tự động theo ngân hàng'}
             readOnly
             disabled
             className="hw-input--readonly"
@@ -61,14 +80,20 @@ const LinkBankForm = ({
             value={formData.account_number}
             onChange={onFormChange}
             placeholder="Ví dụ: 0011001234567"
-            maxLength={25}
+            maxLength={20}
             required
           />
-          <small>Chỉ gồm 6 đến 20 chữ số</small>
+          {formData.account_number.length > 0 && formData.account_number.length < 6 ? (
+            <small style={{ color: '#dc2626' }}>Tối thiểu 6 chữ số (hiện có: {formData.account_number.length})</small>
+          ) : formData.account_number.length > 0 && /^(\d)\1+$/.test(formData.account_number) ? (
+            <small style={{ color: '#dc2626' }}>Số tài khoản không được trùng lặp toàn bộ 1 chữ số</small>
+          ) : (
+            <small>Chỉ gồm 6 đến 20 chữ số</small>
+          )}
         </label>
 
         <label className="hw-field">
-          <span>Tên chủ tài khoản (In hoa không dấu) <b className="hw-required">*</b></span>
+          <span>Tên chủ tài khoản<b className="hw-required">*</b></span>
           <input
             type="text"
             name="account_holder"
@@ -78,11 +103,15 @@ const LinkBankForm = ({
             maxLength={100}
             required
           />
-          <small>Trùng khớp với tên đăng ký tài khoản tại ngân hàng</small>
+          {formData.account_holder.length > 0 && formData.account_holder.trim().split(/\s+/).filter(Boolean).length < 2 ? (
+            <small style={{ color: '#dc2626' }}>Vui lòng nhập đầy đủ cả Họ và Tên</small>
+          ) : (
+            <small>In hoa không dấu, trùng khớp tên đăng ký tại ngân hàng</small>
+          )}
         </label>
 
         <label className="hw-field hw-field--wide">
-          <span>Chi nhánh mở tài khoản ngân hàng (Tùy chọn)</span>
+          <span>Chi nhánh mở tài khoản ngân hàng</span>
           <input
             type="text"
             name="bank_branch"
@@ -98,7 +127,7 @@ const LinkBankForm = ({
       {/* Form Action Bar matching Avora dashboard */}
       <footer className="hw-form-actions">
         <span className="hw-form-actions__hint">
-          Kiểm tra kỹ thông tin trước khi xác nhận liên kết
+          Kiểm tra kỹ thông tin trên thẻ xem trước trước khi xác nhận liên kết
         </span>
         <button
           type="submit"

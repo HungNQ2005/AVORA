@@ -80,7 +80,9 @@ const HotelWalletPage = () => {
         setHotels(hotelList);
         setBanks(bankList);
         if (hotelList.length > 0) {
-          setSelectedHotelId(hotelList[0].hotel_id);
+          const savedHotelId = sessionStorage.getItem('avora_wallet_selected_hotel');
+          const matchedHotel = hotelList.find((h) => h.hotel_id === savedHotelId);
+          setSelectedHotelId(matchedHotel ? matchedHotel.hotel_id : hotelList[0].hotel_id);
         }
       })
       .catch((err) => {
@@ -132,8 +134,20 @@ const HotelWalletPage = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
-    if (name === 'account_holder') {
-      setFormData((prev) => ({ ...prev, [name]: value.toUpperCase() }));
+    if (name === 'account_number') {
+      // Chỉ nhận chữ số, tối đa 20 số
+      const digitsOnly = value.replace(/\D/g, '').slice(0, 20);
+      setFormData((prev) => ({ ...prev, [name]: digitsOnly }));
+    } else if (name === 'account_holder') {
+      // Tự động bỏ dấu tiếng Việt, chỉ giữ chữ cái A-Z và khoảng trắng, in hoa
+      const cleanUpper = value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/g, 'd')
+        .replace(/Đ/g, 'D')
+        .replace(/[^a-zA-Z\s]/g, '')
+        .toUpperCase();
+      setFormData((prev) => ({ ...prev, [name]: cleanUpper }));
     } else {
       setFormData((prev) => ({ ...prev, [name]: value }));
     }
@@ -142,15 +156,33 @@ const HotelWalletPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!formData.bank_cd) {
-      setPageError('Vui lòng chọn ngân hàng.');
+      setPageError('Vui lòng chọn ngân hàng thụ hưởng.');
       return;
     }
-    if (!formData.account_number.trim() || !/^\d{6,20}$/.test(formData.account_number.trim())) {
+
+    const trimmedAcc = formData.account_number.trim();
+    if (!trimmedAcc || !/^\d{6,20}$/.test(trimmedAcc)) {
       setPageError('Số tài khoản ngân hàng phải gồm từ 6 đến 20 chữ số.');
       return;
     }
-    if (!formData.account_holder.trim() || formData.account_holder.trim().length < 2) {
-      setPageError('Tên chủ tài khoản là bắt buộc.');
+    if (/^(\d)\1+$/.test(trimmedAcc)) {
+      setPageError('Số tài khoản không hợp lệ (không được trùng lặp toàn bộ một chữ số).');
+      return;
+    }
+
+    const trimmedHolder = formData.account_holder.trim().replace(/\s+/g, ' ');
+    if (trimmedHolder.length < 5 || trimmedHolder.length > 100) {
+      setPageError('Tên chủ tài khoản phải từ 5 đến 100 ký tự.');
+      return;
+    }
+
+    const nameWords = trimmedHolder.split(' ').filter(Boolean);
+    if (nameWords.length < 2) {
+      setPageError('Tên chủ tài khoản phải bao gồm cả Họ và Tên (tối thiểu 2 từ).');
+      return;
+    }
+    if (nameWords.some((w) => w.length < 2)) {
+      setPageError('Mỗi từ trong tên chủ tài khoản phải có từ 2 ký tự trở lên.');
       return;
     }
 
@@ -188,16 +220,20 @@ const HotelWalletPage = () => {
     }
   };
 
+  const handleRequestChangeBank = () => {
+    showToast('Hệ thống hỗ trợ gửi ticket thay đổi tài khoản ngân hàng thụ hưởng đang được chuẩn bị. Vui lòng liên hệ Admin để đổi tài khoản.');
+  };
+
   const selectedHotel = hotels.find((h) => h.hotel_id === selectedHotelId);
   const linkedBank = walletData?.bank_account;
-  const isLinked = Boolean(linkedBank);
+  const isLinked = Boolean(linkedBank && linkedBank.is_verify);
 
   return (
     <div className="hw-page">
       {/* Breadcrumb */}
       <nav className="hw-breadcrumb" aria-label="Breadcrumb">
-        <span>Bảng điều khiển</span>
-        <span className="hw-breadcrumb-sep">/</span>
+        <span>Marketing & Doanh Thu</span>
+        <span className="hw-breadcrumb-sep">&gt;</span>
         <span className="hw-breadcrumb-active">Ví & Liên kết ngân hàng</span>
       </nav>
 
@@ -230,6 +266,7 @@ const HotelWalletPage = () => {
                     className={`hw-hotel-dropdown-item ${h.hotel_id === selectedHotelId ? 'hw-hotel-dropdown-item--active' : ''}`}
                     onClick={() => {
                       setSelectedHotelId(h.hotel_id);
+                      sessionStorage.setItem('avora_wallet_selected_hotel', h.hotel_id);
                       setIsHotelOpen(false);
                     }}
                   >
@@ -272,7 +309,11 @@ const HotelWalletPage = () => {
             </div>
 
             {isLinked ? (
-              <LinkedBankCard linkedBank={linkedBank} banks={banks} />
+              <LinkedBankCard
+                linkedBank={linkedBank}
+                banks={banks}
+                onChangeClick={handleRequestChangeBank}
+              />
             ) : (
               <LinkBankForm
                 formData={formData}
@@ -293,7 +334,10 @@ const HotelWalletPage = () => {
         onClose={() => setConfirmDialogOpen(false)}
         onConfirm={handleConfirmLink}
         hotelName={selectedHotel?.name}
-        bankName={banks.find((b) => String(b.bank_cd) === String(formData.bank_cd))?.code_name}
+        bankName={(() => {
+          const b = banks.find((item) => String(item.code_cd || item.bank_cd) === String(formData.bank_cd));
+          return b ? `${codeNameParser(b.code_name)} (${b.code_name})` : '';
+        })()}
         accountNumber={formData.account_number}
         accountHolder={formData.account_holder}
         isLoading={formSubmitting}

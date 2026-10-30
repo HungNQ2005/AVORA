@@ -1,33 +1,31 @@
 import React from 'react';
 import { codeNameParser } from '../../../utils/codeNameParser';
+import VirtualBankCard from './VirtualBankCard';
 
 const LinkedBankCard = ({ linkedBank, banks = [], onChangeClick }) => {
   if (!linkedBank) return null;
 
   const foundBank = banks.find((b) => String(b.bank_cd) === String(linkedBank.bank_cd));
   const bankDisplayName = foundBank?.code_name || codeNameParser(linkedBank.bank_cd);
+  const logoUrl = linkedBank.logo_url || foundBank?.logo_url;
+  const bankCode = foundBank?.code_name || linkedBank.code_name || linkedBank.bank_cd;
 
   return (
     <div className="hw-card-display">
-      <div className="hw-card-visual">
-        <div className="hw-card-visual__top">
-          <span className="hw-card-visual__bank">{codeNameParser(bankDisplayName)}</span>
-          <div className="hw-card-visual__chip" />
-        </div>
-        <div className="hw-card-visual__number">
-          {linkedBank.account_number}
-        </div>
-        <div className="hw-card-visual__bottom">
-          <div>
-            <div className="hw-card-visual__holder-label">Chủ tài khoản</div>
-            <div className="hw-card-visual__holder">{linkedBank.account_holder}</div>
-          </div>
-          {linkedBank.bank_branch && (
-            <div className="hw-card-visual__branch">{linkedBank.bank_branch}</div>
-          )}
-        </div>
-      </div>
+      {/* Dynamic Brand-Matched Virtual Bank Card (Zero hardcoded themes, extracts directly from official logo) */}
+      <VirtualBankCard
+        bankCd={linkedBank.bank_cd}
+        codeName={bankCode}
+        bankDisplayName={codeNameParser(bankDisplayName)}
+        logoUrl={logoUrl}
+        logoBase64={linkedBank.logo_base64 || foundBank?.logo_base64}
+        accountNumber={linkedBank.account_number}
+        accountHolder={linkedBank.account_holder}
+        bankBranch={linkedBank.bank_branch}
+        binCode={linkedBank.bin_code || foundBank?.bin_code}
+      />
 
+      {/* Structured Details Pane */}
       <div className="hw-card-info-pane">
         <div className="hw-info-row">
           <span>Ngân hàng</span>
@@ -35,7 +33,7 @@ const LinkedBankCard = ({ linkedBank, banks = [], onChangeClick }) => {
         </div>
         {linkedBank.bin_code && (
           <div className="hw-info-row">
-            <span>Mã BIN Napas</span>
+            <span>Mã định danh (BIN)</span>
             <span>{linkedBank.bin_code}</span>
           </div>
         )}
@@ -55,7 +53,9 @@ const LinkedBankCard = ({ linkedBank, banks = [], onChangeClick }) => {
         )}
         <div className="hw-info-row">
           <span>Trạng thái xác thực</span>
-          <span style={{ color: '#059669' }}>Đã xác minh (Active)</span>
+          <span style={{ color: linkedBank.is_verify ? '#059669' : '#d97706', fontWeight: 650 }}>
+            {linkedBank.is_verify ? 'Đã xác minh' : 'Chưa kích hoạt'}
+          </span>
         </div>
 
         <div className="hw-locked-notice">

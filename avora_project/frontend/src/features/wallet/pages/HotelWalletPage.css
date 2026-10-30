@@ -359,6 +359,13 @@
   cursor: not-allowed;
 }
 
+.hw-form-preview-area {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  padding: 0.25rem 0;
+}
+
 /* ==========================================================================
    LINKED BANK CARD (Synchronized Luxury Card Presentation)
    ========================================================================== */
@@ -400,6 +407,22 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1.5rem;
+}
+
+.hw-card-visual__bank-group {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.hw-card-visual__logo {
+  height: 28px;
+  max-width: 72px;
+  object-fit: contain;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 5px;
+  padding: 2px 5px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .hw-card-visual__bank {
