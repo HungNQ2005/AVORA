@@ -142,21 +142,22 @@ const getSupportedBanks = async () => {
 };
 
 /**
- * Get vendor's hotels list
+ * Get vendor's hotels list (Only approved & active hotels owned by this vendor)
  */
 const getVendorHotels = async (vendorId) => {
   ensureClient();
-  let query = supabase
-    .from('m_hotel')
-    .select('hotel_id, name, address, hotel_status')
-    .eq('is_deleted', false)
-    .order('name', { ascending: true });
-
-  if (vendorId) {
-    query = query.eq('owner_id', vendorId);
+  if (!vendorId) {
+    throw createError(403, 'Không xác định được danh tính chủ khách sạn (Vendor).');
   }
 
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from('m_hotel')
+    .select('hotel_id, name, address, hotel_status')
+    .eq('owner_id', vendorId)
+    .eq('is_deleted', false)
+    .eq('hotel_status', 'ACTIVE')
+    .order('name', { ascending: true });
+
   if (error) throwDatabaseError('Không thể tải danh sách khách sạn.', error);
   return data || [];
 };
@@ -166,33 +167,37 @@ const getVendorHotels = async (vendorId) => {
  */
 const getHotelWalletAndBank = async (hotelId, vendorId) => {
   ensureClient();
+  if (!vendorId) {
+    throw createError(403, 'Không xác định được danh tính chủ khách sạn (Vendor).');
+  }
 
-  // 1. Verify hotel ownership & active status
-  let hotelQuery = supabase
+  // 1. Verify hotel ownership & strictly require ACTIVE status
+  const { data: hotel, error: hotelErr } = await supabase
     .from('m_hotel')
     .select('hotel_id, name, owner_id, hotel_status')
     .eq('hotel_id', hotelId)
-    .eq('is_deleted', false);
+    .eq('owner_id', vendorId)
+    .eq('is_deleted', false)
+    .maybeSingle();
 
-  if (vendorId) {
-    hotelQuery = hotelQuery.eq('owner_id', vendorId);
-  }
-
-  const { data: hotel, error: hotelErr } = await hotelQuery.maybeSingle();
   if (hotelErr) throwDatabaseError('Không thể kiểm tra thông tin khách sạn.', hotelErr);
   if (!hotel) {
     throw createError(404, 'Không tìm thấy khách sạn hoặc bạn không có quyền truy cập.');
   }
 
-  if (hotel.hotel_status === 'INACTIVE') {
-    throw createError(400, 'Khách sạn này hiện đang tạm ngưng hoạt động. Không thể thực hiện thao tác ví.');
+  if (hotel.hotel_status !== 'ACTIVE') {
+    throw createError(
+      400,
+      'Khách sạn chưa được phê duyệt hoặc không ở trạng thái hoạt động (ACTIVE). Không thể thực hiện thao tác ví.'
+    );
   }
 
-  // 2. Get or initialize t_hotel_wallet
+  // 2. Get or initialize t_hotel_wallet (safe against concurrent auto-creation)
   let { data: wallet, error: walletErr } = await supabase
     .from('t_hotel_wallet')
     .select('*')
     .eq('hotel_id', hotelId)
+    .limit(1)
     .maybeSingle();
 
   if (walletErr) throwDatabaseError('Không thể lấy thông tin ví khách sạn.', walletErr);
@@ -209,9 +214,21 @@ const getHotelWalletAndBank = async (hotelId, vendorId) => {
       .single();
 
     if (insertWalletErr) {
-      throwDatabaseError('Không thể khởi tạo ví khách sạn.', insertWalletErr);
+      // Handle race condition if another concurrent request just created the wallet
+      const { data: retryWallet, error: retryErr } = await supabase
+        .from('t_hotel_wallet')
+        .select('*')
+        .eq('hotel_id', hotelId)
+        .limit(1)
+        .maybeSingle();
+
+      if (retryErr || !retryWallet) {
+        throwDatabaseError('Không thể khởi tạo ví khách sạn.', insertWalletErr);
+      }
+      wallet = retryWallet;
+    } else {
+      wallet = newWallet;
     }
-    wallet = newWallet;
   }
 
   // 3. Get active & verified linked bank account from m_bank_account (is_verify must be true)
@@ -251,6 +268,43 @@ const getHotelWalletAndBank = async (hotelId, vendorId) => {
     }
   }
 
+  // 4. Fetch existing verified bank accounts from OTHER active hotels owned by this same Vendor
+  //    so the Vendor can optionally reuse their bank account with 1 click or enter a different one.
+  let vendorSavedAccounts = [];
+  const { data: otherHotels } = await supabase
+    .from('m_hotel')
+    .select('hotel_id, name')
+    .eq('owner_id', vendorId)
+    .eq('is_deleted', false)
+    .eq('hotel_status', 'ACTIVE')
+    .neq('hotel_id', hotelId);
+
+  if (otherHotels && otherHotels.length > 0) {
+    const otherHotelIds = otherHotels.map((h) => h.hotel_id);
+    const hotelNameMap = Object.fromEntries(otherHotels.map((h) => [h.hotel_id, h.name]));
+
+    const { data: otherBankAccounts } = await supabase
+      .from('m_bank_account')
+      .select('bank_account_id, hotel_id, bank_cd, bin_code, account_number, account_holder, bank_branch')
+      .in('hotel_id', otherHotelIds)
+      .eq('is_verify', true)
+      .order('created_at', { ascending: false });
+
+    if (otherBankAccounts && otherBankAccounts.length > 0) {
+      const seenKeys = new Set();
+      for (const acc of otherBankAccounts) {
+        const key = `${acc.bank_cd}:${acc.account_number}`;
+        if (!seenKeys.has(key)) {
+          seenKeys.add(key);
+          vendorSavedAccounts.push({
+            ...acc,
+            source_hotel_name: hotelNameMap[acc.hotel_id] || 'Khách sạn cùng chủ sở hữu',
+          });
+        }
+      }
+    }
+  }
+
   return {
     hotel: {
       hotel_id: hotel.hotel_id,
@@ -265,8 +319,12 @@ const getHotelWalletAndBank = async (hotelId, vendorId) => {
       updated_at: wallet.updated_at,
     },
     bank_account: enrichedBank,
+    vendor_saved_accounts: vendorSavedAccounts,
   };
 };
+
+// Per-hotel concurrency mutex lock to prevent simultaneous duplicate linking requests
+const activeLinkingLocks = new Set();
 
 /**
  * Link single bank account to hotel's wallet (Strictly 1 account per hotel, permanent)
@@ -275,123 +333,240 @@ const linkBankAccount = async ({
   hotelId,
   vendorId,
   bankCd,
-  binCode,
   accountNumber,
   accountHolder,
   bankBranch,
 }) => {
   ensureClient();
-
-  // 1. Verify hotel ownership & operational status
-  let hotelQuery = supabase
-    .from('m_hotel')
-    .select('hotel_id, name, owner_id, hotel_status')
-    .eq('hotel_id', hotelId)
-    .eq('is_deleted', false);
-
-  if (vendorId) {
-    hotelQuery = hotelQuery.eq('owner_id', vendorId);
+  if (!vendorId) {
+    throw createError(403, 'Không xác định được danh tính chủ khách sạn (Vendor).');
   }
 
-  const { data: hotel, error: hotelErr } = await hotelQuery.maybeSingle();
-  if (hotelErr) throwDatabaseError('Không thể kiểm tra khách sạn.', hotelErr);
-  if (!hotel) {
-    throw createError(404, 'Không tìm thấy khách sạn hoặc bạn không có quyền truy cập.');
-  }
+  const hotelLockKey = `hotel:${hotelId}`;
 
-  if (hotel.hotel_status === 'INACTIVE') {
-    throw createError(400, 'Khách sạn này hiện đang tạm ngưng hoạt động. Không thể liên kết tài khoản ngân hàng.');
-  }
-
-  // 2. Ensure wallet exists
-  let { data: wallet } = await supabase
-    .from('t_hotel_wallet')
-    .select('wallet_id')
-    .eq('hotel_id', hotelId)
-    .maybeSingle();
-
-  if (!wallet) {
-    const { data: newWallet, error: createWalletErr } = await supabase
-      .from('t_hotel_wallet')
-      .insert({
-        hotel_id: hotelId,
-        pending_balance: 0,
-        available_balance: 0,
-      })
-      .select('wallet_id')
-      .single();
-
-    if (createWalletErr) {
-      throwDatabaseError('Không thể khởi tạo ví khách sạn.', createWalletErr);
-    }
-    wallet = newWallet;
-  }
-
-  // 3. Check if hotel already has an active, verified linked bank account (is_verify = true)
-  const { data: existingActiveAccount, error: checkBankErr } = await supabase
-    .from('m_bank_account')
-    .select('bank_account_id')
-    .eq('hotel_id', hotelId)
-    .eq('is_verify', true)
-    .limit(1)
-    .maybeSingle();
-
-  if (checkBankErr) throwDatabaseError('Không thể kiểm tra tài khoản ngân hàng.', checkBankErr);
-
-  if (existingActiveAccount) {
+  if (activeLinkingLocks.has(hotelLockKey)) {
     throw createError(
       409,
-      'Khách sạn này đã liên kết tài khoản ngân hàng cố định với ví. Mỗi khách sạn chỉ được liên kết 1 tài khoản hoạt động duy nhất.'
+      'Yêu cầu liên kết tài khoản cho khách sạn này đang được xử lý. Vui lòng không gửi lặp lại.'
     );
   }
 
-  // Clean up any old unverified / inactive bank records for this hotel
-  await supabase
-    .from('m_bank_account')
-    .delete()
-    .eq('hotel_id', hotelId)
-    .eq('is_verify', false);
+  activeLinkingLocks.add(hotelLockKey);
 
-  // 4. Validate bank_cd in m_system_code (business_cd = 'BANK_CD')
-  const { data: validBank, error: bankCodeErr } = await supabase
-    .from('m_system_code')
-    .select('code_cd, code_name')
-    .eq('business_cd', 'BANK_CD')
-    .eq('code_cd', String(bankCd))
-    .maybeSingle();
+  try {
+    // 1. Verify hotel ownership & strictly require ACTIVE operational status
+    const { data: hotel, error: hotelErr } = await supabase
+      .from('m_hotel')
+      .select('hotel_id, name, owner_id, hotel_status')
+      .eq('hotel_id', hotelId)
+      .eq('owner_id', vendorId)
+      .eq('is_deleted', false)
+      .maybeSingle();
 
-  if (bankCodeErr || !validBank) {
-    throw createError(400, 'Ngân hàng được chọn không hợp lệ.');
-  }
+    if (hotelErr) throwDatabaseError('Không thể kiểm tra khách sạn.', hotelErr);
+    if (!hotel) {
+      throw createError(404, 'Không tìm thấy khách sạn hoặc bạn không có quyền truy cập.');
+    }
 
-  // 5. Resolve BIN dynamically from VietQR official API
-  let resolvedBin = binCode || null;
-  if (!resolvedBin) {
+    if (hotel.hotel_status !== 'ACTIVE') {
+      throw createError(
+        400,
+        'Khách sạn chưa được phê duyệt hoặc không ở trạng thái hoạt động (ACTIVE). Không thể liên kết tài khoản ngân hàng.'
+      );
+    }
+
+    // 2. Ensure wallet exists (safe against concurrent auto-creation)
+    let { data: wallet } = await supabase
+      .from('t_hotel_wallet')
+      .select('wallet_id')
+      .eq('hotel_id', hotelId)
+      .limit(1)
+      .maybeSingle();
+
+    if (!wallet) {
+      const { data: newWallet, error: createWalletErr } = await supabase
+        .from('t_hotel_wallet')
+        .insert({
+          hotel_id: hotelId,
+          pending_balance: 0,
+          available_balance: 0,
+        })
+        .select('wallet_id')
+        .single();
+
+      if (createWalletErr) {
+        const { data: retryWallet } = await supabase
+          .from('t_hotel_wallet')
+          .select('wallet_id')
+          .eq('hotel_id', hotelId)
+          .limit(1)
+          .maybeSingle();
+        if (!retryWallet) {
+          throwDatabaseError('Không thể khởi tạo ví khách sạn.', createWalletErr);
+        }
+        wallet = retryWallet;
+      } else {
+        wallet = newWallet;
+      }
+    }
+
+    // 3. Check duplicate #1: Hotel already has an active linked bank account (is_verify = true)
+    const { data: existingActiveAccount, error: checkBankErr } = await supabase
+      .from('m_bank_account')
+      .select('bank_account_id')
+      .eq('hotel_id', hotelId)
+      .eq('is_verify', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (checkBankErr) throwDatabaseError('Không thể kiểm tra tài khoản ngân hàng.', checkBankErr);
+
+    if (existingActiveAccount) {
+      throw createError(
+        409,
+        'Khách sạn này đã liên kết tài khoản ngân hàng cố định với ví. Mỗi khách sạn chỉ được liên kết 1 tài khoản hoạt động duy nhất.'
+      );
+    }
+
+    // Clean up any old inactive bank records (is_verify = false) for this hotel
+    await supabase
+      .from('m_bank_account')
+      .delete()
+      .eq('hotel_id', hotelId)
+      .eq('is_verify', false);
+
+    // 4. Validate bank_cd in m_system_code (business_cd = 'BANK_CD')
+    const { data: validBank, error: bankCodeErr } = await supabase
+      .from('m_system_code')
+      .select('code_cd, code_name')
+      .eq('business_cd', 'BANK_CD')
+      .eq('code_cd', String(bankCd))
+      .maybeSingle();
+
+    if (bankCodeErr || !validBank) {
+      throw createError(400, 'Ngân hàng được chọn không hợp lệ.');
+    }
+
+    // 4b. Check duplicate #2: Allow the same Vendor to use their own bank account across their hotels,
+    //     but block if this (bank_cd + account_number) is already linked to a DIFFERENT Vendor's hotel.
+    const { data: existingAccountsWithNum, error: dupErr } = await supabase
+      .from('m_bank_account')
+      .select('bank_account_id, hotel_id')
+      .eq('bank_cd', String(validBank.code_cd))
+      .eq('account_number', accountNumber.trim())
+      .eq('is_verify', true);
+
+    if (dupErr) throwDatabaseError('Không thể kiểm tra trùng lặp số tài khoản.', dupErr);
+
+    if (existingAccountsWithNum && existingAccountsWithNum.length > 0) {
+      const linkedHotelIds = existingAccountsWithNum.map((item) => item.hotel_id).filter(Boolean);
+      if (linkedHotelIds.length > 0) {
+        const { data: conflictHotels, error: conflictErr } = await supabase
+          .from('m_hotel')
+          .select('hotel_id, owner_id')
+          .in('hotel_id', linkedHotelIds)
+          .neq('owner_id', vendorId)
+          .limit(1);
+
+        if (conflictErr) throwDatabaseError('Không thể đối chiếu chủ sở hữu tài khoản.', conflictErr);
+
+        if (conflictHotels && conflictHotels.length > 0) {
+          throw createError(
+            409,
+            'Số tài khoản ngân hàng này đã được liên kết bởi một chủ khách sạn (Vendor) khác trên hệ thống.'
+          );
+        }
+      }
+    }
+
+    // 5. Resolve BIN exclusively on server from authoritative VietQR data (never trust client bin_code)
     const vietQrBanks = await fetchVietQrBanks();
     const matched = matchVietQrBank(validBank.code_name, vietQrBanks);
-    resolvedBin = matched?.bin || null;
+    const resolvedBin = matched?.bin || null;
+
+    // 6. Insert single bank account record
+    const { data: createdAccount, error: insertBankErr } = await supabase
+      .from('m_bank_account')
+      .insert({
+        hotel_id: hotelId,
+        bank_cd: String(validBank.code_cd),
+        bin_code: resolvedBin,
+        bank_branch: bankBranch?.trim() || null,
+        account_number: accountNumber.trim(),
+        account_holder: accountHolder.trim().toUpperCase(),
+        is_verify: true,
+      })
+      .select('*')
+      .single();
+
+    if (insertBankErr) {
+      throwDatabaseError('Không thể lưu thông tin tài khoản ngân hàng.', insertBankErr);
+    }
+
+    // 7. Post-insert concurrency verification:
+    //    (a) Ensure only 1 active account per hotel survives
+    //    (b) Ensure no other Vendor concurrently linked the exact same (bank_cd + account_number)
+    const [{ data: activeHotelAccounts }, { data: activeSameNumberAccounts }] = await Promise.all([
+      supabase
+        .from('m_bank_account')
+        .select('bank_account_id, created_at')
+        .eq('hotel_id', hotelId)
+        .eq('is_verify', true)
+        .order('created_at', { ascending: true })
+        .order('bank_account_id', { ascending: true }),
+      supabase
+        .from('m_bank_account')
+        .select('bank_account_id, hotel_id, created_at')
+        .eq('bank_cd', String(validBank.code_cd))
+        .eq('account_number', accountNumber.trim())
+        .eq('is_verify', true)
+        .order('created_at', { ascending: true })
+        .order('bank_account_id', { ascending: true }),
+    ]);
+
+    const hotelWinnerId = activeHotelAccounts?.[0]?.bank_account_id;
+
+    if (
+      activeHotelAccounts &&
+      activeHotelAccounts.length > 1 &&
+      createdAccount.bank_account_id !== hotelWinnerId
+    ) {
+      await supabase
+        .from('m_bank_account')
+        .delete()
+        .eq('bank_account_id', createdAccount.bank_account_id);
+      throw createError(
+        409,
+        'Phát hiện yêu cầu liên kết trùng lặp đồng thời cho khách sạn này. Vui lòng tải lại trang.'
+      );
+    }
+
+    if (activeSameNumberAccounts && activeSameNumberAccounts.length > 1) {
+      const firstAccount = activeSameNumberAccounts[0];
+      if (firstAccount.bank_account_id !== createdAccount.bank_account_id) {
+        const { data: firstOwnerHotel } = await supabase
+          .from('m_hotel')
+          .select('owner_id')
+          .eq('hotel_id', firstAccount.hotel_id)
+          .maybeSingle();
+
+        if (firstOwnerHotel && firstOwnerHotel.owner_id !== vendorId) {
+          await supabase
+            .from('m_bank_account')
+            .delete()
+            .eq('bank_account_id', createdAccount.bank_account_id);
+          throw createError(
+            409,
+            'Số tài khoản ngân hàng này vừa được liên kết bởi một chủ khách sạn khác.'
+          );
+        }
+      }
+    }
+
+    return createdAccount;
+  } finally {
+    activeLinkingLocks.delete(hotelLockKey);
   }
-
-  // 6. Insert single bank account record
-  const { data: createdAccount, error: insertBankErr } = await supabase
-    .from('m_bank_account')
-    .insert({
-      hotel_id: hotelId,
-      bank_cd: String(validBank.code_cd),
-      bin_code: resolvedBin,
-      bank_branch: bankBranch?.trim() || null,
-      account_number: accountNumber.trim(),
-      account_holder: accountHolder.trim().toUpperCase(),
-      is_verify: true,
-    })
-    .select('*')
-    .single();
-
-  if (insertBankErr) {
-    throwDatabaseError('Không thể lưu thông tin tài khoản ngân hàng.', insertBankErr);
-  }
-
-  return createdAccount;
 };
 
 module.exports = {

@@ -52,9 +52,9 @@ const LinkedBankCard = ({ linkedBank, banks = [], onChangeClick }) => {
           </div>
         )}
         <div className="hw-info-row">
-          <span>Trạng thái xác thực</span>
+          <span>Trạng thái liên kết</span>
           <span style={{ color: linkedBank.is_verify ? '#059669' : '#d97706', fontWeight: 650 }}>
-            {linkedBank.is_verify ? 'Đã xác minh' : 'Chưa kích hoạt'}
+            {linkedBank.is_verify ? 'Đang hoạt động (Đã kích hoạt)' : 'Ngưng hoạt động'}
           </span>
         </div>
 

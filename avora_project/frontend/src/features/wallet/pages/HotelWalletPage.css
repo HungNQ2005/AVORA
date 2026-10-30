@@ -247,6 +247,94 @@
   color: #2563eb;
 }
 
+/* Quick-Reuse Saved Bank Account Box */
+.hw-saved-accounts-box {
+  background: #f8fafc;
+  border: 1px dashed #94a3b8;
+  border-radius: 11px;
+  padding: 0.9rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.hw-saved-accounts-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.81rem;
+  font-weight: 650;
+  color: #334155;
+}
+
+.hw-saved-accounts-header svg {
+  color: #0052cc;
+  flex-shrink: 0;
+}
+
+.hw-saved-accounts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hw-saved-account-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.85rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  transition: all 0.2s ease;
+  flex-wrap: wrap;
+}
+
+.hw-saved-account-item--active {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.hw-saved-account-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.hw-saved-account-info strong {
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.hw-saved-account-info span {
+  font-size: 0.76rem;
+  color: #64748b;
+}
+
+.hw-saved-account-btn {
+  padding: 0.4rem 0.85rem;
+  border-radius: 7px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0052cc;
+  font-size: 0.78rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+
+.hw-saved-account-btn:hover {
+  background: #eff6ff;
+  border-color: #93c5fd;
+}
+
+.hw-saved-account-item--active .hw-saved-account-btn {
+  background: #10b981;
+  border-color: #10b981;
+  color: #ffffff;
+}
+
 .hw-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -311,6 +399,28 @@
   font-weight: 400;
   color: #64748b;
   margin-top: 0.15rem;
+}
+
+.hw-field small.hw-field__error {
+  color: #dc2626;
+  font-weight: 550;
+}
+
+.hw-field input.hw-input--invalid,
+.hw-field select.hw-input--invalid {
+  border-color: #ef4444;
+  background-color: #fef2f2;
+}
+
+.hw-field input.hw-input--invalid:focus,
+.hw-field select.hw-input--invalid:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+}
+
+.hw-field input.hw-input--valid,
+.hw-field select.hw-input--valid {
+  border-color: #10b981;
 }
 
 /* Form Actions bar (Synchronized with .hotel-detail__form-actions) */

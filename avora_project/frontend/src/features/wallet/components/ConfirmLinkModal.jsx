@@ -7,8 +7,10 @@ const ConfirmLinkModal = ({
   onConfirm,
   hotelName,
   bankName,
+  binCode,
   accountNumber,
   accountHolder,
+  bankBranch,
   isLoading,
 }) => {
   // Close on Escape key
@@ -49,6 +51,12 @@ const ConfirmLinkModal = ({
               <strong>{bankName}</strong>
             </div>
           )}
+          {binCode && (
+            <div className="hw-modal-detail-row">
+              <span>Mã BIN</span>
+              <strong>{binCode}</strong>
+            </div>
+          )}
           <div className="hw-modal-detail-row">
             <span>Số tài khoản</span>
             <strong className="hw-modal-acc-num">{accountNumber}</strong>
@@ -57,6 +65,12 @@ const ConfirmLinkModal = ({
             <span>Chủ tài khoản</span>
             <strong>{accountHolder}</strong>
           </div>
+          {bankBranch && (
+            <div className="hw-modal-detail-row">
+              <span>Chi nhánh</span>
+              <strong>{bankBranch}</strong>
+            </div>
+          )}
         </div>
 
         {/* Security Warning */}

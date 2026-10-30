@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
+import { codeNameParser } from '../../../utils/codeNameParser';
 import {
   fetchWalletBanks,
   fetchWalletHotels,
@@ -12,6 +13,76 @@ import WalletBalanceCards from '../components/WalletBalanceCards';
 import LinkedBankCard from '../components/LinkedBankCard';
 import LinkBankForm from '../components/LinkBankForm';
 import './HotelWalletPage.css';
+
+const isSequentialDigits = (str) => {
+  if (!str || str.length < 6) return false;
+  const asc = '01234567890123456789';
+  const desc = '98765432109876543210';
+  return asc.includes(str) || desc.includes(str);
+};
+
+export const validateBankFormFields = (formData, banks = []) => {
+  const errors = {};
+
+  // 1. Validate bank_cd
+  const bankCd = String(formData.bank_cd ?? '').trim();
+  if (!bankCd) {
+    errors.bank_cd = 'Vui lòng chọn ngân hàng thụ hưởng.';
+  } else if (banks.length > 0 && !banks.some((b) => String(b.code_cd || b.bank_cd) === bankCd)) {
+    errors.bank_cd = 'Ngân hàng đã chọn không hợp lệ.';
+  }
+
+  // 2. Validate account_number
+  const accNum = String(formData.account_number ?? '').trim();
+  if (!accNum) {
+    errors.account_number = 'Vui lòng nhập số tài khoản ngân hàng.';
+  } else if (!/^\d{6,20}$/.test(accNum)) {
+    errors.account_number = `Số tài khoản phải gồm từ 6 đến 20 chữ số (hiện có: ${accNum.length}).`;
+  } else if (/^(\d)\1+$/.test(accNum)) {
+    errors.account_number = 'Số tài khoản không được trùng lặp toàn bộ một chữ số.';
+  } else if (isSequentialDigits(accNum)) {
+    errors.account_number = 'Số tài khoản không được là dãy số tiến hoặc lùi liên tiếp.';
+  } else if (/^0{6,}/.test(accNum)) {
+    errors.account_number = 'Số tài khoản không được bắt đầu bằng chuỗi số 0 liên tiếp.';
+  }
+
+  // 3. Validate account_holder
+  const holder = String(formData.account_holder ?? '').trim().replace(/\s+/g, ' ').toUpperCase();
+  if (!holder) {
+    errors.account_holder = 'Vui lòng nhập tên chủ tài khoản.';
+  } else if (holder.length < 5 || holder.length > 100) {
+    errors.account_holder = `Tên chủ tài khoản phải từ 5 đến 100 ký tự (hiện có: ${holder.length}).`;
+  } else if (!/^[A-Z\s]+$/.test(holder)) {
+    errors.account_holder = 'Tên chủ tài khoản chỉ được chứa chữ cái in hoa không dấu (A-Z).';
+  } else {
+    const words = holder.split(' ').filter(Boolean);
+    if (words.length < 2 || words.length > 10) {
+      errors.account_holder = 'Vui lòng nhập đầy đủ cả Họ và Tên (từ 2 đến 10 từ).';
+    } else if (words.some((w) => w.length < 2 || w.length > 25)) {
+      errors.account_holder = 'Mỗi từ trong tên chủ tài khoản phải dài từ 2 đến 25 ký tự.';
+    } else if (words.some((w) => /([A-Z])\1{2,}/.test(w))) {
+      errors.account_holder = 'Tên chủ tài khoản chứa các ký tự lặp lại bất thường.';
+    } else if (words.some((w) => !/[AEIOUY]/.test(w))) {
+      errors.account_holder = 'Mỗi từ trong tên chủ tài khoản phải là từ có nghĩa.';
+    }
+  }
+
+  // 4. Validate bank_branch (optional, validated if non-empty)
+  const rawBranch = String(formData.bank_branch ?? '').trim().replace(/\s+/g, ' ');
+  if (rawBranch) {
+    if (/<[^>]*>/.test(rawBranch)) {
+      errors.bank_branch = 'Chi nhánh ngân hàng không được chứa thẻ HTML.';
+    } else if (rawBranch.length < 3 || rawBranch.length > 150) {
+      errors.bank_branch = 'Tên chi nhánh ngân hàng phải từ 3 đến 150 ký tự.';
+    } else if (!/^[\p{L}\p{N}\s.,\-/()]+$/u.test(rawBranch)) {
+      errors.bank_branch = 'Chỉ được chứa chữ cái, chữ số và các dấu câu cơ bản (.,-/()).';
+    } else if ((rawBranch.match(/\p{L}/gu) || []).length < 2) {
+      errors.bank_branch = 'Tên chi nhánh ngân hàng phải chứa tối thiểu 2 chữ cái.';
+    }
+  }
+
+  return errors;
+};
 
 const HotelWalletPage = () => {
   const { user, loading: authLoading } = useAuth();
@@ -46,6 +117,7 @@ const HotelWalletPage = () => {
     account_holder: '',
     bank_branch: '',
   });
+  const [touchedFields, setTouchedFields] = useState({});
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
 
@@ -98,33 +170,71 @@ const HotelWalletPage = () => {
     };
   }, []);
 
-  // Load wallet & bank account for selected hotel
+  // Load wallet & bank account for selected hotel (with AbortController to prevent stale race conditions)
+  const abortControllerRef = useRef(null);
+
   const loadHotelWallet = useCallback((hotelId) => {
     if (!hotelId) return;
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setLoadingWallet(true);
     setPageError('');
 
-    fetchHotelWallet(hotelId)
+    fetchHotelWallet(hotelId, controller.signal)
       .then((data) => {
-        setWalletData(data);
+        if (!controller.signal.aborted) {
+          setWalletData(data);
+        }
       })
       .catch((err) => {
+        if (err.name === 'AbortError' || controller.signal.aborted) return;
         setPageError(err.message || 'Không thể tải thông tin ví của khách sạn.');
       })
       .finally(() => {
-        setLoadingWallet(false);
+        if (!controller.signal.aborted) {
+          setLoadingWallet(false);
+        }
       });
   }, []);
 
   useEffect(() => {
     if (selectedHotelId) {
+      setConfirmDialogOpen(false);
+      setTouchedFields({});
+      setFormData({
+        bank_cd: '',
+        bin_code: '',
+        account_number: '',
+        account_holder: '',
+        bank_branch: '',
+      });
       loadHotelWallet(selectedHotelId);
     }
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [selectedHotelId, loadHotelWallet]);
+
+  const fieldErrors = validateBankFormFields(formData, banks);
+
+  const handleFieldBlur = (e) => {
+    const { name } = e.target;
+    if (name) {
+      setTouchedFields((prev) => ({ ...prev, [name]: true }));
+    }
+  };
 
   const handleBankChange = (e) => {
     const selectedBankCd = e.target.value;
-    const foundBank = banks.find((b) => String(b.bank_cd) === String(selectedBankCd));
+    const foundBank = banks.find((b) => String(b.code_cd || b.bank_cd) === String(selectedBankCd));
+    setTouchedFields((prev) => ({ ...prev, bank_cd: true }));
+    setPageError('');
     setFormData((prev) => ({
       ...prev,
       bank_cd: selectedBankCd,
@@ -134,6 +244,8 @@ const HotelWalletPage = () => {
 
   const handleFormChange = (e) => {
     const { name, value } = e.target;
+    setTouchedFields((prev) => ({ ...prev, [name]: true }));
+    setPageError('');
     if (name === 'account_number') {
       // Chỉ nhận chữ số, tối đa 20 số
       const digitsOnly = value.replace(/\D/g, '').slice(0, 20);
@@ -155,34 +267,22 @@ const HotelWalletPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.bank_cd) {
-      setPageError('Vui lòng chọn ngân hàng thụ hưởng.');
-      return;
-    }
+    setTouchedFields({
+      bank_cd: true,
+      account_number: true,
+      account_holder: true,
+      bank_branch: true,
+    });
 
-    const trimmedAcc = formData.account_number.trim();
-    if (!trimmedAcc || !/^\d{6,20}$/.test(trimmedAcc)) {
-      setPageError('Số tài khoản ngân hàng phải gồm từ 6 đến 20 chữ số.');
-      return;
-    }
-    if (/^(\d)\1+$/.test(trimmedAcc)) {
-      setPageError('Số tài khoản không hợp lệ (không được trùng lặp toàn bộ một chữ số).');
-      return;
-    }
+    const currentErrors = validateBankFormFields(formData, banks);
+    const firstError =
+      currentErrors.bank_cd ||
+      currentErrors.account_number ||
+      currentErrors.account_holder ||
+      currentErrors.bank_branch;
 
-    const trimmedHolder = formData.account_holder.trim().replace(/\s+/g, ' ');
-    if (trimmedHolder.length < 5 || trimmedHolder.length > 100) {
-      setPageError('Tên chủ tài khoản phải từ 5 đến 100 ký tự.');
-      return;
-    }
-
-    const nameWords = trimmedHolder.split(' ').filter(Boolean);
-    if (nameWords.length < 2) {
-      setPageError('Tên chủ tài khoản phải bao gồm cả Họ và Tên (tối thiểu 2 từ).');
-      return;
-    }
-    if (nameWords.some((w) => w.length < 2)) {
-      setPageError('Mỗi từ trong tên chủ tài khoản phải có từ 2 ký tự trở lên.');
+    if (firstError) {
+      setPageError(firstError);
       return;
     }
 
@@ -198,13 +298,13 @@ const HotelWalletPage = () => {
     try {
       await linkHotelBankAccount(selectedHotelId, {
         bank_cd: formData.bank_cd,
-        bin_code: formData.bin_code || undefined,
         account_number: formData.account_number.trim(),
-        account_holder: formData.account_holder.trim().toUpperCase(),
-        bank_branch: formData.bank_branch?.trim() || undefined,
+        account_holder: formData.account_holder.trim().replace(/\s+/g, ' ').toUpperCase(),
+        bank_branch: formData.bank_branch?.trim().replace(/\s+/g, ' ') || undefined,
       });
 
       showToast('Liên kết tài khoản ngân hàng với ví khách sạn thành công!');
+      setTouchedFields({});
       setFormData({
         bank_cd: '',
         bin_code: '',
@@ -220,12 +320,33 @@ const HotelWalletPage = () => {
     }
   };
 
+  const handleQuickFillSavedAccount = (savedAcc) => {
+    if (!savedAcc) return;
+    const foundBank = banks.find((b) => String(b.code_cd || b.bank_cd) === String(savedAcc.bank_cd));
+    setFormData({
+      bank_cd: String(savedAcc.bank_cd || ''),
+      bin_code: savedAcc.bin_code || foundBank?.bin_code || '',
+      account_number: String(savedAcc.account_number || ''),
+      account_holder: String(savedAcc.account_holder || '').toUpperCase(),
+      bank_branch: String(savedAcc.bank_branch || ''),
+    });
+    setTouchedFields({
+      bank_cd: true,
+      account_number: true,
+      account_holder: true,
+      bank_branch: Boolean(savedAcc.bank_branch),
+    });
+    setPageError('');
+    showToast(`Đã điền nhanh thông tin tài khoản từ khách sạn "${savedAcc.source_hotel_name}".`);
+  };
+
   const handleRequestChangeBank = () => {
     showToast('Hệ thống hỗ trợ gửi ticket thay đổi tài khoản ngân hàng thụ hưởng đang được chuẩn bị. Vui lòng liên hệ Admin để đổi tài khoản.');
   };
 
   const selectedHotel = hotels.find((h) => h.hotel_id === selectedHotelId);
   const linkedBank = walletData?.bank_account;
+  const vendorSavedAccounts = walletData?.vendor_saved_accounts || [];
   const isLinked = Boolean(linkedBank && linkedBank.is_verify);
 
   return (
@@ -318,8 +439,13 @@ const HotelWalletPage = () => {
               <LinkBankForm
                 formData={formData}
                 banks={banks}
+                vendorSavedAccounts={vendorSavedAccounts}
+                onQuickFillSavedAccount={handleQuickFillSavedAccount}
+                fieldErrors={fieldErrors}
+                touchedFields={touchedFields}
                 onBankChange={handleBankChange}
                 onFormChange={handleFormChange}
+                onFieldBlur={handleFieldBlur}
                 onSubmit={handleSubmit}
                 isSubmitting={formSubmitting}
               />
@@ -338,8 +464,10 @@ const HotelWalletPage = () => {
           const b = banks.find((item) => String(item.code_cd || item.bank_cd) === String(formData.bank_cd));
           return b ? `${codeNameParser(b.code_name)} (${b.code_name})` : '';
         })()}
+        binCode={formData.bin_code}
         accountNumber={formData.account_number}
-        accountHolder={formData.account_holder}
+        accountHolder={formData.account_holder.trim().replace(/\s+/g, ' ').toUpperCase()}
+        bankBranch={formData.bank_branch?.trim().replace(/\s+/g, ' ')}
         isLoading={formSubmitting}
       />
     </div>
