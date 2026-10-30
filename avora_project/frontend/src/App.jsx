@@ -21,6 +21,8 @@ import RefundPolicyManagementPage from './features/refund_policies/pages/RefundP
 import RefundPolicyDetailPage from './features/refund_policies/pages/RefundPolicyDetailPage';
 import CommissionPolicyManagementPage from './features/commission_policies/pages/CommissionPolicyManagementPage';
 import CommissionPolicyDetailPage from './features/commission_policies/pages/CommissionPolicyDetailPage';
+import DisbursementManagementPage from './features/disbursements/pages/DisbursementManagementPage';
+import VendorDisbursementPage from './features/disbursements/pages/VendorDisbursementPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
@@ -136,6 +138,21 @@ const VendorRoute = ({ children }) => {
   if (!isVendor) return <Navigate to="/forbidden" replace />;
 
   return children;
+};
+
+const DisbursementRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  if (['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4') return <VendorDisbursementPage />;
+  if (['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3') return children;
+
+  return <Navigate to="/forbidden" replace />;
 };
 
 /**
@@ -378,6 +395,14 @@ function App() {
               }
             />
             <Route
+              path="disbursements"
+              element={
+                <DisbursementRoute>
+                  <DisbursementManagementPage />
+                </DisbursementRoute>
+              }
+            />
+            <Route
               path="users"
               element={
                 <AdminRoute>
@@ -427,6 +452,7 @@ function App() {
           <Route path="/refund-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/refund-policies" />} />
           <Route path="/commission-policies" element={<Navigate to="/dashboard/commission-policies" replace />} />
           <Route path="/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
+          <Route path="/disbursements" element={<Navigate to="/dashboard/disbursements" replace />} />
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
 

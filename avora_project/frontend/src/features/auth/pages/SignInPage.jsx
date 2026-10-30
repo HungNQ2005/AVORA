@@ -52,6 +52,15 @@ const AlertCircleIcon = () => (
   </svg>
 );
 
+const getPostLoginPath = (user) => {
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  return ['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4'
+    ? '/dashboard/disbursements'
+    : '/';
+};
+
 /**
  * Dedicated Login Screen component in the Screen Flow architecture.
  * Reuses existing merged Login logic and authentication state.
@@ -66,10 +75,10 @@ const SignInPage = () => {
   const activatedParam = searchParams.get('activated');
   const emailParam = searchParams.get('email');
 
-  // If already logged in, redirect straight to home page
+  // Vendors land on their disbursement workflow after authentication.
   useEffect(() => {
     if (user) {
-      navigate('/', { replace: true });
+      navigate(getPostLoginPath(user), { replace: true });
     }
   }, [user, navigate]);
 
@@ -123,7 +132,7 @@ const SignInPage = () => {
         localStorage.removeItem('avora_remembered_email');
       }
       login(res.data.token, res.data.user);
-      navigate('/', { replace: true });
+      navigate(getPostLoginPath(res.data.user), { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || '';
 

@@ -1,0 +1,564 @@
+/* Disbursement Management Page Styles */
+.disbursement-page {
+  padding: 24px 32px;
+  background-color: #F8FAFC;
+  min-height: calc(100vh - 70px);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Toast */
+.disbursement-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideInRight 0.25s ease-out;
+}
+
+.disbursement-toast--success {
+  background-color: #065F46;
+  color: #FFFFFF;
+}
+
+.disbursement-toast--error {
+  background-color: #991B1B;
+  color: #FFFFFF;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Hero Header */
+.disbursement-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  background: linear-gradient(135deg, #003580 0%, #00224F 100%);
+  padding: 28px 32px;
+  border-radius: 12px;
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(0, 53, 128, 0.15);
+}
+
+.disbursement-hero__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.disbursement-role-badge {
+  background-color: #FBBE08;
+  color: #0F172A;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.disbursement-hero__title {
+  font-size: 24px;
+  font-weight: 800;
+  color: #FFFFFF;
+  margin: 0;
+}
+
+.disbursement-hero__desc {
+  color: #CBD5E1;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 650px;
+}
+
+.disbursement-hero__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.disbursement-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+}
+
+.disbursement-btn--primary {
+  background-color: #0066FF;
+  color: #FFFFFF;
+}
+
+.disbursement-btn--primary:hover:not(:disabled) {
+  background-color: #0052CC;
+}
+
+.disbursement-btn--secondary {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.disbursement-btn--secondary:hover:not(:disabled) {
+  background-color: rgba(255, 255, 255, 0.25);
+}
+
+.disbursement-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Metric Stats Grid */
+.disbursement-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.disbursement-stat-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  padding: 18px 20px;
+  border: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease;
+}
+
+.disbursement-stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.disbursement-stat-card__icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.disbursement-stat-card__icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.disbursement-stat-card__icon--pending {
+  background-color: #FEF3C7;
+  color: #D97706;
+}
+
+.disbursement-stat-card__icon--payment {
+  background-color: #DBEAFE;
+  color: #2563EB;
+}
+
+.disbursement-stat-card__icon--settled {
+  background-color: #D1FAE5;
+  color: #059669;
+}
+
+.disbursement-stat-card__icon--total {
+  background-color: #F1F5F9;
+  color: #475569;
+}
+
+.disbursement-stat-card__info {
+  display: flex;
+  flex-direction: column;
+}
+
+.disbursement-stat-card__label {
+  font-size: 12.5px;
+  color: #64748B;
+  font-weight: 500;
+}
+
+.disbursement-stat-card__value {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 4px 0 2px 0;
+}
+
+.disbursement-stat-card__sub {
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+/* Main Card */
+.disbursement-main-card {
+  background: #FFFFFF;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+/* Tabs Bar */
+.disbursement-tabs-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #E2E8F0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.disbursement-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.disbursement-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  background-color: #FFFFFF;
+  color: #475569;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.disbursement-tab:hover {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+}
+
+.disbursement-tab--active {
+  background-color: #003580 !important;
+  color: #FFFFFF !important;
+  border-color: #003580 !important;
+}
+
+.disbursement-tab__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* Search Box */
+.disbursement-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 320px;
+}
+
+.disbursement-search__icon {
+  position: absolute;
+  left: 12px;
+  width: 16px;
+  height: 16px;
+  color: #94A3B8;
+  pointer-events: none;
+}
+
+.disbursement-search__input {
+  width: 100%;
+  padding: 8px 32px 8px 36px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  font-size: 13.5px;
+  color: #1E293B;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.disbursement-search__input:focus {
+  border-color: #0066FF;
+}
+
+.disbursement-search__clear {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+/* Table */
+.disbursement-table-container {
+  overflow-x: auto;
+}
+
+.disbursement-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.disbursement-table th {
+  background-color: #F8FAFC;
+  color: #475569;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 18px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.disbursement-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+
+.disbursement-table tr:hover td {
+  background-color: #F8FAFC;
+}
+
+/* Table Cells */
+.disbursement-hotel-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.disbursement-hotel-name {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 14px;
+}
+
+.disbursement-hotel-owner {
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.disbursement-hotel-email {
+  font-size: 11.5px;
+  color: #94A3B8;
+}
+
+.disbursement-bank-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.disbursement-bank-name {
+  font-weight: 600;
+  color: #003580;
+  font-size: 13.5px;
+}
+
+.disbursement-bank-acc {
+  font-size: 13px;
+  color: #1E293B;
+}
+
+.disbursement-bank-holder {
+  font-size: 12px;
+  color: #64748B;
+}
+
+.disbursement-amount-cell {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.disbursement-amount {
+  font-size: 16px;
+  font-weight: 800;
+  color: #059669;
+}
+
+.disbursement-currency {
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748B;
+}
+
+.disbursement-date-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.disbursement-ref {
+  font-size: 11px;
+  color: #0284C7;
+  font-family: monospace;
+}
+
+/* Badges */
+.disbursement-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.disbursement-badge--warning {
+  background-color: #FEF3C7;
+  color: #B45309;
+}
+
+.disbursement-badge--info {
+  background-color: #DBEAFE;
+  color: #1D4ED8;
+}
+
+.disbursement-badge--success {
+  background-color: #D1FAE5;
+  color: #065F46;
+}
+
+.disbursement-badge--error {
+  background-color: #FEE2E2;
+  color: #991B1B;
+}
+
+.disbursement-badge--default {
+  background-color: #F1F5F9;
+  color: #475569;
+}
+
+/* Actions */
+.disbursement-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.disbursement-action-btn {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+}
+
+.disbursement-action-btn--approve {
+  background-color: #003580;
+  color: #FFFFFF;
+}
+
+.disbursement-action-btn--approve:hover:not(:disabled) {
+  background-color: #00224F;
+}
+
+.disbursement-action-btn--reject {
+  background-color: #FEE2E2;
+  color: #991B1B;
+  border: 1px solid #FECACA;
+}
+
+.disbursement-action-btn--reject:hover:not(:disabled) {
+  background-color: #FCA5A5;
+}
+
+.disbursement-action-btn--settle {
+  background-color: #059669;
+  color: #FFFFFF;
+}
+
+.disbursement-action-btn--settle:hover:not(:disabled) {
+  background-color: #047857;
+}
+
+.disbursement-settled-text {
+  font-size: 12.5px;
+  color: #059669;
+  font-weight: 700;
+}
+
+.disbursement-rejected-text {
+  font-size: 12.5px;
+  color: #DC2626;
+  font-weight: 600;
+}
+
+/* States */
+.disbursement-loading,
+.disbursement-error,
+.disbursement-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  gap: 12px;
+  text-align: center;
+}
+
+.disbursement-empty h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1E293B;
+  margin: 0;
+}
+
+.disbursement-empty p {
+  font-size: 13.5px;
+  color: #64748B;
+  margin: 0;
+}
+
+.disbursement-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #E2E8F0;
+  border-top-color: #003580;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.spin {
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+

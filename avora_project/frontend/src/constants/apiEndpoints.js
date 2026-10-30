@@ -36,8 +36,14 @@ export const API_ENDPOINTS = {
   BOOKING_DATES: (id) => `${API_BASE_URL}/api/bookings/${id}/dates`,
   PAYMENT_CREATE_QR: `${API_BASE_URL}/api/payment/create-qr`,
   PAYMENT_STATUS: (bookingId) => `${API_BASE_URL}/api/payment/status/${bookingId}`,
+  DISBURSEMENTS_BUSINESS: `${API_BASE_URL}/api/business/disbursements`,
+  DISBURSEMENT_APPROVE: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/approve`,
+  DISBURSEMENT_SETTLE: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/settle`,
+  DISBURSEMENT_REJECT: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/reject`,
+  DISBURSEMENTS_VENDOR_OVERVIEW: `${API_BASE_URL}/api/vendor/disbursements/overview`,
+  DISBURSEMENTS_VENDOR_HISTORY: `${API_BASE_URL}/api/vendor/disbursements/history`,
+  DISBURSEMENTS_VENDOR_REQUEST: `${API_BASE_URL}/api/vendor/disbursements/request`,
   WISHLIST: `${API_BASE_URL}/api/wishlist`,
   WATCHLIST: `${API_BASE_URL}/api/watchlist`,
   WISHLIST_CHECK: (id) => `${API_BASE_URL}/api/wishlist/check/${id}`,
 };
-
