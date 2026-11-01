@@ -1,118 +1,112 @@
 import React, { useState } from 'react';
+import {
+  CloseIcon,
+  AlertTriangleIcon,
+} from '../../../common/components/icons';
 
-const DisbursementRejectModal = ({ isOpen, onClose, onConfirm, request, loading }) => {
+const formatCurrency = (val) => `${Number(val || 0).toLocaleString('vi-VN')} VND`;
+
+const DisbursementRejectModal = ({
+  isOpen,
+  onClose,
+  onConfirm,
+  request,
+  loading,
+}) => {
   const [reason, setReason] = useState('');
 
   if (!isOpen || !request) return null;
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (!reason.trim()) return;
     onConfirm({ reason: reason.trim() });
   };
 
   return (
-    <div className="cp-modal-overlay">
-      <div className="cp-modal" style={{ maxWidth: '480px' }}>
-        <div className="cp-modal__header">
-          <div className="cp-modal__title-group">
-            <h2 className="cp-modal__title" style={{ color: '#DC2626' }}>
-              Từ chối yêu cầu giải ngân
-            </h2>
-            <p className="cp-modal__subtitle">
-              Số tiền sẽ được tự động hoàn trả về số dư khả dụng của khách sạn
-            </p>
+    <div
+      className="disbursement-modal-overlay"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !loading) onClose();
+      }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reject-modal-title"
+    >
+      <div className="disbursement-modal" style={{ maxWidth: '500px' }}>
+        {/* Modal Header */}
+        <div className="disbursement-modal__header" style={{ background: '#991B1B', borderBottom: '2px solid #F87171' }}>
+          <div className="disbursement-modal__header-info">
+            <div className="disbursement-modal__icon" style={{ background: 'rgba(255, 255, 255, 0.2)', color: '#FFFFFF' }}>
+              <AlertTriangleIcon size={20} />
+            </div>
+            <div>
+              <h2 id="reject-modal-title" className="disbursement-modal__title">
+                Từ chối yêu cầu giải ngân
+              </h2>
+              <p className="disbursement-modal__subtitle" style={{ color: '#FEE2E2' }}>
+                Hoàn trả toàn bộ số tiền về ví số dư khả dụng của khách sạn
+              </p>
+            </div>
           </div>
           <button
             type="button"
-            className="cp-modal__close-btn"
+            className="disbursement-modal__close-btn"
             onClick={onClose}
             disabled={loading}
+            aria-label="Đóng"
           >
-            ✕
+            <CloseIcon size={18} />
           </button>
         </div>
 
+        {/* Modal Body */}
         <form onSubmit={handleSubmit}>
-          <div className="cp-modal__body" style={{ padding: '20px' }}>
-            <div
-              style={{
-                backgroundColor: '#FEF2F2',
-                border: '1px solid #FECACA',
-                borderRadius: '8px',
-                padding: '14px',
-                marginBottom: '16px',
-                color: '#991B1B',
-                fontSize: '13.5px',
-                lineHeight: '1.5',
-              }}
-            >
-              Bạn đang từ chối yêu cầu giải ngân số tiền{' '}
-              <strong>{Number(request.amount).toLocaleString('vi-VN')} VND</strong> của khách sạn{' '}
-              <strong>{request.hotel_name}</strong>. Khi từ chối, toàn bộ số tiền này sẽ được hoàn
-              lại ngay lập tức vào ví khách sạn.
+          <div className="disbursement-modal__body">
+            {/* Warning notice */}
+            <div className="disbursement-alert-box disbursement-alert-box--error">
+              <AlertTriangleIcon size={18} className="disbursement-alert-box__icon" />
+              <div className="disbursement-alert-box__content">
+                Bạn đang từ chối yêu cầu giải ngân số tiền{' '}
+                <strong>{formatCurrency(request.amount)}</strong> của khách sạn{' '}
+                <strong>{request.hotel_name}</strong>. Khi từ chối, toàn bộ số tiền này sẽ được hoàn lại ngay lập tức vào ví khách sạn.
+              </div>
             </div>
 
-            <div className="cp-form-group">
-              <label className="cp-form-label" style={{ fontWeight: '600', color: '#334155' }}>
-                Lý do từ chối (bắt buộc)
+            {/* Input reason */}
+            <div className="disbursement-form-group">
+              <label htmlFor="reject-reason" className="disbursement-form-label">
+                Lý do từ chối <span className="disbursement-required">*</span>
               </label>
               <textarea
-                className="cp-form-input"
+                id="reject-reason"
+                className="disbursement-form-textarea"
                 rows={3}
                 placeholder="VD: Sai thông tin số tài khoản thụ hưởng, nghi vấn trùng lặp giao dịch..."
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 required
-                style={{
-                  width: '100%',
-                  padding: '9px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #CBD5E1',
-                }}
               />
             </div>
           </div>
 
-          <div
-            className="cp-modal__footer"
-            style={{
-              padding: '16px 20px',
-              borderTop: '1px solid #E2E8F0',
-              display: 'flex',
-              justifyContent: 'flex-end',
-              gap: '10px',
-            }}
-          >
+          {/* Modal Footer */}
+          <div className="disbursement-modal__footer">
             <button
               type="button"
-              className="cp-btn cp-btn--secondary"
+              className="disbursement-btn disbursement-btn--outline"
               onClick={onClose}
               disabled={loading}
-              style={{
-                padding: '9px 16px',
-                borderRadius: '6px',
-                border: '1px solid #CBD5E1',
-                backgroundColor: '#FFF',
-                cursor: 'pointer',
-              }}
             >
-              Đóng
+              Hủy bỏ
             </button>
             <button
               type="submit"
-              className="cp-btn cp-btn--danger"
+              className="disbursement-btn disbursement-btn--danger"
               disabled={loading || !reason.trim()}
-              style={{
-                padding: '9px 20px',
-                borderRadius: '6px',
-                backgroundColor: '#DC2626',
-                color: '#FFF',
-                border: 'none',
-                fontWeight: '600',
-                cursor: loading || !reason.trim() ? 'not-allowed' : 'pointer',
-              }}
             >
-              {loading ? 'Đang xử lý...' : 'Xác nhận từ chối'}
+              <CloseIcon size={15} />
+              <span>{loading ? 'Đang xử lý...' : 'Xác nhận từ chối'}</span>
             </button>
           </div>
         </form>
@@ -122,4 +116,3 @@ const DisbursementRejectModal = ({ isOpen, onClose, onConfirm, request, loading 
 };
 
 export default DisbursementRejectModal;
-

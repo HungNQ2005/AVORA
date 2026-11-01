@@ -483,12 +483,12 @@
   overflow: hidden;
 }
 
-/* Toolbar: Tabs & Search */
+/* Toolbar: Status Tabs */
 .vd-toolbar {
   padding: 1rem 1.25rem;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 1rem;
   border-bottom: 1px solid #e2e8f0;
   flex-wrap: wrap;
@@ -560,57 +560,6 @@
 .vd-tab--active .vd-tab__count--success {
   background: #bbf7d0;
   color: #14532d;
-}
-
-/* Search input */
-.vd-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.vd-search__icon {
-  position: absolute;
-  left: 0.75rem;
-  color: #94a3b8;
-  pointer-events: none;
-}
-
-.vd-search__input {
-  padding: 0.48rem 2rem 0.48rem 2.25rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 0.84rem;
-  color: #0f172a;
-  background: #ffffff;
-  width: 260px;
-  transition: all 0.15s ease;
-  outline: none;
-}
-
-.vd-search__input:focus {
-  border-color: #003580;
-  box-shadow: 0 0 0 3px rgba(0, 53, 128, 0.1);
-  width: 300px;
-}
-
-.vd-search__clear {
-  position: absolute;
-  right: 0.6rem;
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px;
-  border-radius: 50%;
-}
-
-.vd-search__clear:hover {
-  color: #0f172a;
-  background: #f1f5f9;
 }
 
 /* ─── Table ──────────────────────────────────────────────────────────────── */
@@ -717,14 +666,6 @@
   white-space: nowrap;
 }
 
-/* Reference Cell */
-.vd-ref-cell {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.8rem;
-  color: #64748b;
-  white-space: nowrap;
-}
-
 /* Status Badges: Consolidated "Đợi giải ngân" vs "Giải ngân" */
 .vd-status-badge {
   display: inline-flex;
@@ -753,6 +694,17 @@
 
 .vd-status-badge--warning .vd-status-badge__dot {
   background: #d97706;
+}
+
+/* "Đã phê duyệt" */
+.vd-status-badge--info {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.vd-status-badge--info .vd-status-badge__dot {
+  background: #2563eb;
 }
 
 /* "Giải ngân" */

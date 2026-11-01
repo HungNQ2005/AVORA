@@ -6,7 +6,6 @@ import {
 } from '../../../services/disbursementApi';
 import {
   RefreshCwIcon,
-  SearchIcon,
   PlusIcon,
   CreditCardIcon,
   BuildingIcon,
@@ -43,9 +42,8 @@ const VendorDisbursementPage = () => {
   const [reloadKey, setReloadKey] = useState(0);
   const [requestFormOpen, setRequestFormOpen] = useState(false);
 
-  // Filters & Search
+  // Status filter tabs
   const [activeTab, setActiveTab] = useState('ALL'); // ALL | PENDING | COMPLETED
-  const [searchTerm, setSearchTerm] = useState('');
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -122,12 +120,22 @@ const VendorDisbursementPage = () => {
 
   /**
    * Status mapping requirement:
-   * Show request information and two statuses: "Đợi giải ngân" and "Giải ngân"
+   * Show request information with updated statuses:
+   * 1: "Đợi giải ngân" (Chờ duyệt)
+   * 2: "Đã phê duyệt" (Approved - Chờ thanh toán)
+   * 4: "Giải ngân" (Completed)
+   * 5: "Bị từ chối" (Rejected)
    */
   const getRequestStatus = (request) => {
     const code = String(request.status_cd);
-    if (['1', '2', '3'].includes(code)) {
+    if (code === '1') {
       return { label: 'Đợi giải ngân', color: 'warning', code: 'PENDING' };
+    }
+    if (code === '2') {
+      return { label: 'Đã phê duyệt', color: 'info', code: 'PENDING' };
+    }
+    if (code === '3') {
+      return { label: 'Đang xử lý', color: 'info', code: 'PENDING' };
     }
     if (code === '4') {
       return { label: 'Giải ngân', color: 'success', code: 'COMPLETED' };
@@ -149,31 +157,15 @@ const VendorDisbursementPage = () => {
     setError('');
   };
 
-  // Filtered requests based on activeTab and searchTerm
+  // Filter requests by the selected status tab
   const filteredHistory = useMemo(() => {
     return history.filter((req) => {
       const status = getRequestStatus(req);
       if (activeTab === 'PENDING' && status.code !== 'PENDING') return false;
       if (activeTab === 'COMPLETED' && status.code !== 'COMPLETED') return false;
-
-      if (searchTerm.trim()) {
-        const term = searchTerm.trim().toLowerCase();
-        const bankName = (req.bank_info?.bank_name || '').toLowerCase();
-        const accNumber = (req.bank_info?.account_number || '').toLowerCase();
-        const accHolder = (req.bank_info?.account_holder || '').toLowerCase();
-        const ref = (req.gateway_transaction_ref || '').toLowerCase();
-        const id = (req.withdrawal_id || '').toLowerCase();
-        return (
-          bankName.includes(term) ||
-          accNumber.includes(term) ||
-          accHolder.includes(term) ||
-          ref.includes(term) ||
-          id.includes(term)
-        );
-      }
       return true;
     });
-  }, [history, activeTab, searchTerm]);
+  }, [history, activeTab]);
 
   const tabCounts = useMemo(() => {
     return {
@@ -308,7 +300,7 @@ const VendorDisbursementPage = () => {
 
           {/* Below: Display a list/table of existing disbursement requests from the database */}
           <section className="vd-main-card">
-            {/* Toolbar: Filter tabs & Search */}
+            {/* Status filter tabs */}
             <div className="vd-toolbar">
               <div className="vd-tabs">
                 <button
@@ -337,26 +329,6 @@ const VendorDisbursementPage = () => {
                 </button>
               </div>
 
-              <div className="vd-search">
-                <SearchIcon size={15} className="vd-search__icon" />
-                <input
-                  type="text"
-                  className="vd-search__input"
-                  placeholder="Tìm theo ngân hàng, STK, người nhận..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                {searchTerm && (
-                  <button
-                    type="button"
-                    className="vd-search__clear"
-                    onClick={() => setSearchTerm('')}
-                    title="Xóa tìm kiếm"
-                  >
-                    <CloseIcon size={14} />
-                  </button>
-                )}
-              </div>
             </div>
 
             {/* Table Content */}
@@ -370,11 +342,7 @@ const VendorDisbursementPage = () => {
                 <div className="vd-empty-card">
                   <CreditCardIcon size={44} className="vd-empty-icon" />
                   <h3>Chưa có yêu cầu giải ngân nào</h3>
-                  <p>
-                    {searchTerm
-                      ? `Không tìm thấy yêu cầu nào khớp với từ khóa "${searchTerm}".`
-                      : 'Khi bạn gửi yêu cầu rút tiền từ số dư ví, danh sách sẽ hiển thị tại đây.'}
-                  </p>
+                  <p>Khi bạn gửi yêu cầu rút tiền từ số dư ví, danh sách sẽ hiển thị tại đây.</p>
                 </div>
               ) : (
                 <table className="vd-table">
@@ -385,7 +353,6 @@ const VendorDisbursementPage = () => {
                       <th>Thông tin nhận tiền</th>
                       <th>Số tiền yêu cầu</th>
                       <th>Trạng thái</th>
-                      <th>Mã đối soát</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -426,11 +393,6 @@ const VendorDisbursementPage = () => {
                             <span className={`vd-status-badge vd-status-badge--${status.color}`}>
                               <span className="vd-status-badge__dot"></span>
                               {status.label}
-                            </span>
-                          </td>
-                          <td>
-                            <span className="vd-ref-cell">
-                              {request.gateway_transaction_ref || '—'}
                             </span>
                           </td>
                         </tr>

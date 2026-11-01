@@ -1,59 +1,103 @@
-/* Disbursement Management Page Styles */
+/* ═══════════════════════════════════════════════════════════════════════════
+   AVORA ENTERPRISE DESIGN SYSTEM: BUSINESS MANAGER DISBURSEMENT APPROVAL
+   Unified styling synchronized with Hotel Management, Rooms, Coupons, and Policies.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─── Page Container ──────────────────────────────────────────────────────── */
 .disbursement-page {
-  padding: 24px 32px;
+  padding: 1.5rem 2rem;
+  max-width: 1440px;
+  margin: 0 auto;
   background-color: #F8FAFC;
   min-height: calc(100vh - 70px);
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 1.5rem;
+  box-sizing: border-box;
 }
 
-/* Toast */
+@media (max-width: 768px) {
+  .disbursement-page {
+    padding: 1rem;
+    gap: 1.25rem;
+  }
+}
+
+/* ─── Toast Feedback ──────────────────────────────────────────────────────── */
 .disbursement-toast {
   position: fixed;
-  top: 24px;
-  right: 24px;
+  top: 1.5rem;
+  right: 1.5rem;
   z-index: 9999;
-  padding: 12px 20px;
+  padding: 0.85rem 1.25rem;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  animation: slideInRight 0.25s ease-out;
+  font-size: 0.88rem;
+  font-weight: 600;
+  box-shadow: 0 10px 25px -5px rgba(11, 30, 63, 0.15), 0 8px 10px -6px rgba(11, 30, 63, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  animation: disbursementToastSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .disbursement-toast--success {
-  background-color: #065F46;
-  color: #FFFFFF;
+  background-color: #FFFFFF;
+  color: #065F46;
+  border: 1px solid #E2E8F0;
+  border-left: 4px solid #10B981;
 }
 
 .disbursement-toast--error {
-  background-color: #991B1B;
-  color: #FFFFFF;
+  background-color: #FFFFFF;
+  color: #991B1B;
+  border: 1px solid #E2E8F0;
+  border-left: 4px solid #EF4444;
 }
 
-@keyframes slideInRight {
+@keyframes disbursementToastSlide {
   from {
-    transform: translateX(100%);
+    transform: translateX(30px) scale(0.96);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateX(0) scale(1);
     opacity: 1;
   }
 }
 
-/* Hero Header */
+/* ─── Breadcrumb ──────────────────────────────────────────────────────────── */
+.disbursement-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: #64748B;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.disbursement-breadcrumb__sep {
+  color: #CBD5E1;
+  font-size: 0.72rem;
+}
+
+.disbursement-breadcrumb__active {
+  color: #003580;
+  font-weight: 700;
+}
+
+/* ─── Hero Header ─────────────────────────────────────────────────────────── */
 .disbursement-hero {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 20px;
   background: linear-gradient(135deg, #003580 0%, #00224F 100%);
-  padding: 28px 32px;
+  padding: 1.75rem 2rem;
   border-radius: 12px;
   color: #FFFFFF;
-  box-shadow: 0 4px 14px rgba(0, 53, 128, 0.15);
+  box-shadow: 0 4px 16px rgba(0, 53, 128, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .disbursement-hero__title-row {
@@ -61,6 +105,7 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 8px;
+  flex-wrap: wrap;
 }
 
 .disbursement-role-badge {
@@ -74,15 +119,16 @@
 }
 
 .disbursement-hero__title {
-  font-size: 24px;
+  font-size: 1.65rem;
   font-weight: 800;
   color: #FFFFFF;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .disbursement-hero__desc {
   color: #CBD5E1;
-  font-size: 14px;
+  font-size: 0.85rem;
   line-height: 1.5;
   margin: 0;
   max-width: 650px;
@@ -91,82 +137,128 @@
 .disbursement-hero__actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
 .disbursement-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  padding: 10px 18px;
+  padding: 0.55rem 1rem;
   border-radius: 8px;
-  font-size: 13.5px;
+  font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   border: none;
+  white-space: nowrap;
 }
 
 .disbursement-btn--primary {
-  background-color: #0066FF;
-  color: #FFFFFF;
+  background-color: #FBBE08;
+  color: #0F172A;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(251, 190, 8, 0.35);
 }
 
 .disbursement-btn--primary:hover:not(:disabled) {
-  background-color: #0052CC;
+  background-color: #E6AC07;
+  transform: translateY(-1px);
 }
 
 .disbursement-btn--secondary {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.12);
   color: #FFFFFF;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 .disbursement-btn--secondary:hover:not(:disabled) {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.disbursement-btn--outline {
+  background-color: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #334155;
+}
+
+.disbursement-btn--outline:hover:not(:disabled) {
+  background-color: #F8FAFC;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.disbursement-btn--danger {
+  background-color: #DC2626;
+  color: #FFFFFF;
+}
+
+.disbursement-btn--danger:hover:not(:disabled) {
+  background-color: #B91C1C;
+}
+
+.disbursement-btn--success {
+  background-color: #059669;
+  color: #FFFFFF;
+}
+
+.disbursement-btn--success:hover:not(:disabled) {
+  background-color: #047857;
 }
 
 .disbursement-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  transform: none !important;
 }
 
-/* Metric Stats Grid */
+/* ─── Metric Stat Cards ──────────────────────────────────────────────────── */
 .disbursement-stats-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  gap: 1rem;
+}
+
+@media (max-width: 1024px) {
+  .disbursement-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .disbursement-stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .disbursement-stat-card {
-  background: #FFFFFF;
-  border-radius: 12px;
-  padding: 18px 20px;
+  background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 1.15rem 1.25rem;
   display: flex;
-  align-items: center;
-  gap: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: transform 0.2s ease;
+  align-items: flex-start;
+  gap: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .disbursement-stat-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .disbursement-stat-card__icon {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-}
-
-.disbursement-stat-card__icon svg {
-  width: 24px;
-  height: 24px;
 }
 
 .disbursement-stat-card__icon--pending {
@@ -186,169 +278,163 @@
 
 .disbursement-stat-card__icon--total {
   background-color: #F1F5F9;
-  color: #475569;
+  color: #003580;
 }
 
 .disbursement-stat-card__info {
   display: flex;
   flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
 }
 
 .disbursement-stat-card__label {
-  font-size: 12.5px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: #64748B;
-  font-weight: 500;
 }
 
 .disbursement-stat-card__value {
-  font-size: 18px;
+  font-size: 1.35rem;
   font-weight: 800;
   color: #0F172A;
-  margin: 4px 0 2px 0;
+  margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .disbursement-stat-card__sub {
-  font-size: 11.5px;
+  font-size: 0.74rem;
   color: #94A3B8;
 }
 
-/* Main Card */
+/* ─── Main Card: Tabs & Table ────────────────────────────────────────────── */
 .disbursement-main-card {
-  background: #FFFFFF;
-  border-radius: 12px;
+  background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   overflow: hidden;
 }
 
-/* Tabs Bar */
 .disbursement-tabs-bar {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
-  padding: 16px 20px;
+  padding: 1rem 1.25rem;
   border-bottom: 1px solid #E2E8F0;
+  gap: 1rem;
   flex-wrap: wrap;
-  gap: 12px;
+  background-color: #FFFFFF;
 }
 
 .disbursement-tabs {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .disbursement-tab {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: 1px solid #CBD5E1;
-  background-color: #FFFFFF;
+  gap: 0.5rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 20px;
+  background-color: #F1F5F9;
+  border: 1px solid transparent;
   color: #475569;
-  font-size: 13.5px;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .disbursement-tab:hover {
-  background-color: #F8FAFC;
-  border-color: #94A3B8;
+  background-color: #E2E8F0;
+  color: #0F172A;
 }
 
 .disbursement-tab--active {
-  background-color: #003580 !important;
-  color: #FFFFFF !important;
-  border-color: #003580 !important;
+  background-color: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #003580;
+  font-weight: 700;
 }
 
 .disbursement-tab__count {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 11px;
+  padding: 0.08rem 0.45rem;
+  border-radius: 12px;
+  font-size: 0.72rem;
   font-weight: 700;
 }
 
-/* Search Box */
-.disbursement-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 320px;
-}
-
-.disbursement-search__icon {
-  position: absolute;
-  left: 12px;
-  width: 16px;
-  height: 16px;
-  color: #94A3B8;
-  pointer-events: none;
-}
-
-.disbursement-search__input {
-  width: 100%;
-  padding: 8px 32px 8px 36px;
-  border-radius: 8px;
-  border: 1px solid #CBD5E1;
-  font-size: 13.5px;
-  color: #1E293B;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.disbursement-search__input:focus {
-  border-color: #0066FF;
-}
-
-.disbursement-search__clear {
-  position: absolute;
-  right: 10px;
-  background: none;
-  border: none;
-  color: #94A3B8;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-/* Table */
+/* ─── Table ──────────────────────────────────────────────────────────────── */
 .disbursement-table-container {
   overflow-x: auto;
+  width: 100%;
 }
 
 .disbursement-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
+  font-size: 0.85rem;
 }
 
-.disbursement-table th {
+.disbursement-table thead tr {
   background-color: #F8FAFC;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  padding: 12px 18px;
   border-bottom: 1px solid #E2E8F0;
 }
 
-.disbursement-table td {
-  padding: 16px 18px;
-  border-bottom: 1px solid #F1F5F9;
-  vertical-align: middle;
+.disbursement-table thead th {
+  padding: 0.85rem 1.25rem;
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
 }
 
-.disbursement-table tr:hover td {
+.disbursement-table tbody tr {
+  border-bottom: 1px solid #F1F5F9;
+  transition: background-color 0.12s ease;
+}
+
+.disbursement-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.disbursement-table tbody tr:hover {
   background-color: #F8FAFC;
 }
 
-/* Table Cells */
+.disbursement-table td {
+  padding: 1rem 1.25rem;
+  vertical-align: middle;
+  color: #334155;
+}
+
+/* Request ID Badge */
+.disbursement-id-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #003580;
+  background-color: #EFF6FF;
+  border: 1px solid #DBEAFE;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+  letter-spacing: 0.02em;
+}
+
+/* Hotel Cell */
 .disbursement-hotel-cell {
   display: flex;
   flex-direction: column;
@@ -358,19 +444,20 @@
 .disbursement-hotel-name {
   font-weight: 700;
   color: #0F172A;
-  font-size: 14px;
+  font-size: 0.88rem;
 }
 
 .disbursement-hotel-owner {
-  font-size: 12.5px;
+  font-size: 0.8rem;
   color: #475569;
 }
 
 .disbursement-hotel-email {
-  font-size: 11.5px;
+  font-size: 0.75rem;
   color: #94A3B8;
 }
 
+/* Bank Cell */
 .disbursement-bank-cell {
   display: flex;
   flex-direction: column;
@@ -380,144 +467,536 @@
 .disbursement-bank-name {
   font-weight: 600;
   color: #003580;
-  font-size: 13.5px;
+  font-size: 0.85rem;
 }
 
 .disbursement-bank-acc {
-  font-size: 13px;
-  color: #1E293B;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.disbursement-bank-acc strong {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #0F172A;
 }
 
 .disbursement-bank-holder {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: #64748B;
+  text-transform: uppercase;
 }
 
+/* Amount Cell */
 .disbursement-amount-cell {
   display: flex;
   align-items: baseline;
   gap: 4px;
+  white-space: nowrap;
 }
 
 .disbursement-amount {
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 800;
-  color: #059669;
+  color: #0F172A;
 }
 
 .disbursement-currency {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   color: #64748B;
 }
 
+/* Date Cell */
 .disbursement-date-cell {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  font-size: 12.5px;
+  gap: 2px;
+  font-size: 0.82rem;
   color: #475569;
+  white-space: nowrap;
 }
 
 .disbursement-ref {
-  font-size: 11px;
+  font-size: 0.74rem;
   color: #0284C7;
-  font-family: monospace;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-/* Badges */
+/* Status Badges */
 .disbursement-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 6px;
-  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.disbursement-badge__dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
 }
 
 .disbursement-badge--warning {
   background-color: #FEF3C7;
   color: #B45309;
+  border: 1px solid #FDE68A;
+}
+.disbursement-badge--warning .disbursement-badge__dot {
+  background-color: #D97706;
 }
 
 .disbursement-badge--info {
   background-color: #DBEAFE;
   color: #1D4ED8;
+  border: 1px solid #BFDBFE;
+}
+.disbursement-badge--info .disbursement-badge__dot {
+  background-color: #2563EB;
 }
 
 .disbursement-badge--success {
-  background-color: #D1FAE5;
+  background-color: #ECFDF5;
   color: #065F46;
+  border: 1px solid #A7F3D0;
+}
+.disbursement-badge--success .disbursement-badge__dot {
+  background-color: #10B981;
 }
 
 .disbursement-badge--error {
-  background-color: #FEE2E2;
+  background-color: #FEF2F2;
   color: #991B1B;
+  border: 1px solid #FECACA;
+}
+.disbursement-badge--error .disbursement-badge__dot {
+  background-color: #EF4444;
 }
 
 .disbursement-badge--default {
   background-color: #F1F5F9;
   color: #475569;
+  border: 1px solid #CBD5E1;
+}
+.disbursement-badge--default .disbursement-badge__dot {
+  background-color: #64748B;
 }
 
-/* Actions */
+/* Actions in table */
 .disbursement-actions {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .disbursement-action-btn {
-  padding: 6px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0.35rem 0.65rem;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 0.78rem;
   font-weight: 600;
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
+/* View Details button */
+.disbursement-action-btn--detail {
+  background-color: #F8FAFC;
+  color: #334155;
+  border-color: #CBD5E1;
+}
+.disbursement-action-btn--detail:hover:not(:disabled) {
+  background-color: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #003580;
+}
+
+/* Approve button */
 .disbursement-action-btn--approve {
   background-color: #003580;
   color: #FFFFFF;
 }
-
 .disbursement-action-btn--approve:hover:not(:disabled) {
   background-color: #00224F;
+  box-shadow: 0 2px 6px rgba(0, 53, 128, 0.25);
 }
 
+/* Reject button */
 .disbursement-action-btn--reject {
-  background-color: #FEE2E2;
-  color: #991B1B;
-  border: 1px solid #FECACA;
+  background-color: #FEF2F2;
+  color: #DC2626;
+  border-color: #FECACA;
 }
-
 .disbursement-action-btn--reject:hover:not(:disabled) {
-  background-color: #FCA5A5;
+  background-color: #FEE2E2;
 }
 
+/* Settle button */
 .disbursement-action-btn--settle {
   background-color: #059669;
   color: #FFFFFF;
 }
-
 .disbursement-action-btn--settle:hover:not(:disabled) {
   background-color: #047857;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
 }
 
 .disbursement-settled-text {
-  font-size: 12.5px;
+  font-size: 0.8rem;
   color: #059669;
   font-weight: 700;
 }
 
 .disbursement-rejected-text {
-  font-size: 12.5px;
+  font-size: 0.8rem;
   color: #DC2626;
   font-weight: 600;
 }
 
-/* States */
+/* ═══════════════════════════════════════════════════════════════════════════
+   UNIFIED MODALS STYLING (AVORA ENTERPRISE)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.disbursement-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 1rem;
+}
+
+.disbursement-modal {
+  background-color: #FFFFFF;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 540px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  animation: disbursementModalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.disbursement-modal--detail {
+  max-width: 680px;
+}
+
+@keyframes disbursementModalFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Header */
+.disbursement-modal__header {
+  background-color: #003580;
+  color: #FFFFFF;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #C9A227;
+}
+
+.disbursement-modal__header-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.disbursement-modal__icon {
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #FBBF24;
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.disbursement-modal__title {
+  margin: 0 0 4px 0;
+  font-size: 1.18rem;
+  font-weight: 700;
+  color: #FFFFFF;
+  line-height: 1.25;
+}
+
+.disbursement-modal__subtitle {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #BFDBFE;
+}
+
+.disbursement-modal__close-btn {
+  background-color: rgba(255, 255, 255, 0.12);
+  border: none;
+  color: #FFFFFF;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.disbursement-modal__close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+/* Body */
+.disbursement-modal__body {
+  padding: 22px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* Detail Hero in Modal */
+.disbursement-detail-hero {
+  background: linear-gradient(135deg, #003580 0%, #00224F 100%);
+  border-radius: 8px;
+  padding: 1.25rem 1.5rem;
+  color: #FFFFFF;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.disbursement-detail-hero__label {
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #BFDBFE;
+}
+
+.disbursement-detail-hero__amount {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+
+/* Detail Sections */
+.disbursement-detail-section {
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.disbursement-detail-section__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #003580;
+  letter-spacing: 0.04em;
+  margin-bottom: 0.85rem;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 0.5rem;
+}
+
+.disbursement-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem 1.25rem;
+}
+
+@media (max-width: 600px) {
+  .disbursement-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.disbursement-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.disbursement-detail-item--full {
+  grid-column: 1 / -1;
+}
+
+.disbursement-detail-item__label {
+  font-size: 0.74rem;
+  color: #64748B;
+  font-weight: 600;
+}
+
+.disbursement-detail-item__val {
+  font-size: 0.86rem;
+  color: #1E293B;
+}
+
+.disbursement-detail-item__val--bold {
+  font-weight: 700;
+}
+
+.disbursement-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.disbursement-copy-btn {
+  padding: 2px 8px;
+  border-radius: 4px;
+  background-color: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #003580;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.disbursement-copy-btn:hover {
+  background-color: #DBEAFE;
+}
+
+/* Preview Box inside Confirmation Modals */
+.disbursement-preview-box {
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.disbursement-preview-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.84rem;
+  gap: 1rem;
+}
+
+.disbursement-preview-row--divider {
+  border-top: 1px dashed #CBD5E1;
+  padding-top: 0.6rem;
+  margin-top: 0.2rem;
+}
+
+.disbursement-preview-label {
+  color: #64748B;
+}
+
+.disbursement-preview-val {
+  color: #1E293B;
+  text-align: right;
+}
+
+/* Alert Boxes inside Modals */
+.disbursement-alert-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.disbursement-alert-box__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.disbursement-alert-box--info {
+  background-color: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1E3A8A;
+}
+
+.disbursement-alert-box--error {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+.disbursement-alert-box__content p {
+  margin: 0;
+}
+
+/* Form inputs inside modals */
+.disbursement-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.disbursement-form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #1E293B;
+}
+
+.disbursement-required {
+  color: #EF4444;
+}
+
+.disbursement-form-input,
+.disbursement-form-textarea {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 0.86rem;
+  color: #0F172A;
+  background-color: #FFFFFF;
+  outline: none;
+  transition: all 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.disbursement-form-input:focus,
+.disbursement-form-textarea:focus {
+  border-color: #003580;
+  box-shadow: 0 0 0 3px rgba(0, 53, 128, 0.1);
+}
+
+/* Footer */
+.disbursement-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #E2E8F0;
+  background-color: #FFFFFF;
+}
+
+/* ─── Loading & Empty States ─────────────────────────────────────────────── */
 .disbursement-loading,
 .disbursement-error,
 .disbursement-empty {
@@ -525,27 +1004,29 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 48px 24px;
-  gap: 12px;
+  padding: 4rem 2rem;
+  gap: 1rem;
   text-align: center;
+  color: #64748B;
 }
 
 .disbursement-empty h3 {
-  font-size: 16px;
+  font-size: 1.1rem;
   font-weight: 700;
   color: #1E293B;
   margin: 0;
 }
 
 .disbursement-empty p {
-  font-size: 13.5px;
+  font-size: 0.85rem;
   color: #64748B;
   margin: 0;
+  max-width: 440px;
 }
 
 .disbursement-spinner {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border: 3px solid #E2E8F0;
   border-top-color: #003580;
   border-radius: 50%;
@@ -561,4 +1042,3 @@
     transform: rotate(360deg);
   }
 }
-

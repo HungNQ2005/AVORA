@@ -1,22 +1,25 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   fetchBusinessDisbursements,
   approveDisbursement,
   settleDisbursement,
   rejectDisbursement,
 } from '../../../services/disbursementApi';
-import DisbursementSettleModal from '../components/DisbursementSettleModal';
+import DisbursementDetailModal from '../components/DisbursementDetailModal';
+import DisbursementApproveModal from '../components/DisbursementApproveModal';
 import DisbursementRejectModal from '../components/DisbursementRejectModal';
+import DisbursementSettleModal from '../components/DisbursementSettleModal';
 import {
   RefreshCwIcon,
-  SearchIcon,
   CheckCircleIcon,
   CreditCardIcon,
   BuildingIcon,
-  DownloadIcon,
   InfoIcon,
+  EyeIcon,
+  CheckIcon,
+  CloseIcon,
+  AlertTriangleIcon,
 } from '../../../common/components/icons';
-import ExcelJS from 'exceljs';
 import './DisbursementManagementPage.css';
 
 const formatCurrency = (val) => {
@@ -43,14 +46,18 @@ const DisbursementManagementPage = () => {
   const [error, setError] = useState(null);
   const [toast, setToast] = useState({ message: '', type: 'success' });
 
-  // Filters & Tabs
-  // TABS: PENDING_APPROVAL (1), PENDING_PAYMENT (2), SETTLEMENT (4), ALL
+  // Status tabs
+  // TABS: PENDING_APPROVAL (1), PENDING_PAYMENT (2), SETTLEMENT (4), REJECTED (5), ALL
   const [activeTab, setActiveTab] = useState('PENDING_APPROVAL');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
-  const [actionLoadingId, setActionLoadingId] = useState(null);
 
-  // Modals
+  // Modals state
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [detailRequest, setDetailRequest] = useState(null);
+
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [approveRequest, setApproveRequest] = useState(null);
+  const [approveLoading, setApproveLoading] = useState(false);
+
   const [settleModalOpen, setSettleModalOpen] = useState(false);
   const [settleRequest, setSettleRequest] = useState(null);
   const [settleLoading, setSettleLoading] = useState(false);
@@ -58,14 +65,6 @@ const DisbursementManagementPage = () => {
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectRequest, setRejectRequest] = useState(null);
   const [rejectLoading, setRejectLoading] = useState(false);
-
-  // Debounce search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [searchTerm]);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -83,7 +82,6 @@ const DisbursementManagementPage = () => {
     try {
       const res = await fetchBusinessDisbursements({
         status: activeTab,
-        search: debouncedSearch,
       });
       setItems(res.items || []);
       setStats(res.stats || null);
@@ -94,33 +92,42 @@ const DisbursementManagementPage = () => {
       setLoading(false);
       if (isRefresh) setRefreshing(false);
     }
-  }, [activeTab, debouncedSearch]);
+  }, [activeTab]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // Tab 1: Approve request (PND -> APR / Pending Payment)
-  const handleApprove = async (request) => {
-    if (actionLoadingId) return;
-    const confirmApprove = window.confirm(
-      `Bạn có chắc chắn muốn phê duyệt yêu cầu giải ngân ${formatCurrency(request.amount)} của khách sạn "${request.hotel_name}"?\n\nYêu cầu sẽ được chuyển sang tab "Chờ thanh toán" để thực hiện đối soát chi trả.`
-    );
-    if (!confirmApprove) return;
+  // Action: Open View Details
+  const handleOpenDetail = (request) => {
+    setDetailRequest(request);
+    setDetailModalOpen(true);
+  };
 
-    setActionLoadingId(request.withdrawal_id);
+  // Action: Open Approve Modal (Accept)
+  const handleOpenApproveModal = (request) => {
+    setApproveRequest(request);
+    setApproveModalOpen(true);
+  };
+
+  // Action: Confirm Approve (Accept: PND -> APR / Approved)
+  const handleConfirmApprove = async () => {
+    if (!approveRequest) return;
+    setApproveLoading(true);
     try {
-      await approveDisbursement(request.withdrawal_id);
-      showToast('Phê duyệt yêu cầu thành công! Đã tự động chuyển sang Chờ thanh toán.', 'success');
+      await approveDisbursement(approveRequest.withdrawal_id);
+      showToast('Phê duyệt yêu cầu giải ngân thành công! Đã tự động chuyển sang Chờ thanh toán.', 'success');
+      setApproveModalOpen(false);
+      setApproveRequest(null);
       await loadData(true);
     } catch (err) {
       showToast(err.message || 'Phê duyệt thất bại.', 'error');
     } finally {
-      setActionLoadingId(null);
+      setApproveLoading(false);
     }
   };
 
-  // Tab 2: Settle / Complete Payment (APR -> CMP / Settled)
+  // Action: Open Settle Modal (Complete Payment: APR -> CMP / Settled)
   const handleOpenSettleModal = (request) => {
     setSettleRequest(request);
     setSettleModalOpen(true);
@@ -142,7 +149,7 @@ const DisbursementManagementPage = () => {
     }
   };
 
-  // Reject Request (PND -> REJ)
+  // Action: Open Reject Modal (Reject: PND -> REJ, refunding balance)
   const handleOpenRejectModal = (request) => {
     setRejectRequest(request);
     setRejectModalOpen(true);
@@ -161,59 +168,6 @@ const DisbursementManagementPage = () => {
       showToast(err.message || 'Từ chối thất bại.', 'error');
     } finally {
       setRejectLoading(false);
-    }
-  };
-
-  // Excel Export
-  const handleExportExcel = async () => {
-    try {
-      const workbook = new ExcelJS.Workbook();
-      const worksheet = workbook.addWorksheet('Giai_Ngan_Vendor');
-
-      worksheet.columns = [
-        { header: 'Mã yêu cầu', key: 'id', width: 36 },
-        { header: 'Khách sạn', key: 'hotel', width: 25 },
-        { header: 'Chủ sở hữu', key: 'owner', width: 22 },
-        { header: 'Email', key: 'email', width: 26 },
-        { header: 'Ngân hàng', key: 'bank', width: 18 },
-        { header: 'Số tài khoản', key: 'acc_no', width: 18 },
-        { header: 'Tên thụ hưởng', key: 'acc_name', width: 22 },
-        { header: 'Số tiền (VND)', key: 'amount', width: 18 },
-        { header: 'Trạng thái', key: 'status', width: 18 },
-        { header: 'Mã GD / Biên nhận', key: 'ref', width: 22 },
-        { header: 'Ngày tạo', key: 'created_at', width: 20 },
-      ];
-
-      items.forEach((item) => {
-        worksheet.addRow({
-          id: item.withdrawal_id,
-          hotel: item.hotel_name,
-          owner: item.owner_name,
-          email: item.owner_email,
-          bank: item.bank_info?.bank_name || '',
-          acc_no: item.bank_info?.account_number || '',
-          acc_name: item.bank_info?.account_holder || '',
-          amount: item.amount,
-          status: item.status_label,
-          ref: item.gateway_transaction_ref || '',
-          created_at: formatDate(item.created_at),
-        });
-      });
-
-      const buffer = await workbook.xlsx.writeBuffer();
-      const blob = new Blob([buffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `Bao_Cao_Giai_Ngan_Vendor_${new Date().toISOString().slice(0, 10)}.xlsx`;
-      a.click();
-      window.URL.revokeObjectURL(url);
-      showToast('Xuất báo cáo Excel giải ngân thành công!', 'success');
-    } catch (err) {
-      console.error('Lỗi xuất file Excel:', err);
-      showToast('Lỗi khi xuất file Excel.', 'error');
     }
   };
 
@@ -238,6 +192,12 @@ const DisbursementManagementPage = () => {
       badgeColor: '#059669',
     },
     {
+      key: 'REJECTED',
+      label: 'Bị từ chối',
+      count: stats?.rejected_count || 0,
+      badgeColor: '#DC2626',
+    },
+    {
       key: 'ALL',
       label: 'Tất cả yêu cầu',
       count: stats?.total_count || 0,
@@ -250,9 +210,19 @@ const DisbursementManagementPage = () => {
       {/* Toast alert */}
       {toast.message && (
         <div className={`disbursement-toast disbursement-toast--${toast.type}`}>
-          {toast.message}
+          {toast.type === 'success' ? <CheckCircleIcon size={18} /> : <AlertTriangleIcon size={18} />}
+          <span>{toast.message}</span>
         </div>
       )}
+
+      {/* Breadcrumb Navigation */}
+      <nav className="disbursement-breadcrumb" aria-label="Breadcrumb">
+        <span>BẢNG ĐIỀU KHIỂN</span>
+        <span className="disbursement-breadcrumb__sep">/</span>
+        <span>MARKETING &amp; DOANH THU</span>
+        <span className="disbursement-breadcrumb__sep">/</span>
+        <span className="disbursement-breadcrumb__active">Quản lý giải ngân</span>
+      </nav>
 
       {/* Hero Header */}
       <div className="disbursement-hero">
@@ -268,22 +238,14 @@ const DisbursementManagementPage = () => {
         </div>
         <div className="disbursement-hero__actions">
           <button
+            type="button"
             className="disbursement-btn disbursement-btn--secondary"
             onClick={() => loadData(true)}
             disabled={refreshing}
             title="Làm mới dữ liệu"
           >
-            <RefreshCwIcon className={refreshing ? 'spin' : ''} />
+            <RefreshCwIcon size={16} className={refreshing ? 'spin' : ''} />
             <span>{refreshing ? 'Đang tải...' : 'Làm mới'}</span>
-          </button>
-          <button
-            className="disbursement-btn disbursement-btn--primary"
-            onClick={handleExportExcel}
-            disabled={items.length === 0}
-            title="Xuất danh sách ra Excel"
-          >
-            <DownloadIcon />
-            <span>Xuất Excel</span>
           </button>
         </div>
       </div>
@@ -292,7 +254,7 @@ const DisbursementManagementPage = () => {
       <div className="disbursement-stats-grid">
         <div className="disbursement-stat-card">
           <div className="disbursement-stat-card__icon disbursement-stat-card__icon--pending">
-            <InfoIcon />
+            <InfoIcon size={22} />
           </div>
           <div className="disbursement-stat-card__info">
             <span className="disbursement-stat-card__label">Chờ phê duyệt</span>
@@ -307,7 +269,7 @@ const DisbursementManagementPage = () => {
 
         <div className="disbursement-stat-card">
           <div className="disbursement-stat-card__icon disbursement-stat-card__icon--payment">
-            <CreditCardIcon />
+            <CreditCardIcon size={22} />
           </div>
           <div className="disbursement-stat-card__info">
             <span className="disbursement-stat-card__label">Chờ thanh toán</span>
@@ -322,7 +284,7 @@ const DisbursementManagementPage = () => {
 
         <div className="disbursement-stat-card">
           <div className="disbursement-stat-card__icon disbursement-stat-card__icon--settled">
-            <CheckCircleIcon />
+            <CheckCircleIcon size={22} />
           </div>
           <div className="disbursement-stat-card__info">
             <span className="disbursement-stat-card__label">Đã quyết toán</span>
@@ -337,7 +299,7 @@ const DisbursementManagementPage = () => {
 
         <div className="disbursement-stat-card">
           <div className="disbursement-stat-card__icon disbursement-stat-card__icon--total">
-            <BuildingIcon />
+            <BuildingIcon size={22} />
           </div>
           <div className="disbursement-stat-card__info">
             <span className="disbursement-stat-card__label">Tổng giải ngân</span>
@@ -353,13 +315,14 @@ const DisbursementManagementPage = () => {
 
       {/* Main Card with Tabs & Table */}
       <div className="disbursement-main-card">
-        {/* Navigation Tabs */}
+        {/* Navigation Tabs Bar */}
         <div className="disbursement-tabs-bar">
           <div className="disbursement-tabs">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.key;
               return (
                 <button
+                  type="button"
                   key={tab.key}
                   className={`disbursement-tab ${isActive ? 'disbursement-tab--active' : ''}`}
                   onClick={() => setActiveTab(tab.key)}
@@ -379,25 +342,6 @@ const DisbursementManagementPage = () => {
             })}
           </div>
 
-          {/* Search box */}
-          <div className="disbursement-search">
-            <SearchIcon className="disbursement-search__icon" />
-            <input
-              type="text"
-              className="disbursement-search__input"
-              placeholder="Tìm theo tên KS, chủ sở hữu, STK..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            {searchTerm && (
-              <button
-                className="disbursement-search__clear"
-                onClick={() => setSearchTerm('')}
-              >
-                ✕
-              </button>
-            )}
-          </div>
         </div>
 
         {/* Content body */}
@@ -409,8 +353,10 @@ const DisbursementManagementPage = () => {
             </div>
           ) : error ? (
             <div className="disbursement-error">
+              <AlertTriangleIcon size={24} style={{ color: '#DC2626' }} />
               <p>{error}</p>
               <button
+                type="button"
                 className="disbursement-btn disbursement-btn--secondary"
                 onClick={() => loadData()}
               >
@@ -419,19 +365,16 @@ const DisbursementManagementPage = () => {
             </div>
           ) : items.length === 0 ? (
             <div className="disbursement-empty">
-              <CreditCardIcon style={{ width: '48px', height: '48px', color: '#94A3B8' }} />
+              <CreditCardIcon size={48} style={{ color: '#94A3B8' }} />
               <h3>Không tìm thấy yêu cầu giải ngân</h3>
-              <p>
-                {debouncedSearch
-                  ? `Không có kết quả nào khớp với từ khóa "${debouncedSearch}".`
-                  : 'Hiện tại chưa có yêu cầu nào trong danh mục này.'}
-              </p>
+              <p>Hiện tại chưa có yêu cầu nào trong danh mục này.</p>
             </div>
           ) : (
             <table className="disbursement-table">
               <thead>
                 <tr>
-                  <th>Khách sạn & Đối tác</th>
+                  <th>Mã yêu cầu</th>
+                  <th>Khách sạn &amp; Đối tác</th>
                   <th>Thông tin ngân hàng</th>
                   <th>Số tiền yêu cầu</th>
                   <th>Thời gian yêu cầu</th>
@@ -441,21 +384,35 @@ const DisbursementManagementPage = () => {
               </thead>
               <tbody>
                 {items.map((row) => {
-                  const isActionLoading = actionLoadingId === row.withdrawal_id;
+                  const shortId = row.withdrawal_id
+                    ? `WD-${row.withdrawal_id.slice(0, 8).toUpperCase()}`
+                    : '—';
+                  const isPending = String(row.status_cd) === '1';
+                  const isApproved = String(row.status_cd) === '2';
+                  const isSettled = String(row.status_cd) === '4';
+                  const isRejected = String(row.status_cd) === '5';
+
                   return (
                     <tr key={row.withdrawal_id}>
-                      {/* Cột 1: Khách sạn & Đối tác */}
+                      {/* Cột 1: Mã yêu cầu (Request ID) */}
+                      <td>
+                        <span className="disbursement-id-badge" title={row.withdrawal_id}>
+                          {shortId}
+                        </span>
+                      </td>
+
+                      {/* Cột 2: Khách sạn & Đối tác (Hotel & Vendor) */}
                       <td>
                         <div className="disbursement-hotel-cell">
                           <span className="disbursement-hotel-name">{row.hotel_name}</span>
                           <span className="disbursement-hotel-owner">
                             Chủ sở hữu: <strong>{row.owner_name}</strong>
                           </span>
-                          <span className="disbursement-hotel-email">{row.owner_email}</span>
+                          <span className="disbursement-hotel-email">{row.owner_email || '—'}</span>
                         </div>
                       </td>
 
-                      {/* Cột 2: Ngân hàng thụ hưởng */}
+                      {/* Cột 3: Ngân hàng thụ hưởng (Bank Account) */}
                       <td>
                         <div className="disbursement-bank-cell">
                           <span className="disbursement-bank-name">
@@ -470,7 +427,7 @@ const DisbursementManagementPage = () => {
                         </div>
                       </td>
 
-                      {/* Cột 3: Số tiền */}
+                      {/* Cột 4: Số tiền (Amount) */}
                       <td>
                         <div className="disbursement-amount-cell">
                           <span className="disbursement-amount">
@@ -480,7 +437,7 @@ const DisbursementManagementPage = () => {
                         </div>
                       </td>
 
-                      {/* Cột 4: Thời gian */}
+                      {/* Cột 5: Thời gian (Request Date) */}
                       <td>
                         <div className="disbursement-date-cell">
                           <span>{formatDate(row.created_at)}</span>
@@ -492,62 +449,78 @@ const DisbursementManagementPage = () => {
                         </div>
                       </td>
 
-                      {/* Cột 5: Trạng thái */}
+                      {/* Cột 6: Trạng thái (Status) */}
                       <td>
                         <span
                           className={`disbursement-badge disbursement-badge--${row.status_color}`}
                         >
+                          <span className="disbursement-badge__dot"></span>
                           {row.status_label}
                         </span>
                       </td>
 
-                      {/* Cột 6: Thao tác quy trình */}
+                      {/* Cột 7: Thao tác quy trình (Actions: View Details, Accept, Reject) */}
                       <td style={{ textAlign: 'center' }}>
                         <div className="disbursement-actions">
-                          {/* Bước 1: Duyệt yêu cầu (PND -> APR / Pending Payment) */}
-                          {row.status_cd === '1' && (
+                          {/* 1. Nút Xem chi tiết (View Details) */}
+                          <button
+                            type="button"
+                            className="disbursement-action-btn disbursement-action-btn--detail"
+                            onClick={() => handleOpenDetail(row)}
+                            title="Xem chi tiết đầy đủ của yêu cầu này"
+                          >
+                            <EyeIcon size={14} />
+                            <span>Chi tiết</span>
+                          </button>
+
+                          {/* 2. Thao tác khi ở bước Chờ phê duyệt (Accept & Reject) */}
+                          {isPending && (
                             <>
                               <button
+                                type="button"
                                 className="disbursement-action-btn disbursement-action-btn--approve"
-                                onClick={() => handleApprove(row)}
-                                disabled={isActionLoading}
+                                onClick={() => handleOpenApproveModal(row)}
                                 title="Phê duyệt yêu cầu này và chuyển sang Chờ thanh toán"
                               >
-                                {isActionLoading ? '...' : '✓ Phê duyệt'}
+                                <CheckIcon size={14} />
+                                <span>Phê duyệt</span>
                               </button>
                               <button
+                                type="button"
                                 className="disbursement-action-btn disbursement-action-btn--reject"
                                 onClick={() => handleOpenRejectModal(row)}
-                                disabled={isActionLoading}
                                 title="Từ chối yêu cầu và hoàn trả tiền về ví khách sạn"
                               >
-                                Từ chối
+                                <CloseIcon size={13} />
+                                <span>Từ chối</span>
                               </button>
                             </>
                           )}
 
-                          {/* Bước 2: Hoàn tất chi trả / Quyết toán (APR -> CMP / Settled) */}
-                          {row.status_cd === '2' && (
+                          {/* 3. Thao tác khi ở bước Chờ thanh toán (Settle Payment) */}
+                          {isApproved && (
                             <button
+                              type="button"
                               className="disbursement-action-btn disbursement-action-btn--settle"
                               onClick={() => handleOpenSettleModal(row)}
                               title="Xác nhận hoàn tất chuyển khoản và quyết toán cho Vendor"
                             >
-                              💳 Xác nhận chi trả
+                              <CreditCardIcon size={14} />
+                              <span>Chi trả</span>
                             </button>
                           )}
 
-                          {/* Bước 3: Đã giải ngân (CMP) */}
-                          {row.status_cd === '4' && (
+                          {/* 4. Đã quyết toán thành công */}
+                          {isSettled && (
                             <span className="disbursement-settled-text">
                               ✓ Đã quyết toán
                             </span>
                           )}
 
-                          {/* Trạng thái khác: Đã từ chối */}
-                          {row.status_cd === '5' && (
+                          {/* 5. Đã từ chối */}
+                          {isRejected && (
                             <span className="disbursement-rejected-text">
-                              ✕ Đã từ chối
+                              ✕ Bị từ chối
                             </span>
                           )}
                         </div>
@@ -561,26 +534,58 @@ const DisbursementManagementPage = () => {
         </div>
       </div>
 
-      {/* Settle Modal */}
-      <DisbursementSettleModal
-        isOpen={settleModalOpen}
-        onClose={() => setSettleModalOpen(false)}
-        onConfirm={handleConfirmSettle}
-        request={settleRequest}
-        loading={settleLoading}
+      {/* ─── MODALS ────────────────────────────────────────────────────────── */}
+
+      {/* 1. View Details Modal */}
+      <DisbursementDetailModal
+        isOpen={detailModalOpen}
+        onClose={() => {
+          setDetailModalOpen(false);
+          setDetailRequest(null);
+        }}
+        request={detailRequest}
+        onApprove={(req) => handleOpenApproveModal(req)}
+        onReject={(req) => handleOpenRejectModal(req)}
+        onSettle={(req) => handleOpenSettleModal(req)}
       />
 
-      {/* Reject Modal */}
+      {/* 2. Approve Modal (Accept) */}
+      <DisbursementApproveModal
+        isOpen={approveModalOpen}
+        onClose={() => {
+          setApproveModalOpen(false);
+          setApproveRequest(null);
+        }}
+        onConfirm={handleConfirmApprove}
+        request={approveRequest}
+        loading={approveLoading}
+      />
+
+      {/* 3. Reject Modal (Reject) */}
       <DisbursementRejectModal
         isOpen={rejectModalOpen}
-        onClose={() => setRejectModalOpen(false)}
+        onClose={() => {
+          setRejectModalOpen(false);
+          setRejectRequest(null);
+        }}
         onConfirm={handleConfirmReject}
         request={rejectRequest}
         loading={rejectLoading}
+      />
+
+      {/* 4. Settle Modal (Complete Payment) */}
+      <DisbursementSettleModal
+        isOpen={settleModalOpen}
+        onClose={() => {
+          setSettleModalOpen(false);
+          setSettleRequest(null);
+        }}
+        onConfirm={handleConfirmSettle}
+        request={settleRequest}
+        loading={settleLoading}
       />
     </div>
   );
 };
 
 export default DisbursementManagementPage;
-
