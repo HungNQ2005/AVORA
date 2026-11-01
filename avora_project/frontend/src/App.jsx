@@ -23,6 +23,7 @@ import CommissionPolicyManagementPage from './features/commission_policies/pages
 import CommissionPolicyDetailPage from './features/commission_policies/pages/CommissionPolicyDetailPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import HotelWalletPage from './features/wallet/pages/HotelWalletPage';
+import VenueWalletPage from './features/venueWallet/pages/VenueWalletPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
 import HotelManagerRoute from './common/components/HotelManagerRoute';
@@ -339,6 +340,14 @@ function App() {
               }
             />
             <Route
+              path="venue-wallet"
+              element={
+                <VendorRoute>
+                  <VenueWalletPage />
+                </VendorRoute>
+              }
+            />
+            <Route
               path="coupons"
               element={
                 <CouponManagerRoute>
@@ -406,6 +415,7 @@ function App() {
 
           {/* Friendly redirect aliases for the old /admin and top-level paths */}
           <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/venue-wallet" element={<Navigate to="/dashboard/venue-wallet" replace />} />
           <Route path="/admin/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
           <Route path="/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
           <Route path="/admin/room-types" element={<Navigate to="/dashboard/room-types" replace />} />

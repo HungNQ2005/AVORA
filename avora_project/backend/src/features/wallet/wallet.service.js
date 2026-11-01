@@ -305,6 +305,21 @@ const getHotelWalletAndBank = async (hotelId, vendorId) => {
     }
   }
 
+  // Synchronize dynamic balances with venueWallet ledger to maintain 100% consistency across pages
+  let liveAvailable = Math.max(0, Number(wallet.available_balance) || 0);
+  let livePending = Math.max(0, Number(wallet.pending_balance) || 0);
+
+  try {
+    const venueWalletService = require('../venueWallet/venueWallet.service');
+    const overview = await venueWalletService.getVenueWalletDetails({ vendorId, hotelId });
+    if (overview?.balances) {
+      liveAvailable = Number(overview.balances.available_balance) || 0;
+      livePending = Number(overview.balances.pending_balance) || 0;
+    }
+  } catch (syncErr) {
+    console.warn('[Wallet] Balance sync fallback to raw DB:', syncErr?.message || syncErr);
+  }
+
   return {
     hotel: {
       hotel_id: hotel.hotel_id,
@@ -313,8 +328,8 @@ const getHotelWalletAndBank = async (hotelId, vendorId) => {
     wallet: {
       wallet_id: wallet.wallet_id,
       hotel_id: wallet.hotel_id,
-      pending_balance: Math.max(0, Number(wallet.pending_balance) || 0),
-      available_balance: Math.max(0, Number(wallet.available_balance) || 0),
+      pending_balance: livePending,
+      available_balance: liveAvailable,
       created_at: wallet.created_at,
       updated_at: wallet.updated_at,
     },

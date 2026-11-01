@@ -36,6 +36,8 @@
 
 /* Header & Hotel Switcher */
 .hw-header {
+  position: relative;
+  z-index: 1000;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -62,6 +64,7 @@
 .hw-hotel-select {
   position: relative;
   min-width: 280px;
+  z-index: 1002;
 }
 
 .hw-hotel-select-btn {
@@ -95,10 +98,10 @@
   background: #ffffff;
   border: 1px solid var(--hd-border);
   border-radius: 10px;
-  box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.12);
+  box-shadow: 0 20px 48px -6px rgba(15, 23, 42, 0.25), 0 8px 16px -2px rgba(15, 23, 42, 0.1);
   max-height: 260px;
   overflow-y: auto;
-  z-index: 60;
+  z-index: 99999;
   padding: 0.4rem 0;
 }
 

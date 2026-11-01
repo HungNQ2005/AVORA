@@ -139,7 +139,6 @@ const DashboardHeader = () => {
       <div className="dashboard-header__actions" ref={notifRef}>
         {/* Role Pill */}
         <div className={`dashboard-header__role-badge ${badgeConfig.className}`}>
-          <span className="dashboard-header__role-dot" />
           <span>{badgeConfig.label}</span>
         </div>
 

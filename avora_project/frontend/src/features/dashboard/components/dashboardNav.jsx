@@ -287,20 +287,36 @@ const DashboardNav = () => {
               </NavLink>
             )}
             {isVendor && (
-              <NavLink
-                to="/dashboard/wallet"
-                className={({ isActive }) =>
-                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-                }
-              >
-                <span className="admin-sidebar__icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
-                    <line x1="2" y1="10" x2="22" y2="10"></line>
-                  </svg>
-                </span>
-                <span className="admin-sidebar__label">Ví & Liên kết ngân hàng</span>
-              </NavLink>
+              <>
+                <NavLink
+                  to="/dashboard/venue-wallet"
+                  className={({ isActive }) =>
+                    `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                  }
+                >
+                  <span className="admin-sidebar__icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="1" x2="12" y2="23"></line>
+                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                  </span>
+                  <span className="admin-sidebar__label">Ví doanh thu chỗ nghỉ</span>
+                </NavLink>
+                <NavLink
+                  to="/dashboard/wallet"
+                  className={({ isActive }) =>
+                    `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                  }
+                >
+                  <span className="admin-sidebar__icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                      <line x1="2" y1="10" x2="22" y2="10"></line>
+                    </svg>
+                  </span>
+                  <span className="admin-sidebar__label">Ví & Liên kết ngân hàng</span>
+                </NavLink>
+              </>
             )}
           </div>
         )}
