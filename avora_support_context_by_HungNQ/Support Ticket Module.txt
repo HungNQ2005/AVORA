@@ -1,0 +1,99 @@
+CREATE TABLE t_support_ticket (
+    ticket_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Các khóa ngoại liên kết thực thể
+    requester_id UUID REFERENCES m_user(user_id) NOT NULL, -- Bắt buộc: Người tạo ticket (Khách hàng hoặc Vendor)
+    hotel_id UUID REFERENCES m_hotel(hotel_id),            -- Không bắt buộc: Liên kết với khách sạn (Dành cho Vendor)
+    booking_id UUID REFERENCES t_booking(booking_id),      -- Không bắt buộc: Liên kết với đơn hàng/thanh toán (Dành cho Khách)
+    
+    -- Phân loại và Trạng thái (Map với m_system_code)
+    ticket_type_cd VARCHAR(50) NOT NULL,    -- Ví dụ: PAY_WRONG_CODE, VENDOR_BANK_UPDATE, REFUND_REQ
+    ticket_status_cd VARCHAR(50) NOT NULL,  -- Ví dụ: OPEN, IN_PROGRESS, WAITING_USER_REPLY, RESOLVED, CLOSED
+    priority_cd VARCHAR(50) DEFAULT 'MEDIUM', -- Mức độ ưu tiên: LOW, MEDIUM, HIGH, URGENT
+    
+    -- Nội dung chính
+    title VARCHAR(255) NOT NULL,            -- Tiêu đề tóm tắt (VD: "Chuyển sai nội dung mã QR")
+    description TEXT NOT NULL,              -- Nội dung chi tiết vấn đề
+    attachment_urls JSONB,                  -- Mảng link ảnh/file bằng chứng (Bill ngân hàng, CCCD)
+    
+    -- Xử lý nghiệp vụ CSKH
+    assigned_to UUID REFERENCES m_user(user_id), -- Admin đang thụ lý ticket này
+    resolution_note TEXT,                   -- Ghi chú chốt lại vấn đề của Admin khi đóng ticket
+    resolved_at TIMESTAMP,                  -- Thời điểm giải quyết xong
+    
+    -- Cờ hệ thống
+    is_deleted BOOLEAN DEFAULT FALSE,       -- Xóa mềm (Soft delete)
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tạo Index để tối ưu tốc độ tìm kiếm và filter trên Dashboard
+CREATE INDEX idx_ticket_requester ON t_support_ticket(requester_id);
+CREATE INDEX idx_ticket_hotel ON t_support_ticket(hotel_id);
+CREATE INDEX idx_ticket_booking ON t_support_ticket(booking_id);
+CREATE INDEX idx_ticket_status_priority ON t_support_ticket(ticket_status_cd, priority_cd);
+CREATE INDEX idx_ticket_assigned_to ON t_support_ticket(assigned_to);
+
+-- ===========================================================================
+-- 2. TẠO BẢNG T_SUPPORT_TICKET_REPLY (Lịch sử trao đổi / Chat)
+-- ===========================================================================
+CREATE TABLE t_support_ticket_reply (
+    reply_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    ticket_id UUID REFERENCES t_support_ticket(ticket_id) ON DELETE CASCADE,
+    sender_id UUID REFERENCES m_user(user_id) NOT NULL, -- Ai là người nhắn câu này (Khách, Vendor, hay Admin)
+    
+    message TEXT NOT NULL,                  -- Nội dung tin nhắn trả lời
+    attachment_urls JSONB,                  -- File đính kèm bổ sung trong lúc chat
+    
+    is_internal_note BOOLEAN DEFAULT FALSE, -- đây là tin nhắn Admin note nội bộ cho nhau, Khách/Vendor không nhìn thấy
+    
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tạo Index để load lịch sử chat nhanh nhất theo thứ tự thời gian
+CREATE INDEX idx_ticket_reply_timeline ON t_support_ticket_reply(ticket_id, created_at);
+
+-- ===========================================================================
+-- FUNCTION & TRIGGER TỰ ĐỘNG CẬP NHẬT UPDATED_AT
+-- ===========================================================================
+CREATE OR REPLACE FUNCTION update_modified_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+CREATE TRIGGER trg_update_ticket_modtime
+BEFORE UPDATE ON t_support_ticket
+FOR EACH ROW EXECUTE FUNCTION update_modified_column();
+
+-- ===========================================================================
+-- DỮ LIỆU DANH MỤC SUPPORT TICKET
+-- ===========================================================================
+
+INSERT INTO m_system_code (business_cd, code_cd, code_name, sort_no) 
+VALUES 
+-- 1. SUPPORT_STS (Trạng thái Ticket)
+('SUPPORT_STS', '1', 'OPN', 1), -- OPN: Open (Mới tạo)
+('SUPPORT_STS', '2', 'INP', 2), -- INP: In Progress (Đang xử lý)
+('SUPPORT_STS', '3', 'WAT', 3), -- WAT: Waiting (Chờ phản hồi)
+('SUPPORT_STS', '4', 'RSV', 4), -- RSV: Resolved (Đã giải quyết)
+('SUPPORT_STS', '5', 'CLS', 5), -- CLS: Closed (Đã đóng)
+
+-- 2. SUPPORT_CAT (Phân loại Ticket)
+-- Nhóm B2C: Khách hàng & Thanh toán
+('SUPPORT_CAT', '1', 'PWC', 1), -- PWC: Pay Wrong Code (Sai cú pháp)
+('SUPPORT_CAT', '2', 'PWA', 2), -- PWA: Pay Wrong Amount (Sai số tiền)
+('SUPPORT_CAT', '3', 'PTO', 3), -- PTO: Pay Timeout (Thanh toán quá hạn)
+('SUPPORT_CAT', '4', 'RFD', 4), -- RFD: Refund (Yêu cầu hoàn tiền)
+('SUPPORT_CAT', '5', 'BKI', 5), -- BKI: Booking Issue (Vấn đề đơn hàng)
+
+-- Nhóm B2B: Vendor / Đối tác khách sạn
+('SUPPORT_CAT', '6', 'VBU', 6), -- VBU: Vendor Bank Update (Cập nhật ngân hàng)
+('SUPPORT_CAT', '7', 'VIU', 7), -- VIU: Vendor Info Update (Cập nhật thông tin)
+('SUPPORT_CAT', '8', 'VPO', 8), -- VPO: Vendor Policy (Hỏi về chính sách/hoa hồng)
+
+-- Nhóm Chung
+('SUPPORT_CAT', '9', 'GEN', 9)  -- GEN: General (Thông tin chung/Khác)
