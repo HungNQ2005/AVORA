@@ -23,7 +23,10 @@ const ReviewDeletionDialog = ({ onCancel, onConfirm, busy = false, error = '' })
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    onConfirm({ reason_code: reasonCode, reason_text: reasonCode === 'OTHER' ? reasonText.trim() : null });
+    onConfirm({
+      reason_code: reasonCode,
+      ...(reasonCode === 'OTHER' ? { reason_text: reasonText.trim() } : {}),
+    });
   };
 
   return (
