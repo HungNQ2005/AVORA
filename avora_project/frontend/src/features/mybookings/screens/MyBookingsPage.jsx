@@ -28,7 +28,7 @@ import InvoiceModal from '../components/InvoiceModal';
 import RefundReceiptModal from '../components/RefundReceiptModal';
 import GalleryModal from '../components/GalleryModal';
 import { getValidBookingPage } from '../components/bookingCardHelpers';
-import ReviewModal from '../../bookings/components/ReviewModal';
+import ReviewModal from '../components/ReviewModal';
 
 const isConfirmedBooking = (statusCode) => ['2', 'CFM'].includes(String(statusCode ?? '').trim().toUpperCase());
 
