@@ -360,12 +360,14 @@
   color: #94a3b8;
   border-top: 1px solid #f1f5f9;
   padding-top: 0.65rem;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .vw-stat-card__footer-left {
   font-weight: 500;
   color: #64748b;
+  white-space: nowrap;
 }
 
 .vw-stat-badge {
@@ -374,6 +376,7 @@
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .vw-stat-badge--green {

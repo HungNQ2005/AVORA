@@ -152,42 +152,6 @@ const VenueWalletPage = () => {
               )}
             </div>
           )}
-
-          {/* Refresh Action */}
-          <button
-            type="button"
-            className="vw-btn vw-btn--outline"
-            onClick={handleRefresh}
-            disabled={refreshing}
-            title="Đồng bộ lại dữ liệu biến động ví"
-          >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              className={refreshing ? 'vw-spinner-spin' : ''}
-            >
-              <polyline points="23 4 23 10 17 10" />
-              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-            </svg>
-            <span>{refreshing ? 'Đang tải...' : 'Làm mới'}</span>
-          </button>
-
-          {/* Link to Bank Linking & Withdrawal */}
-          <Link
-            to="/dashboard/wallet"
-            className="vw-btn vw-btn--primary"
-            title="Quản lý tài khoản ngân hàng thụ hưởng và yêu cầu rút tiền"
-          >
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="5" width="20" height="14" rx="2" />
-              <line x1="2" y1="10" x2="22" y2="10" />
-            </svg>
-            <span>Rút tiền &amp; Ngân hàng</span>
-          </Link>
         </div>
       </div>
 

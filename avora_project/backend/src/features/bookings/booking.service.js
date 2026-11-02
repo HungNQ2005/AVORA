@@ -1998,7 +1998,54 @@ const changeBookingDates = async (
 /**
  * Cancel a booking using the configured cancellation status, restore inventory, and record refund request based on policy.
  */
-const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phòng' } = {}, currentUser) => {
+let cachedVietQrBanks = null;
+let lastBanksFetchTime = 0;
+
+/**
+ * Fetch supported banks list from VietQR for refund bank account selection
+ */
+const getSupportedBanks = async () => {
+  const now = Date.now();
+  if (cachedVietQrBanks && now - lastBanksFetchTime < 15 * 60 * 1000) {
+    return cachedVietQrBanks;
+  }
+  try {
+    const res = await fetch('https://api.vietqr.io/v2/banks', {
+      headers: { Accept: 'application/json' },
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (Array.isArray(json?.data) && json.data.length > 0) {
+        cachedVietQrBanks = json.data.map((b) => ({
+          id: b.id,
+          name: b.name,
+          code: b.code,
+          bin: b.bin,
+          short_name: b.shortName || b.short_name || b.code,
+          logo: b.logo,
+        }));
+        lastBanksFetchTime = now;
+        return cachedVietQrBanks;
+      }
+    }
+  } catch (err) {
+    console.warn('[Booking] Fetch VietQR banks warning:', err.message);
+  }
+  return cachedVietQrBanks || [];
+};
+
+const cancelBooking = async (
+  bookingId,
+  {
+    reason = 'Khách yêu cầu hủy phòng',
+    bank_name = '',
+    bank_bin = '',
+    account_number = '',
+    account_holder = '',
+  } = {},
+  currentUser
+) => {
   ensureClient();
 
   const [booking, sysCodes] = await Promise.all([
@@ -2043,6 +2090,7 @@ const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phò
   }
 
   // Calculate refund amount according to m_cancellation_policy and applied_penalty_rate
+  const isPaid = hasSuccessfulPayment(booking);
   const policy = booking.m_cancellation_policy || null;
   const freeCancelHours = policy?.free_cancel_before_hours != null ? Number(policy.free_cancel_before_hours) : null;
   const penaltyRate =
@@ -2062,34 +2110,61 @@ const cancelBooking = async (bookingId, { reason = 'Khách yêu cầu hủy phò
 
   const appliedPenalty = isWithinFreeWindow ? 0 : penaltyRate;
   const refundPercent = Math.max(0, 100 - appliedPenalty);
-  const calculatedRefundAmount = Math.round((Number(booking.total_amount || 0) * refundPercent) / 100);
+  const calculatedRefundAmount = isPaid
+    ? Math.round((Number(booking.total_amount || 0) * refundPercent) / 100)
+    : 0;
 
   const paymentTxns = Array.isArray(booking.t_payment_transaction) ? booking.t_payment_transaction : [];
   const latestPayment = paymentTxns[0] || null;
   const refundStatusCd = sysCodes.getCodeCd('REFUND_STS', 'PND');
-  const refundRef = `REF-${bookingId.substring(0, 8).toUpperCase()}`;
+  const refundRef = `REF-${bank_bin ? `${bank_bin}-` : ''}${bookingId.substring(0, 8).toUpperCase()}`;
 
-  const { data: refundRecord } = await supabase
-    .from('t_refund_request')
-    .insert({
-      transaction_id: latestPayment?.transaction_id || null,
-      booking_id: bookingId,
-      refund_amount: calculatedRefundAmount,
-      refund_status_cd: refundStatusCd,
-      gateway_refund_ref: refundRef,
-      reason: `${reason}${appliedPenalty > 0 ? ` (Áp dụng phí hủy ${appliedPenalty}% theo chính sách khách sạn)` : ' (Hủy trong thời hạn miễn phí)'}`,
-    })
-    .select('*')
-    .maybeSingle();
+  let refundRecord = null;
+
+  // Trường hợp 2: Đơn đã thanh toán và số tiền hoàn > 0đ
+  if (isPaid && calculatedRefundAmount > 0) {
+    const cleanBankName = String(bank_name || '').trim();
+    const cleanAccNum = String(account_number || '').trim();
+    const cleanHolder = String(account_holder || '').trim().toUpperCase();
+
+    const noteParts = [
+      `Lý do: ${reason}`,
+      cleanBankName ? `Hoàn tiền về: ${cleanBankName}${bank_bin ? ` (Mã BIN: ${bank_bin})` : ''}` : null,
+      cleanAccNum ? `Số TK: ${cleanAccNum}` : null,
+      cleanHolder ? `Chủ TK: ${cleanHolder}` : null,
+      appliedPenalty > 0 ? `Áp dụng phí hủy ${appliedPenalty}% theo chính sách khách sạn` : 'Hủy trong thời hạn miễn phí (Hoàn 100%)',
+    ].filter(Boolean);
+
+    const { data: insertedRefund } = await supabase
+      .from('t_refund_request')
+      .insert({
+        transaction_id: latestPayment?.transaction_id || null,
+        booking_id: bookingId,
+        refund_amount: calculatedRefundAmount,
+        refund_status_cd: refundStatusCd,
+        gateway_refund_ref: refundRef,
+        reason: noteParts.join(' • '),
+      })
+      .select('*')
+      .maybeSingle();
+
+    refundRecord = insertedRefund;
+  }
+
+  const returnMessage =
+    isPaid && calculatedRefundAmount > 0
+      ? appliedPenalty > 0
+        ? `Đã gửi yêu cầu hủy đặt phòng. Áp dụng phí phạt ${appliedPenalty}% theo chính sách hủy, số tiền hoàn dự kiến: ${calculatedRefundAmount.toLocaleString('vi-VN')} đ.`
+        : `Đã gửi yêu cầu hủy đặt phòng và hoàn tiền ${calculatedRefundAmount.toLocaleString('vi-VN')} đ thành công trong thời hạn miễn phí hủy.`
+      : 'Đã hủy đặt phòng thành công.';
 
   return {
     booking_id: bookingId,
     booking_status_cd: cancelledStatusCd,
     status_code_name: 'CAN',
-    message:
-      appliedPenalty > 0
-        ? `Đã hủy đặt phòng. Áp dụng phí phạt ${appliedPenalty}% theo chính sách hủy, số tiền hoàn dự kiến: ${calculatedRefundAmount.toLocaleString('vi-VN')} đ.`
-        : 'Đã hủy đặt phòng thành công trong thời hạn miễn phí hủy.',
+    message: returnMessage,
+    is_paid: isPaid,
+    refund_amount: calculatedRefundAmount,
     refund: refundRecord || {
       gateway_refund_ref: refundRef,
       refund_amount: calculatedRefundAmount,
@@ -2233,6 +2308,7 @@ module.exports = {
   updateBookingGuestInfo,
   changeBookingDates,
   cancelBooking,
+  getSupportedBanks,
   getBookingVoucher,
   getBookingInvoice,
   adjustInventoryForStay,

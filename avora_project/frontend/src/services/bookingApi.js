@@ -121,6 +121,41 @@ export const cancelBooking = async (id, payload = {}) => {
   return json.data;
 };
 
+export const fetchRefundBanks = async () => {
+  try {
+    const response = await fetch(API_ENDPOINTS.BOOKING_BANKS);
+    if (response.ok) {
+      const json = await response.json();
+      if (Array.isArray(json?.data) && json.data.length > 0) {
+        return json.data;
+      }
+    }
+  } catch (err) {
+    console.warn('[BookingApi] Backend banks fetch warning:', err.message);
+  }
+
+  // Fallback to direct VietQR public API
+  try {
+    const directRes = await fetch('https://api.vietqr.io/v2/banks');
+    if (directRes.ok) {
+      const directJson = await directRes.json();
+      if (Array.isArray(directJson?.data)) {
+        return directJson.data.map((b) => ({
+          id: b.id,
+          name: b.name,
+          code: b.code,
+          bin: b.bin,
+          short_name: b.shortName || b.short_name || b.code,
+          logo: b.logo,
+        }));
+      }
+    }
+  } catch (directErr) {
+    console.error('[BookingApi] Direct VietQR fetch failed:', directErr);
+  }
+  return [];
+};
+
 export const fetchBookingVoucher = async (id) => {
   const url = API_ENDPOINTS.BOOKING_VOUCHER(id);
   const response = await authenticatedFetch(url);

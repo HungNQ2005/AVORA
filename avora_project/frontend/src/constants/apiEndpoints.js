@@ -33,6 +33,7 @@ export const API_ENDPOINTS = {
   BOOKING_VOUCHER: (id) => `${API_BASE_URL}/api/bookings/${id}/voucher`,
   BOOKING_INVOICE: (id) => `${API_BASE_URL}/api/bookings/${id}/invoice`,
   BOOKING_CANCEL: (id) => `${API_BASE_URL}/api/bookings/${id}/cancel`,
+  BOOKING_BANKS: `${API_BASE_URL}/api/bookings/banks`,
   BOOKING_DATES: (id) => `${API_BASE_URL}/api/bookings/${id}/dates`,
   PAYMENT_CREATE_QR: `${API_BASE_URL}/api/payment/create-qr`,
   PAYMENT_STATUS: (bookingId) => `${API_BASE_URL}/api/payment/status/${bookingId}`,

@@ -202,6 +202,18 @@ const getBookingInvoice = async (req, res, next) => {
   }
 };
 
+const getSupportedBanks = async (_req, res, next) => {
+  try {
+    const banks = await bookingService.getSupportedBanks();
+    return res.status(200).json({
+      status: 'success',
+      data: banks,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   calculatePricing,
   createBooking,
@@ -210,6 +222,7 @@ module.exports = {
   updateBookingGuestInfo,
   changeBookingDates,
   cancelBooking,
+  getSupportedBanks,
   getBookingVoucher,
   getBookingInvoice,
 };

@@ -24,6 +24,9 @@ const bookingErrorHandler = (err, _req, res, next) => {
 // POST /api/bookings/calculate - Preview and calculate totals with coupon
 router.post('/bookings/calculate', bookingController.calculatePricing);
 
+// GET /api/bookings/banks - List supported VietQR banks for refund
+router.get('/bookings/banks', bookingController.getSupportedBanks);
+
 // GET /api/bookings/my (and /bookings) - Get customer's bookings with filters & counts
 router.get('/bookings/my', authenticate, bookingController.getMyBookings);
 router.get('/bookings', authenticate, bookingController.getMyBookings);

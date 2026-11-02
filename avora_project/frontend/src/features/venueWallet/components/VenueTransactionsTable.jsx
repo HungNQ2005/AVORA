@@ -326,7 +326,7 @@ const VenueTransactionsTable = ({ inflow = [], outflow = [], onSelectTransaction
                       {/* 4. Delta Amount */}
                       <td className="vw-col-amount">
                         <span className={`vw-delta-amount ${isIn ? 'vw-text-green' : 'vw-text-rose'}`}>
-                          {isIn ? '+' : '-'}{formatCurrency(tx.net_amount)}
+                          {Number(tx.net_amount) > 0 ? (isIn ? '+' : '-') : ''}{formatCurrency(tx.net_amount)}
                         </span>
                       </td>
 

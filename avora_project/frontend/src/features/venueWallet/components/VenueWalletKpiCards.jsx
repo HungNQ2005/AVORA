@@ -74,13 +74,15 @@ const VenueWalletKpiCards = ({ balances = {}, summary = {}, policies = {} }) => 
         </div>
         <div className="vw-stat-card__value-row">
           <span className="vw-stat-card__main-value vw-text-blue">
-            +{formatCurrency(totalInflowNet)}
+            {totalInflowNet > 0 ? `+${formatCurrency(totalInflowNet)}` : formatCurrency(0)}
           </span>
         </div>
         <div className="vw-stat-card__footer">
           <span className="vw-stat-card__footer-left">{totalInflowCount} đơn hoàn tất</span>
           <span className="vw-stat-badge vw-stat-badge--blue">
-            Sàn: -{formatCurrency(totalCommission)} ({commRate}%)
+            {totalCommission > 0
+              ? `Sàn: -${formatCurrency(totalCommission)} (${commRate}%)`
+              : 'Chưa phát sinh'}
           </span>
         </div>
       </div>
@@ -98,7 +100,7 @@ const VenueWalletKpiCards = ({ balances = {}, summary = {}, policies = {} }) => 
         </div>
         <div className="vw-stat-card__value-row">
           <span className="vw-stat-card__main-value vw-text-rose">
-            -{formatCurrency(totalOutflowDeducted)}
+            {totalOutflowDeducted > 0 ? `-${formatCurrency(totalOutflowDeducted)}` : formatCurrency(0)}
           </span>
         </div>
         <div className="vw-stat-card__footer">
