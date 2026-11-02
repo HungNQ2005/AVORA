@@ -70,7 +70,7 @@ const CancelBookingModal = ({
 
   const bankDropdownRef = useRef(null);
 
-  // Load VietQR banks when in Case 2
+  // Load supported banks from m_system_code when in Case 2
   useEffect(() => {
     if (!isCase2) return;
     let active = true;
@@ -113,7 +113,10 @@ const CancelBookingModal = ({
         b.name?.toLowerCase().includes(q) ||
         b.short_name?.toLowerCase().includes(q) ||
         b.code?.toLowerCase().includes(q) ||
-        b.bin?.includes(q)
+        b.code_name?.toLowerCase().includes(q) ||
+        b.bank_cd?.toLowerCase().includes(q) ||
+        (b.bin && String(b.bin).includes(q)) ||
+        (b.bin_code && String(b.bin_code).includes(q))
     );
   }, [banks, bankSearchQuery]);
 
@@ -152,7 +155,7 @@ const CancelBookingModal = ({
 
     if (isCase2) {
       if (!selectedBank) {
-        newErrors.bank = 'Vui lòng chọn ngân hàng nhận tiền hoàn từ danh sách VietQR.';
+        newErrors.bank = 'Vui lòng chọn ngân hàng nhận tiền hoàn từ danh sách hệ thống.';
       }
       if (!accountNumber || accountNumber.length < 6 || accountNumber.length > 25) {
         newErrors.accountNumber = 'Vui lòng nhập số tài khoản ngân hàng hợp lệ (từ 6 đến 25 chữ số).';
@@ -174,10 +177,13 @@ const CancelBookingModal = ({
     };
 
     if (isCase2 && selectedBank) {
-      payload.bank_name = selectedBank.short_name
-        ? `${selectedBank.name} (${selectedBank.short_name})`
-        : selectedBank.name;
-      payload.bank_bin = selectedBank.bin || '';
+      const bankShort = selectedBank.short_name || selectedBank.code_name || selectedBank.code || '';
+      const bankFull = selectedBank.name || selectedBank.code_name || '';
+      payload.bank_cd = selectedBank.bank_cd || selectedBank.code_cd || selectedBank.code || '';
+      payload.bank_name = bankShort && bankFull && bankShort !== bankFull
+        ? `${bankFull} (${bankShort})`
+        : (bankFull || bankShort);
+      payload.bank_bin = selectedBank.bin || selectedBank.bin_code || '';
       payload.account_number = accountNumber.trim();
       payload.account_holder = accountHolder.trim();
     }
@@ -287,15 +293,15 @@ const CancelBookingModal = ({
               </div>
 
               <div className="cbm-form-grid">
-                {/* 1. Ngân hàng nhận tiền (Chọn từ VietQR) */}
+                {/* 1. Ngân hàng nhận tiền (Hệ thống m_system_code) */}
                 <div className="cbm-field" ref={bankDropdownRef}>
                   <label className="cbm-label">
                     <span>
                       Ngân hàng nhận tiền <span className="cbm-req">*</span>
                     </span>
-                    {selectedBank?.bin && (
+                    {(selectedBank?.bin || selectedBank?.bin_code) && (
                       <span className="cbm-label-hint">
-                        Mã BIN: {selectedBank.bin}
+                        Mã BIN: {selectedBank.bin || selectedBank.bin_code}
                       </span>
                     )}
                   </label>
@@ -310,26 +316,26 @@ const CancelBookingModal = ({
                     >
                       {selectedBank ? (
                         <div className="cbm-bank-trigger-content">
-                          {selectedBank.logo && (
+                          {(selectedBank.logo || selectedBank.logo_url) && (
                             <img
-                              src={selectedBank.logo}
-                              alt={selectedBank.short_name}
+                              src={selectedBank.logo || selectedBank.logo_url}
+                              alt={selectedBank.short_name || selectedBank.code_name || ''}
                               className="cbm-bank-logo"
                             />
                           )}
                           <div className="cbm-bank-info">
                             <span className="cbm-bank-shortname">
-                              {selectedBank.short_name || selectedBank.name}
+                              {selectedBank.short_name || selectedBank.code_name || selectedBank.name}
                             </span>
                             <span className="cbm-bank-bin-badge">
-                              {selectedBank.name}
+                              {selectedBank.name || selectedBank.code_name}
                             </span>
                           </div>
                         </div>
                       ) : (
                         <span className="cbm-bank-placeholder">
                           {loadingBanks
-                            ? 'Đang tải danh sách ngân hàng VietQR...'
+                            ? 'Đang tải danh sách ngân hàng hệ thống...'
                             : 'Chọn ngân hàng nhận tiền...'}
                         </span>
                       )}
@@ -365,10 +371,12 @@ const CancelBookingModal = ({
                           ) : (
                             filteredBanks.map((b) => (
                               <button
-                                key={b.bin || b.code || b.id}
+                                key={b.bank_cd || b.code_cd || b.bin || b.code || b.id}
                                 type="button"
                                 className={`cbm-bank-item ${
-                                  selectedBank?.bin === b.bin
+                                  ((selectedBank?.bank_cd && selectedBank.bank_cd === b.bank_cd) ||
+                                   (selectedBank?.code_cd && selectedBank.code_cd === b.code_cd) ||
+                                   (selectedBank?.bin && selectedBank.bin === b.bin))
                                     ? 'cbm-bank-item--selected'
                                     : ''
                                 }`}
@@ -384,28 +392,30 @@ const CancelBookingModal = ({
                                   }
                                 }}
                               >
-                                {b.logo && (
+                                {(b.logo || b.logo_url) && (
                                   <img
-                                    src={b.logo}
-                                    alt={b.short_name}
+                                    src={b.logo || b.logo_url}
+                                    alt={b.short_name || b.code_name || ''}
                                     className="cbm-bank-logo"
                                   />
                                 )}
                                 <div className="cbm-bank-item-text">
                                   <span className="cbm-bank-item-title">
-                                    {b.short_name || b.name}{' '}
-                                    <span
-                                      style={{
-                                        color: '#64748b',
-                                        fontSize: '0.72rem',
-                                        fontWeight: 400,
-                                      }}
-                                    >
-                                      (BIN: {b.bin})
-                                    </span>
+                                    {b.short_name || b.code_name || b.name}{' '}
+                                    {(b.bin || b.bin_code) && (
+                                      <span
+                                        style={{
+                                          color: '#64748b',
+                                          fontSize: '0.72rem',
+                                          fontWeight: 400,
+                                        }}
+                                      >
+                                        (BIN: {b.bin || b.bin_code})
+                                      </span>
+                                    )}
                                   </span>
                                   <span className="cbm-bank-item-sub">
-                                    {b.name}
+                                    {b.name || b.code_name}
                                   </span>
                                 </div>
                               </button>

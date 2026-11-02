@@ -121,6 +121,10 @@ export const cancelBooking = async (id, payload = {}) => {
   return json.data;
 };
 
+/**
+ * Fetch supported bank list for cancellation refunds.
+ * Sourced directly from backend m_system_code (business_cd = 'BANK_CD')
+ */
 export const fetchRefundBanks = async () => {
   try {
     const response = await fetch(API_ENDPOINTS.BOOKING_BANKS);
@@ -134,25 +138,19 @@ export const fetchRefundBanks = async () => {
     console.warn('[BookingApi] Backend banks fetch warning:', err.message);
   }
 
-  // Fallback to direct VietQR public API
+  // Fallback to wallet banks endpoint (also sourced from m_system_code)
   try {
-    const directRes = await fetch('https://api.vietqr.io/v2/banks');
-    if (directRes.ok) {
-      const directJson = await directRes.json();
-      if (Array.isArray(directJson?.data)) {
-        return directJson.data.map((b) => ({
-          id: b.id,
-          name: b.name,
-          code: b.code,
-          bin: b.bin,
-          short_name: b.shortName || b.short_name || b.code,
-          logo: b.logo,
-        }));
+    const walletRes = await fetch(API_ENDPOINTS.WALLET_BANKS);
+    if (walletRes.ok) {
+      const walletJson = await walletRes.json();
+      if (Array.isArray(walletJson?.data) && walletJson.data.length > 0) {
+        return walletJson.data;
       }
     }
-  } catch (directErr) {
-    console.error('[BookingApi] Direct VietQR fetch failed:', directErr);
+  } catch (walletErr) {
+    console.warn('[BookingApi] Wallet banks fallback warning:', walletErr.message);
   }
+
   return [];
 };
 

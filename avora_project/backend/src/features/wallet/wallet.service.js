@@ -135,7 +135,13 @@ const getSupportedBanks = async () => {
         bin_code: matched?.bin || null,
         logo_url: logoUrl,
         logo_base64: logoBase64,
-        short_name: matched?.shortName || codeNameParser(b.code_name),
+        code_cd: b.code_cd,
+        code: matched?.code || b.code_name,
+        name: matched?.name || (codeNameParser(b.code_name) !== b.code_name ? codeNameParser(b.code_name) : b.code_name),
+        bin: matched?.bin || null,
+        logo: logoUrl,
+        short_name: matched?.shortName || codeNameParser(b.code_name) || b.code_name,
+        sort_no: b.sort_no,
       };
     })
   );

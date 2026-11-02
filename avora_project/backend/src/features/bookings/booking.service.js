@@ -1998,41 +1998,42 @@ const changeBookingDates = async (
 /**
  * Cancel a booking using the configured cancellation status, restore inventory, and record refund request based on policy.
  */
-let cachedVietQrBanks = null;
-let lastBanksFetchTime = 0;
+const walletService = require('../wallet/wallet.service');
+const { codeNameParser } = require('../../utils/codeNameParser');
 
 /**
- * Fetch supported banks list from VietQR for refund bank account selection
+ * Fetch supported banks list from m_system_code (business_cd = 'BANK_CD')
+ * for refund bank account selection
  */
 const getSupportedBanks = async () => {
-  const now = Date.now();
-  if (cachedVietQrBanks && now - lastBanksFetchTime < 15 * 60 * 1000) {
-    return cachedVietQrBanks;
-  }
   try {
-    const res = await fetch('https://api.vietqr.io/v2/banks', {
-      headers: { Accept: 'application/json' },
-      signal: AbortSignal.timeout(6000),
-    });
-    if (res.ok) {
-      const json = await res.json();
-      if (Array.isArray(json?.data) && json.data.length > 0) {
-        cachedVietQrBanks = json.data.map((b) => ({
-          id: b.id,
-          name: b.name,
-          code: b.code,
-          bin: b.bin,
-          short_name: b.shortName || b.short_name || b.code,
-          logo: b.logo,
-        }));
-        lastBanksFetchTime = now;
-        return cachedVietQrBanks;
-      }
-    }
+    return await walletService.getSupportedBanks();
   } catch (err) {
-    console.warn('[Booking] Fetch VietQR banks warning:', err.message);
+    console.warn('[Booking] getSupportedBanks via walletService failed, falling back to m_system_code query:', err.message);
+    const { data, error } = await supabase
+      .from('m_system_code')
+      .select('code_cd, code_name, sort_no')
+      .eq('business_cd', 'BANK_CD')
+      .order('sort_no', { ascending: true });
+
+    if (error || !data) return [];
+    return data.map((b) => {
+      const parsed = codeNameParser(b.code_name);
+      return {
+        bank_cd: b.code_cd,
+        code_cd: b.code_cd,
+        code_name: b.code_name,
+        code: b.code_name,
+        name: parsed !== b.code_name ? parsed : b.code_name,
+        short_name: parsed || b.code_name,
+        bin: null,
+        bin_code: null,
+        logo: null,
+        logo_url: null,
+        sort_no: b.sort_no,
+      };
+    });
   }
-  return cachedVietQrBanks || [];
 };
 
 const cancelBooking = async (
@@ -2041,6 +2042,7 @@ const cancelBooking = async (
     reason = 'Khách yêu cầu hủy phòng',
     bank_name = '',
     bank_bin = '',
+    bank_cd = '',
     account_number = '',
     account_holder = '',
   } = {},
@@ -2123,13 +2125,25 @@ const cancelBooking = async (
 
   // Trường hợp 2: Đơn đã thanh toán và số tiền hoàn > 0đ
   if (isPaid && calculatedRefundAmount > 0) {
-    const cleanBankName = String(bank_name || '').trim();
+    let cleanBankName = String(bank_name || '').trim();
+    if (!cleanBankName && bank_cd) {
+      const { data: bankSysCode } = await supabase
+        .from('m_system_code')
+        .select('code_name')
+        .eq('business_cd', 'BANK_CD')
+        .eq('code_cd', String(bank_cd))
+        .maybeSingle();
+      if (bankSysCode?.code_name) {
+        cleanBankName = codeNameParser(bankSysCode.code_name) || bankSysCode.code_name;
+      }
+    }
     const cleanAccNum = String(account_number || '').trim();
     const cleanHolder = String(account_holder || '').trim().toUpperCase();
 
     const noteParts = [
       `Lý do: ${reason}`,
       cleanBankName ? `Hoàn tiền về: ${cleanBankName}${bank_bin ? ` (Mã BIN: ${bank_bin})` : ''}` : null,
+      bank_cd ? `Mã ngân hàng (System Code): ${bank_cd}` : null,
       cleanAccNum ? `Số TK: ${cleanAccNum}` : null,
       cleanHolder ? `Chủ TK: ${cleanHolder}` : null,
       appliedPenalty > 0 ? `Áp dụng phí hủy ${appliedPenalty}% theo chính sách khách sạn` : 'Hủy trong thời hạn miễn phí (Hoàn 100%)',
