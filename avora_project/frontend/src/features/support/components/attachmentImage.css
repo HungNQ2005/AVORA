@@ -1,0 +1,130 @@
+.support-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.support-attachment {
+  width: 150px;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #dbe5f1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.support-attachment__preview {
+  display: block;
+  width: 100%;
+  height: 100px;
+  border: 0;
+  padding: 0;
+  background: #f1f5f9;
+  cursor: zoom-in;
+}
+
+.support-attachment__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.support-attachment figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 5px;
+  font-size: 10px;
+}
+
+.support-attachment figcaption span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.support-attachment figcaption button {
+  flex: 0 0 auto;
+  border: 0;
+  background: transparent;
+  color: #b91c1c;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.support-attachment-error {
+  color: #b91c1c;
+  font-size: 12px;
+}
+
+.support-attachment-loading {
+  padding: 8px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.support-image-modal {
+  position: fixed;
+  z-index: 1500;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(15 23 42 / 82%);
+}
+
+.support-image-modal__dialog {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  max-width: min(1100px, 100%);
+  max-height: 100%;
+}
+
+.support-image-modal__dialog img {
+  display: block;
+  max-width: 100%;
+  max-height: calc(100vh - 100px);
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 35%);
+}
+
+.support-image-modal__dialog p {
+  max-width: 100%;
+  margin: 10px 0 0;
+  color: #fff;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.support-image-modal__close {
+  position: absolute;
+  z-index: 1;
+  top: -16px;
+  right: -16px;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 35%);
+  border-radius: 50%;
+  background: #fff;
+  color: #172b4d;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (max-width: 600px) {
+  .support-image-modal {
+    padding: 16px;
+  }
+
+  .support-image-modal__close {
+    top: -12px;
+    right: -8px;
+  }
+}

@@ -9,7 +9,6 @@ const { processChat } = require('../chatbot/chatbot.service');
 const BUCKET = 'support_ticket_attachments';
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_TICKET_ATTACHMENT_BYTES = 6 * 1024 * 1024;
-const TICKET_STATUSES = new Set(['OPN', 'INP', 'WAT', 'RSV', 'CLS']);
 const CUSTOMER_CATEGORIES = new Set(['PWC', 'PWA', 'PTO', 'RFD', 'BKI', 'GEN']);
 const VENDOR_CATEGORIES = new Set(['VBU', 'VIU', 'VPO']);
 const SUPPORT_CATEGORY_LABELS = {
@@ -748,7 +747,6 @@ const getSupportCounts = async (user) => {
 };
 
 module.exports = {
-  TICKET_STATUSES,
   listCategories,
   createCategory,
   listTickets,

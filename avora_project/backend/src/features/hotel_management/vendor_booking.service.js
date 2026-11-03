@@ -24,6 +24,13 @@ const addCalendarMonth = (dateOnly) => {
   return date.toISOString().slice(0, 10);
 };
 const formatDate = (value) => value ? String(value).slice(0, 10) : '';
+const isReadOnlyBookingStatus = (status) => [
+  'CAN',
+  'CANCELLED',
+  'CHECKED_OUT',
+  'COMPLETED',
+  'COMPLETE',
+].includes(String(status || '').trim().toUpperCase().replace(/[\s-]+/g, '_'));
 
 const assertHotelOwnership = async (hotelId, vendorId) => {
   const { data: hotel, error } = await supabase.from('m_hotel')
@@ -50,9 +57,6 @@ const getBookingStatusNames = async () => {
 
 const listHotelBookings = async (hotelId, vendorId, query) => {
   const hotel = await assertHotelOwnership(hotelId, vendorId);
-  if (query.check_in_from && query.check_in_to && query.check_in_from > query.check_in_to) {
-    throw createError(400, 'Ngày bắt đầu không được sau ngày kết thúc.');
-  }
   const [{ data: bookingRows, error }, statusNames] = await Promise.all([
     supabase.from('t_booking').select(`
       booking_id, user_id, hotel_id, total_amount, guest_name, guest_phone, special_request,
@@ -80,44 +84,48 @@ const listHotelBookings = async (hotelId, vendorId, query) => {
     if (query.status === 'in_use' && (statusName === 'CAN' || checkIn > today || checkOut <= today)) return false;
     if (query.status === 'completed' && (statusName === 'CAN' || checkOut > today)) return false;
     if (query.status !== 'cancelled' && statusName === 'CAN' && query.status !== 'all') return false;
-    if (query.check_in_from && checkIn < query.check_in_from) return false;
-    if (query.check_in_to && checkIn > query.check_in_to) return false;
-    if (query.check_out_from && checkOut < query.check_out_from) return false;
-    if (query.check_out_to && checkOut > query.check_out_to) return false;
+    if (query.check_in_date && checkIn !== query.check_in_date) return false;
+    if (query.check_out_date && checkOut !== query.check_out_date) return false;
     return true;
   });
 
   const total = filtered.length;
   const start = (query.page - 1) * query.limit;
-  const items = filtered.slice(start, start + query.limit).map((booking) => ({
-    booking_id: booking.booking_id,
-    booking_code: formatBookingCode(booking.booking_id, booking.created_at),
-    booking_status_cd: statusNames.get(String(booking.booking_status_cd || '').toUpperCase()) || booking.booking_status_cd,
-    total_amount: Number(booking.total_amount || 0),
-    created_at: booking.created_at,
-    guest: {
-      name: booking.guest_name || booking.m_user?.full_name || '',
-      phone: booking.guest_phone || '',
-      email: booking.m_user?.email || '',
-    },
-    hotel: { hotel_id: hotelId, name: hotel.name },
-    special_request: booking.special_request || '',
-    is_paid: true,
-    payment_amount: (booking.t_payment_transaction || []).reduce((sum, payment) => sum + Number(payment.amount_paid || 0), 0),
-    stay: {
-      check_in_date: booking.t_booking_detail.map((detail) => formatDate(detail.check_in_date)).sort()[0],
-      check_out_date: booking.t_booking_detail.map((detail) => formatDate(detail.check_out_date)).sort().reverse()[0],
-      rooms: booking.t_booking_detail.map((detail) => ({
-        booking_detail_id: detail.booking_detail_id,
-        room_type_id: detail.room_type_id,
-        room_type: detail.m_room_type?.type_name || 'Phòng',
-        quantity: Number(detail.quantity || 0),
-        guests_per_room: Number(detail.m_room_type?.max_adults || 0) + Number(detail.m_room_type?.max_children || 0),
-        bed_type: detail.m_room_type?.bed_type || '',
-        room_size: detail.m_room_type?.room_size || '',
-      })),
-    },
-  }));
+  const items = filtered.slice(start, start + query.limit).map((booking) => {
+    const statusName = statusNames.get(String(booking.booking_status_cd || '').toUpperCase()) || '';
+    const checkInDate = booking.t_booking_detail.map((detail) => formatDate(detail.check_in_date)).sort()[0];
+    const checkOutDate = booking.t_booking_detail.map((detail) => formatDate(detail.check_out_date)).sort().reverse()[0];
+    return {
+      booking_id: booking.booking_id,
+      booking_code: formatBookingCode(booking.booking_id, booking.created_at),
+      booking_status_cd: statusName || booking.booking_status_cd,
+      total_amount: Number(booking.total_amount || 0),
+      created_at: booking.created_at,
+      guest: {
+        name: booking.guest_name || booking.m_user?.full_name || '',
+        phone: booking.guest_phone || '',
+        email: booking.m_user?.email || '',
+      },
+      hotel: { hotel_id: hotelId, name: hotel.name },
+      special_request: booking.special_request || '',
+      is_paid: true,
+      payment_amount: (booking.t_payment_transaction || []).reduce((sum, payment) => sum + Number(payment.amount_paid || 0), 0),
+      stay: {
+        check_in_date: checkInDate,
+        check_out_date: checkOutDate,
+        rooms: booking.t_booking_detail.map((detail) => ({
+          booking_detail_id: detail.booking_detail_id,
+          room_type_id: detail.room_type_id,
+          room_type: detail.m_room_type?.type_name || 'Phòng',
+          quantity: Number(detail.quantity || 0),
+          guests_per_room: Number(detail.m_room_type?.max_adults || 0) + Number(detail.m_room_type?.max_children || 0),
+          bed_type: detail.m_room_type?.bed_type || '',
+          room_size: detail.m_room_type?.room_size || '',
+        })),
+      },
+      is_editable: !isReadOnlyBookingStatus(statusName) && checkOutDate > today,
+    };
+  });
   return {
     items,
     pagination: { page: query.page, limit: query.limit, total, total_pages: Math.ceil(total / query.limit) },
@@ -131,8 +139,20 @@ const getOwnedPaidBooking = async (hotelId, bookingId, vendor) => {
   if (String(booking.hotel_id) !== String(hotelId)) throw createError(404, 'Không tìm thấy đơn đặt phòng của khách sạn này.');
   if (!hasPayment(booking.t_payment_transaction)) throw createError(409, 'Chỉ được quản lý đơn đặt phòng đã thanh toán.');
   const names = await getBookingStatusNames();
-  if ((names.get(String(booking.booking_status_cd || '').toUpperCase()) || '') === 'CAN') {
-    throw createError(409, 'Đơn đặt phòng đã bị hủy.');
+  const statusName = names.get(String(booking.booking_status_cd || '').toUpperCase()) || '';
+  if (isReadOnlyBookingStatus(statusName)) {
+    if (statusName === 'CAN' || statusName === 'CANCELLED') {
+      throw createError(409, 'Đơn đặt phòng đã bị hủy.');
+    }
+    throw createError(409, 'Không thể chỉnh sửa đơn đặt phòng đã trả phòng.');
+  }
+  const checkOut = (booking.t_booking_detail || [])
+    .map((detail) => formatDate(detail.check_out_date))
+    .sort()
+    .reverse()[0];
+  if (!checkOut) throw createError(409, 'Đơn đặt phòng không có ngày trả phòng hợp lệ.');
+  if (checkOut <= getVietnamToday()) {
+    throw createError(409, 'Không thể chỉnh sửa đơn đặt phòng sau ngày trả phòng.');
   }
   return { booking, user };
 };

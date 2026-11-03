@@ -8,12 +8,20 @@ import {
   getHotels,
   getVendorHotelBookings,
 } from '../../../services/hotelManagementService';
+import VendorBookingCard from '../components/VendorBookingCard';
 import './vendorBookingsPage.css';
 
 const formatDate = (value) => value ? new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString('vi-VN') : '—';
 const formatMoney = (value) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(Number(value || 0));
 const errorMessage = (error) => error.response?.data?.message || error.message || 'Đã xảy ra lỗi. Vui lòng thử lại.';
-const statusNames = { CAN: 'Đã hủy', CFM: 'Đã xác nhận', PND: 'Chờ xác nhận', OPN: 'Mới', COMPLETED: 'Hoàn tất' };
+const statusNames = {
+  CAN: 'Đã hủy',
+  CFM: 'Đã xác nhận',
+  PND: 'Chờ xác nhận',
+  OPN: 'Mới',
+  COMPLETED: 'Đã trả phòng',
+  CHECKED_OUT: 'Đã trả phòng',
+};
 const getVietnamToday = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
 const addCalendarMonth = (dateOnly) => {
   const date = new Date(`${dateOnly}T00:00:00.000Z`);
@@ -37,7 +45,7 @@ const VendorBookingsPage = () => {
   const [roomTypes, setRoomTypes] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total: 0 });
-  const [filters, setFilters] = useState({ status: 'all', check_in_from: '', check_in_to: '', check_out_from: '', check_out_to: '' });
+  const [filters, setFilters] = useState({ status: 'all', check_in_date: '', check_out_date: '' });
   const [action, setAction] = useState(null);
   const [actionForm, setActionForm] = useState({ reason: '', check_in_date: '', check_out_date: '', booking_detail_id: '', room_type_id: '' });
   const [loading, setLoading] = useState(true);
@@ -92,10 +100,8 @@ const VendorBookingsPage = () => {
         page,
         limit: 20,
         status: filters.status,
-        ...(filters.check_in_from ? { check_in_from: filters.check_in_from } : {}),
-        ...(filters.check_in_to ? { check_in_to: filters.check_in_to } : {}),
-        ...(filters.check_out_from ? { check_out_from: filters.check_out_from } : {}),
-        ...(filters.check_out_to ? { check_out_to: filters.check_out_to } : {}),
+        ...(filters.check_in_date ? { check_in_date: filters.check_in_date } : {}),
+        ...(filters.check_out_date ? { check_out_date: filters.check_out_date } : {}),
       });
       setBookings(result.items || []);
       setPagination(result.pagination || { page: 1, total_pages: 1, total: 0 });
@@ -208,10 +214,8 @@ const VendorBookingsPage = () => {
             <option value="all">Tất cả</option><option value="in_use">Đang lưu trú</option><option value="completed">Đã hoàn thành</option><option value="cancelled">Đã hủy</option>
           </select>
         </label>
-        <label>Nhận phòng từ<input type="date" value={filters.check_in_from} onChange={(event) => setFilters((current) => ({ ...current, check_in_from: event.target.value }))} /></label>
-        <label>Nhận phòng đến<input type="date" value={filters.check_in_to} onChange={(event) => setFilters((current) => ({ ...current, check_in_to: event.target.value }))} /></label>
-        <label>Trả phòng từ<input type="date" value={filters.check_out_from} onChange={(event) => setFilters((current) => ({ ...current, check_out_from: event.target.value }))} /></label>
-        <label>Trả phòng đến<input type="date" value={filters.check_out_to} onChange={(event) => setFilters((current) => ({ ...current, check_out_to: event.target.value }))} /></label>
+        <label>Ngày nhận phòng<input type="date" value={filters.check_in_date} onChange={(event) => setFilters((current) => ({ ...current, check_in_date: event.target.value }))} /></label>
+        <label>Ngày trả phòng<input type="date" value={filters.check_out_date} onChange={(event) => setFilters((current) => ({ ...current, check_out_date: event.target.value }))} /></label>
       </div>
 
       {selectedHotel && <h2 className="vendor-bookings__hotel-title">{selectedHotel.name} <span>{pagination.total} đơn</span></h2>}
@@ -220,48 +224,15 @@ const VendorBookingsPage = () => {
       ) : bookings.length ? (
         <div className="vendor-bookings__list">
           {bookings.map((booking) => (
-            <article className="vendor-booking-card" key={booking.booking_id}>
-              <header>
-                <div><strong>{booking.booking_code}</strong><span>{booking.guest.name || 'Khách lưu trú'}</span></div>
-                <span className={`vendor-booking-status vendor-booking-status--${booking.booking_status_cd}`}>{statusNames[booking.booking_status_cd] || booking.booking_status_cd}</span>
-              </header>
-              <div className="vendor-booking-card__body">
-                <div className="vendor-booking-card__guest">
-                  <span>{booking.guest.email || 'Không có email'}</span><span>{booking.guest.phone || 'Không có số điện thoại'}</span>
-                </div>
-                <div className="vendor-booking-card__stay">
-                  <strong>{formatDate(booking.stay.check_in_date)} – {formatDate(booking.stay.check_out_date)}</strong>
-                  {booking.stay.rooms.map((room) => (
-                    <p key={room.booking_detail_id}>
-                      {room.quantity} × {room.room_type} · {room.guests_per_room} khách/ phòng{room.bed_type ? ` · ${room.bed_type}` : ''}
-                      <button type="button" onClick={() => openAction('room', booking, room)}>Đổi hạng phòng</button>
-                    </p>
-                  ))}
-                </div>
-                <div className="vendor-booking-card__total"><span>Tổng thanh toán</span><strong>{formatMoney(booking.total_amount)}</strong></div>
-              </div>
-              {booking.special_request && <p className="vendor-booking-card__request"><strong>Yêu cầu:</strong> {booking.special_request}</p>}
-              <footer>
-                <span>Đặt lúc {formatDate(booking.created_at)}</span>
-                {booking.booking_status_cd !== 'CAN' && (
-                  <div>
-                    <button
-                      type="button"
-                      disabled={booking.stay.check_in_date < vendorActionCutoff}
-                      title={booking.stay.check_in_date < vendorActionCutoff ? 'Chỉ được thay đổi trước ngày nhận phòng ít nhất một tháng.' : ''}
-                      onClick={() => openAction('dates', booking)}
-                    >Đổi ngày lưu trú</button>
-                    <button
-                      type="button"
-                      className="is-danger"
-                      disabled={booking.stay.check_in_date < vendorActionCutoff}
-                      title={booking.stay.check_in_date < vendorActionCutoff ? 'Chỉ được hủy trước ngày nhận phòng ít nhất một tháng.' : ''}
-                      onClick={() => openAction('cancel', booking)}
-                    >Hủy đơn</button>
-                  </div>
-                )}
-              </footer>
-            </article>
+            <VendorBookingCard
+              key={booking.booking_id}
+              booking={booking}
+              actionCutoff={vendorActionCutoff}
+              statusNames={statusNames}
+              formatDate={formatDate}
+              formatMoney={formatMoney}
+              onAction={openAction}
+            />
           ))}
         </div>
       ) : (
