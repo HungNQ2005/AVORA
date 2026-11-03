@@ -35,6 +35,7 @@ const DashboardNav = () => {
   const canManageCoupons = isBmr;
   const canManageRefundPolicies = isBmr;
   const canManageCommissionPolicies = isBmr;
+  const canAccessDisbursements = isVendor || isBmr;
   const canViewStatistics = isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
@@ -256,7 +257,7 @@ const DashboardNav = () => {
         )}
 
         {/* MARKETING & DOANH THU */}
-        {(canManageCoupons || canManageRefundPolicies || canManageCommissionPolicies || canViewStatistics) && (
+        {(canManageCoupons || canManageRefundPolicies || canManageCommissionPolicies || canAccessDisbursements || canViewStatistics) && (
           <div className="admin-sidebar__group">
             <div className="admin-sidebar__group-title">MARKETING & DOANH THU</div>
             {canManageCoupons && (
@@ -306,6 +307,22 @@ const DashboardNav = () => {
                 <span className="admin-sidebar__label">Chính sách phí hoa hồng</span>
               </NavLink>
             )}
+            {canAccessDisbursements && (
+              <NavLink
+                to="/dashboard/disbursements"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                    <line x1="2" y1="10" x2="22" y2="10"></line>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">{isVendor ? 'Yêu cầu giải ngân' : 'Quản lý giải ngân'}</span>
+              </NavLink>
+            )}
             {canViewStatistics && (
               <NavLink
                 to="/dashboard/statistics"
@@ -321,6 +338,38 @@ const DashboardNav = () => {
                 </span>
                 <span className="admin-sidebar__label">Báo cáo doanh thu</span>
               </NavLink>
+            )}
+            {isVendor && (
+              <>
+                <NavLink
+                  to="/dashboard/venue-wallet"
+                  className={({ isActive }) =>
+                    `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                  }
+                >
+                  <span className="admin-sidebar__icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <line x1="12" y1="1" x2="12" y2="23"></line>
+                      <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                    </svg>
+                  </span>
+                  <span className="admin-sidebar__label">Ví doanh thu chỗ nghỉ</span>
+                </NavLink>
+                <NavLink
+                  to="/dashboard/wallet"
+                  className={({ isActive }) =>
+                    `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                  }
+                >
+                  <span className="admin-sidebar__icon">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                      <line x1="2" y1="10" x2="22" y2="10"></line>
+                    </svg>
+                  </span>
+                  <span className="admin-sidebar__label">Ví & Liên kết ngân hàng</span>
+                </NavLink>
+              </>
             )}
           </div>
         )}

@@ -22,7 +22,11 @@ import RefundPolicyManagementPage from './features/refund_policies/pages/RefundP
 import RefundPolicyDetailPage from './features/refund_policies/pages/RefundPolicyDetailPage';
 import CommissionPolicyManagementPage from './features/commission_policies/pages/CommissionPolicyManagementPage';
 import CommissionPolicyDetailPage from './features/commission_policies/pages/CommissionPolicyDetailPage';
+import DisbursementManagementPage from './features/disbursements/pages/DisbursementManagementPage';
+import VendorDisbursementPage from './features/disbursements/pages/VendorDisbursementPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
+import HotelWalletPage from './features/wallet/pages/HotelWalletPage';
+import VenueWalletPage from './features/venueWallet/pages/VenueWalletPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
 import HotelManagerRoute from './common/components/HotelManagerRoute';
@@ -138,6 +142,21 @@ const VendorRoute = ({ children }) => {
   if (!isVendor) return <Navigate to="/forbidden" replace />;
 
   return children;
+};
+
+const DisbursementRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  if (['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4') return <VendorDisbursementPage />;
+  if (['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3') return children;
+
+  return <Navigate to="/forbidden" replace />;
 };
 
 /**
@@ -340,6 +359,22 @@ function App() {
               }
             />
             <Route
+              path="wallet"
+              element={
+                <VendorRoute>
+                  <HotelWalletPage />
+                </VendorRoute>
+              }
+            />
+            <Route
+              path="venue-wallet"
+              element={
+                <VendorRoute>
+                  <VenueWalletPage />
+                </VendorRoute>
+              }
+            />
+            <Route
               path="coupons"
               element={
                 <CouponManagerRoute>
@@ -388,6 +423,14 @@ function App() {
               }
             />
             <Route
+              path="disbursements"
+              element={
+                <DisbursementRoute>
+                  <DisbursementManagementPage />
+                </DisbursementRoute>
+              }
+            />
+            <Route
               path="users"
               element={
                 <AdminRoute>
@@ -415,6 +458,7 @@ function App() {
 
           {/* Friendly redirect aliases for the old /admin and top-level paths */}
           <Route path="/admin" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/venue-wallet" element={<Navigate to="/dashboard/venue-wallet" replace />} />
           <Route path="/admin/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
           <Route path="/rooms" element={<Navigate to="/dashboard/rooms" replace />} />
           <Route path="/admin/room-types" element={<Navigate to="/dashboard/room-types" replace />} />
@@ -431,6 +475,8 @@ function App() {
           <Route path="/admin/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
           <Route path="/admin/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
           <Route path="/statistics" element={<Navigate to="/dashboard/statistics" replace />} />
+          <Route path="/admin/wallet" element={<Navigate to="/dashboard/wallet" replace />} />
+          <Route path="/wallet" element={<Navigate to="/dashboard/wallet" replace />} />
           <Route path="/admin/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/admin/roles" element={<Navigate to="/dashboard/roles" replace />} />
           <Route path="/room-types" element={<Navigate to="/dashboard/room-types" replace />} />
@@ -445,6 +491,7 @@ function App() {
           <Route path="/refund-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/refund-policies" />} />
           <Route path="/commission-policies" element={<Navigate to="/dashboard/commission-policies" replace />} />
           <Route path="/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
+          <Route path="/disbursements" element={<Navigate to="/dashboard/disbursements" replace />} />
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
           <Route path="/admin/audit-logs" element={<Navigate to="/dashboard/audit-logs" replace />} />

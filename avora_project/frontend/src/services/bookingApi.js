@@ -121,6 +121,39 @@ export const cancelBooking = async (id, payload = {}) => {
   return json.data;
 };
 
+/**
+ * Fetch supported bank list for cancellation refunds.
+ * Sourced directly from backend m_system_code (business_cd = 'BANK_CD')
+ */
+export const fetchRefundBanks = async () => {
+  try {
+    const response = await fetch(API_ENDPOINTS.BOOKING_BANKS);
+    if (response.ok) {
+      const json = await response.json();
+      if (Array.isArray(json?.data) && json.data.length > 0) {
+        return json.data;
+      }
+    }
+  } catch (err) {
+    console.warn('[BookingApi] Backend banks fetch warning:', err.message);
+  }
+
+  // Fallback to wallet banks endpoint (also sourced from m_system_code)
+  try {
+    const walletRes = await fetch(API_ENDPOINTS.WALLET_BANKS);
+    if (walletRes.ok) {
+      const walletJson = await walletRes.json();
+      if (Array.isArray(walletJson?.data) && walletJson.data.length > 0) {
+        return walletJson.data;
+      }
+    }
+  } catch (walletErr) {
+    console.warn('[BookingApi] Wallet banks fallback warning:', walletErr.message);
+  }
+
+  return [];
+};
+
 export const fetchBookingVoucher = async (id) => {
   const url = API_ENDPOINTS.BOOKING_VOUCHER(id);
   const response = await authenticatedFetch(url);
