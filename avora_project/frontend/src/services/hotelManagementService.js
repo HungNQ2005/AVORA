@@ -51,6 +51,11 @@ export const uploadHotelImage = async (hotelId, file, currentImageCount) => {
 export const deleteHotelImage = async (hotelId, imageId) => unwrap(await api.delete(`/hotels/${encodeURIComponent(hotelId)}/images/${encodeURIComponent(imageId)}`));
 export const setHotelImageThumbnail = async (hotelId, imageId) => unwrap(await api.post(`/hotels/${encodeURIComponent(hotelId)}/images/${encodeURIComponent(imageId)}/thumbnail`));
 
+export const getVendorHotelBookings = async (hotelId, params = {}) => unwrap(await api.get(`/hotels/${encodeURIComponent(hotelId)}/bookings`, { params }));
+export const cancelVendorHotelBooking = async (hotelId, bookingId, payload) => unwrap(await api.post(`/hotels/${encodeURIComponent(hotelId)}/bookings/${encodeURIComponent(bookingId)}/cancel`, payload));
+export const changeVendorBookingDates = async (hotelId, bookingId, payload) => unwrap(await api.patch(`/hotels/${encodeURIComponent(hotelId)}/bookings/${encodeURIComponent(bookingId)}/dates`, payload));
+export const changeVendorBookingRoomType = async (hotelId, bookingId, payload) => unwrap(await api.patch(`/hotels/${encodeURIComponent(hotelId)}/bookings/${encodeURIComponent(bookingId)}/room-type`, payload));
+
 export const getCities = async () => unwrap(await api.get('/locations/cities'));
 export const getDistricts = async (cityId) => unwrap(await api.get('/locations/districts', { params: { city_id: cityId } }));
 export const getWards = async (districtId) => unwrap(await api.get('/locations/wards', { params: { district_id: districtId } }));

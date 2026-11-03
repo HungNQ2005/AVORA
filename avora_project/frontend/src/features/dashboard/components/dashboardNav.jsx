@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import AvatarContent from '../../../common/components/AvatarContent';
+import { getSupportCounts } from '../../../services/supportApi';
 import './dashboardNav.css';
 
 const ROLE_LABELS = {
@@ -21,6 +22,7 @@ const getUserInitials = (name) => {
 const DashboardNav = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [unreadSupportCount, setUnreadSupportCount] = useState(0);
   const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
@@ -37,6 +39,24 @@ const DashboardNav = () => {
   const canViewStatistics = isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
+
+  useEffect(() => {
+    let active = true;
+    if (!isAdmin && !isVendor) return undefined;
+    const refreshUnreadCount = () => {
+      getSupportCounts()
+        .then((counts) => {
+          if (active) setUnreadSupportCount(Number(counts?.unread || 0));
+        })
+        .catch((error) => console.error('Could not load dashboard support unread count:', error));
+    };
+    refreshUnreadCount();
+    const interval = window.setInterval(refreshUnreadCount, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [isAdmin, isVendor]);
 
   return (
     <aside className="admin-sidebar">
@@ -76,6 +96,39 @@ const DashboardNav = () => {
               </span>
               <span className="admin-sidebar__label">Bảng thống kê</span>
             </NavLink>
+          </div>
+        )}
+
+        {(isAdmin || isVendor) && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">HỖ TRỢ &amp; ĐẶT PHÒNG</div>
+            <NavLink
+              to="/dashboard/support"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon" aria-hidden="true">✉</span>
+              <span className="admin-sidebar__label">Phiếu hỗ trợ</span>
+              {unreadSupportCount > 0 && (
+                <span
+                  className="dashboard-nav__notification"
+                  aria-label={`${unreadSupportCount} phiếu có cập nhật mới`}
+                  title={`${unreadSupportCount} phiếu có cập nhật mới`}
+                />
+              )}
+            </NavLink>
+            {isVendor && (
+              <NavLink
+                to="/dashboard/hotel-bookings"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon" aria-hidden="true">▤</span>
+                <span className="admin-sidebar__label">Đặt phòng khách sạn</span>
+              </NavLink>
+            )}
           </div>
         )}
 

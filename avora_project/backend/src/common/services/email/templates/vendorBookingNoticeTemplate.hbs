@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="vi">
+  <head><meta charset="utf-8"><title>Thông báo đặt phòng AVORA</title></head>
+  <body style="font-family:Arial,sans-serif;color:#172b4d;line-height:1.6">
+    <h2>Thông báo từ {{hotelName}}</h2>
+    <p>Khách sạn đã {{action}} cho đơn đặt phòng <strong>{{bookingCode}}</strong>.</p>
+    {{#if oldRoom}}<p>Hạng phòng: {{oldRoom}} → {{newRoom}}</p>{{/if}}
+    <p>Thời gian lưu trú: {{checkIn}} – {{checkOut}}</p>
+    <p>Lý do: {{reason}}</p>
+    <p>Vui lòng đăng nhập AVORA để xem chi tiết đơn đặt phòng.</p>
+    <hr><small>© {{year}} AVORA</small>
+  </body>
+</html>

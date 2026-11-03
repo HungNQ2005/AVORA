@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { codeNameParser } from '../../utils/codeNameParser';
 import AvatarContent from './AvatarContent';
+import { getSupportCounts } from '../../services/supportApi';
 import './AdminSidebar.css';
 
 const ROLE_LABELS = {
@@ -22,19 +23,13 @@ const AdminSidebar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
   const isSystemAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || String(user?.role_cd) === '1';
   const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || String(user?.role_cd) === '4';
   const isBmr = ['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || String(user?.role_cd) === '3';
-<<<<<<< HEAD
-  const canManageVenue = ['ADM', 'ADMIN', 'VEN', 'VENDOR'].includes(roleCode) || ['1', '4'].includes(String(user?.role_cd));
-  const canManageCoupons = ['BMR', 'BUSINESS_MANAGER', 'ADM', 'ADMIN'].includes(roleCode) || ['3', '1'].includes(String(user?.role_cd));
-  const canManageHotels = isSystemAdmin || isVendor;
-  const canManageRefundPolicies = isSystemAdmin || isBmr;
-  const canViewStatistics = isSystemAdmin || isVendor;
-=======
   const canManageRoomTypes = isSystemAdmin;
   const canManageAmenities = isSystemAdmin;
   const canManageRooms = isSystemAdmin || isVendor;
@@ -43,9 +38,26 @@ const AdminSidebar = () => {
   const canManageRefundPolicies = isBmr;
   const canManageCommissionPolicies = isBmr;
   const canViewStatistics = isVendor;
->>>>>>> origin/main
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
+
+  useEffect(() => {
+    let active = true;
+    if (!isSystemAdmin && !isVendor) return undefined;
+    const refreshCount = () => {
+      getSupportCounts()
+        .then((counts) => {
+          if (active) setUnreadCount(Number(counts?.unread || 0));
+        })
+        .catch((error) => console.error('Could not load dashboard support unread count:', error));
+    };
+    refreshCount();
+    const interval = window.setInterval(refreshCount, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [isSystemAdmin, isVendor]);
 
   return (
     <aside className="admin-sidebar">
@@ -66,63 +78,6 @@ const AdminSidebar = () => {
       {/* Navigation Sections */}
       <nav className="admin-sidebar__nav">
         {/* TỔNG QUAN */}
-<<<<<<< HEAD
-        <div className="admin-sidebar__group">
-          <div className="admin-sidebar__group-title">TỔNG QUAN</div>
-          <NavLink to="/admin" className="admin-sidebar__link" end>
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <rect x="3" y="3" width="7" height="7"></rect>
-                <rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect>
-                <rect x="3" y="14" width="7" height="7"></rect>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Bảng điều khiển</span>
-          </NavLink>
-        </div>
-
-        {/* NGƯỜI DÙNG & PHÂN QUYỀN */}
-        <div className="admin-sidebar__group">
-          <div className="admin-sidebar__group-title">NGƯỜI DÙNG & PHÂN QUYỀN</div>
-          <NavLink
-            to="/admin/users"
-            className={({ isActive }) =>
-              `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/users') ? 'admin-sidebar__link--active' : ''}`
-            }
-          >
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-                <circle cx="9" cy="7" r="4"></circle>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Quản lý người dùng</span>
-          </NavLink>
-          <NavLink
-            to="/admin/roles"
-            className={({ isActive }) =>
-              `admin-sidebar__link ${isActive || location.pathname.startsWith('/admin/roles') || location.pathname === '/roles' ? 'admin-sidebar__link--active' : ''}`
-            }
-          >
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Vai trò & Quyền hạn (RBAC)</span>
-          </NavLink>
-          <div className="admin-sidebar__link disabled">
-            <span className="admin-sidebar__icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-            </span>
-            <span className="admin-sidebar__label">Lịch sử truy cập</span>
-=======
         {canViewStatistics && (
           <div className="admin-sidebar__group">
             <div className="admin-sidebar__group-title">TỔNG QUAN</div>
@@ -137,7 +92,33 @@ const AdminSidebar = () => {
               </span>
               <span className="admin-sidebar__label">Bảng thống kê</span>
             </NavLink>
->>>>>>> origin/main
+          </div>
+        )}
+
+        {(isSystemAdmin || isVendor) && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">HỖ TRỢ &amp; ĐẶT PHÒNG</div>
+            <NavLink
+              to="/dashboard/support"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/support') ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon" aria-hidden="true">✉</span>
+              <span className="admin-sidebar__label">Phiếu hỗ trợ</span>
+              {unreadCount > 0 && <span className="admin-sidebar__notification">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+            </NavLink>
+            {isVendor && (
+              <NavLink
+                to="/dashboard/hotel-bookings"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/hotel-bookings') ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon" aria-hidden="true">▤</span>
+                <span className="admin-sidebar__label">Đặt phòng khách sạn</span>
+              </NavLink>
+            )}
           </div>
         )}
 
@@ -175,7 +156,7 @@ const AdminSidebar = () => {
               <span className="admin-sidebar__label">Vai trò & Quyền hạn (RBAC)</span>
             </NavLink>
           </div>
-        </div>
+        )}
 
         {/* HỆ THỐNG KHÁCH SẠN */}
         <div className="admin-sidebar__group">

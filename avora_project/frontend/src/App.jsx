@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet, useParams } from 'react-router-dom';
 import MainLayout from './common/components/MainLayout';
 import HomePage from './features/home/HomePage';
@@ -37,6 +37,9 @@ import ReviewPage from './features/reviews/pages/ReviewPage';
 import AdminReviewManagementPage from './features/reviews/pages/AdminReviewManagementPage';
 import PaymentQRScreen from './features/payments/pages/PaymentQRScreen';
 import PaymentSuccessScreen from './features/payments/pages/PaymentSuccessScreen';
+
+const SupportCenter = lazy(() => import('./features/support/pages/SupportCenter'));
+const VendorBookingsPage = lazy(() => import('./features/hotel_management/pages/VendorBookingsPage'));
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -137,6 +140,28 @@ const VendorRoute = ({ children }) => {
   const isVendor = ['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4';
   if (!isVendor) return <Navigate to="/forbidden" replace />;
 
+  return children;
+};
+
+const RoleSupportCenter = () => {
+  const { user } = useAuth();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode)
+    || String(user?.role_cd) === '1';
+  return <SupportCenter mode={isAdmin ? 'admin' : 'vendor'} />;
+};
+
+const SupportManagerRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const canManageSupport = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'VEN', 'VENDOR'].includes(roleCode)
+    || ['1', '4'].includes(roleCd);
+  if (!canManageSupport) return <Navigate to="/forbidden" replace />;
   return children;
 };
 
@@ -282,6 +307,26 @@ function App() {
                 <HotelManagerRoute>
                   <HotelManagementDetailPage />
                 </HotelManagerRoute>
+              }
+            />
+            <Route
+              path="support"
+              element={
+                <SupportManagerRoute>
+                  <Suspense fallback={<div className="support-empty">Đang tải trung tâm hỗ trợ…</div>}>
+                    <RoleSupportCenter />
+                  </Suspense>
+                </SupportManagerRoute>
+              }
+            />
+            <Route
+              path="hotel-bookings"
+              element={
+                <VendorRoute>
+                  <Suspense fallback={<div className="support-empty">Đang tải danh sách đặt phòng…</div>}>
+                    <VendorBookingsPage />
+                  </Suspense>
+                </VendorRoute>
               }
             />
             <Route

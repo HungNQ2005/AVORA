@@ -2,6 +2,11 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { createSupportTicket, getSupportCategories } from '../../services/supportApi';
+
+const TicketCreateDialog = React.lazy(() => import('../support/pages/SupportCenter').then((module) => ({
+    default: module.CreateTicketDialog,
+})));
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const HOTEL_PATH_RE = /^\/(?:hotels?|hotel-detail)\/([0-9a-f-]{36})/i;
@@ -86,10 +91,16 @@ const AIChatWidget = () => {
     const [loading, setLoading] = useState(false);
     const [userLocation, setUserLocation] = useState(null);
     const [geoStatus, setGeoStatus] = useState('idle');
+    const [supportCategories, setSupportCategories] = useState([]);
+    const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+    const [ticketDialogLoading, setTicketDialogLoading] = useState(false);
+    const [ticketDialogError, setTicketDialogError] = useState('');
     const askedGeoRef = useRef(false);
     const endRef = useRef(null);
 
     const isLoggedIn = Boolean(user && token);
+    const userRole = String(user?.role_code_name || '').trim().toUpperCase();
+    const canCreateSupportTicket = isLoggedIn && ['CUS', 'VEN', 'BMR'].includes(userRole);
     const currentHotelId =
         (location.pathname.match(HOTEL_PATH_RE) || [])[1] ||
         new URLSearchParams(location.search).get('hotelId') ||
@@ -181,6 +192,30 @@ const AIChatWidget = () => {
         navigate('/signin');
     };
 
+    const openSupportTicket = async () => {
+        setTicketDialogError('');
+        setTicketDialogLoading(true);
+        try {
+            setSupportCategories(await getSupportCategories());
+            setTicketDialogOpen(true);
+        } catch (error) {
+            setTicketDialogError(error.response?.data?.message || 'Không thể tải danh mục hỗ trợ.');
+        } finally {
+            setTicketDialogLoading(false);
+        }
+    };
+
+    const createTicketFromChat = async (data, files) => {
+        try {
+            const created = await createSupportTicket(data, files);
+            setTicketDialogOpen(false);
+            setOpen(false);
+            navigate(`/myaccount?tab=support&ticketId=${encodeURIComponent(created.ticket_id)}`);
+        } catch (error) {
+            throw new Error(error.response?.data?.message || error.message || 'Không thể tạo phiếu hỗ trợ.');
+        }
+    };
+
     return (
         <>
             <style>{`
@@ -215,6 +250,8 @@ const AIChatWidget = () => {
         .avora-chat__send:disabled{opacity:.5;cursor:not-allowed}
         .avora-chat__login{padding:12px;border-top:1px solid #e2e8f0;background:#fff;display:flex;justify-content:center}
         .avora-chat__login button{border:2px solid #ffc107;border-radius:24px;padding:11px 20px;background:linear-gradient(135deg,#003580,#006ce4);color:#fff;font-weight:600;cursor:pointer}
+        .avora-chat__support-cta{align-self:center;border:1px solid #bfdbfe;border-radius:18px;padding:7px 12px;background:#fff;color:#003580;font-size:12px;font-weight:700;cursor:pointer}
+        .avora-chat__support-error{align-self:center;color:#b91c1c;font-size:11px;text-align:center}
       `}</style>
 
             {open && (
@@ -252,6 +289,20 @@ const AIChatWidget = () => {
                             </div>
                         )}
 
+                        {canCreateSupportTicket && (
+                            <>
+                                <button
+                                    type="button"
+                                    className="avora-chat__support-cta"
+                                    onClick={openSupportTicket}
+                                    disabled={ticketDialogLoading}
+                                >
+                                    {ticketDialogLoading ? 'Đang tải danh mục…' : 'Vẫn cần trợ giúp? Tạo phiếu hỗ trợ'}
+                                </button>
+                                {ticketDialogError && <span className="avora-chat__support-error" role="alert">{ticketDialogError}</span>}
+                            </>
+                        )}
+
                         {loading && <div className="avora-chat__typing">Trợ lý đang soạn câu trả lời…</div>}
                         <div ref={endRef} />
                     </div>
@@ -287,6 +338,17 @@ const AIChatWidget = () => {
                         </div>
                     )}
                 </div>
+            )}
+
+            {ticketDialogOpen && (
+                <React.Suspense fallback={null}>
+                    <TicketCreateDialog
+                        mode={userRole === 'VEN' ? 'vendor' : 'customer'}
+                        categories={supportCategories}
+                        onClose={() => setTicketDialogOpen(false)}
+                        onSubmit={createTicketFromChat}
+                    />
+                </React.Suspense>
             )}
 
             <button

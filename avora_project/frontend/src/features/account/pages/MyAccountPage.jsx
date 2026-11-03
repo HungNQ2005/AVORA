@@ -10,7 +10,10 @@ import ReviewHistory from '../../reviews/components/ReviewHistory';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
+import { getSupportCounts } from '../../../services/supportApi';
 import './MyAccountPage.css';
+
+const SupportCenter = React.lazy(() => import('../../support/pages/SupportCenter'));
 
 /**
  * Icons used throughout the Profile page matching the reference design.
@@ -148,9 +151,9 @@ const MyAccountPage = () => {
   const { user, setUser, logout, loading } = useAuth();
 
   const tabParam = searchParams.get('tab');
-  // Active navigation tab: 'info' | 'favorites' | 'reviews' | 'security'
+  // Active navigation tab: 'info' | 'favorites' | 'reviews' | 'support' | 'security'
   const [activeTab, setActiveTab] = useState(() => {
-    if (tabParam && ['info', 'favorites', 'reviews', 'security'].includes(tabParam)) {
+    if (tabParam && ['info', 'favorites', 'reviews', 'support', 'security'].includes(tabParam)) {
       return tabParam;
     }
     return 'info';
@@ -159,7 +162,7 @@ const MyAccountPage = () => {
   // Sync activeTab when query param changes
   useEffect(() => {
     const currentTab = searchParams.get('tab');
-    if (currentTab && ['info', 'favorites', 'reviews', 'security'].includes(currentTab)) {
+    if (currentTab && ['info', 'favorites', 'reviews', 'support', 'security'].includes(currentTab)) {
       setActiveTab(currentTab);
     }
   }, [searchParams]);
@@ -190,6 +193,25 @@ const MyAccountPage = () => {
   const [otpModalOpen, setOtpModalOpen] = useState(false);
   const [logoutDialog, setLogoutDialog] = useState(false);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [unreadSupportCount, setUnreadSupportCount] = useState(0);
+
+  useEffect(() => {
+    if (!user?.user_id) return undefined;
+    let active = true;
+    const refreshCount = () => {
+      getSupportCounts()
+        .then((counts) => {
+          if (active) setUnreadSupportCount(Number(counts?.unread || 0));
+        })
+        .catch((error) => console.error('Could not load support-ticket unread count:', error));
+    };
+    refreshCount();
+    const interval = window.setInterval(refreshCount, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [user?.user_id]);
 
   // Saved accommodations list (backed strictly by real database or user state)
   const [savedAccommodations, setSavedAccommodations] = useState(() => {
@@ -464,9 +486,11 @@ const MyAccountPage = () => {
                 ? 'Danh sách yêu thích'
                 : activeTab === 'reviews'
                   ? 'Lịch sử đánh giá'
-                  : activeTab === 'security'
-                    ? 'Bảo mật tài khoản'
-                    : 'Quản lý hồ sơ'}
+                  : activeTab === 'support'
+                    ? 'Tickets & Hỗ trợ'
+                    : activeTab === 'security'
+                      ? 'Bảo mật tài khoản'
+                      : 'Quản lý hồ sơ'}
             </span>
           </nav>
 
@@ -610,6 +634,19 @@ const MyAccountPage = () => {
                 <div className="profile-nav-item__left">
                   <LuggageIcon />
                   <span>Đặt chỗ của tôi</span>
+                </div>
+                <ChevronRightIcon />
+              </button>
+
+              <button
+                type="button"
+                className={`profile-nav-item ${activeTab === 'support' ? 'is-active' : ''}`}
+                onClick={() => switchTab('support')}
+              >
+                <div className="profile-nav-item__left">
+                  <HeadsetIcon />
+                  <span>Tickets &amp; Hỗ trợ</span>
+                  {unreadSupportCount > 0 && <span className="profile-support-unread">{unreadSupportCount > 99 ? '99+' : unreadSupportCount}</span>}
                 </div>
                 <ChevronRightIcon />
               </button>
@@ -1029,6 +1066,12 @@ const MyAccountPage = () => {
               <div className="profile-card profile-review-card">
                 <ReviewHistory />
               </div>
+            )}
+
+            {activeTab === 'support' && (
+              <React.Suspense fallback={<div className="profile-card" role="status">Đang tải trung tâm hỗ trợ…</div>}>
+                <SupportCenter mode="customer" />
+              </React.Suspense>
             )}
 
             {/* ════ TAB 4: BẢO MẬT TÀI KHOẢN ════ */}

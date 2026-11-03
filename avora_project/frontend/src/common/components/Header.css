@@ -363,6 +363,7 @@
 }
 
 .avora-header__user-avatar {
+  position: relative;
   width: 26px;
   height: 26px;
   border-radius: 50%;
@@ -374,6 +375,17 @@
   font-weight: 800;
   font-size: 13px;
   flex-shrink: 0;
+}
+
+.avora-header__support-unread-dot {
+  position: absolute;
+  top: -2px;
+  right: -3px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: #ef4444;
 }
 
 .avora-header__user-name {
@@ -1245,5 +1257,4 @@
     justify-content: center;
   }
 }
-
 

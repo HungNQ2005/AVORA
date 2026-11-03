@@ -5,6 +5,7 @@ import { codeNameParser } from '../../utils/codeNameParser';
 import AvatarContent from './AvatarContent';
 import { getSavedFavorites } from '../../utils/favoritesStorage';
 import { getReviewRemovalNotifications } from '../../services/reviewApi';
+import { getSupportCounts } from '../../services/supportApi';
 import './Header.css';
 
 /* Custom SVG Icons matching the reference UI */
@@ -188,6 +189,7 @@ const Header = ({
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [notificationState, setNotificationState] = useState({ userId: null, items: [], error: '' });
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
   const notifications = notificationState.userId === user?.user_id ? notificationState.items : [];
   const notificationError = notificationState.userId === user?.user_id ? notificationState.error : '';
   const notificationLoading = Boolean(user?.user_id && notificationState.userId !== user.user_id && !notificationError);
@@ -276,6 +278,24 @@ const Header = ({
       window.removeEventListener('focus', handleFocus);
     };
   }, [user?.user_id]);
+
+  useEffect(() => {
+    if (!user?.user_id || !['CUS', 'BMR'].includes(role)) return undefined;
+    let active = true;
+    const refreshCount = () => {
+      getSupportCounts()
+        .then((counts) => {
+          if (active) setSupportUnreadCount(Number(counts?.unread || 0));
+        })
+        .catch((error) => console.error('Could not load header support unread count:', error));
+    };
+    refreshCount();
+    const interval = window.setInterval(refreshCount, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [role, user?.user_id]);
 
   const userRoleDisplayName = codeNameParser(user?.role_code_name);
 
@@ -542,6 +562,9 @@ const Header = ({
                         fallback={(displayName.charAt(0) || 'U').toUpperCase()}
                         alt={displayName}
                       />
+                      {supportUnreadCount > 0 && ['CUS', 'BMR'].includes(role) && (
+                        <span className="avora-header__support-unread-dot" aria-label="Có cập nhật phiếu hỗ trợ chưa đọc" title="Có cập nhật phiếu hỗ trợ chưa đọc" />
+                      )}
                     </div>
                     <span className="avora-header__user-name">{displayName}</span>
                     <ChevronDownIcon />
