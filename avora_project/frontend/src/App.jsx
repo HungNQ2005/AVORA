@@ -15,6 +15,7 @@ import RoomTypeDetailPage from './features/room_types/pages/RoomTypeDetailPage';
 import AmenityManagementPage from './features/amenities/pages/AmenityManagementPage';
 import UserManagementPage from './features/users/pages/UserManagementPage';
 import RoleManagementPage from './features/users/pages/RoleManagementPage';
+import AuditLogManagementPage from './features/audit_logs/pages/AuditLogManagementPage';
 import CouponManagementPage from './features/coupons/pages/CouponManagementPage';
 import CouponDetailPage from './features/coupons/pages/CouponDetailPage';
 import RefundPolicyManagementPage from './features/refund_policies/pages/RefundPolicyManagementPage';
@@ -30,6 +31,7 @@ import DashboardPage from './features/dashboard/pages/dashboardPage';
 import HotelManagementPage from './features/hotel_management/pages/hotelManagementPage';
 import HotelManagementDetailPage from './features/hotel_management/pages/hotelDetailPage';
 import RoomManagementPage from './features/rooms/pages/RoomManagementPage';
+import VendorBookingPage from './features/vendor_bookings/pages/VendorBookingPage';
 import AIChatWidget from './features/chatbot/AIChatWidget';
 import BookingPage from './features/bookings/pages/BookingPage';
 import MyBookingsPage from './features/mybookings/screens/MyBookingsPage';
@@ -282,6 +284,14 @@ function App() {
               }
             />
             <Route
+              path="bookings"
+              element={
+                <VendorRoute>
+                  <VendorBookingPage />
+                </VendorRoute>
+              }
+            />
+            <Route
               path="roles"
               element={
                 <AdminRoute>
@@ -393,6 +403,14 @@ function App() {
                 </AdminRoute>
               }
             />
+            <Route
+              path="audit-logs"
+              element={
+                <AdminRoute>
+                  <AuditLogManagementPage />
+                </AdminRoute>
+              }
+            />
           </Route>
 
           {/* Friendly redirect aliases for the old /admin and top-level paths */}
@@ -429,6 +447,8 @@ function App() {
           <Route path="/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
+          <Route path="/admin/audit-logs" element={<Navigate to="/dashboard/audit-logs" replace />} />
+          <Route path="/audit-logs" element={<Navigate to="/dashboard/audit-logs" replace />} />
 
         </Routes>
       </BrowserRouter>

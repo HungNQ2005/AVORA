@@ -7,7 +7,7 @@ const MAX_RANGE_DAYS = 366;
 const DEFAULT_RANGE_DAYS = 30;
 const VN_OFFSET = '+07:00';
 const DAY_MS = 24 * 60 * 60 * 1000;
-const CANCELLED_CODES = ['CANCELLED', 'CANCELED'];
+const CANCELLED_CODES = ['CAN', 'CANCELLED', 'CANCELED', 'DA_HUY'];
 
 const createError = (statusCode, message) => {
   const error = new Error(message);
@@ -31,9 +31,21 @@ const toNumber = (value) => {
   return Number.isFinite(n) ? n : 0;
 };
 
+/** Ensure database timestamps without timezone offsets are treated as UTC ISO strings with trailing Z */
+const ensureUtcIsoString = (val) => {
+  if (!val) return val;
+  const s = String(val).trim().replace(' ', 'T');
+  if (s.includes('T') && !s.endsWith('Z') && !/[+-]\d{2}(:\d{2})?$/.test(s)) {
+    return `${s}Z`;
+  }
+  return s;
+};
+
 /** Format a Date as YYYY-MM-DD using Vietnam time (UTC+7). */
 const toVnDateKey = (value) => {
-  const d = new Date(value);
+  if (!value) return null;
+  const utcVal = typeof value === 'string' ? ensureUtcIsoString(value) : value;
+  const d = new Date(utcVal);
   if (Number.isNaN(d.getTime())) return null;
   return new Date(d.getTime() + 7 * 60 * 60 * 1000).toISOString().slice(0, 10);
 };
@@ -45,8 +57,73 @@ const isValidDateKey = (value) => {
 };
 
 /**
+ * Calculate the previous period dates and comparison label based on periodType or date range.
+ * - 'month': Previous calendar month (e.g. 2026-10-01 to 2026-10-31 -> 2026-09-01 to 2026-09-30)
+ * - 'year': Previous calendar year (e.g. 2026-01-01 to 2026-12-31 -> 2025-01-01 to 2025-12-31)
+ * - 'custom': Exact length shift backward
+ */
+const getPreviousPeriod = (fromKey, toKey, periodType) => {
+  const normType = String(periodType || '').trim().toLowerCase();
+
+  const [y1, m1, d1] = fromKey.split('-').map(Number);
+  const [y2, m2, d2] = toKey.split('-').map(Number);
+  const lastDayOfCurMonth = new Date(Date.UTC(y1, m1, 0)).getUTCDate();
+  const isFullMonth = (y1 === y2 && m1 === m2 && d1 === 1 && d2 === lastDayOfCurMonth);
+  const isFullYear = (y1 === y2 && m1 === 1 && d1 === 1 && m2 === 12 && d2 === 31);
+
+  if (normType === 'month' || isFullMonth) {
+    const prevYear = m1 === 1 ? y1 - 1 : y1;
+    const prevMonth = m1 === 1 ? 12 : m1 - 1;
+    const prevMonthStr = String(prevMonth).padStart(2, '0');
+    const prevFrom = `${prevYear}-${prevMonthStr}-01`;
+    const lastDayOfPrevMonth = new Date(Date.UTC(prevYear, prevMonth, 0)).getUTCDate();
+    const prevTo = `${prevYear}-${prevMonthStr}-${String(lastDayOfPrevMonth).padStart(2, '0')}`;
+    return {
+      from: prevFrom,
+      to: prevTo,
+      days: lastDayOfPrevMonth,
+      label: `Tháng ${prevMonthStr}/${prevYear}`,
+      periodType: 'month',
+      comparisonLabel: 'so với tháng trước',
+    };
+  }
+
+  if (normType === 'year' || isFullYear) {
+    const prevYear = y1 - 1;
+    const prevFrom = `${prevYear}-01-01`;
+    const prevTo = `${prevYear}-12-31`;
+    const isLeap = (prevYear % 4 === 0 && prevYear % 100 !== 0) || prevYear % 400 === 0;
+    return {
+      from: prevFrom,
+      to: prevTo,
+      days: isLeap ? 366 : 365,
+      label: `Năm ${prevYear}`,
+      periodType: 'year',
+      comparisonLabel: 'so với năm trước',
+    };
+  }
+
+  // Custom range fallback: shift backwards by exact same number of days
+  const fromTime = new Date(`${fromKey}T00:00:00Z`).getTime();
+  const days = Math.round((new Date(`${toKey}T00:00:00Z`) - fromTime) / DAY_MS) + 1;
+  const prevToTime = fromTime - DAY_MS;
+  const prevFromTime = prevToTime - (days - 1) * DAY_MS;
+  const prevFrom = toVnDateKey(prevFromTime);
+  const prevTo = toVnDateKey(prevToTime);
+
+  return {
+    from: prevFrom,
+    to: prevTo,
+    days,
+    label: `${prevFrom} - ${prevTo}`,
+    periodType: 'custom',
+    comparisonLabel: 'so với kỳ trước',
+  };
+};
+
+/**
  * Normalise and validate the date range. Defaults to the last 30 days (VN time).
- * @returns {{ from: string, to: string }}
+ * @returns {{ from: string, to: string, days: number }}
  */
 const resolveDateRange = (from, to) => {
   const today = toVnDateKey(Date.now());
@@ -85,8 +162,7 @@ const fetchAllPages = async (buildQuery, errorMessage) => {
 };
 
 /**
-/**
- * Active hotels the vendor can pick from (only hotels owned/created by this vendor).
+ * Accessible hotels for statistics (hotels owned by vendor, or all non-deleted hotels).
  * READ-ONLY.
  */
 const getStatisticsHotels = async (vendorId) => {
@@ -95,8 +171,7 @@ const getStatisticsHotels = async (vendorId) => {
   let query = supabase
     .from('m_hotel')
     .select('hotel_id, name, address, star_rating, hotel_status, owner_id')
-    .eq('is_deleted', false)
-    .eq('hotel_status', 'ACTIVE');
+    .eq('is_deleted', false);
 
   if (vendorId) {
     query = query.eq('owner_id', vendorId);
@@ -108,19 +183,24 @@ const getStatisticsHotels = async (vendorId) => {
   return data || [];
 };
 
-/** Resolve booking status code -> display code name via m_system_code (same lookup as chatbot). */
-const getStatusNames = async (codes) => {
+/** Resolve booking status code -> display code name via m_system_code. Preloads BOOKING_STS codes. */
+const getStatusNames = async () => {
   const names = {};
-  if (codes.length === 0) return names;
-
   const { data, error } = await supabase
     .from('m_system_code')
     .select('code_cd, code_name')
-    .in('code_cd', codes);
-  if (error) throwDatabaseError('Không thể tải tên trạng thái đơn đặt phòng', error);
+    .eq('business_cd', 'BOOKING_STS');
+
+  if (error) {
+    console.warn('[Statistics] Không thể tải mã trạng thái từ m_system_code:', error.message);
+    return names;
+  }
 
   (data || []).forEach((row) => {
-    if (!names[row.code_cd]) names[row.code_cd] = row.code_name;
+    const cd = String(row.code_cd || '').trim();
+    const nm = String(row.code_name || '').trim().toUpperCase();
+    if (cd) names[cd] = nm;
+    if (nm) names[nm] = nm;
   });
   return names;
 };
@@ -134,9 +214,10 @@ const getStatusNames = async (codes) => {
  *
  * @param {{ hotelId: string, from?: string, to?: string, vendorId?: string }} params
  */
-const getHotelOverview = async ({ hotelId, from, to, vendorId }) => {
+const getHotelOverview = async ({ hotelId, from, to, periodType, vendorId }) => {
   ensureClient();
   const range = resolveDateRange(from, to);
+  const prevInfo = getPreviousPeriod(range.from, range.to, periodType);
 
   let hotelQuery = supabase
     .from('m_hotel')
@@ -158,12 +239,9 @@ const getHotelOverview = async ({ hotelId, from, to, vendorId }) => {
   const startIso = `${range.from}T00:00:00.000${VN_OFFSET}`;
   const endIso = `${range.to}T23:59:59.999${VN_OFFSET}`;
 
-  // Prior period of exact same length
-  const fromTime = new Date(`${range.from}T00:00:00Z`).getTime();
-  const prevToTime = fromTime - DAY_MS;
-  const prevFromTime = prevToTime - (range.days - 1) * DAY_MS;
-  const prevFrom = toVnDateKey(prevFromTime);
-  const prevTo = toVnDateKey(prevToTime);
+  // Prior period calculated from calendar logic
+  const prevFrom = prevInfo.from;
+  const prevTo = prevInfo.to;
   const prevStartIso = `${prevFrom}T00:00:00.000${VN_OFFSET}`;
   const prevEndIso = `${prevTo}T23:59:59.999${VN_OFFSET}`;
 
@@ -207,16 +285,19 @@ const getHotelOverview = async ({ hotelId, from, to, vendorId }) => {
         .order('review_id', { ascending: true })
         .range(rf, rt),
       'Không thể tải dữ liệu đánh giá'
-    ),
+    ).catch((err) => {
+      console.warn('[Statistics] Không thể tải đánh giá khách sạn, bỏ qua điểm đánh giá:', err.message);
+      return [];
+    }),
   ]);
 
-  const allBookings = [...bookings, ...prevBookings];
-  const statusCodes = [...new Set(allBookings.map((b) => b.booking_status_cd).filter(Boolean))];
-  const statusNames = await getStatusNames(statusCodes);
+  const statusNames = await getStatusNames();
 
   const isCancelled = (code) => {
-    const candidates = [code, statusNames[code]].filter(Boolean).map((v) => String(v).toUpperCase());
-    return candidates.some((c) => CANCELLED_CODES.includes(c));
+    if (!code) return false;
+    const str = String(code).trim().toUpperCase();
+    const mapped = String(statusNames[code] || statusNames[str] || str).trim().toUpperCase();
+    return CANCELLED_CODES.includes(str) || CANCELLED_CODES.includes(mapped);
   };
 
   const statusMap = new Map();
@@ -227,8 +308,8 @@ const getHotelOverview = async ({ hotelId, from, to, vendorId }) => {
   let roomsBooked = 0;
 
   bookings.forEach((booking) => {
-    const code = booking.booking_status_cd || 'UNKNOWN';
-    const key = String(statusNames[code] || code);
+    const rawCode = booking.booking_status_cd || 'UNKNOWN';
+    const key = statusNames[rawCode] || statusNames[String(rawCode).trim().toUpperCase()] || String(rawCode).trim().toUpperCase();
     const cancelled = isCancelled(booking.booking_status_cd);
     const amount = toNumber(booking.total_amount);
 
@@ -248,7 +329,7 @@ const getHotelOverview = async ({ hotelId, from, to, vendorId }) => {
       day.revenue += amount;
       (booking.t_booking_detail || []).forEach((detail) => {
         const quantity = toNumber(detail.quantity);
-        const name = detail.m_room_type?.type_name || 'Không xác định';
+        const name = (Array.isArray(detail.m_room_type) ? detail.m_room_type[0]?.type_name : detail.m_room_type?.type_name) || 'Không xác định';
         roomTypeMap.set(name, (roomTypeMap.get(name) || 0) + quantity);
         roomsBooked += quantity;
       });
@@ -299,8 +380,10 @@ const getHotelOverview = async ({ hotelId, from, to, vendorId }) => {
       address: hotel.address,
       star_rating: hotel.star_rating,
     },
+    period_type: prevInfo.periodType,
+    comparison_label: prevInfo.comparisonLabel,
     range: { from: range.from, to: range.to, days: range.days },
-    previous_period: { from: prevFrom, to: prevTo, days: range.days },
+    previous_period: { from: prevFrom, to: prevTo, days: prevInfo.days, label: prevInfo.label },
     rating: { average: averageScore, count: scores.length },
     summary: {
       total_bookings: totalBookings,

@@ -39,5 +39,11 @@ export const API_ENDPOINTS = {
   WISHLIST: `${API_BASE_URL}/api/wishlist`,
   WATCHLIST: `${API_BASE_URL}/api/watchlist`,
   WISHLIST_CHECK: (id) => `${API_BASE_URL}/api/wishlist/check/${id}`,
+  VENDOR_BOOKINGS: `${API_BASE_URL}/api/vendor/bookings`,
+  VENDOR_BOOKING_DETAIL: (id) => `${API_BASE_URL}/api/vendor/bookings/${id}`,
+  VENDOR_BOOKING_STATUS: (id) => `${API_BASE_URL}/api/vendor/bookings/${id}/status`,
+  AUDIT_LOGS: `${API_BASE_URL}/api/admin/audit-logs`,
+  AUDIT_LOG_DETAIL: (id) => `${API_BASE_URL}/api/admin/audit-logs/${encodeURIComponent(id)}`,
+  AUDIT_LOG_STATS: `${API_BASE_URL}/api/admin/audit-logs/stats`,
 };
 

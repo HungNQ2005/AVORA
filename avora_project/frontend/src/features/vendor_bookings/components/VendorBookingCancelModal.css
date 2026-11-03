@@ -1,0 +1,112 @@
+.vbooking-cancel-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: vbookingScaleIn 0.2s ease-out;
+  overflow: hidden;
+}
+
+.vbooking-cancel-modal__header {
+  padding: 20px 24px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fee2e2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vbooking-cancel-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vbooking-cancel-modal__title {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #991b1b;
+}
+
+.vbooking-cancel-modal__sub {
+  margin: 0;
+  font-size: 12px;
+  color: #7f1d1d;
+}
+
+.vbooking-cancel-modal__form {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vbooking-cancel-warning {
+  margin: 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+  background: #f8fafc;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #f59e0b;
+}
+
+.vbooking-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vbooking-form-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.vbooking-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vbooking-textarea:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.vbooking-textarea--error {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.vbooking-form-error-msg {
+  font-size: 11px;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.vbooking-cancel-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
