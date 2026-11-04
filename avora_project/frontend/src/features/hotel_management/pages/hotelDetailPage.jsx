@@ -212,11 +212,6 @@ const HotelDetailPage = () => {
           <p className="hotel-detail__location">{addressParts.join(', ') || 'Chưa có vị trí'}</p>
         </div>
         <div className="hotel-detail__actions">
-          {isVendor && !hotel.is_deleted && (
-            <Link className="hotel-button hotel-button--quiet" to={`/dashboard/hotel-bookings?hotelId=${encodeURIComponent(hotel.hotel_id)}`}>
-              Xem danh sách đặt phòng
-            </Link>
-          )}
           {canApprove && !hotel.is_deleted && isPending && <button type="button" className="hotel-button hotel-button--primary" onClick={handleApprove} disabled={actionLoading}>{actionLoading ? 'Đang duyệt…' : 'Phê duyệt'}</button>}
           {isVendor && !hotel.is_deleted && isInactive && <button type="button" className="hotel-button hotel-button--primary" onClick={handleReactivate} disabled={actionLoading}>Yêu cầu mở lại</button>}
           {vendorCanDeactivate && <button type="button" className="hotel-button hotel-button--danger" onClick={requestDelete} disabled={actionLoading}>Ngừng hoạt động</button>}

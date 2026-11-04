@@ -101,7 +101,7 @@ const DashboardNav = () => {
 
         {(isAdmin || isVendor) && (
           <div className="admin-sidebar__group">
-            <div className="admin-sidebar__group-title">HỖ TRỢ &amp; ĐẶT PHÒNG</div>
+            <div className="admin-sidebar__group-title">HỖ TRỢ</div>
             <NavLink
               to="/dashboard/support"
               className={({ isActive }) =>
@@ -118,17 +118,6 @@ const DashboardNav = () => {
                 />
               )}
             </NavLink>
-            {isVendor && (
-              <NavLink
-                to="/dashboard/hotel-bookings"
-                className={({ isActive }) =>
-                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
-                }
-              >
-                <span className="admin-sidebar__icon" aria-hidden="true">▤</span>
-                <span className="admin-sidebar__label">Đặt phòng khách sạn</span>
-              </NavLink>
-            )}
           </div>
         )}
 

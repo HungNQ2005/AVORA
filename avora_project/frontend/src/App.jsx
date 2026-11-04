@@ -39,7 +39,6 @@ import PaymentQRScreen from './features/payments/pages/PaymentQRScreen';
 import PaymentSuccessScreen from './features/payments/pages/PaymentSuccessScreen';
 
 const SupportCenter = lazy(() => import('./features/support/pages/SupportCenter'));
-const VendorBookingsPage = lazy(() => import('./features/hotel_management/pages/VendorBookingsPage'));
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -317,16 +316,6 @@ function App() {
                     <RoleSupportCenter />
                   </Suspense>
                 </SupportManagerRoute>
-              }
-            />
-            <Route
-              path="hotel-bookings"
-              element={
-                <VendorRoute>
-                  <Suspense fallback={<div className="support-empty">Đang tải danh sách đặt phòng…</div>}>
-                    <VendorBookingsPage />
-                  </Suspense>
-                </VendorRoute>
               }
             />
             <Route

@@ -97,7 +97,7 @@ const AdminSidebar = () => {
 
         {(isSystemAdmin || isVendor) && (
           <div className="admin-sidebar__group">
-            <div className="admin-sidebar__group-title">HỖ TRỢ &amp; ĐẶT PHÒNG</div>
+            <div className="admin-sidebar__group-title">HỖ TRỢ</div>
             <NavLink
               to="/dashboard/support"
               className={({ isActive }) =>
@@ -108,17 +108,6 @@ const AdminSidebar = () => {
               <span className="admin-sidebar__label">Phiếu hỗ trợ</span>
               {unreadCount > 0 && <span className="admin-sidebar__notification">{unreadCount > 99 ? '99+' : unreadCount}</span>}
             </NavLink>
-            {isVendor && (
-              <NavLink
-                to="/dashboard/hotel-bookings"
-                className={({ isActive }) =>
-                  `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/hotel-bookings') ? 'admin-sidebar__link--active' : ''}`
-                }
-              >
-                <span className="admin-sidebar__icon" aria-hidden="true">▤</span>
-                <span className="admin-sidebar__label">Đặt phòng khách sạn</span>
-              </NavLink>
-            )}
           </div>
         )}
 
