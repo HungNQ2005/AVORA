@@ -8,6 +8,7 @@ const {
   validateGuestInfoPayload,
   validateBookingDateChangePayload,
 } = require('./booking.validation');
+const { recordAuditLog } = require('../../utils/auditLogger');
 
 /**
  * Controller handling customer booking actions.
@@ -46,6 +47,20 @@ const createBooking = async (req, res, next) => {
     }
 
     const bookingResult = await bookingService.createBooking(req.body, req.user);
+
+    recordAuditLog({
+      req,
+      action_cd: '1', // INS
+      entity_name: 't_booking',
+      entity_id: bookingResult?.booking_id || bookingResult?.id,
+      new_data: {
+        booking_id: bookingResult?.booking_id,
+        booking_ref: bookingResult?.booking_ref,
+        total_amount: bookingResult?.total_amount,
+        hotel_id: req.body?.hotel_id,
+        hotel_name: bookingResult?.hotel_name,
+      },
+    });
     return res.status(201).json({
       status: 'success',
       message: 'Đặt phòng thành công! Đơn đặt chỗ đã được ghi nhận.',
@@ -121,6 +136,14 @@ const updateBookingGuestInfo = async (req, res, next) => {
 
     const { id } = req.params;
     const updated = await bookingService.updateBookingGuestInfo(id, req.body, req.user);
+
+    recordAuditLog({
+      req,
+      action_cd: '2', // UPD
+      entity_name: 't_booking',
+      entity_id: id,
+      new_data: req.body,
+    });
     return res.status(200).json({
       status: 'success',
       message: 'Cập nhật thông tin đơn đặt phòng thành công!',
@@ -166,6 +189,18 @@ const cancelBooking = async (req, res, next) => {
   try {
     const { id } = req.params;
     const result = await bookingService.cancelBooking(id, req.body, req.user);
+
+    recordAuditLog({
+      req,
+      action_cd: '2', // UPD
+      entity_name: 't_booking',
+      entity_id: id,
+      new_data: {
+        status: 'CANCELLED',
+        reason: req.body?.reason || null,
+        refund_amount: result?.refund_amount || 0,
+      },
+    });
     return res.status(200).json({
       status: 'success',
       message: result.message,

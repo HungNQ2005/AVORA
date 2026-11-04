@@ -459,6 +459,97 @@ const getAuditLogById = async (logId) => {
   };
 };
 
+/**
+ * Records an audit log event into h_system_audit_log asynchronously.
+ * Never throws an unhandled error to disrupt the calling business logic.
+ *
+ * @param {object} params
+ * @param {string|null} [params.actor_user_id]
+ * @param {string|number} params.action_cd - '1'/'INS', '2'/'UPD', '3'/'DEL', '4'/'LGN'
+ * @param {string} params.entity_name - e.g. 't_booking', 'm_hotel', 'm_room', 'm_coupon', 'm_user', 'auth'
+ * @param {string|number} [params.entity_id]
+ * @param {object|null} [params.old_data]
+ * @param {object|null} [params.new_data]
+ * @param {string|null} [params.ip_address]
+ * @param {object|null} [params.req]
+ * @returns {Promise<object|null>}
+ */
+const recordAuditLog = async ({
+  actor_user_id,
+  action_cd,
+  entity_name,
+  entity_id,
+  old_data = null,
+  new_data = null,
+  ip_address = null,
+  req = null,
+} = {}) => {
+  try {
+    const client = getClient();
+    if (!client) {
+      return null;
+    }
+
+    let finalActorId = actor_user_id;
+    let finalIp = ip_address;
+
+    if (req) {
+      if (!finalActorId && req.user) {
+        finalActorId = req.user.user_id || req.user.id;
+      }
+      if (!finalIp) {
+        const forwarded = req.headers ? (req.headers['x-forwarded-for'] || req.headers['x-real-ip']) : null;
+        finalIp = forwarded
+          ? String(forwarded).split(',')[0].trim()
+          : (req.socket?.remoteAddress || req.ip || '127.0.0.1');
+      }
+    }
+
+    const actionInfo = resolveAuditAction(action_cd);
+    const resolvedActionCd = actionInfo.action_cd || String(action_cd);
+
+    const sanitize = (obj) => {
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+      const copy = { ...obj };
+      ['password', 'password_hash', 'token', 'access_token', 'refresh_token'].forEach((k) => {
+        if (copy[k]) copy[k] = '[HIDDEN]';
+      });
+      return copy;
+    };
+
+    const payload = {
+      actor_user_id: finalActorId || null,
+      action_cd: resolvedActionCd,
+      entity_name: String(entity_name || '').trim(),
+      entity_id: entity_id !== undefined && entity_id !== null ? String(entity_id) : null,
+      old_data: sanitize(old_data),
+      new_data: sanitize(new_data),
+      ip_address: finalIp ? String(finalIp).slice(0, 50) : null,
+      created_at: new Date().toISOString(),
+    };
+
+    if (typeof client.from === 'function') {
+      const q = client.from('h_system_audit_log');
+      if (typeof q.insert === 'function') {
+        const insertResult = q.insert(payload);
+        const { data, error } = typeof insertResult.select === 'function'
+          ? (typeof insertResult.select().maybeSingle === 'function' ? await insertResult.select().maybeSingle() : await insertResult.select())
+          : await insertResult;
+
+        if (error) {
+          console.warn('[AuditLogger] Ghi nhật ký thất bại:', error.message);
+          return null;
+        }
+        return data || payload;
+      }
+    }
+    return null;
+  } catch (err) {
+    console.warn('[AuditLogger] Lỗi ngoại lệ khi ghi nhật ký:', err.message);
+    return null;
+  }
+};
+
 module.exports = {
   setCustomClient,
   getClient,
@@ -469,4 +560,5 @@ module.exports = {
   formatAuditLogItem,
   getAuditLogs,
   getAuditLogById,
+  recordAuditLog,
 };

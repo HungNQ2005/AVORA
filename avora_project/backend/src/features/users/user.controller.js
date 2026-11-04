@@ -2,6 +2,7 @@
 
 const userService = require('./user.service');
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
+const { recordAuditLog } = require('../../utils/auditLogger');
 
 /**
  * GET /api/users
@@ -66,6 +67,15 @@ const handleUpdateUserStatus = async (req, res, next) => {
     }
 
     const updatedUser = await userService.updateUserStatus(id, status);
+
+    recordAuditLog({
+      req,
+      action_cd: '2', // UPD
+      entity_name: 'm_user',
+      entity_id: id,
+      new_data: { status, updatedUser },
+    });
+
     return sendSuccess(res, 200, 'Cập nhật trạng thái người dùng thành công.', updatedUser);
   } catch (err) {
     if (err.statusCode) {
@@ -137,6 +147,14 @@ const handleConfirmRoleChange = async (req, res, next) => {
       otpCode,
     });
 
+    recordAuditLog({
+      req,
+      action_cd: '2', // UPD
+      entity_name: 'm_user',
+      entity_id: id,
+      new_data: { newRole, message: result.message },
+    });
+
     return sendSuccess(res, 200, result.message, result);
   } catch (err) {
     if (err.statusCode) {
@@ -186,4 +204,3 @@ module.exports = {
   handleConfirmRoleChange,
   handleUpdateAvatar,
 };
-

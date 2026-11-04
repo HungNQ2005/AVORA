@@ -2,6 +2,7 @@
 
 const vendorBookingService = require('./vendor_booking.service');
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
+const { recordAuditLog } = require('../../utils/auditLogger');
 
 /**
  * GET /api/vendor/bookings
@@ -83,6 +84,19 @@ const updateVendorBookingStatus = async (req, res) => {
       bookingId: id.trim(),
       newStatus: status.trim(),
       reason: reason || '',
+    });
+
+    recordAuditLog({
+      actor_user_id: req.user?.user_id || req.hotelAccess?.userId,
+      action_cd: '2', // UPD
+      entity_name: 't_booking',
+      entity_id: id.trim(),
+      new_data: {
+        status: result.status,
+        reason: reason || null,
+        booking_ref: result.booking_ref,
+      },
+      req,
     });
 
     return sendSuccess(res, 200, result.message, result);

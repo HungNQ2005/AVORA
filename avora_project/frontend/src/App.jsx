@@ -449,9 +449,7 @@ function App() {
             <Route
               path="audit-logs"
               element={
-                <AdminRoute>
-                  <AuditLogManagementPage />
-                </AdminRoute>
+                <AdminRoute><AuditLogManagementPage /></AdminRoute>
               }
             />
           </Route>

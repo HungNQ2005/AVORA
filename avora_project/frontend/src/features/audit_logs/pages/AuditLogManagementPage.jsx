@@ -230,12 +230,12 @@ const AuditLogManagementPage = () => {
             <span className="audit-breadcrumb__sep">&gt;</span>
             <span>Nhật ký &amp; Giám sát</span>
             <span className="audit-breadcrumb__sep">&gt;</span>
-            <span className="audit-breadcrumb__current">Nhật ký kiểm toán (Audit Log)</span>
+            <span className="audit-breadcrumb__current">Nhật ký hoạt động hệ thống (Audit Log)</span>
           </nav>
 
           {/* Title & Badge */}
           <div className="audit-title-row">
-            <h1 className="audit-main-title">Nhật ký kiểm toán hệ thống</h1>
+            <h1 className="audit-main-title">Nhật ký hoạt động hệ thống</h1>
             <span className="audit-main-badge">AUDIT LOG</span>
           </div>
 
