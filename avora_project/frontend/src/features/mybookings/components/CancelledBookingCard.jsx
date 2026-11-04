@@ -69,6 +69,27 @@ const CancelledBookingCard = ({
           </span> • Dự kiến: {booking.stay.check_in_date} – {booking.stay.check_out_date} ({booking.stay.nights} đêm) • {booking.stay.room_type_name}
         </p>
 
+        {/* Cancellation reason prominent alert */}
+        {(booking.cancellation_reason || booking.refund?.reason) && (
+          <div
+            style={{
+              margin: '8px 0',
+              padding: '8px 12px',
+              background: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              fontSize: '13px',
+              color: '#991b1b',
+              display: 'flex',
+              alignItems: 'baseline',
+              gap: '6px',
+            }}
+          >
+            <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>Lý do hủy từ khách sạn:</span>
+            <span>{booking.cancellation_reason || booking.refund?.reason}</span>
+          </div>
+        )}
+
         {/* Refund detail box from t_refund_request */}
         {booking.refund ? (
           <div className="my-bookings-compact-refund-box">

@@ -1509,6 +1509,11 @@ const getMyBookings = async ({
             : refundStatusCodeName === 'PND'
               ? 'Chờ xử lý hoàn tiền'
               : null;
+    let cancelReason = refund?.reason || '';
+    if (!cancelReason && b.special_request) {
+      const match = b.special_request.match(/\[Lý do khách sạn hủy:\s*(.+?)\]/);
+      if (match) cancelReason = match[1];
+    }
 
     // Coupon strictly from booking's linked m_coupon (null if booking did not use a coupon)
     const couponData = b.m_coupon || null;
@@ -1568,6 +1573,7 @@ const getMyBookings = async ({
       guest_name: b.guest_name || '',
       guest_phone: b.guest_phone || '',
       special_request: b.special_request || '',
+      cancellation_reason: cancelReason,
       booking_status_cd: b.booking_status_cd,
       status_code: statusInfo.status_code,
       status_code_name: statusInfo.status_code_name,

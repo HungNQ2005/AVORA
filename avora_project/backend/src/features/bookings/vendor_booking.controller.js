@@ -74,9 +74,24 @@ const updateVendorBookingStatus = async (req, res) => {
       return sendError(res, 400, 'Vui lòng chọn trạng thái mới cần cập nhật.');
     }
 
-    // Nếu lý do hủy được gửi lên, validate độ dài
-    if (reason && typeof reason === 'string' && reason.length > 500) {
-      return sendError(res, 400, 'Lý do hủy đơn không được vượt quá 500 ký tự.');
+    // Nếu trạng thái là HỦY (CAN hoặc 3), kiểm tra validate lý do hủy chặt chẽ
+    const isCancel = ['CAN', '3'].includes(String(status).trim().toUpperCase());
+    if (isCancel) {
+      const trimmedReason = String(reason || '').trim();
+      if (!trimmedReason) {
+        return sendError(res, 400, 'Vui lòng nhập lý do hủy đơn đặt phòng, không được để trống.');
+      }
+      if (trimmedReason.length < 5) {
+        return sendError(res, 400, 'Lý do hủy đơn cần ít nhất 5 ký tự để khách hàng hiểu rõ.');
+      }
+      if (trimmedReason.length > 500) {
+        return sendError(res, 400, 'Lý do hủy đơn không được vượt quá 500 ký tự.');
+      }
+      if (!/[a-zA-ZÀ-ỹ]/.test(trimmedReason)) {
+        return sendError(res, 400, 'Lý do hủy phòng phải chứa chữ cái mô tả rõ ràng, không được chỉ chứa ký tự đặc biệt hoặc số.');
+      }
+    } else if (reason && typeof reason === 'string' && reason.length > 500) {
+      return sendError(res, 400, 'Lý do không được vượt quá 500 ký tự.');
     }
 
     const result = await vendorBookingService.updateVendorBookingStatus({

@@ -169,6 +169,40 @@ const VendorBookingDetailModal = ({
               </div>
             </div>
           </div>
+
+          {/* Section 4: Thông tin hủy đơn & Hoàn tiền (Nếu đã hủy) */}
+          {isCan && (
+            <div className="vbooking-detail-section" style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '10px', padding: '14px 16px' }}>
+              <h4 className="vbooking-detail-section__title" style={{ color: '#991b1b', marginBottom: '8px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="15" y1="9" x2="9" y2="15"></line>
+                  <line x1="9" y1="9" x2="15" y2="15"></line>
+                </svg>
+                <span>Thông tin hủy đơn & Hoàn tiền</span>
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px' }}>
+                  <span style={{ color: '#7f1d1d', fontWeight: 600 }}>Lý do hủy đơn:</span>
+                  <span style={{ color: '#991b1b', textAlign: 'right', fontWeight: 600 }}>
+                    {booking.cancellation_reason || booking.refund?.reason || (booking.special_request?.match(/\[Lý do khách sạn hủy:\s*(.+?)\]/)?.[1]) || 'Đã hủy theo quy định'}
+                  </span>
+                </div>
+                {booking.refund ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '10px', paddingTop: '4px', borderTop: '1px dashed #fecaca' }}>
+                    <span style={{ color: '#065f46', fontWeight: 600 }}>Yêu cầu hoàn tiền:</span>
+                    <span style={{ color: '#047857', textAlign: 'right' }}>
+                      <strong>{formatCurrency(booking.refund.refund_amount)}</strong> • Mã: {booking.refund.gateway_refund_ref || 'REF'}
+                    </span>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>
+                    (Đơn chưa thanh toán trực tuyến, không phát sinh hoàn tiền)
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}

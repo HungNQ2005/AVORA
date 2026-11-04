@@ -1,6 +1,7 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const { adjustInventoryForStay } = require('./booking.service');
 
 const createError = (message, statusCode = 500) => {
   const err = new Error(message);
@@ -151,6 +152,20 @@ const getVendorBookings = async ({
           bed_type,
           room_size
         )
+      ),
+      t_payment_transaction (
+        transaction_id,
+        amount_paid,
+        payment_method_cd,
+        paid_at
+      ),
+      t_refund_request (
+        refund_id,
+        refund_amount,
+        refund_status_cd,
+        gateway_refund_ref,
+        reason,
+        created_at
       )
     `, { count: 'exact' })
     .in('hotel_id', targetHotelIds);
@@ -215,6 +230,22 @@ const getVendorBookings = async ({
       }
     });
 
+    const paymentTxns = Array.isArray(b.t_payment_transaction) ? b.t_payment_transaction : [];
+    const latestPayment = paymentTxns.find((tx) => Number(tx.amount_paid) > 0 || tx.paid_at) || paymentTxns[0] || null;
+    const isPaid = paymentTxns.some((tx) => Number(tx.amount_paid) > 0 || Boolean(tx.paid_at));
+    const amountPaid = latestPayment ? Number(latestPayment.amount_paid || 0) : (isPaid ? Number(b.total_amount || 0) : 0);
+
+    const refunds = Array.isArray(b.t_refund_request) ? b.t_refund_request : [];
+    const refund = refunds[0] || null;
+
+    let cancellationReason = refund?.reason || '';
+    if (!cancellationReason && b.special_request) {
+      const match = b.special_request.match(/\[Lý do khách sạn hủy:\s*(.+?)\]/);
+      if (match) {
+        cancellationReason = match[1];
+      }
+    }
+
     return {
       booking_id: b.booking_id,
       booking_ref: String(b.booking_id || '').split('-')[0].toUpperCase(),
@@ -232,6 +263,22 @@ const getVendorBookings = async ({
       check_in_date: earliestCheckIn,
       check_out_date: latestCheckOut,
       total_rooms: totalRoomsCount,
+      is_paid: isPaid,
+      payment: {
+        is_paid: isPaid,
+        amount_paid: amountPaid,
+        transaction_id: latestPayment?.transaction_id || null,
+        paid_at: latestPayment?.paid_at || null,
+      },
+      refund: refund ? {
+        refund_id: refund.refund_id,
+        refund_amount: Number(refund.refund_amount || 0),
+        refund_status_cd: refund.refund_status_cd,
+        gateway_refund_ref: refund.gateway_refund_ref,
+        reason: refund.reason,
+        created_at: refund.created_at,
+      } : null,
+      cancellation_reason: cancellationReason,
       details: details.map((d) => ({
         booking_detail_id: d.booking_detail_id,
         room_type_id: d.room_type_id,
@@ -306,6 +353,22 @@ const getVendorBookingById = async ({ hotelAccess, bookingId }) => {
           room_size,
           default_price
         )
+      ),
+      t_payment_transaction (
+        transaction_id,
+        amount_paid,
+        payment_method_cd,
+        gateway_ref_id,
+        paid_at,
+        created_at
+      ),
+      t_refund_request (
+        refund_id,
+        refund_amount,
+        refund_status_cd,
+        gateway_refund_ref,
+        reason,
+        created_at
       )
     `)
     .eq('booking_id', bookingId)
@@ -328,6 +391,22 @@ const getVendorBookingById = async ({ hotelAccess, bookingId }) => {
   const statusMeta = normalizeStatusCode(booking.booking_status_cd);
   const details = booking.t_booking_detail || [];
 
+  const paymentTxns = Array.isArray(booking.t_payment_transaction) ? booking.t_payment_transaction : [];
+  const latestPayment = paymentTxns.find((tx) => Number(tx.amount_paid) > 0 || tx.paid_at) || paymentTxns[0] || null;
+  const isPaid = paymentTxns.some((tx) => Number(tx.amount_paid) > 0 || Boolean(tx.paid_at));
+  const amountPaid = latestPayment ? Number(latestPayment.amount_paid || 0) : (isPaid ? Number(booking.total_amount || 0) : 0);
+
+  const refunds = Array.isArray(booking.t_refund_request) ? booking.t_refund_request : [];
+  const refund = refunds[0] || null;
+
+  let cancellationReason = refund?.reason || '';
+  if (!cancellationReason && booking.special_request) {
+    const match = booking.special_request.match(/\[Lý do khách sạn hủy:\s*(.+?)\]/);
+    if (match) {
+      cancellationReason = match[1];
+    }
+  }
+
   return {
     booking_id: booking.booking_id,
     booking_ref: String(booking.booking_id || '').split('-')[0].toUpperCase(),
@@ -340,6 +419,22 @@ const getVendorBookingById = async ({ hotelAccess, bookingId }) => {
     total_amount: Number(booking.total_amount || 0),
     discount_amount: Number(booking.discount_amount || 0),
     status: statusMeta,
+    is_paid: isPaid,
+    payment: {
+      is_paid: isPaid,
+      amount_paid: amountPaid,
+      transaction_id: latestPayment?.transaction_id || null,
+      paid_at: latestPayment?.paid_at || null,
+    },
+    refund: refund ? {
+      refund_id: refund.refund_id,
+      refund_amount: Number(refund.refund_amount || 0),
+      refund_status_cd: refund.refund_status_cd,
+      gateway_refund_ref: refund.gateway_refund_ref,
+      reason: refund.reason,
+      created_at: refund.created_at,
+    } : null,
+    cancellation_reason: cancellationReason,
     created_at: booking.created_at,
     updated_at: booking.updated_at,
     details: details.map((d) => ({
@@ -385,16 +480,45 @@ const updateVendorBookingStatus = async ({ hotelAccess, bookingId, newStatus, re
     throw createError(`Đơn đặt phòng đã ở trạng thái "${targetStatus.label}".`, 400);
   }
 
-  // 2. Cập nhật trạng thái vào t_booking
+  // 2. Validate lý do nếu là Hủy đơn (CAN)
+  let trimmedReason = '';
+  if (targetStatus.name === 'CAN') {
+    trimmedReason = String(reason || '').trim();
+    if (!trimmedReason) {
+      throw createError('Vui lòng nhập lý do hủy đơn đặt phòng, không được để trống.', 400);
+    }
+    if (trimmedReason.length < 5) {
+      throw createError('Lý do hủy đơn cần ít nhất 5 ký tự để khách hàng hiểu rõ.', 400);
+    }
+    if (trimmedReason.length > 500) {
+      throw createError('Lý do hủy đơn không được dài quá 500 ký tự.', 400);
+    }
+    if (!/[a-zA-ZÀ-ỹ]/.test(trimmedReason)) {
+      throw createError('Lý do hủy phòng phải chứa chữ cái mô tả rõ ràng, không được chỉ chứa ký tự đặc biệt hoặc số.', 400);
+    }
+  }
+
+  // 3. Nếu Hủy đơn: Hoàn lại tồn kho phòng trong t_inventory
+  if (targetStatus.name === 'CAN') {
+    const details = currentBooking.details || [];
+    if (details.length > 0 && details[0].check_in_date && details[0].check_out_date) {
+      try {
+        await adjustInventoryForStay(details, details[0].check_in_date, details[0].check_out_date, -1);
+      } catch (invErr) {
+        console.warn('[VendorBooking] Cảnh báo hoàn tồn kho phòng:', invErr.message);
+      }
+    }
+  }
+
+  // 4. Cập nhật trạng thái vào t_booking
   const updatePayload = {
     booking_status_cd: targetStatus.codeCd, // lưu mã chuẩn '2' hoặc '3'
     updated_at: new Date().toISOString(),
   };
 
-  // Nếu có lý do hủy, ghi chú thêm vào special_request
-  if (targetStatus.name === 'CAN' && reason) {
+  if (targetStatus.name === 'CAN' && trimmedReason) {
     const existingReq = currentBooking.special_request ? `${currentBooking.special_request}\n` : '';
-    updatePayload.special_request = `${existingReq}[Lý do khách sạn hủy: ${reason.trim()}]`;
+    updatePayload.special_request = `${existingReq}[Lý do khách sạn hủy: ${trimmedReason}]`;
   }
 
   const { data, error } = await supabase
@@ -409,14 +533,61 @@ const updateVendorBookingStatus = async ({ hotelAccess, bookingId, newStatus, re
     throw createError('Không thể cập nhật trạng thái đơn đặt phòng. Vui lòng thử lại.', 500);
   }
 
+  // 5. Liên kết luồng hoàn tiền: Nếu đơn đã thanh toán, tự động tạo yêu cầu hoàn tiền 100%
+  let refundRecord = null;
+  const isPaid = Boolean(currentBooking.is_paid || (currentBooking.payment && currentBooking.payment.amount_paid > 0));
+  const refundAmount = isPaid ? Number(currentBooking.payment?.amount_paid || currentBooking.total_amount || 0) : 0;
+
+  if (targetStatus.name === 'CAN' && isPaid && refundAmount > 0) {
+    let refundStatusCd = '1'; // Default system code for PND
+    const { data: sysCodeData } = await supabase
+      .from('m_system_code')
+      .select('code_cd')
+      .eq('business_cd', 'REFUND_STS')
+      .eq('code_name', 'PND')
+      .maybeSingle();
+
+    if (sysCodeData?.code_cd) {
+      refundStatusCd = sysCodeData.code_cd;
+    }
+
+    const refundRef = `REF-VEN-${bookingId.substring(0, 8).toUpperCase()}`;
+    const latestTxnId = currentBooking.payment?.transaction_id || null;
+
+    const { data: insertedRefund, error: refundErr } = await supabase
+      .from('t_refund_request')
+      .insert({
+        transaction_id: latestTxnId,
+        booking_id: bookingId,
+        refund_amount: refundAmount,
+        refund_status_cd: refundStatusCd,
+        gateway_refund_ref: refundRef,
+        reason: `Khách sạn hủy: ${trimmedReason}`,
+      })
+      .select()
+      .maybeSingle();
+
+    if (refundErr) {
+      console.error('[VendorBooking] Lỗi tạo yêu cầu hoàn tiền:', refundErr.message);
+    } else {
+      refundRecord = insertedRefund;
+    }
+  }
+
   return {
     booking_id: bookingId,
     booking_ref: currentBooking.booking_ref,
     status: targetStatus,
+    is_paid: isPaid,
+    refund_amount: refundAmount,
+    refund: refundRecord,
+    cancellation_reason: trimmedReason,
     message:
       targetStatus.name === 'CFM'
         ? 'Xác nhận đơn đặt phòng thành công!'
-        : 'Đã hủy đơn đặt phòng thành công.',
+        : isPaid
+          ? `Đã hủy đơn đặt phòng và tự động gửi yêu cầu hoàn tiền ${refundAmount.toLocaleString('vi-VN')} đ cho khách hàng.`
+          : 'Đã hủy đơn đặt phòng thành công.',
   };
 };
 
