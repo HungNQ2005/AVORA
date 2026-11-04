@@ -13,14 +13,6 @@ const getCategories = async (req, res, next) => {
   }
 };
 
-const createCategory = async (req, res, next) => {
-  try {
-    return send(res, 201, 'Tạo danh mục hỗ trợ thành công.', await supportService.createCategory(req.validated.body));
-  } catch (error) {
-    return next(error);
-  }
-};
-
 const listTickets = async (req, res, next) => {
   try {
     return send(res, 200, 'Lấy danh sách phiếu hỗ trợ thành công.', await supportService.listTickets(req.user, req.validated.query));
@@ -174,7 +166,6 @@ const getCounts = async (req, res, next) => {
 
 module.exports = {
   getCategories,
-  createCategory,
   listTickets,
   getTicket,
   createTicket,

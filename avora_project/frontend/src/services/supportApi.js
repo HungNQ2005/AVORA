@@ -42,7 +42,6 @@ export const updateSupportTicketStatus = async (ticketId, data) => unwrap(await 
 export const claimSupportTicket = async (ticketId) => unwrap(await api.post(`${ticketPath(ticketId)}/claim`));
 export const deleteSupportTicket = async (ticketId) => unwrap(await api.delete(ticketPath(ticketId)));
 export const deleteSupportAttachment = async (ticketId, key) => unwrap(await api.delete(`${ticketPath(ticketId)}/attachments/${encodeURIComponent(key)}`));
-export const createSupportCategory = async (data) => unwrap(await api.post('/support/categories', data));
 export const chatWithSupportAI = async (ticketId, data) => unwrap(await api.post(`${ticketPath(ticketId)}/ai-chat`, data));
 
 export const loadSupportImage = async (attachmentUrl, signal) => {

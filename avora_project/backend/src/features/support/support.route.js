@@ -12,7 +12,6 @@ const {
   createTicketBodySchema,
   createReplyBodySchema,
   ticketStatusBodySchema,
-  createCategoryBodySchema,
   aiChatBodySchema,
 } = require('./support.validation');
 
@@ -25,7 +24,6 @@ const participants = ['CUS', 'VEN', 'BMR', 'ADM'];
 const requesters = ['CUS', 'VEN', 'BMR'];
 
 router.get('/support/categories', authenticate, requireRole(...participants), controller.getCategories);
-router.post('/support/categories', authenticate, requireRole('ADM'), validateRequest({ body: createCategoryBodySchema }), controller.createCategory);
 router.get('/support/counts', authenticate, requireRole(...participants), controller.getCounts);
 router.get('/support/tickets', authenticate, requireRole(...participants), validateRequest({ query: ticketListQuerySchema }), controller.listTickets);
 router.post('/support/tickets', authenticate, requireRole(...requesters), upload.array('attachments', 3), validateRequest({ body: createTicketBodySchema }), controller.createTicket);

@@ -319,39 +319,6 @@ const listCategories = async (user) => {
   });
 };
 
-const createCategory = async ({ group, category_code }) => {
-  const categories = await loadCategories();
-  if (categories.some((category) => category.code === category_code)) {
-    throw createError(409, 'Mã danh mục đã tồn tại.');
-  }
-  const { data: rows, error: maxError } = await supabase
-    .from('m_system_code')
-    .select('code_cd')
-    .eq('business_cd', 'SUPPORT_CAT');
-  if (maxError) throw maxError;
-  const nextCode = String(Math.max(0, ...(rows || []).map((row) => Number(row.code_cd) || 0)) + 1);
-  const groupBase = group === 'customer' ? 10000 : 20000;
-  const groupCount = categories.filter((item) => item.group === group).length;
-  const { data, error } = await supabase
-    .from('m_system_code')
-    .insert({
-      business_cd: 'SUPPORT_CAT',
-      code_cd: nextCode,
-      code_name: category_code,
-      sort_no: groupBase + groupCount,
-    })
-    .select('code_cd, code_name, sort_no')
-    .single();
-  if (error) throw error;
-  return {
-    code: data.code_name,
-    code_cd: data.code_cd,
-    sort_no: data.sort_no,
-    group,
-    label: getCategoryLabel(data.code_name),
-  };
-};
-
 const listTickets = async (user, query) => {
   if (query.from && query.to && query.from > query.to) {
     throw createError(400, 'Ngày bắt đầu không được sau ngày kết thúc.');
@@ -524,24 +491,31 @@ const createReply = async (ticketId, user, input, files) => {
     insertedReplyId = reply.reply_id;
     let updatedTicket = ticket;
     if (!input.is_internal_note) {
-      const nextStatus = isAdmin(user)
-        ? 'WAT'
-        : ticket.ticket_status_cd === 'RSV'
-          ? 'INP'
-          : ticket.ticket_status_cd === 'WAT'
-            ? 'INP'
-            : ticket.ticket_status_cd;
-      const { data, error: updateError } = await supabase.from('t_support_ticket')
+      const isConfirmedResolved = ticket.ticket_status_cd === 'RSV' && Boolean(ticket.resolved_at);
+      let nextStatus = ticket.ticket_status_cd;
+      if (isConfirmedResolved) {
+        nextStatus = 'RSV';
+      } else if (isAdmin(user)) {
+        nextStatus = 'WAT';
+      } else if (ticket.ticket_status_cd === 'RSV' || ticket.ticket_status_cd === 'WAT') {
+        nextStatus = 'INP';
+      }
+      let ticketUpdate = supabase.from('t_support_ticket')
         .update({
           ticket_status_cd: nextStatus,
-          ...(ticket.ticket_status_cd === 'RSV' ? { resolved_at: null, resolution_note: null } : {}),
+          ...(!isConfirmedResolved && ticket.ticket_status_cd === 'RSV' ? { resolved_at: null, resolution_note: null } : {}),
           updated_at: now(),
         })
         .eq('ticket_id', ticketId)
+        .eq('ticket_status_cd', ticket.ticket_status_cd);
+      ticketUpdate = ticket.resolved_at
+        ? ticketUpdate.eq('resolved_at', ticket.resolved_at)
+        : ticketUpdate.is('resolved_at', null);
+      const { data, error: updateError } = await ticketUpdate
         .select('*')
-        .single();
+        .maybeSingle();
       if (updateError) throw updateError;
-      updatedTicket = data;
+      updatedTicket = data || await getTicketRow(ticketId);
     }
     ticketEvents.emit(ticketEmitter(ticketId));
     const replies = await getReplies(ticketId);
@@ -564,6 +538,9 @@ const updateTicketStatus = async (ticketId, user, input) => {
   await assertTicketAccess(ticket, user);
   const admin = isAdmin(user);
   let updates;
+  if (ticket.ticket_status_cd === 'RSV' && ticket.resolved_at && input.action !== 'close') {
+    throw createError(409, 'Phiếu đã được xác nhận giải quyết; chỉ có thể đóng hoặc xóa phiếu.');
+  }
   if (input.action === 'claim') return claimTicket(ticketId, user);
   if (input.action === 'request_resolution') {
     if (!admin) throw createError(403, 'Chỉ Quản trị viên mới có thể đề xuất giải quyết.');
@@ -596,12 +573,18 @@ const updateTicketStatus = async (ticketId, user, input) => {
   } else {
     throw createError(400, 'Thao tác trạng thái không hợp lệ.');
   }
-  const { data, error } = await supabase.from('t_support_ticket')
+  let statusUpdate = supabase.from('t_support_ticket')
     .update({ ...updates, updated_at: now() })
     .eq('ticket_id', ticketId)
+    .eq('ticket_status_cd', ticket.ticket_status_cd);
+  statusUpdate = ticket.resolved_at
+    ? statusUpdate.eq('resolved_at', ticket.resolved_at)
+    : statusUpdate.is('resolved_at', null);
+  const { data, error } = await statusUpdate
     .select('*')
-    .single();
+    .maybeSingle();
   if (error) throw error;
+  if (!data) throw createError(409, 'Trạng thái phiếu đã thay đổi. Vui lòng tải lại rồi thử lại.');
   ticketEvents.emit(ticketEmitter(ticketId));
   return withTicketDetails(data, user);
 };
@@ -748,7 +731,6 @@ const getSupportCounts = async (user) => {
 
 module.exports = {
   listCategories,
-  createCategory,
   listTickets,
   createTicket,
   getTicket,

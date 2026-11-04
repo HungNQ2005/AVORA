@@ -63,11 +63,6 @@ const ticketStatusBodySchema = z.object({
   }
 });
 
-const createCategoryBodySchema = z.object({
-  group: z.enum(['customer', 'vendor']),
-  category_code: z.string().trim().min(2).max(50).regex(/^[A-Z][A-Z0-9_]*$/, 'Mã danh mục chỉ được chứa chữ in hoa, số và dấu gạch dưới.'),
-}).strict();
-
 const aiChatBodySchema = z.object({
   message: z.string().trim().min(1).max(2000),
   history: z.array(z.object({
@@ -87,6 +82,5 @@ module.exports = {
   createTicketBodySchema,
   createReplyBodySchema,
   ticketStatusBodySchema,
-  createCategoryBodySchema,
   aiChatBodySchema,
 };

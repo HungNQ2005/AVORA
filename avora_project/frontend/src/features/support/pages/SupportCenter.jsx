@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { fetchMyBookings } from '../../../services/bookingApi';
 import { getHotels } from '../../../services/hotelManagementService';
 import {
   chatWithSupportAI,
   claimSupportTicket,
-  createSupportCategory,
   createSupportTicket,
   deleteSupportAttachment,
   deleteSupportTicket,
@@ -17,9 +16,9 @@ import {
   subscribeToSupportTicket,
   updateSupportTicketStatus,
 } from '../../../services/supportApi';
-import AttachmentImage from '../components/AttachmentImage';
+import SupportTicketConversation from '../components/SupportTicketConversation';
 import SupportTicketWorkspace from '../components/SupportTicketWorkspace';
-import './supportCenter.css';
+import './SupportCenter.css';
 
 const STATUS_LABELS = {
   OPN: 'Mới',
@@ -49,30 +48,6 @@ const getErrorMessage = (error, fallback) => error.response?.data?.message || er
 const formatDate = (value) => value ? new Date(value).toLocaleString('vi-VN') : '—';
 const formatDateOnly = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN') : '';
 
-const RequesterAccountDetails = ({ requester }) => {
-  const [avatarFailed, setAvatarFailed] = useState(false);
-  const name = requester.full_name || requester.email || 'Người dùng';
-  const initial = name.trim().charAt(0).toUpperCase() || 'U';
-
-  return (
-    <details className="support-requester-details">
-      <summary>
-        <span className="support-requester-details__avatar">
-          {requester.avatar_url && !avatarFailed
-            ? <img src={requester.avatar_url} alt="" onError={() => setAvatarFailed(true)} />
-            : initial}
-        </span>
-        <span><strong>{name}</strong><small>{requester.email}</small></span>
-      </summary>
-      {requester.email && (
-        <Link to={`/dashboard/users?search=${encodeURIComponent(requester.email)}`}>
-          Xem thông tin tài khoản
-        </Link>
-      )}
-    </details>
-  );
-};
-
 const SupportCenter = ({ mode = 'customer' }) => {
   const isAdmin = mode === 'admin';
   const isVendor = mode === 'vendor';
@@ -87,9 +62,6 @@ const SupportCenter = ({ mode = 'customer' }) => {
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [showCreate, setShowCreate] = useState(false);
-  const [newCategory, setNewCategory] = useState({ group: 'customer', category_code: '' });
-  const [categoryLoading, setCategoryLoading] = useState(false);
-  const [categoryMessage, setCategoryMessage] = useState('');
   const selectedTicketId = searchParams.get('ticketId');
   const { user } = useAuth();
 
@@ -266,25 +238,6 @@ const SupportCenter = ({ mode = 'customer' }) => {
     }
   };
 
-  const handleCreateCategory = async (event) => {
-    event.preventDefault();
-    setCategoryLoading(true);
-    setCategoryMessage('');
-    try {
-      await createSupportCategory({
-        ...newCategory,
-        category_code: newCategory.category_code.trim().toUpperCase(),
-      });
-      setNewCategory((current) => ({ ...current, category_code: '' }));
-      setCategoryMessage('Đã thêm danh mục hỗ trợ.');
-      await loadCategories();
-    } catch (createError) {
-      setCategoryMessage(getErrorMessage(createError, 'Không thể thêm danh mục hỗ trợ.'));
-    } finally {
-      setCategoryLoading(false);
-    }
-  };
-
   const heading = isAdmin ? 'Quản lý phiếu hỗ trợ' : isVendor ? 'Hỗ trợ nhà cung cấp' : 'Tickets & Hỗ trợ';
   const visibleCategories = categories.filter((category) => isAdmin
     || isVendor
@@ -309,26 +262,6 @@ const SupportCenter = ({ mode = 'customer' }) => {
       {error && <div className="support-alert support-alert--error" role="alert">{error}</div>}
       {notice && <div className="support-alert support-alert--success" role="status">{notice}</div>}
 
-      {isAdmin && (
-        <form className="support-category-form" onSubmit={handleCreateCategory}>
-          <strong>Danh mục hỗ trợ</strong>
-          <select value={newCategory.group} onChange={(event) => setNewCategory((current) => ({ ...current, group: event.target.value }))}>
-            <option value="customer">Khách hàng</option>
-            <option value="vendor">Nhà cung cấp</option>
-          </select>
-          <input
-            value={newCategory.category_code}
-            onChange={(event) => setNewCategory((current) => ({ ...current, category_code: event.target.value }))}
-            placeholder="Mã danh mục, ví dụ ACCOUNT"
-            pattern="[A-Za-z][A-Za-z0-9_]*"
-            maxLength={50}
-            required
-          />
-          <button type="submit" disabled={categoryLoading}>{categoryLoading ? 'Đang thêm…' : 'Thêm danh mục'}</button>
-          {categoryMessage && <span role="status">{categoryMessage}</span>}
-        </form>
-      )}
-
       <SupportTicketWorkspace
         selectedTicketId={selectedTicketId}
         filters={filters}
@@ -347,12 +280,14 @@ const SupportCenter = ({ mode = 'customer' }) => {
         detailLoading={detailLoading}
         ticket={ticket}
         conversation={ticket && (
-          <TicketConversation
+          <SupportTicketConversation
             ticket={ticket}
             mode={mode}
             viewerId={user?.user_id}
             isAssignedAdmin={isAdmin && String(ticket.assigned_to) === String(user?.user_id)}
             categoryLabel={categoryLabelByCode.get(ticket.ticket_type_cd) || ticket.category_label}
+            statusLabels={STATUS_LABELS}
+            formatDate={formatDate}
             onClaim={handleClaim}
             onStatus={handleStatus}
             onReply={handleReply}
@@ -372,221 +307,6 @@ const SupportCenter = ({ mode = 'customer' }) => {
         />
       )}
     </section>
-  );
-};
-
-const TicketConversation = ({ ticket, mode, viewerId, isAssignedAdmin, categoryLabel, onClaim, onStatus, onReply, onDeleteAttachment, onDeleteTicket, onAIChat }) => {
-  const isAdmin = mode === 'admin';
-  const isClosed = ticket.ticket_status_cd === 'CLS';
-  const [resolutionNote, setResolutionNote] = useState('');
-  const [statusError, setStatusError] = useState('');
-  const [aiOpen, setAiOpen] = useState(false);
-  const [aiMessage, setAiMessage] = useState('');
-  const [aiHistory, setAiHistory] = useState([]);
-  const [aiLoading, setAiLoading] = useState(false);
-
-  const runStatusAction = async (action) => {
-    setStatusError('');
-    try {
-      await onStatus(action, resolutionNote);
-      setResolutionNote('');
-    } catch (error) {
-      setStatusError(getErrorMessage(error, 'Không thể cập nhật trạng thái.'));
-    }
-  };
-
-  const askAI = async (event) => {
-    event.preventDefault();
-    if (!aiMessage.trim() || aiLoading) return;
-    const message = aiMessage.trim();
-    const history = aiHistory.map(({ role, content }) => ({ role, content }));
-    setAiHistory((current) => [...current, { role: 'user', content: message }]);
-    setAiMessage('');
-    setAiLoading(true);
-    try {
-      const result = await onAIChat(ticket.ticket_id, { message, history });
-      setAiHistory((current) => [...current, { role: 'assistant', content: result.reply || 'Xin lỗi, tôi chưa có câu trả lời.' }]);
-    } catch (error) {
-      setAiHistory((current) => [...current, { role: 'assistant', content: getErrorMessage(error, 'Trợ lý AI tạm thời không khả dụng.') }]);
-    } finally {
-      setAiLoading(false);
-    }
-  };
-
-  return (
-    <>
-      <header className="support-conversation__header">
-        <div>
-          <div className="support-conversation__title-row">
-            <h2>{ticket.title}</h2>
-            <span className={`support-status support-status--${ticket.ticket_status_cd}`}>{STATUS_LABELS[ticket.ticket_status_cd] || ticket.ticket_status_cd}</span>
-          </div>
-          <p>{categoryLabel} · Tạo lúc {formatDate(ticket.created_at)}{ticket.assigned_admin ? ` · ${ticket.assigned_admin.label}` : ''}</p>
-        </div>
-        {isAdmin && ticket.requester && <RequesterAccountDetails requester={ticket.requester} />}
-      </header>
-
-      <div className="support-conversation__messages">
-        <article className={`support-message support-message--description ${String(ticket.requester_id) === String(viewerId) ? 'support-message--own' : 'support-message--other'}`}>
-          <div className="support-message__byline"><strong>{ticket.requester?.full_name || (isAdmin ? 'Người gửi phiếu' : 'Bạn')}</strong><time>{formatDate(ticket.created_at)}</time></div>
-          <p>{ticket.description}</p>
-          {!!ticket.attachment_urls?.length && (
-            <div className="support-attachments">
-              {ticket.attachment_urls.map((attachment) => (
-                <AttachmentImage
-                  key={attachment.key}
-                  attachment={attachment}
-                  onDelete={!isClosed && !isAdmin ? onDeleteAttachment : undefined}
-                />
-              ))}
-            </div>
-          )}
-        </article>
-        {ticket.resolution_note && (
-          <div className="support-resolution">
-            <strong>Đề xuất giải quyết</strong>
-            <p>{ticket.resolution_note}</p>
-          </div>
-        )}
-        {(ticket.replies || []).map((reply) => (
-          <article
-            key={reply.reply_id}
-            className={`support-message ${String(reply.sender_id) === String(viewerId) ? 'support-message--own' : 'support-message--other'} ${reply.is_internal_note ? 'support-message--internal' : ''}`}
-          >
-            <div className="support-message__byline">
-              <strong>{reply.sender_name || (reply.sender_role === 'ADM' ? 'Đội ngũ hỗ trợ' : 'Người gửi')}</strong>
-              <time>{formatDate(reply.created_at)}</time>
-              {reply.is_internal_note && <span>Ghi chú nội bộ</span>}
-            </div>
-            {reply.message && <p>{reply.message}</p>}
-            {!!reply.attachment_urls?.length && (
-              <div className="support-attachments">
-                {reply.attachment_urls.map((attachment) => (
-                  <AttachmentImage
-                    key={attachment.key}
-                    attachment={attachment}
-                    onDelete={!isClosed && String(reply.sender_id) === String(viewerId) ? onDeleteAttachment : undefined}
-                  />
-                ))}
-              </div>
-            )}
-          </article>
-        ))}
-        {aiOpen && (
-          <section className="support-ai">
-            <div className="support-ai__header"><strong>Trợ lý AVORA</strong><button type="button" onClick={() => setAiOpen(false)}>Đóng</button></div>
-            <div className="support-ai__messages">
-              {aiHistory.length ? aiHistory.map((message, index) => <p key={`${index}-${message.role}`} className={`support-ai__message support-ai__message--${message.role}`}>{message.content}</p>) : <p>Mô tả vấn đề hoặc hỏi cách xử lý trước khi tiếp tục.</p>}
-            </div>
-            <form onSubmit={askAI}>
-              <input value={aiMessage} onChange={(event) => setAiMessage(event.target.value)} maxLength={2000} placeholder="Nhập câu hỏi..." />
-              <button type="submit" disabled={aiLoading || !aiMessage.trim()}>{aiLoading ? '…' : 'Gửi'}</button>
-            </form>
-          </section>
-        )}
-      </div>
-
-      {statusError && <div className="support-alert support-alert--error" role="alert">{statusError}</div>}
-      <footer className="support-conversation__actions">
-        {isAdmin && ticket.ticket_status_cd === 'OPN' && !ticket.assigned_to && (
-          <button type="button" className="support-button support-button--outline" onClick={onClaim}>Nhận xử lý</button>
-        )}
-        {isAssignedAdmin && ticket.ticket_status_cd !== 'CLS' && (
-          <div className="support-status-actions">
-            {!ticket.resolved_at && (
-              <>
-                <textarea value={resolutionNote} onChange={(event) => setResolutionNote(event.target.value)} maxLength={5000} placeholder="Ghi nội dung đề xuất giải quyết..." />
-                <button type="button" className="support-button support-button--outline" disabled={!resolutionNote.trim()} onClick={() => runStatusAction('request_resolution')}>Đề xuất giải quyết</button>
-              </>
-            )}
-            {ticket.ticket_status_cd === 'RSV' && ticket.resolved_at && <button type="button" className="support-button support-button--primary" onClick={() => runStatusAction('close')}>Đóng phiếu</button>}
-          </div>
-        )}
-        {!isAdmin && ticket.ticket_status_cd === 'RSV' && !ticket.resolved_at && (
-          <>
-            <button type="button" className="support-button support-button--outline" onClick={() => runStatusAction('reject_resolution')}>Chưa được giải quyết</button>
-            <button type="button" className="support-button support-button--primary" onClick={() => runStatusAction('confirm_resolution')}>Xác nhận giải quyết</button>
-          </>
-        )}
-        {!isAdmin && !isClosed && ticket.ticket_status_cd === 'OPN' && (
-          <button type="button" className="support-button support-button--outline" onClick={() => setAiOpen((open) => !open)}>Hỏi trợ lý AI</button>
-        )}
-        {(ticket.ticket_status_cd === 'CLS' ? isAdmin && isAssignedAdmin : !isAdmin || isAssignedAdmin) && (
-          <button type="button" className="support-button support-button--danger" onClick={onDeleteTicket}>Xóa phiếu</button>
-        )}
-        {!isClosed && (!isAdmin || ticket.assigned_to) && <ReplyComposer isAdmin={isAdmin} onSubmit={onReply} />}
-        {!isClosed && isAdmin && !ticket.assigned_to && <p className="support-closed-note">Nhận xử lý phiếu trước khi trả lời.</p>}
-        {isClosed && <p className="support-closed-note">Phiếu đã đóng. Không thể gửi thêm tin nhắn.</p>}
-      </footer>
-    </>
-  );
-};
-
-const ReplyComposer = ({ isAdmin, onSubmit }) => {
-  const [message, setMessage] = useState('');
-  const [files, setFiles] = useState([]);
-  const [internal, setInternal] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const updateFiles = (event) => {
-    const nextFiles = [...event.target.files];
-    if (nextFiles.length > MAX_FILES) {
-      setError(`Mỗi lần chỉ được gửi tối đa ${MAX_FILES} ảnh.`);
-      return;
-    }
-    if (nextFiles.some((file) => !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > MAX_FILE_SIZE)) {
-      setError('Chỉ chấp nhận ảnh JPEG, PNG hoặc WEBP tối đa 2 MB mỗi ảnh.');
-      return;
-    }
-    setError('');
-    setFiles(nextFiles);
-  };
-
-  const submit = async (event) => {
-    event.preventDefault();
-    setError('');
-    if (!message.trim() && !files.length) {
-      setError('Vui lòng nhập tin nhắn hoặc chọn ảnh đính kèm.');
-      return;
-    }
-    if (LINK_PATTERN.test(message)) {
-      setError('Tin nhắn không được chứa đường dẫn.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      await onSubmit({ message, files, internal });
-      setMessage('');
-      setFiles([]);
-      setInternal(false);
-      event.target.reset();
-    } catch (submitError) {
-      setError(getErrorMessage(submitError, 'Không thể gửi tin nhắn.'));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <form className="support-reply-form" onSubmit={submit}>
-      {error && <span className="support-reply-form__error" role="alert">{error}</span>}
-      {isAdmin && (
-        <label className="support-reply-form__internal">
-          <input type="checkbox" checked={internal} onChange={(event) => setInternal(event.target.checked)} />
-          Ghi chú nội bộ (chỉ quản trị viên thấy)
-        </label>
-      )}
-      <textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder={internal ? 'Nhập ghi chú nội bộ...' : 'Nhập phản hồi...'} maxLength={100000} />
-      <div className="support-reply-form__footer">
-        <label className="support-upload">
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={updateFiles} />
-          Đính kèm ảnh
-        </label>
-        <span>{files.length ? `${files.length} ảnh đã chọn` : `${countWords(message)} từ`}</span>
-        <button type="submit" disabled={submitting}>{submitting ? 'Đang gửi…' : 'Gửi'}</button>
-      </div>
-    </form>
   );
 };
 
