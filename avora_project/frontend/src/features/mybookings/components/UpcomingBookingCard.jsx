@@ -107,11 +107,7 @@ const UpcomingBookingCard = ({
               <div className="my-bookings-rating-score-box">
                 <div className="my-bookings-rating-text">
                   <div className="my-bookings-rating-text-label">
-                    {booking.hotel.rating_score >= 9
-                      ? 'Xuất sắc'
-                      : booking.hotel.rating_score >= 8
-                        ? 'Tuyệt vời'
-                        : 'Đánh giá tốt'}
+                    {getScoreLabel(booking.hotel.rating_score)}
                   </div>
                   <div className="my-bookings-rating-text-count">
                     {booking.hotel.review_count > 0
