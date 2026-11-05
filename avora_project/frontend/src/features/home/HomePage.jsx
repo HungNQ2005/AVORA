@@ -1045,10 +1045,10 @@ const HomePage = () => {
                     </p>
 
                     {/* Dòng thông báo hộp vàng chữ đen nhận biết Flash Sale */}
-                    <div className="avora-flash-alert-gold">
+                    <div className="avora-flash-alert-gold" title={`Khuyến mãi giờ vàng (${flashSale?.code || 'FLASH_SALE'})`}>
                       <span className="avora-flash-alert-gold__icon">⚡</span>
                       <span className="avora-flash-alert-gold__text">
-                        <strong>FLASH SALE {flashDiscountText}</strong> • Ưu đãi khung giờ vàng
+                        <strong>FLASH SALE {flashDiscountText}</strong> • Khung giờ vàng
                       </span>
                     </div>
 
@@ -1067,26 +1067,28 @@ const HomePage = () => {
                         <div style={{ fontWeight: 600 }}>{hotel.room_highlight.name}</div>
                         <div style={{ color: '#475569', fontSize: '11.5px' }}>
                           {hotel.room_highlight.room_numbers?.length > 0
-                            ? `Phòng ${hotel.room_highlight.room_numbers.join(', ')} · `
+                            ? `Phòng ${hotel.room_highlight.room_numbers.join(', ')}${
+                                hotel.room_highlight.floors?.length > 0
+                                  ? ` (${hotel.room_highlight.floors.join(', ')})`
+                                  : ''
+                              } · `
                             : ''}
-                          {hotel.room_highlight.bed_type}
+                          {hotel.room_highlight.bed_type} · {hotel.room_highlight.room_size}
                         </div>
                       </div>
                     )}
 
-                    <div className="avora-hotel-card__rating-row">
-                      <div className="avora-rating-pill">
-                        <span className="avora-rating-pill__score">{hotel.star_rating || '9.5'}</span>
-                        <span className="avora-rating-pill__label">
-                          {getScoreLabel(hotel.star_rating || 9.5, hotel.score_label)}
-                        </span>
-                      </div>
-                      <span className="avora-hotel-card__reviews-count">
-                        {hotel.reviews_count ? `${hotel.reviews_count.toLocaleString('vi-VN')} đánh giá` : 'Được yêu thích'}
+                    <div className="avora-hotel-card__rating">
+                      <span className="avora-hotel-card__score">
+                        {Number(hotel.star_rating || 9.2).toFixed(1)}
                       </span>
+                      <div className="avora-hotel-card__rating-text">
+                        <strong>{getScoreLabel(hotel.star_rating, hotel.score_label)}</strong>
+                        <span>{hotel.reviews_count ? `${Number(hotel.reviews_count).toLocaleString('vi-VN')} đánh giá` : '1.200 đánh giá'}</span>
+                      </div>
                     </div>
 
-                    <div className="avora-hotel-card__pricing">
+                    <div className="avora-hotel-card__price-box">
                       {formattedOriginalPrice && (
                         <span className="avora-hotel-card__old-price">{formattedOriginalPrice}</span>
                       )}
@@ -1101,13 +1103,12 @@ const HomePage = () => {
                     <button
                       type="button"
                       className="avora-hotel-card__btn"
-                      style={{ background: '#d97706', borderColor: '#b45309' }}
                       onClick={(e) => {
                         e.stopPropagation();
                         navigate(`/hotels/${hotel.hotel_id}`);
                       }}
                     >
-                      Đặt phòng Flash Sale ⚡
+                      Xem phòng trống
                     </button>
                   </div>
                 </div>
@@ -1238,7 +1239,7 @@ const HomePage = () => {
                         <div className="avora-flash-alert-gold" title={`Khuyến mãi giờ vàng (${flashSale.code || 'FLASH_SALE'})`}>
                           <span className="avora-flash-alert-gold__icon">⚡</span>
                           <span className="avora-flash-alert-gold__text">
-                            <strong>FLASH SALE {flashDiscountText}</strong> • Ưu đãi khung giờ vàng
+                            <strong>FLASH SALE {flashDiscountText}</strong> • Khung giờ vàng
                           </span>
                         </div>
                       )}

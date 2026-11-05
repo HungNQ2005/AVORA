@@ -193,7 +193,7 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
           <div className="avora-flash-alert-gold" title={`Khuyến mãi giờ vàng (${flashSale.code || 'FLASH_SALE'})`}>
             <span className="avora-flash-alert-gold__icon">⚡</span>
             <span className="avora-flash-alert-gold__text">
-              <strong>FLASH SALE {flashDiscountText}</strong> • Ưu đãi khung giờ vàng
+              <strong>FLASH SALE {flashDiscountText}</strong> • Khung giờ vàng
             </span>
           </div>
         )}
