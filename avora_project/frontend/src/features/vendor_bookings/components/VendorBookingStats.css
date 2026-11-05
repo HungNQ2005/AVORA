@@ -1,0 +1,119 @@
+.vbooking-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1024px) {
+  .vbooking-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .vbooking-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vbooking-stat-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 18px 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vbooking-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+}
+
+.vbooking-stat-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.vbooking-stat-card__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.vbooking-stat-card__icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vbooking-stat-card__icon--blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.vbooking-stat-card__icon--amber {
+  background: #fffbeb;
+  color: #d97706;
+}
+
+.vbooking-stat-card__icon--green {
+  background: #ecfdf5;
+  color: #059669;
+}
+
+.vbooking-stat-card__icon--red {
+  background: #fef2f2;
+  color: #dc2626;
+}
+
+.vbooking-stat-card__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.vbooking-stat-card__value {
+  font-size: 26px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+}
+
+.vbooking-stat-card__value--amber {
+  color: #d97706;
+}
+
+.vbooking-stat-card__value--green {
+  color: #059669;
+}
+
+.vbooking-stat-card__value--red {
+  color: #dc2626;
+}
+
+.vbooking-stat-card__unit {
+  font-size: 13px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.vbooking-stat-card__footer {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px dashed #f1f5f9;
+}
+

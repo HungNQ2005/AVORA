@@ -6,6 +6,7 @@ import MapModal from './components/MapModal';
 import { useAuth } from '../../context/AuthContext';
 import { isHotelSaved, toggleFavoriteHotel } from '../../utils/favoritesStorage';
 import { getRoomCapacityDetails } from '../../utils/roomCapacityHelper';
+import { getScoreLabel } from '../../utils/ratingHelper';
 import './HotelDetailPage.css';
 
 import {
@@ -314,7 +315,7 @@ const HotelDetailPage = () => {
     star_quality = 5,
     star_rating = 9,
     reviews_count = 0,
-    score_label = 'Xuất sắc',
+    score_label,
     facilities = [],
     images = [],
     cancellation_policy = null,
@@ -413,7 +414,7 @@ const HotelDetailPage = () => {
             <div className="hotel-header-right">
               <div className="hotel-score-box">
                 <div className="hotel-score-text">
-                  <div className="hotel-score-label">{score_label}</div>
+                  <div className="hotel-score-label">{getScoreLabel(star_rating, score_label)}</div>
                   <div className="hotel-score-reviews">{reviews_count} đánh giá thực tế</div>
                 </div>
                 <div className="hotel-score-badge">{Number(star_rating).toFixed(1)}</div>
@@ -831,7 +832,7 @@ const HotelDetailPage = () => {
               </div>
               <div className="reviews-overall-text">
                 <div className="reviews-overall-label">
-                  {score_label}
+                  {getScoreLabel(star_rating, score_label)}
                 </div>
                 <div className="reviews-overall-count">
                   {reviews.length} đánh giá thực tế

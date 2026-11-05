@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import { getSavedFavorites, toggleFavoriteHotel } from '../../utils/favoritesStorage';
 import { getMinRoomsRequired, MAX_ROOM_CAPACITY } from '../../utils/roomCapacityHelper';
+import { getScoreLabel } from '../../utils/ratingHelper';
 import './HomePage.css';
 
 import {
@@ -25,6 +26,18 @@ import {
   LightbulbIcon,
 } from '../../common/components/icons';
 
+
+const FALLBACK_HOTEL_IMAGES = [
+  "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1571896349842-33c89424de2d?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80",
+];
+const getFallbackHotelImage = (id) => {
+  const hash = String(id || "").split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return FALLBACK_HOTEL_IMAGES[hash % FALLBACK_HOTEL_IMAGES.length];
+};
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -363,6 +376,23 @@ const HomePage = () => {
   }, [hotels, region]);
 
   const hasRegionalPromo = !loadingHotels && regionalPromoHotels.length > 0;
+
+  // Filter and sort quality hotels for "Chỗ nghỉ được khách yêu thích nhất"
+  const favoriteHotels = useMemo(() => {
+    if (!hotels || hotels.length === 0) return [];
+    const valid = hotels.filter((h) => {
+      const name = (h.name || "").trim();
+      const isTest = /test/i.test(name) || /demo/i.test(name);
+      const isLowQuality = (Number(h.star_rating) > 0 && Number(h.star_rating) < 7.0) || (Number(h.star_quality) < 3);
+      return !isTest && !isLowQuality;
+    });
+    const pool = valid.length >= 4 ? valid : hotels.filter((h) => !/test/i.test(h.name || ""));
+    return [...(pool.length > 0 ? pool : hotels)].sort((a, b) => {
+      return (Number(b.star_rating || 0) * 100 + Number(b.reviews_count || 0) / 100) -
+             (Number(a.star_rating || 0) * 100 + Number(a.reviews_count || 0) / 100);
+    });
+  }, [hotels]);
+
 
   const handlePromoClick = () => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -901,9 +931,9 @@ const HomePage = () => {
               </button>
               <button
                 type="button"
-                className={`avora-circle-btn ${carouselIdx + 4 < hotels.length ? 'avora-circle-btn--active' : ''}`}
-                onClick={() => setCarouselIdx((prev) => Math.min(hotels.length - 4, prev + 4))}
-                disabled={carouselIdx + 4 >= hotels.length}
+                className={`avora-circle-btn ${carouselIdx + 4 < favoriteHotels.length ? 'avora-circle-btn--active' : ''}`}
+                onClick={() => setCarouselIdx((prev) => Math.min(favoriteHotels.length - 4, prev + 4))}
+                disabled={carouselIdx + 4 >= favoriteHotels.length}
                 aria-label="Sau"
               >
                 <ChevronRightIcon />
@@ -926,16 +956,17 @@ const HomePage = () => {
                   </div>
                 </div>
               ))
-            ) : hotels.length === 0 ? (
+            ) : favoriteHotels.length === 0 ? (
               <div className="avora-hotels-empty">
                 <p>Không tìm thấy chỗ nghỉ phù hợp.</p>
               </div>
             ) : (
-              hotels.slice(carouselIdx, carouselIdx + 4).map((hotel) => {
+              favoriteHotels.slice(carouselIdx, carouselIdx + 4).map((hotel) => {
                 const isFav = !!favorites[hotel.hotel_id];
                 const starQuality = Math.min(5, Math.max(1, hotel.star_quality || 5));
                 const starsStr = '★'.repeat(starQuality) + '☆'.repeat(5 - starQuality);
-                const hotelImage = hotel.thumbnail || hotel.images?.[0] || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
+                const fallbackImg = getFallbackHotelImage(hotel.hotel_id);
+                const hotelImage = hotel.thumbnail || hotel.images?.[0] || fallbackImg;
                 const formattedPrice = hotel.price ? new Intl.NumberFormat('vi-VN').format(hotel.price) : '1.500.000';
                 const formattedOriginalPrice = hotel.original_price ? `${new Intl.NumberFormat('vi-VN').format(hotel.original_price)} VND` : null;
 
@@ -953,7 +984,7 @@ const HomePage = () => {
                         loading="lazy"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
+                          e.target.src = fallbackImg;
                         }}
                       />
                       <button
@@ -1011,7 +1042,7 @@ const HomePage = () => {
                           {Number(hotel.star_rating || 9.2).toFixed(1)}
                         </span>
                         <div className="avora-hotel-card__rating-text">
-                          <strong>{hotel.score_label || 'Tuyệt hảo'}</strong>
+                          <strong>{getScoreLabel(hotel.star_rating, hotel.score_label)}</strong>
                           <span>{hotel.reviews_count ? `${hotel.reviews_count} đánh giá` : '1.200 đánh giá'}</span>
                         </div>
                       </div>

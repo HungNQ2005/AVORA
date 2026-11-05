@@ -23,7 +23,7 @@ const handleGetStatisticsHotels = async (req, res, next) => {
  * GET /api/statistics/overview?hotel_id=<uuid>&from=YYYY-MM-DD&to=YYYY-MM-DD
  */
 const handleGetOverview = async (req, res, next) => {
-  const { hotel_id: hotelId, from, to } = req.query;
+  const { hotel_id: hotelId, from, to, period_type: periodType } = req.query;
   const isVendor = req.user?.role_code_name === 'VEN';
   const vendorId = isVendor ? req.user?.user_id : null;
 
@@ -39,6 +39,7 @@ const handleGetOverview = async (req, res, next) => {
       hotelId,
       from: from || undefined,
       to: to || undefined,
+      periodType: typeof periodType === 'string' ? periodType : undefined,
       vendorId,
     });
     return sendSuccess(res, 200, 'Lấy thống kê khách sạn thành công', data);

@@ -1,0 +1,356 @@
+/* Audit Log Diff Viewer Styles */
+
+.diff-viewer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Toolbar */
+.diff-viewer__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.25rem;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.diff-viewer__tabs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f1f5f9;
+  padding: 0.25rem;
+  border-radius: 8px;
+}
+
+.diff-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.diff-tab-btn:hover {
+  color: #1e293b;
+}
+
+.diff-tab-btn--active {
+  background: #ffffff;
+  color: #0b1e3f;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.diff-badge-count {
+  padding: 0.1rem 0.45rem;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.diff-filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: #475569;
+  cursor: pointer;
+  user-select: none;
+}
+
+.diff-filter-toggle input[type="checkbox"] {
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+  accent-color: #0b1e3f;
+}
+
+/* Notices */
+.diff-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+}
+
+.diff-notice strong {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.15rem;
+}
+
+.diff-notice p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.diff-notice--insert {
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  color: #065f46;
+}
+
+.diff-notice--delete {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.diff-notice--login {
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #5b21b6;
+}
+
+/* Visual Table */
+.diff-visual-container {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.diff-table-responsive {
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: auto;
+}
+
+.diff-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.82rem;
+}
+
+.diff-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.7rem 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  z-index: 1;
+}
+
+.diff-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.diff-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.diff-table td {
+  padding: 0.65rem 0.85rem;
+  vertical-align: top;
+}
+
+.diff-cell-key code {
+  background: #f1f5f9;
+  color: #0f172a;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* Pills */
+.diff-pill {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.diff-pill--added {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.diff-pill--removed {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.diff-pill--modified {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.diff-pill--unchanged {
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+/* Row Highlights */
+.diff-row--added {
+  background: #f0fdf4;
+}
+
+.diff-row--removed {
+  background: #fff1f2;
+}
+
+.diff-row--modified {
+  background: #f8fafc;
+}
+
+.diff-val-strike {
+  text-decoration: line-through;
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  display: inline-block;
+  font-size: 0.8rem;
+}
+
+.diff-val-bold {
+  font-weight: 600;
+  color: #059669;
+  background: #dcfce7;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  display: inline-block;
+  font-size: 0.8rem;
+}
+
+.diff-val {
+  word-break: break-word;
+}
+
+.diff-val--null,
+.diff-val--undefined {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.diff-val--bool {
+  font-weight: 600;
+}
+
+.diff-val--true {
+  color: #059669;
+}
+
+.diff-val--false {
+  color: #dc2626;
+}
+
+.diff-val--num {
+  font-family: ui-monospace, monospace;
+  color: #2563eb;
+  font-weight: 600;
+}
+
+.diff-val-object {
+  margin: 0;
+  background: #f8fafc;
+  padding: 0.4rem;
+  border-radius: 4px;
+  max-height: 120px;
+  overflow: auto;
+  font-size: 0.75rem;
+}
+
+.diff-empty-cell {
+  color: #cbd5e1;
+}
+
+.diff-empty-notice {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+/* Raw JSON View */
+.diff-raw-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 768px) {
+  .diff-raw-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.diff-raw-block {
+  background: #0f172a;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.diff-raw-block__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.55rem 0.85rem;
+  background: #1e293b;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-bottom: 1px solid #334155;
+}
+
+.diff-copy-btn {
+  background: #334155;
+  color: #e2e8f0;
+  border: none;
+  border-radius: 4px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.diff-copy-btn:hover:not(:disabled) {
+  background: #475569;
+}
+
+.diff-copy-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.diff-raw-pre {
+  margin: 0;
+  padding: 0.85rem;
+  max-height: 320px;
+  overflow: auto;
+  color: #38bdf8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}

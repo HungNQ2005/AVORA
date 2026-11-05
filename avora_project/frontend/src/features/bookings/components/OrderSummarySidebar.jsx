@@ -86,14 +86,7 @@ const OrderSummarySidebar = ({
   const availableCoupons = Array.isArray(pricing?.available_coupons) ? pricing.available_coupons : [];
   const dailyCoupons = getDailyCoupons(availableCoupons);
 
-  const getScoreLabel = (score) => {
-    const num = Number(score);
-    if (!num) return 'Chưa có đánh giá';
-    if (num >= 9) return 'Xuất sắc';
-    if (num >= 8) return 'Tuyệt vời';
-    if (num >= 7) return 'Rất tốt';
-    return 'Đánh giá tốt';
-  };
+
 
   return (
     <div className="booking-summary-col">

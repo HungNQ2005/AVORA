@@ -27,11 +27,13 @@ export const fetchStatisticsHotels = async () => {
 
 /**
  * Fetch statistics overview of one hotel in a date range.
- * @param {{ hotelId: string, from: string, to: string }} params
+ * @param {{ hotelId: string, from: string, to: string, periodType?: string }} params
  * @param {AbortSignal} [signal]
  */
-export const fetchStatisticsOverview = async ({ hotelId, from, to }, signal) => {
-  const query = new URLSearchParams({ hotel_id: hotelId, from, to });
+export const fetchStatisticsOverview = async ({ hotelId, from, to, periodType }, signal) => {
+  const params = { hotel_id: hotelId, from, to };
+  if (periodType) params.period_type = periodType;
+  const query = new URLSearchParams(params);
   const response = await authenticatedFetch(
     `${API_ENDPOINTS.STATISTICS_OVERVIEW}?${query.toString()}`,
     { signal },

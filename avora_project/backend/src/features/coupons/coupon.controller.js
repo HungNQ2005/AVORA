@@ -3,6 +3,7 @@
 const couponService = require("./coupon.service");
 const { sendSuccess, sendError } = require("../../utils/responseHelper");
 const { validateCouponPayload } = require("./coupon.validation");
+const { recordAuditLog } = require("../../utils/auditLogger");
 
 const validateCouponId = (id) =>
   typeof id === "string" && id.trim().length > 0;
@@ -64,6 +65,14 @@ const createCoupon = async (req, res, next) => {
     if (error) return sendError(res, 400, error);
 
     const coupon = await couponService.createCoupon(payload);
+
+    recordAuditLog({
+      req,
+      action_cd: '1', // INS
+      entity_name: 'm_coupon',
+      entity_id: coupon?.coupon_id || coupon?.code,
+      new_data: coupon,
+    });
     return sendSuccess(res, 201, "Tạo coupon thành công", coupon);
   } catch (err) {
     next(err);
@@ -81,6 +90,14 @@ const updateCoupon = async (req, res, next) => {
     if (error) return sendError(res, 400, error);
 
     const coupon = await couponService.updateCoupon(id, payload);
+
+    recordAuditLog({
+      req,
+      action_cd: '2', // UPD
+      entity_name: 'm_coupon',
+      entity_id: id,
+      new_data: coupon,
+    });
     return sendSuccess(res, 200, "Cập nhật coupon thành công", coupon);
   } catch (err) {
     next(err);
@@ -95,6 +112,14 @@ const deleteCoupon = async (req, res, next) => {
     }
 
     await couponService.deleteCoupon(id);
+
+    recordAuditLog({
+      req,
+      action_cd: '3', // DEL
+      entity_name: 'm_coupon',
+      entity_id: id,
+      new_data: { is_deleted: true },
+    });
     return sendSuccess(res, 200, "Vô hiệu hóa coupon thành công");
   } catch (err) {
     next(err);

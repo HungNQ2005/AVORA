@@ -4,6 +4,7 @@ const authService = require('./auth.service');
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
 const { sendMail } = require('../../common/services/email/email.service');
 const { renderExpiredLinkPage } = require('./templates/expiredLinkPage');
+const { recordAuditLog } = require('../../utils/auditLogger');
 
 /**
  * POST /api/auth/signup
@@ -142,6 +143,20 @@ const handleSignIn = async (req, res, next) => {
 
     const { token, user } = await authService.signInUser(email, password);
 
+    recordAuditLog({
+      actor_user_id: user.user_id,
+      action_cd: '4', // LGN
+      entity_name: 'auth',
+      entity_id: user.user_id,
+      new_data: {
+        email: user.email,
+        role_cd: user.role_cd,
+        role_name: user.role_code_name || user.role_name,
+        full_name: user.full_name,
+      },
+      req,
+    });
+
     return sendSuccess(res, 200, 'Signed in successfully.', { token, user });
   } catch (err) {
     if (err.statusCode) {
@@ -175,6 +190,15 @@ const handleUpdateProfile = async (req, res, next) => {
   try {
     const { full_name, phone } = req.body;
     const user = await authService.updateUserProfile(req.user.user_id, { fullName: full_name, phone });
+    recordAuditLog({
+      actor_user_id: req.user.user_id,
+      action_cd: '2', // UPD
+      entity_name: 'm_user',
+      entity_id: req.user.user_id,
+      new_data: { full_name, phone },
+      req,
+    });
+
     return sendSuccess(res, 200, 'Profile updated successfully.', user);
   } catch (err) {
     if (err.statusCode) {
@@ -201,6 +225,15 @@ const handleChangePassword = async (req, res, next) => {
     }
 
     await authService.changePassword(req.user.user_id, current_password, new_password);
+    recordAuditLog({
+      actor_user_id: req.user.user_id,
+      action_cd: '2', // UPD
+      entity_name: 'm_user',
+      entity_id: req.user.user_id,
+      new_data: { action: 'CHANGE_PASSWORD', changed_at: new Date().toISOString() },
+      req,
+    });
+
     return sendSuccess(res, 200, 'Password changed successfully.');
   } catch (err) {
     if (err.statusCode) {

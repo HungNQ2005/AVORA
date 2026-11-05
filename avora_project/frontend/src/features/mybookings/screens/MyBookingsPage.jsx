@@ -289,11 +289,12 @@ const MyBookingsPage = () => {
     setCancelReason('Khách thay đổi kế hoạch chuyến đi');
   };
 
-  const handleConfirmCancel = async () => {
+  const handleConfirmCancel = async (payload) => {
     if (!cancelModalBooking) return;
     setIsCancelling(true);
     try {
-      await cancelBooking(cancelModalBooking.booking_id, { reason: cancelReason });
+      const cancelPayload = payload || { reason: cancelReason };
+      await cancelBooking(cancelModalBooking.booking_id, cancelPayload);
       setCancelModalBooking(null);
       await loadBookings();
     } catch (err) {
@@ -560,8 +561,6 @@ const MyBookingsPage = () => {
 
       <CancelBookingModal
         booking={cancelModalBooking}
-        cancelReason={cancelReason}
-        setCancelReason={setCancelReason}
         isCancelling={isCancelling}
         onConfirm={handleConfirmCancel}
         onClose={() => setCancelModalBooking(null)}

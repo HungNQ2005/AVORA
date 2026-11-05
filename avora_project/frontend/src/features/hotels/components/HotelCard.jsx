@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { isHotelSaved, toggleFavoriteHotel } from '../../../utils/favoritesStorage';
+import { getScoreLabel } from '../../../utils/ratingHelper';
 
 import {
   StarIcon,
@@ -145,7 +146,7 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
           {/* Review Score Block (Top Right) */}
           <div className="hotel-card__review-block">
             <div className="hotel-card__review-text">
-              <span className="hotel-card__review-label">{hotel.score_label || 'Tuyệt vời'}</span>
+              <span className="hotel-card__review-label">{getScoreLabel(hotel.star_rating, hotel.score_label)}</span>
               <span className="hotel-card__review-count">
                 {new Intl.NumberFormat('vi-VN').format(hotel.reviews_count || 120)} đánh giá
               </span>

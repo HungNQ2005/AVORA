@@ -1,0 +1,369 @@
+/* Audit Log Table Styles */
+
+.audit-table-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.audit-table-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+}
+
+.audit-table-container {
+  overflow-x: auto;
+  width: 100%;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.84rem;
+}
+
+/* Header */
+.audit-table thead th {
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+/* Body Rows */
+.audit-table tbody tr {
+  border-bottom: 1px solid #f1f5f9;
+  transition: background-color 0.15s ease;
+}
+
+.audit-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.audit-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.audit-table td {
+  padding: 0.85rem 1rem;
+  vertical-align: middle;
+  color: #334155;
+}
+
+/* Time Cell */
+.audit-cell-time {
+  display: flex;
+  flex-direction: column;
+}
+
+.audit-cell-time__main {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Actor Cell */
+.audit-cell-actor {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.audit-cell-actor__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #0b1e3f;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.audit-cell-actor__details {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.audit-cell-actor__name {
+  font-weight: 600;
+  color: #0b1e3f;
+  font-size: 0.84rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.audit-cell-actor__email {
+  font-size: 0.75rem;
+  color: #64748b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Action Badges */
+.audit-table-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.audit-table-badge--ins {
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+}
+
+.audit-table-badge--upd {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+
+.audit-table-badge--del {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.audit-table-badge--lgn {
+  background: #f5f3ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.audit-table-badge--default {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+/* Entity Tag */
+.audit-cell-entity {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.audit-entity-tag {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0b1e3f;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.audit-entity-id-tag {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.72rem;
+}
+
+/* IP Cell */
+.audit-cell-ip {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+/* Summary Cell */
+.audit-cell-summary {
+  font-size: 0.8rem;
+  color: #64748b;
+  display: block;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Action Button */
+.audit-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.65rem;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0b1e3f;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.audit-action-btn:hover {
+  background: #0b1e3f;
+  color: #ffffff;
+  border-color: #0b1e3f;
+}
+
+/* Pagination Footer */
+.audit-table-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.audit-table-pagination__info {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-size: 0.82rem;
+  color: #64748b;
+}
+
+.audit-table-page-size-selector {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.audit-table-select {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 0.82rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.audit-table-select:focus {
+  border-color: #0b1e3f;
+}
+
+.audit-table-pagination__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.audit-page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 0.45rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.audit-page-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #0b1e3f;
+}
+
+.audit-page-btn--active {
+  background: #0b1e3f !important;
+  border-color: #0b1e3f !important;
+  color: #ffffff !important;
+}
+
+.audit-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.audit-page-dots {
+  padding: 0 0.3rem;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+/* Loading & Empty States */
+.audit-table-state {
+  padding: 3.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  text-align: center;
+}
+
+.audit-table-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #0b1e3f;
+  border-radius: 50%;
+  animation: auditSpin 0.75s linear infinite;
+}
+
+.audit-table-state--empty h3,
+.audit-table-state--error h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.audit-table-state--empty p,
+.audit-table-state--error p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+  max-width: 400px;
+}
+
+.audit-table-retry-btn {
+  padding: 0.5rem 1rem;
+  background: #0b1e3f;
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.5rem;
+}
+
+.audit-table-retry-btn:hover {
+  background: #142a52;
+}

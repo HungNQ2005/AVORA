@@ -42,13 +42,13 @@ const StatsChart = ({ type, data, formatValue }) => {
   const items = useMemo(() => (data || []).filter((d) => Number(d.value) >= 0), [data]);
   const total = items.reduce((sum, d) => sum + Number(d.value), 0);
 
-  if (items.length === 0 || total === 0) {
+  if (items.length === 0 || (type === 'pie' && total === 0)) {
     return <div className="st-chart st-chart--empty">Chưa có dữ liệu trong khoảng thời gian đã chọn.</div>;
   }
 
   const active = activeIndex !== null ? items[activeIndex] : null;
   const readout = active
-    ? `${active.label}: ${formatValue(active.value)}${type === 'pie' ? ` (${((active.value / total) * 100).toFixed(1)}%)` : ''}`
+    ? `${active.label}: ${formatValue(active.value)}${type === 'pie' && total > 0 ? ` (${((active.value / total) * 100).toFixed(1)}%)` : ''}`
     : 'Rê chuột vào các cột hoặc lát cắt để xem chi tiết';
 
   let svg;

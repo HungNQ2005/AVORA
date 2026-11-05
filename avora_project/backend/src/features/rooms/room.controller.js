@@ -2,6 +2,7 @@
 
 const roomService = require('./room.service');
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
+const { recordAuditLog } = require('../../utils/auditLogger');
 
 const getAccess = (req) => {
   const roleCode = String(req.user?.role_code_name || '').toUpperCase();
@@ -94,6 +95,13 @@ const handleCreateRoom = async (req, res, next) => {
       { hotel_id, room_type_id, room_number, floor, status_cd },
       access
     );
+    recordAuditLog({
+      req,
+      action_cd: '1',
+      entity_name: 'm_room',
+      entity_id: room?.room_id,
+      new_data: room,
+    });
     return sendSuccess(res, 201, 'Tạo buồng phòng thành công.', room);
   } catch (err) {
     return next(err);
@@ -107,6 +115,13 @@ const handleUpdateRoom = async (req, res, next) => {
   try {
     const access = getAccess(req);
     const room = await roomService.updateRoom(req.params.id, req.body, access);
+    recordAuditLog({
+      req,
+      action_cd: '2',
+      entity_name: 'm_room',
+      entity_id: req.params.id,
+      new_data: room,
+    });
     return sendSuccess(res, 200, 'Cập nhật buồng phòng thành công.', room);
   } catch (err) {
     return next(err);
@@ -120,6 +135,13 @@ const handleDeleteRoom = async (req, res, next) => {
   try {
     const access = getAccess(req);
     const room = await roomService.softDeleteRoom(req.params.id, access);
+    recordAuditLog({
+      req,
+      action_cd: '3',
+      entity_name: 'm_room',
+      entity_id: req.params.id,
+      new_data: { is_deleted: true },
+    });
     return sendSuccess(res, 200, 'Đã xóa buồng phòng thành công.', room);
   } catch (err) {
     return next(err);

@@ -11,6 +11,8 @@ import {
   formatCurrency,
   formatDisplayDate,
   formatNumber,
+  getMonthRange,
+  getYearRange,
   getStatusLabel,
   toDateKey,
   validateRange,
@@ -46,7 +48,28 @@ const StatisticsPage = () => {
     return <Navigate to="/forbidden" replace />;
   }
 
-  const initialRange = useMemo(() => defaultRange(30), []);
+  const today = useMemo(() => new Date(), []);
+  const currentYear = today.getFullYear();
+  const currentMonthStr = useMemo(() => {
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  }, [today]);
+
+  const prevMonthStr = useMemo(() => {
+    const d = new Date(today);
+    d.setDate(1);
+    d.setMonth(d.getMonth() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, [today]);
+
+  const initialMonthRange = useMemo(() => {
+    const [y, m] = currentMonthStr.split('-').map(Number);
+    return getMonthRange(y, m);
+  }, [currentMonthStr]);
+
+  // Kỳ thống kê: 'MONTH' (mặc định theo tháng), 'YEAR' (theo năm), 'CUSTOM' (tùy chỉnh khoảng ngày)
+  const [periodMode, setPeriodMode] = useState('MONTH');
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthStr);
+  const [selectedYear, setSelectedYear] = useState(currentYear);
 
   const [hotels, setHotels] = useState([]);
   const [hotelsLoading, setHotelsLoading] = useState(true);
@@ -55,8 +78,8 @@ const StatisticsPage = () => {
   const [isHotelOpen, setIsHotelOpen] = useState(false);
   const hotelRef = useRef(null);
 
-  const [from, setFrom] = useState(initialRange.from);
-  const [to, setTo] = useState(initialRange.to);
+  const [from, setFrom] = useState(initialMonthRange.from);
+  const [to, setTo] = useState(initialMonthRange.to);
   const rangeError = validateRange(from, to);
 
   const [overview, setOverview] = useState(null);
@@ -108,7 +131,7 @@ const StatisticsPage = () => {
     loadHotels();
   }, [loadHotels]);
 
-  // Load statistics whenever hotel / range changes (stale requests are aborted)
+  // Load statistics whenever hotel / range / periodMode changes (stale requests are aborted)
   useEffect(() => {
     if (!selectedHotelId || rangeError) return undefined;
 
@@ -116,7 +139,12 @@ const StatisticsPage = () => {
     setLoading(true);
     setError('');
 
-    fetchStatisticsOverview({ hotelId: selectedHotelId, from, to }, controller.signal)
+    const periodTypeParam = periodMode.toLowerCase();
+
+    fetchStatisticsOverview(
+      { hotelId: selectedHotelId, from, to, periodType: periodTypeParam },
+      controller.signal
+    )
       .then((data) => {
         setOverview(data);
       })
@@ -130,7 +158,7 @@ const StatisticsPage = () => {
       });
 
     return () => controller.abort();
-  }, [selectedHotelId, from, to, rangeError, reloadKey]);
+  }, [selectedHotelId, from, to, periodMode, rangeError, reloadKey]);
 
   const selectedHotel = hotels.find((h) => h.hotel_id === selectedHotelId) || null;
 
@@ -145,7 +173,7 @@ const StatisticsPage = () => {
     }
     if (dataset === 'TIME') {
       return {
-        items: buildTimeSeries(overview.by_day, overview.range.days).map((r) => ({ label: r.label, value: r.revenue })),
+        items: buildTimeSeries(overview.by_day, overview.range.days, overview.range.from, overview.range.to).map((r) => ({ label: r.label, value: r.revenue })),
         format: formatCurrency,
         unit: 'đ',
       };
@@ -157,10 +185,75 @@ const StatisticsPage = () => {
     };
   }, [overview, dataset]);
 
+  // Chuyển đổi chế độ kỳ (Tháng / Năm / Tùy chỉnh)
+  const handlePeriodModeChange = (mode) => {
+    setPeriodMode(mode);
+    if (mode === 'MONTH') {
+      const [y, m] = selectedMonth.split('-').map(Number);
+      const r = getMonthRange(y, m);
+      setFrom(r.from);
+      setTo(r.to);
+    } else if (mode === 'YEAR') {
+      const r = getYearRange(selectedYear);
+      setFrom(r.from);
+      setTo(r.to);
+    } else {
+      const r = defaultRange(30);
+      setFrom(r.from);
+      setTo(r.to);
+    }
+  };
+
+  const handleMonthChange = (newMonth) => {
+    if (!newMonth) return;
+    setSelectedMonth(newMonth);
+    const [y, m] = newMonth.split('-').map(Number);
+    const r = getMonthRange(y, m);
+    setFrom(r.from);
+    setTo(r.to);
+  };
+
+  const selectCurrentMonth = () => {
+    handleMonthChange(currentMonthStr);
+  };
+
+  const selectPreviousMonth = () => {
+    handleMonthChange(prevMonthStr);
+  };
+
+  const handleYearChange = (newYear) => {
+    const y = Number(newYear);
+    setSelectedYear(y);
+    const r = getYearRange(y);
+    setFrom(r.from);
+    setTo(r.to);
+  };
+
+  const selectCurrentYear = () => {
+    handleYearChange(currentYear);
+  };
+
+  const selectPreviousYear = () => {
+    handleYearChange(currentYear - 1);
+  };
+
+  const yearOptions = useMemo(() => {
+    const list = [];
+    for (let y = currentYear; y >= currentYear - 5; y--) {
+      list.push(y);
+    }
+    return list;
+  }, [currentYear]);
+
   const applyPreset = (days) => {
     const range = defaultRange(days);
     setFrom(range.from);
     setTo(range.to);
+  };
+
+  const isPresetActive = (days) => {
+    const pRange = defaultRange(days);
+    return from === pRange.from && to === pRange.to;
   };
 
   const handleExport = async () => {
@@ -175,6 +268,15 @@ const StatisticsPage = () => {
   const summary = overview?.summary;
   const rating = overview?.rating;
   const comparison = overview?.comparison;
+
+  // Nhãn so sánh động theo kỳ chọn: tháng -> "so với tháng trước", năm -> "so với năm trước"
+  const comparisonLabel = overview?.comparison_label || (
+    periodMode === 'MONTH'
+      ? 'so với tháng trước'
+      : periodMode === 'YEAR'
+      ? 'so với năm trước'
+      : 'so với kỳ trước'
+  );
 
   return (
     <div className="st-page">
@@ -313,39 +415,159 @@ const StatisticsPage = () => {
         <div className="st-empty">Chưa có khách sạn nào đang hoạt động để thống kê.</div>
       )}
 
-      {/* Date range frame */}
-      <section className="st-card st-range">
-        <div className="st-range__fields">
-          <label className="st-field">
-            <span className="st-field__label">Từ ngày</span>
-            <input
-              type="date"
-              className="st-field__input"
-              value={from}
-              max={to || undefined}
-              onChange={(e) => setFrom(e.target.value)}
-            />
-          </label>
-          <label className="st-field">
-            <span className="st-field__label">Đến ngày</span>
-            <input
-              type="date"
-              className="st-field__input"
-              value={to}
-              min={from || undefined}
-              onChange={(e) => setTo(e.target.value)}
-            />
-          </label>
-        </div>
-        <div className="st-range__presets">
-          <span className="st-range__presets-label">CHỌN NHANH:</span>
-          {PRESETS.map((p) => (
-            <button key={p.days} type="button" className="st-pill" onClick={() => applyPreset(p.days)}>
-              {p.label}
+      {/* Date & Period Selection Card */}
+      <section className="st-card st-period-section">
+        <div className="st-period-section__header">
+          <div className="st-period-toggle" role="group" aria-label="Chọn kỳ thống kê">
+            <button
+              type="button"
+              className={`st-period-toggle__btn ${periodMode === 'MONTH' ? 'st-period-toggle__btn--active' : ''}`}
+              onClick={() => handlePeriodModeChange('MONTH')}
+            >
+              Theo Tháng
             </button>
-          ))}
+            <button
+              type="button"
+              className={`st-period-toggle__btn ${periodMode === 'YEAR' ? 'st-period-toggle__btn--active' : ''}`}
+              onClick={() => handlePeriodModeChange('YEAR')}
+            >
+              Theo Năm
+            </button>
+            <button
+              type="button"
+              className={`st-period-toggle__btn ${periodMode === 'CUSTOM' ? 'st-period-toggle__btn--active' : ''}`}
+              onClick={() => handlePeriodModeChange('CUSTOM')}
+            >
+              Tùy chỉnh ngày
+            </button>
+          </div>
+
+          <div className="st-period-info">
+            <span className="st-period-info__range">
+              {formatDisplayDate(from)} &ndash; {formatDisplayDate(to)}
+            </span>
+            {overview?.previous_period && (
+              <span className="st-period-info__compare">
+                ({comparisonLabel}: {overview.previous_period.label || `${formatDisplayDate(overview.previous_period.from)} - ${formatDisplayDate(overview.previous_period.to)}`})
+              </span>
+            )}
+          </div>
         </div>
-        {rangeError && <p className="st-range__error" role="alert">{rangeError}</p>}
+
+        {/* Dynamic Controls based on periodMode */}
+        {periodMode === 'MONTH' && (
+          <div className="st-range">
+            <div className="st-range__fields">
+              <label className="st-field">
+                <span className="st-field__label">CHỌN THÁNG</span>
+                <input
+                  type="month"
+                  className="st-field__input st-field__input--month"
+                  value={selectedMonth}
+                  onChange={(e) => handleMonthChange(e.target.value)}
+                />
+              </label>
+            </div>
+            <div className="st-range__presets">
+              <span className="st-range__presets-label">CHỌN NHANH:</span>
+              <button
+                type="button"
+                className={`st-pill ${selectedMonth === currentMonthStr ? 'st-pill--active' : ''}`}
+                onClick={selectCurrentMonth}
+              >
+                Tháng này
+              </button>
+              <button
+                type="button"
+                className={`st-pill ${selectedMonth === prevMonthStr ? 'st-pill--active' : ''}`}
+                onClick={selectPreviousMonth}
+              >
+                Tháng trước
+              </button>
+            </div>
+            {rangeError && <p className="st-range__error" role="alert">{rangeError}</p>}
+          </div>
+        )}
+
+        {periodMode === 'YEAR' && (
+          <div className="st-range">
+            <div className="st-range__fields">
+              <label className="st-field">
+                <span className="st-field__label">CHỌN NĂM</span>
+                <select
+                  className="st-field__input st-field__select"
+                  value={selectedYear}
+                  onChange={(e) => handleYearChange(e.target.value)}
+                >
+                  {yearOptions.map((y) => (
+                    <option key={y} value={y}>
+                      Năm {y}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="st-range__presets">
+              <span className="st-range__presets-label">CHỌN NHANH:</span>
+              <button
+                type="button"
+                className={`st-pill ${selectedYear === currentYear ? 'st-pill--active' : ''}`}
+                onClick={selectCurrentYear}
+              >
+                Năm nay
+              </button>
+              <button
+                type="button"
+                className={`st-pill ${selectedYear === currentYear - 1 ? 'st-pill--active' : ''}`}
+                onClick={selectPreviousYear}
+              >
+                Năm trước
+              </button>
+            </div>
+            {rangeError && <p className="st-range__error" role="alert">{rangeError}</p>}
+          </div>
+        )}
+
+        {periodMode === 'CUSTOM' && (
+          <div className="st-range">
+            <div className="st-range__fields">
+              <label className="st-field">
+                <span className="st-field__label">Từ ngày</span>
+                <input
+                  type="date"
+                  className="st-field__input"
+                  value={from}
+                  max={to || undefined}
+                  onChange={(e) => setFrom(e.target.value)}
+                />
+              </label>
+              <label className="st-field">
+                <span className="st-field__label">Đến ngày</span>
+                <input
+                  type="date"
+                  className="st-field__input"
+                  value={to}
+                  min={from || undefined}
+                  onChange={(e) => setTo(e.target.value)}
+                />
+              </label>
+            </div>
+            <div className="st-range__presets">
+              <span className="st-range__presets-label">CHỌN NHANH:</span>
+              {PRESETS.map((p) => (
+                <button
+                  key={p.days}
+                  type="button"
+                  className={`st-pill ${isPresetActive(p.days) ? 'st-pill--active' : ''}`}
+                  onClick={() => applyPreset(p.days)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            {rangeError && <p className="st-range__error" role="alert">{rangeError}</p>}
+          </div>
+        )}
       </section>
 
       {/* Summary cards with comparison to previous period */}
@@ -357,7 +579,7 @@ const StatisticsPage = () => {
             <div className={`st-stat__comparison ${comparison.total_bookings.change_pct > 0 ? 'st-stat__comparison--up' : comparison.total_bookings.change_pct < 0 ? 'st-stat__comparison--down' : 'st-stat__comparison--neutral'}`}>
               <span className="st-stat__arrow">{comparison.total_bookings.change_pct > 0 ? '▲' : comparison.total_bookings.change_pct < 0 ? '▼' : '■'}</span>
               <span className="st-stat__pct">{comparison.total_bookings.change_pct > 0 ? `+${comparison.total_bookings.change_pct}%` : `${comparison.total_bookings.change_pct}%`}</span>
-              <span className="st-stat__prev-label">so với kỳ trước</span>
+              <span className="st-stat__prev-label">{comparisonLabel}</span>
             </div>
           )}
         </div>
@@ -368,7 +590,7 @@ const StatisticsPage = () => {
             <div className={`st-stat__comparison ${comparison.revenue.change_pct > 0 ? 'st-stat__comparison--up' : comparison.revenue.change_pct < 0 ? 'st-stat__comparison--down' : 'st-stat__comparison--neutral'}`}>
               <span className="st-stat__arrow">{comparison.revenue.change_pct > 0 ? '▲' : comparison.revenue.change_pct < 0 ? '▼' : '■'}</span>
               <span className="st-stat__pct">{comparison.revenue.change_pct > 0 ? `+${comparison.revenue.change_pct}%` : `${comparison.revenue.change_pct}%`}</span>
-              <span className="st-stat__prev-label">so với kỳ trước</span>
+              <span className="st-stat__prev-label">{comparisonLabel}</span>
             </div>
           )}
         </div>
@@ -379,7 +601,7 @@ const StatisticsPage = () => {
             <div className={`st-stat__comparison ${comparison.rooms_booked.change_pct > 0 ? 'st-stat__comparison--up' : comparison.rooms_booked.change_pct < 0 ? 'st-stat__comparison--down' : 'st-stat__comparison--neutral'}`}>
               <span className="st-stat__arrow">{comparison.rooms_booked.change_pct > 0 ? '▲' : comparison.rooms_booked.change_pct < 0 ? '▼' : '■'}</span>
               <span className="st-stat__pct">{comparison.rooms_booked.change_pct > 0 ? `+${comparison.rooms_booked.change_pct}%` : `${comparison.rooms_booked.change_pct}%`}</span>
-              <span className="st-stat__prev-label">so với kỳ trước</span>
+              <span className="st-stat__prev-label">{comparisonLabel}</span>
             </div>
           )}
         </div>
@@ -390,7 +612,7 @@ const StatisticsPage = () => {
             <div className={`st-stat__comparison ${comparison.cancelled_bookings.change_pct > 0 ? 'st-stat__comparison--down' : comparison.cancelled_bookings.change_pct < 0 ? 'st-stat__comparison--up' : 'st-stat__comparison--neutral'}`}>
               <span className="st-stat__arrow">{comparison.cancelled_bookings.change_pct > 0 ? '▲' : comparison.cancelled_bookings.change_pct < 0 ? '▼' : '■'}</span>
               <span className="st-stat__pct">{comparison.cancelled_bookings.change_pct > 0 ? `+${comparison.cancelled_bookings.change_pct}%` : `${comparison.cancelled_bookings.change_pct}%`}</span>
-              <span className="st-stat__prev-label">so với kỳ trước</span>
+              <span className="st-stat__prev-label">{comparisonLabel}</span>
             </div>
           )}
         </div>
@@ -415,7 +637,7 @@ const StatisticsPage = () => {
             ) : overview ? (
               <StatsChart type={chartType} data={chartData.items} formatValue={chartData.format} />
             ) : (
-              !error && <div className="st-empty">Chọn khách sạn và khoảng ngày hợp lệ để xem thống kê.</div>
+              !error && <div className="st-empty">Chọn khách sạn và khoảng thời gian hợp lệ để xem thống kê.</div>
             )}
           </div>
 
@@ -481,7 +703,7 @@ const StatisticsPage = () => {
             Doanh thu tính trên các đơn không bị hủy, theo ngày tạo đơn
             ({formatDisplayDate(overview.range.from)} - {formatDisplayDate(overview.range.to)}).
             {overview.previous_period && (
-              <span> So sánh với kỳ trước ({formatDisplayDate(overview.previous_period.from)} - {formatDisplayDate(overview.previous_period.to)}).</span>
+              <span> So sánh {comparisonLabel} ({formatDisplayDate(overview.previous_period.from)} - {formatDisplayDate(overview.previous_period.to)}).</span>
             )}
             {' '}Điểm đánh giá là điểm trung bình toàn thời gian của khách sạn.
           </p>
