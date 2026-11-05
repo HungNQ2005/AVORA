@@ -119,6 +119,12 @@ const SupportTicketConversation = ({
             <span className="support-category-pill">{categoryLabel}</span>
             <span className="support-meta-dot">•</span>
             <span>Tạo lúc {formatDate(ticket.created_at)}</span>
+            {ticket.hotel_name && (
+              <>
+                <span className="support-meta-dot">•</span>
+                <span>Khách sạn: <strong>{ticket.hotel_name}</strong></span>
+              </>
+            )}
             {ticket.assigned_admin && (
               <>
                 <span className="support-meta-dot">•</span>

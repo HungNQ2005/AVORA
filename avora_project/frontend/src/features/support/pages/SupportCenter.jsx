@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { fetchMyBookings } from '../../../services/bookingApi';
 import { getHotels } from '../../../services/hotelManagementService';
+import { fetchWalletBanks } from '../../../services/walletApi';
 import {
   chatWithSupportAI,
   claimSupportTicket,
@@ -44,7 +45,15 @@ const splitIntoMessages = (text) => {
   }
   return parts;
 };
-const getErrorMessage = (error, fallback) => error.response?.data?.message || error.message || fallback;
+const getErrorMessage = (error, fallback) => {
+  const issues = error.response?.data?.data?.issues;
+  if (Array.isArray(issues) && issues.length) {
+    return issues
+      .map(({ field, message }) => [field, message].filter(Boolean).join(': '))
+      .join(' ');
+  }
+  return error.response?.data?.message || error.message || fallback;
+};
 const formatDate = (value) => value ? new Date(value).toLocaleString('vi-VN') : '—';
 const formatDateOnly = (value) => value ? new Date(`${value}T00:00:00`).toLocaleDateString('vi-VN') : '';
 
@@ -319,6 +328,8 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
   const [bookingsTotalPages, setBookingsTotalPages] = useState(1);
   const [bookingsRetryPage, setBookingsRetryPage] = useState(1);
   const [hotels, setHotels] = useState([]);
+  const [banks, setBanks] = useState([]);
+  const [banksError, setBanksError] = useState('');
   const [form, setForm] = useState({
     ticket_type_cd: '',
     title: '',
@@ -326,6 +337,7 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
     priority_cd: 'MEDIUM',
     booking_ids: [],
     hotel_id: '',
+    bank_cd: '',
     bank_account_number: '',
   });
   const [files, setFiles] = useState([]);
@@ -338,6 +350,8 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
   const selectedCategory = usableCategories.find((category) => category.code === form.ticket_type_cd);
   const isVendorCategory = selectedCategory?.group === 'vendor';
   const requiresBankAccountNumber = selectedCategory?.code === 'VBU';
+  const selectedBank = banks.find((bank) => String(bank.code_cd || bank.bank_cd) === String(form.bank_cd));
+  const selectedBankName = selectedBank?.short_name || selectedBank?.name || '';
   const canLinkBooking = mode === 'customer' && ['PWC', 'PWA', 'PTO', 'RFD', 'BKI'].includes(selectedCategory?.code);
 
   const loadBookings = async (page = 1) => {
@@ -363,6 +377,14 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
   useEffect(() => {
     let active = true;
     if (isVendor) {
+      fetchWalletBanks()
+        .then((bankList) => {
+          if (active) setBanks(bankList);
+        })
+        .catch((bankError) => {
+          console.error('Could not load banks for support ticket:', bankError);
+          if (active) setBanksError(getErrorMessage(bankError, 'Không thể tải danh sách ngân hàng.'));
+        });
       const loadHotels = async () => {
         try {
           const firstPage = await getHotels({ page: 1 });
@@ -434,7 +456,9 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
     event.preventDefault();
     setError('');
     const bankRequestWords = requiresBankAccountNumber
-      ? countWords('Nội dung muốn thay đổi Số tài khoản ngân hàng muốn thay đổi') + countWords(form.bank_account_number)
+      ? countWords('Ngân hàng muốn thay đổi Nội dung muốn thay đổi Số tài khoản ngân hàng muốn thay đổi')
+        + countWords(selectedBankName)
+        + countWords(form.bank_account_number)
       : 0;
     if (countWords(form.title) > 50 || countWords(form.description) + bankRequestWords > 500) {
       setError('Tiêu đề tối đa 50 từ, mô tả tối đa 500 từ.');
@@ -444,8 +468,8 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
       setError('Tiêu đề và mô tả không được chứa đường dẫn.');
       return;
     }
-    if (requiresBankAccountNumber && (!form.hotel_id || !form.bank_account_number.trim())) {
-      setError('Vui lòng chọn khách sạn và nhập số tài khoản ngân hàng muốn thay đổi.');
+    if (requiresBankAccountNumber && (!form.hotel_id || !form.bank_cd || !form.bank_account_number.trim())) {
+      setError('Vui lòng chọn khách sạn, ngân hàng và nhập số tài khoản ngân hàng muốn thay đổi.');
       return;
     }
     setLoading(true);
@@ -457,7 +481,10 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
         description: form.description.trim(),
         ...(canLinkBooking && form.booking_ids.length ? { booking_ids: form.booking_ids } : {}),
         ...(isVendorCategory && form.hotel_id ? { hotel_id: form.hotel_id } : {}),
-        ...(requiresBankAccountNumber ? { bank_account_number: form.bank_account_number.trim() } : {}),
+        ...(requiresBankAccountNumber ? {
+          bank_cd: form.bank_cd,
+          bank_account_number: form.bank_account_number.trim(),
+        } : {}),
         ...(isVendorCategory ? { priority_cd: form.priority_cd } : {}),
       }, files);
     } catch (submitError) {
@@ -482,6 +509,7 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
               ticket_type_cd: event.target.value,
               booking_ids: [],
               hotel_id: '',
+              bank_cd: '',
               bank_account_number: '',
             }))}>
               {usableCategories.map((category) => <option key={category.code} value={category.code}>{category.label}</option>)}
@@ -496,18 +524,35 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
             <small>{countWords(form.description)} / 500 từ</small>
           </label>
           {requiresBankAccountNumber && (
-            <label>Số tài khoản ngân hàng muốn thay đổi
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="off"
-                required
-                maxLength={100}
-                value={form.bank_account_number}
-                onChange={(event) => setForm((current) => ({ ...current, bank_account_number: event.target.value }))}
-                placeholder="Nhập số tài khoản mới"
-              />
-            </label>
+            <>
+              <label>Ngân hàng muốn thay đổi
+                <select
+                  required
+                  value={form.bank_cd}
+                  onChange={(event) => setForm((current) => ({ ...current, bank_cd: event.target.value }))}
+                >
+                  <option value="">Chọn ngân hàng</option>
+                  {banks.map((bank) => (
+                    <option key={bank.code_cd || bank.bank_cd} value={bank.code_cd || bank.bank_cd}>
+                      {bank.short_name || bank.name}
+                    </option>
+                  ))}
+                </select>
+                {banksError && <small role="alert">{banksError}</small>}
+              </label>
+              <label>Số tài khoản ngân hàng muốn thay đổi
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  required
+                  maxLength={100}
+                  value={form.bank_account_number}
+                  onChange={(event) => setForm((current) => ({ ...current, bank_account_number: event.target.value }))}
+                  placeholder="Nhập số tài khoản mới"
+                />
+              </label>
+            </>
           )}
           {canLinkBooking && (
             <section className="support-booking-picker" aria-label="Đơn đặt phòng liên quan">
@@ -618,7 +663,7 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
             <>
               <label>{requiresBankAccountNumber ? 'Khách sạn cần cập nhật (bắt buộc)' : 'Khách sạn liên quan (không bắt buộc)'}
                 <select required={requiresBankAccountNumber} value={form.hotel_id} onChange={(event) => setForm((current) => ({ ...current, hotel_id: event.target.value }))}>
-                  {!requiresBankAccountNumber && <option value="">Không liên kết</option>}
+                  <option value="">{requiresBankAccountNumber ? 'Chọn khách sạn' : 'Không liên kết'}</option>
                   {hotels.map((hotel) => <option key={hotel.hotel_id} value={hotel.hotel_id}>{hotel.name}</option>)}
                 </select>
                 {requiresBankAccountNumber && !hotels.length && <small>Bạn chưa có khách sạn đủ điều kiện để gửi yêu cầu.</small>}
@@ -676,7 +721,7 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
               </div>
             )}
           </section>
-          <footer><button type="button" className="support-button support-button--outline" onClick={onClose}>Hủy</button><button type="submit" className="support-button support-button--primary" disabled={loading || !usableCategories.length || (requiresBankAccountNumber && !hotels.length)}>{loading ? 'Đang gửi…' : 'Gửi yêu cầu'}</button></footer>
+          <footer><button type="button" className="support-button support-button--outline" onClick={onClose}>Hủy</button><button type="submit" className="support-button support-button--primary" disabled={loading || !usableCategories.length || (requiresBankAccountNumber && (!hotels.length || !banks.length))}>{loading ? 'Đang gửi…' : 'Gửi yêu cầu'}</button></footer>
         </form>
       </section>
     </div>

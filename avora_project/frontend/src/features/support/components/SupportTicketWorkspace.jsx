@@ -125,7 +125,10 @@ const SupportTicketWorkspace = ({
               </div>
               <div className="support-ticket-row__bottom">
                 <span className="support-requester">
-                  {item.requester?.full_name || item.assigned_admin?.label || (item.hotel_id ? `Khách sạn ${item.hotel_id.slice(0, 8)}` : 'Phiếu hỗ trợ')}
+                  {item.requester?.full_name
+                    || (item.hotel_name ? `Khách sạn ${item.hotel_name}` : null)
+                    || item.assigned_admin?.label
+                    || (item.hotel_id ? `Khách sạn ${item.hotel_id.slice(0, 8)}` : 'Phiếu hỗ trợ')}
                 </span>
                 {item.unread && <span className="support-unread" role="img" aria-label="Có cập nhật mới" title="Có cập nhật mới" />}
               </div>

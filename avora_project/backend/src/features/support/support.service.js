@@ -6,6 +6,7 @@ const sharp = require('sharp');
 const supabase = require('../../config/supabaseClient');
 const { processChat } = require('../chatbot/chatbot.service');
 const { formatBookingCode } = require('../bookings/booking.service');
+const { codeNameParser } = require('../../utils/codeNameParser');
 
 const BUCKET = 'support_ticket_attachments';
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
@@ -150,6 +151,7 @@ const shapeTicket = (ticket, replies = [], requester = null, assigned = null, vi
     title: ticket.title,
     description: ticket.description,
     hotel_id: ticket.hotel_id || null,
+    hotel_name: ticket.hotel_name || null,
     booking_id: ticket.booking_id || null,
     booking_ids: [...new Set(bookings.map((booking) => booking.booking_id))],
     bookings,
@@ -307,6 +309,17 @@ const getUsersById = async (ids) => {
   }]));
 };
 
+const getHotelNamesById = async (tickets) => {
+  const hotelIds = [...new Set(tickets.map((ticket) => ticket.hotel_id).filter(Boolean).map(String))];
+  if (!hotelIds.length) return new Map();
+  const { data, error } = await supabase
+    .from('m_hotel')
+    .select('hotel_id, name')
+    .in('hotel_id', hotelIds);
+  if (error) throw error;
+  return new Map((data || []).map((hotel) => [String(hotel.hotel_id), hotel.name]));
+};
+
 const getReplies = async (ticketId) => {
   const { data, error } = await supabase
     .from('t_support_ticket_reply')
@@ -351,13 +364,14 @@ const getTicketBookingIds = async (tickets) => {
 };
 
 const withTicketDetails = async (ticket, user) => {
-  const [replies, users, bookingIdsByTicket] = await Promise.all([
+  const [replies, users, bookingIdsByTicket, hotelNames] = await Promise.all([
     getReplies(ticket.ticket_id),
     getUsersById([ticket.requester_id, ticket.assigned_to]),
     getTicketBookingIds([ticket]),
+    getHotelNamesById([ticket]),
   ]);
   return shapeTicket(
-    ticket,
+    { ...ticket, hotel_name: hotelNames.get(String(ticket.hotel_id)) || null },
     replies,
     users.get(String(ticket.requester_id)),
     users.get(String(ticket.assigned_to)),
@@ -420,9 +434,12 @@ const listTickets = async (user, query) => {
     Promise.all(tickets.map((ticket) => getReplies(ticket.ticket_id))),
     getTicketBookingIds(tickets),
   ]);
-  const users = await getUsersById(tickets.flatMap((ticket) => [ticket.requester_id, ticket.assigned_to]));
+  const [users, hotelNames] = await Promise.all([
+    getUsersById(tickets.flatMap((ticket) => [ticket.requester_id, ticket.assigned_to])),
+    getHotelNamesById(tickets),
+  ]);
   const items = tickets.map((ticket, index) => shapeTicket(
-    ticket,
+    { ...ticket, hotel_name: hotelNames.get(String(ticket.hotel_id)) || null },
     allReplies[index],
     users.get(String(ticket.requester_id)),
     users.get(String(ticket.assigned_to)),
@@ -454,8 +471,20 @@ const createTicket = async (user, input, files) => {
     throw createError(400, 'Mức ưu tiên Khẩn cấp chỉ dành cho phiếu hỗ trợ Nhà cung cấp.');
   }
   const priority = category.group === 'vendor' ? input.priority_cd || 'MEDIUM' : 'MEDIUM';
-  if (category.code === 'VBU' && (!input.hotel_id || !input.bank_account_number?.trim())) {
-    throw createError(400, 'Vui lòng chọn khách sạn và nhập số tài khoản ngân hàng muốn thay đổi.');
+  let bankName = '';
+  if (category.code === 'VBU') {
+    if (!input.hotel_id || !input.bank_cd || !input.bank_account_number?.trim()) {
+      throw createError(400, 'Vui lòng chọn khách sạn, ngân hàng và nhập số tài khoản ngân hàng muốn thay đổi.');
+    }
+    const { data: bank, error } = await supabase
+      .from('m_system_code')
+      .select('code_cd, code_name')
+      .eq('business_cd', 'BANK_CD')
+      .eq('code_cd', input.bank_cd)
+      .maybeSingle();
+    if (error) throw error;
+    if (!bank) throw createError(400, 'Ngân hàng được chọn không hợp lệ.');
+    bankName = codeNameParser(bank.code_name);
   }
   if (input.hotel_id) {
     if (!isVendorRole(user) || category.group !== 'vendor') {
@@ -488,7 +517,7 @@ const createTicket = async (user, input, files) => {
   }
 
   const description = category.code === 'VBU'
-    ? `Nội dung muốn thay đổi:\n${input.description}\n\nSố tài khoản ngân hàng muốn thay đổi:\n${input.bank_account_number.trim()}`
+    ? `Ngân hàng muốn thay đổi:\n${bankName}\n\nNội dung muốn thay đổi:\n${input.description}\n\nSố tài khoản ngân hàng muốn thay đổi:\n${input.bank_account_number.trim()}`
     : input.description;
   const descriptionWordCount = (description.match(/[\p{L}\p{N}]+(?:['’_-][\p{L}\p{N}]+)*/gu) || []).length;
   if (descriptionWordCount > 500) throw createError(400, 'Mô tả không được vượt quá 500 từ.');
@@ -619,8 +648,17 @@ const createReply = async (ticketId, user, input, files) => {
     }
     ticketEvents.emit(ticketEmitter(ticketId));
     const replies = await getReplies(ticketId);
-    const users = await getUsersById([updatedTicket.requester_id, updatedTicket.assigned_to]);
-    return shapeTicket(updatedTicket, replies, users.get(String(updatedTicket.requester_id)), users.get(String(updatedTicket.assigned_to)), user);
+    const [users, hotelNames] = await Promise.all([
+      getUsersById([updatedTicket.requester_id, updatedTicket.assigned_to]),
+      getHotelNamesById([updatedTicket]),
+    ]);
+    return shapeTicket(
+      { ...updatedTicket, hotel_name: hotelNames.get(String(updatedTicket.hotel_id)) || null },
+      replies,
+      users.get(String(updatedTicket.requester_id)),
+      users.get(String(updatedTicket.assigned_to)),
+      user
+    );
   } catch (error) {
     if (insertedReplyId) {
       const { error: rollbackError } = await supabase.from('t_support_ticket_reply')

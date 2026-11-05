@@ -3,6 +3,10 @@
 const { z } = require('zod');
 
 const uuid = z.string().uuid({ message: 'Mã dữ liệu không hợp lệ.' });
+const hotelUuid = z.string()
+  .regex(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, {
+    message: 'Mã dữ liệu không hợp lệ.',
+  });
 const MAX_TITLE_WORDS = 50;
 const MAX_DESCRIPTION_WORDS = 500;
 const MAX_MESSAGE_WORDS = 500;
@@ -51,12 +55,20 @@ const createTicketBodySchema = z.object({
   description: z.string().trim().min(1).refine((value) => wordCount(value) <= MAX_DESCRIPTION_WORDS, {
     message: `Mô tả không được vượt quá ${MAX_DESCRIPTION_WORDS} từ.`,
   }).refine(noLinks, { message: 'Mô tả không được chứa đường dẫn.' }),
-  hotel_id: uuid.optional().nullable(),
+  hotel_id: hotelUuid.optional().nullable(),
   booking_id: uuid.optional().nullable(),
   booking_ids: bookingIdsSchema,
+  bank_cd: z.string().trim().max(50).optional(),
   bank_account_number: z.string().trim().max(100).optional(),
   priority_cd: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
 }).strict().superRefine((data, ctx) => {
+  if (data.ticket_type_cd.trim().toUpperCase() === 'VBU' && !data.bank_cd) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['bank_cd'],
+      message: 'Vui lòng chọn ngân hàng muốn thay đổi.',
+    });
+  }
   if (data.ticket_type_cd.trim().toUpperCase() === 'VBU' && !data.bank_account_number) {
     ctx.addIssue({
       code: 'custom',
@@ -76,6 +88,13 @@ const createTicketBodySchema = z.object({
       code: 'custom',
       path: ['bank_account_number'],
       message: 'Trường số tài khoản chỉ áp dụng cho yêu cầu cập nhật tài khoản ngân hàng.',
+    });
+  }
+  if (data.ticket_type_cd.trim().toUpperCase() !== 'VBU' && data.bank_cd) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['bank_cd'],
+      message: 'Trường ngân hàng chỉ áp dụng cho yêu cầu cập nhật tài khoản ngân hàng.',
     });
   }
 });
