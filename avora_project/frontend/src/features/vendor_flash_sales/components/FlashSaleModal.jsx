@@ -38,7 +38,7 @@ export const toIsoString = (localValue) => {
 const EMPTY_FORM = {
   hotel_id: '',
   code_name: '',
-  discount_type: 'FLASH_PERCENT',
+  discount_type: 'PERCENT',
   discount_value: '',
   max_discount_amount: '',
   min_order_amount: '',
@@ -67,7 +67,7 @@ const FlashSaleModal = ({
       setForm({
         hotel_id: initialData.hotel_id || (hotels[0]?.hotel_id ?? ''),
         code_name: initialData.code_name || (initialData.code ? initialData.code.split('_').slice(2).join('_') : ''),
-        discount_type: initialData.discount_type || 'FLASH_PERCENT',
+        discount_type: initialData.discount_type || 'PERCENT',
         discount_value: initialData.discount_value ?? '',
         max_discount_amount: initialData.max_discount_amount ?? '',
         min_order_amount: initialData.min_order_amount ?? '',
@@ -294,39 +294,30 @@ const FlashSaleModal = ({
                 </div>
               </div>
 
-              {/* Discount Type */}
+              {/* Discount Type: Cố định là % cho Flash Sale */}
               <div className="rt-form-group">
-                <label htmlFor="fs-discount-type">
-                  Loại giảm giá <span className="req">*</span>
+                <label>
+                  Hình thức ưu đãi <span className="req">*</span>
                 </label>
-                <select
-                  id="fs-discount-type"
-                  className="rt-select"
-                  value={form.discount_type}
-                  onChange={(e) => handleChange('discount_type', e.target.value)}
-                  disabled={loading}
-                >
-                  <option value="FLASH_PERCENT">⚡ Giảm theo phần trăm (%) - Giờ vàng Flash Sale</option>
-                  <option value="FIXED_AMOUNT">Giảm số tiền cố định (VNĐ)</option>
-                </select>
+                <div style={{ padding: '10px 14px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', color: '#92400e', fontWeight: 700, fontSize: '0.86rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span>⚡ Giảm theo phần trăm (%) — Khung giờ vàng Flash Sale</span>
+                </div>
               </div>
 
               {/* Discount Value */}
               <div className="rt-form-group">
                 <label htmlFor="fs-discount-value">
-                  Mức giảm ưu đãi <span className="req">*</span>
-                  <span className="rt-label-right">
-                    {['FLASH_PERCENT', 'PERCENT'].includes(form.discount_type) ? 'Tỷ lệ % (1-100)' : 'Đơn vị: VNĐ'}
-                  </span>
+                  Mức giảm ưu đãi (%) <span className="req">*</span>
+                  <span className="rt-label-right">Tỷ lệ % (1-100)</span>
                 </label>
                 <input
                   id="fs-discount-value"
                   className={`rt-input ${errors.discount_value ? 'rt-input--error' : ''}`}
                   type="number"
                   min="1"
-                  max={['FLASH_PERCENT', 'PERCENT'].includes(form.discount_type) ? '100' : undefined}
-                  step={['FLASH_PERCENT', 'PERCENT'].includes(form.discount_type) ? '1' : '10000'}
-                  placeholder={['FLASH_PERCENT', 'PERCENT'].includes(form.discount_type) ? 'Ví dụ: 20, 30, 50...' : 'Ví dụ: 100000, 250000...'}
+                  max="100"
+                  step="1"
+                  placeholder="Ví dụ: 15, 20, 30, 50..."
                   value={form.discount_value}
                   onChange={(e) => handleChange('discount_value', e.target.value)}
                   disabled={loading}

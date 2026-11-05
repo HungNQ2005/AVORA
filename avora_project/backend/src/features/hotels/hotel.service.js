@@ -403,6 +403,7 @@ const searchHotels = async (params = {}) => {
       const code = String(coupon.code || '');
       const parts = code.split('_');
       if (parts.length < 3 || parts[0].toUpperCase() !== 'FS') return;
+      if (!['FLASH_PERCENT', 'PERCENT'].includes(coupon.discount_type)) return;
       const prefix = parts[1].toUpperCase();
       const matchedHotelId = hotelIdByPrefix.get(prefix);
       if (!matchedHotelId) return;
@@ -895,7 +896,8 @@ const getHotelById = async (hotelId, options = {}) => {
     .or('is_deleted.is.null,is_deleted.eq.false')
     .lte('valid_from', nowIso)
     .gte('valid_to', nowIso)
-    .ilike('code', `FS_${hotelPrefix}_%`);
+    .ilike('code', `FS_${hotelPrefix}_%`)
+    .in('discount_type', ['FLASH_PERCENT', 'PERCENT']);
 
   let activeFlashSale = null;
   if (dbFlashSales && dbFlashSales.length > 0) {

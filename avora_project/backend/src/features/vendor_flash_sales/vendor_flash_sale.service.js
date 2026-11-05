@@ -314,7 +314,7 @@ const createVendorFlashSale = async ({ userId, payload }) => {
   const nowIso = new Date().toISOString();
   const insertData = {
     code: fullCode,
-    discount_type: payload.discount_type || 'FLASH_PERCENT',
+    discount_type: payload.discount_type || 'PERCENT',
     discount_value: payload.discount_value,
     max_discount_amount: payload.max_discount_amount || null,
     min_order_amount: payload.min_order_amount || null,

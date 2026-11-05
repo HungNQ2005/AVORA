@@ -65,7 +65,7 @@ const validateCreateFlashSale = (body) => {
   }
 
   // discount_type
-  const discountType = String(body.discount_type || 'FLASH_PERCENT').trim().toUpperCase();
+  const discountType = String(body.discount_type || 'PERCENT').trim().toUpperCase();
   if (!ALLOWED_DISCOUNT_TYPES.includes(discountType)) {
     return validationError('Loại giảm giá chỉ được là FLASH_PERCENT, FIXED_AMOUNT, PERCENT hoặc FIXED.');
   }

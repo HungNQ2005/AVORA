@@ -103,11 +103,16 @@ const OrderSummarySidebar = ({
   const availableCoupons = Array.isArray(pricing?.available_coupons) ? pricing.available_coupons : [];
   const dailyCoupons = getDailyCoupons(availableCoupons);
 
-  // Promotion Resolution Details from Backend
+  // Promotion Resolution Details from Backend: % = Flash Sale | Tiền thuần = Coupon
   const promotionDetails = pricing?.promotion_details || null;
+  const isPercentType =
+    appliedCoupon?.discount_type === 'FLASH_PERCENT' ||
+    appliedCoupon?.discount_type === 'PERCENT' ||
+    Boolean(appliedCoupon?.code?.startsWith('FS_'));
+
   const appliedType =
     promotionDetails?.applied_type ||
-    (appliedCoupon?.code?.startsWith('FS_')
+    (isPercentType
       ? 'FLASH_SALE'
       : appliedCoupon
         ? 'MANUAL_COUPON'

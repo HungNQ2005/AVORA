@@ -560,7 +560,8 @@ const calculatePricing = async ({
   if (flashPrefix && Array.isArray(activeCouponsRes.data)) {
     const candidateFlashSales = activeCouponsRes.data.filter((c) => {
       const code = String(c.code || '').toUpperCase();
-      return code.startsWith(flashPrefix);
+      const isPercent = ['FLASH_PERCENT', 'PERCENT'].includes(c.discount_type);
+      return code.startsWith(flashPrefix) && isPercent;
     });
 
     for (const candidate of candidateFlashSales) {
