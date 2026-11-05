@@ -36,6 +36,7 @@ import HotelManagementPage from './features/hotel_management/pages/hotelManageme
 import HotelManagementDetailPage from './features/hotel_management/pages/hotelDetailPage';
 import RoomManagementPage from './features/rooms/pages/RoomManagementPage';
 import VendorBookingPage from './features/vendor_bookings/pages/VendorBookingPage';
+import VendorFlashSalePage from './features/vendor_flash_sales/VendorFlashSalePage';
 import AIChatWidget from './features/chatbot/AIChatWidget';
 import BookingPage from './features/bookings/pages/BookingPage';
 import MyBookingsPage from './features/mybookings/screens/MyBookingsPage';
@@ -308,6 +309,14 @@ function App() {
                 <VendorRoute>
                   <VendorBookingPage />
                 </VendorRoute>
+              }
+            />
+            <Route
+              path="flash-sales"
+              element={
+                <HotelManagerRoute>
+                  <VendorFlashSalePage />
+                </HotelManagerRoute>
               }
             />
             <Route

@@ -1384,4 +1384,24 @@
   margin-bottom: 12px;
   font-weight: 500;
   line-height: 1.35;
-}
+}
+
+/* ─── ⚡ Flash Sale Styles trên HomePage ─── */
+.avora-hotel-card__badge--flash-sale {
+  background: linear-gradient(135deg, #ef4444 0%, #f59e0b 100%) !important;
+  color: #ffffff !important;
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.4);
+  animation: pulse-flash 2s infinite ease-in-out;
+}
+
+.avora-hotel-card__current-price--flash {
+  color: #dc2626 !important;
+  font-weight: 800;
+}
+
+.avora-hotel-card__tax-note--flash {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+

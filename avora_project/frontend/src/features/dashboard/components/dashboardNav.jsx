@@ -32,6 +32,7 @@ const DashboardNav = () => {
   const canManageRooms = isAdmin || isVendor;
   const canManageBookings = isVendor;
   const canManageHotels = isAdmin || isVendor;
+  const canManageFlashSales = isVendor || isAdmin;
   const canManageCoupons = isBmr;
   const canManageRefundPolicies = isBmr;
   const canManageCommissionPolicies = isBmr;
@@ -257,9 +258,24 @@ const DashboardNav = () => {
         )}
 
         {/* MARKETING & DOANH THU */}
-        {(canManageCoupons || canManageRefundPolicies || canManageCommissionPolicies || canAccessDisbursements || canViewStatistics) && (
+        {(canManageCoupons || canManageFlashSales || canManageRefundPolicies || canManageCommissionPolicies || canAccessDisbursements || canViewStatistics) && (
           <div className="admin-sidebar__group">
             <div className="admin-sidebar__group-title">MARKETING & DOANH THU</div>
+            {canManageFlashSales && (
+              <NavLink
+                to="/dashboard/flash-sales"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Quản lý Flash Sale</span>
+              </NavLink>
+            )}
             {canManageCoupons && (
               <NavLink
                 to="/dashboard/coupons"

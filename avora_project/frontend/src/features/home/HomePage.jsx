@@ -4,6 +4,11 @@ import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import { getSavedFavorites, toggleFavoriteHotel } from '../../utils/favoritesStorage';
 import { getMinRoomsRequired, MAX_ROOM_CAPACITY } from '../../utils/roomCapacityHelper';
 import { getScoreLabel } from '../../utils/ratingHelper';
+import {
+  isFlashSaleActive,
+  getFlashSaleDiscountText,
+  calculateDisplayPricing,
+} from '../../utils/flashSaleHelper';
 import './HomePage.css';
 
 import {
@@ -967,8 +972,14 @@ const HomePage = () => {
                 const starsStr = '★'.repeat(starQuality) + '☆'.repeat(5 - starQuality);
                 const fallbackImg = getFallbackHotelImage(hotel.hotel_id);
                 const hotelImage = hotel.thumbnail || hotel.images?.[0] || fallbackImg;
-                const formattedPrice = hotel.price ? new Intl.NumberFormat('vi-VN').format(hotel.price) : '1.500.000';
-                const formattedOriginalPrice = hotel.original_price ? `${new Intl.NumberFormat('vi-VN').format(hotel.original_price)} VND` : null;
+
+                // Xử lý biểu giá và Flash Sale
+                const flashSale = isFlashSaleActive(hotel.active_flash_sale) ? hotel.active_flash_sale : null;
+                const flashDiscountText = flashSale ? getFlashSaleDiscountText(flashSale) : '';
+                const pricing = calculateDisplayPricing(hotel.price, flashSale, hotel.original_price);
+
+                const formattedPrice = pricing.currentPrice ? new Intl.NumberFormat('vi-VN').format(pricing.currentPrice) : '1.500.000';
+                const formattedOriginalPrice = pricing.originalPrice ? `${new Intl.NumberFormat('vi-VN').format(pricing.originalPrice)} VND` : null;
 
                 return (
                   <div
@@ -998,9 +1009,17 @@ const HomePage = () => {
                       >
                         <HeartIcon filled={isFav} />
                       </button>
-                      <span className="avora-hotel-card__badge">
-                        {hotel.is_genius ? 'Ưu đãi Genius' : (hotel.tag || 'Ưu đãi đặc biệt')}
-                      </span>
+
+                      {/* Huy hiệu Flash Sale hoặc Tag mặc định */}
+                      {flashSale ? (
+                        <span className="avora-hotel-card__badge avora-hotel-card__badge--flash-sale">
+                          ⚡ Flash Sale {flashDiscountText}
+                        </span>
+                      ) : (
+                        <span className="avora-hotel-card__badge">
+                          {hotel.is_genius ? 'Ưu đãi Genius' : (hotel.tag || 'Ưu đãi đặc biệt')}
+                        </span>
+                      )}
                     </div>
 
                     <div className="avora-hotel-card__body">
@@ -1051,10 +1070,16 @@ const HomePage = () => {
                         {formattedOriginalPrice && (
                           <span className="avora-hotel-card__old-price">{formattedOriginalPrice}</span>
                         )}
-                        <div className="avora-hotel-card__current-price">
+                        <div className={`avora-hotel-card__current-price ${flashSale ? 'avora-hotel-card__current-price--flash' : ''}`}>
                           {formattedPrice} <span className="avora-hotel-card__curr">VND</span>
                         </div>
-                        <span className="avora-hotel-card__tax-note">đã bao gồm thuế và phí</span>
+                        {pricing.hasFlashSale ? (
+                          <span className="avora-hotel-card__tax-note avora-hotel-card__tax-note--flash">
+                            ⚡ Đã giảm {new Intl.NumberFormat('vi-VN').format(pricing.discountAmount)} VND
+                          </span>
+                        ) : (
+                          <span className="avora-hotel-card__tax-note">đã bao gồm thuế và phí</span>
+                        )}
                       </div>
 
                       <button
