@@ -2,6 +2,9 @@
 
 const supabase = require('../../config/supabaseClient');
 const { codeNameParser } = require('../../utils/codeNameParser');
+const env = require('../../config/env');
+const { recordAuditLog } = require('../../utils/auditLogger');
+const vietqr = require('./vietqr.helper');
 
 const createError = (statusCode, message) => {
   const error = new Error(message);
@@ -245,6 +248,10 @@ const createVendorDisbursementRequest = async (userId, payload) => {
 
   if (!numAmount || isNaN(numAmount) || numAmount <= 0) {
     throw createError(400, 'Số tiền giải ngân không hợp lệ. Vui lòng nhập số tiền lớn hơn 0.');
+  }
+
+  if (!Number.isInteger(numAmount)) {
+    throw createError(400, 'Số tiền giải ngân phải là số nguyên (VND).');
   }
 
   if (numAmount < 50000) {
@@ -598,12 +605,38 @@ const approveDisbursement = async (requestId, adminUserId) => {
 };
 
 /**
- * Business Manager / Kế toán: Hoàn tất chi trả / quyết toán (APR -> CMP / Settled)
+ * Chuyển lỗi DB thiếu cột (chưa chạy migration sepay_disbursement_setup.sql) thành thông báo rõ ràng.
+ */
+const mapDbError = (err, prefix) => {
+  const msg = String(err?.message || '');
+  if (err?.code === '42703' || /payment_code|paid_at|settlement_source|sepay_transaction_id|settled_by/.test(msg)) {
+    return createError(
+      503,
+      'Cơ sở dữ liệu chưa được cập nhật cho tính năng giải ngân tự động. Vui lòng chạy backend/sql/sepay_disbursement_setup.sql.'
+    );
+  }
+  return createError(500, `${prefix}: ${msg}`);
+};
+
+/**
+ * Business Manager / Kế toán: Xác nhận THỦ CÔNG đã chi trả (APR -> CMP / Settled).
+ * Đây là phương án dự phòng khi webhook SePay không tự xác nhận được.
  */
 const settleDisbursement = async (requestId, adminUserId, payload = {}) => {
   ensureClient();
 
-  const { gateway_transaction_ref, note } = payload;
+  const refCode = String(payload.gateway_transaction_ref || '').trim();
+  const note = String(payload.note || '').trim();
+
+  if (!refCode) {
+    throw createError(400, 'Vui lòng nhập mã tham chiếu / biên nhận chuyển khoản ngân hàng để xác nhận thủ công.');
+  }
+  if (refCode.length > 100) {
+    throw createError(400, 'Mã tham chiếu ngân hàng quá dài (tối đa 100 ký tự).');
+  }
+  if (note.length > 500) {
+    throw createError(400, 'Ghi chú quá dài (tối đa 500 ký tự).');
+  }
 
   const { data: request, error: reqErr } = await supabase
     .from('t_withdrawal_request')
@@ -626,22 +659,41 @@ const settleDisbursement = async (requestId, adminUserId, payload = {}) => {
   }
 
   const now = new Date().toISOString();
-  const refCode = gateway_transaction_ref?.trim() || `STL-${Date.now()}`;
 
+  // Cập nhật có điều kiện: chỉ thành công nếu yêu cầu VẪN đang ở APR (chống race với webhook SePay).
   const { data: updated, error: updateErr } = await supabase
     .from('t_withdrawal_request')
     .update({
       status_cd: '4', // CMP (Completed / Paid / Settled)
       gateway_transaction_ref: refCode,
+      paid_at: now,
+      settlement_source: 'MANUAL',
+      settled_by: adminUserId || null,
       updated_at: now,
     })
     .eq('withdrawal_id', requestId)
+    .eq('status_cd', '2')
     .select()
-    .single();
+    .maybeSingle();
 
   if (updateErr) {
-    throw createError(500, `Không thể cập nhật trạng thái quyết toán: ${updateErr.message}`);
+    throw mapDbError(updateErr, 'Không thể cập nhật trạng thái quyết toán');
   }
+  if (!updated) {
+    throw createError(
+      409,
+      'Yêu cầu vừa được xử lý bởi một tiến trình khác (có thể SePay vừa tự động xác nhận). Vui lòng tải lại danh sách.'
+    );
+  }
+
+  recordAuditLog({
+    actor_user_id: adminUserId || null,
+    action_cd: '2',
+    entity_name: 't_withdrawal_request',
+    entity_id: requestId,
+    old_data: { status_cd: '2' },
+    new_data: { status_cd: '4', settlement_source: 'MANUAL', gateway_transaction_ref: refCode, note: note || null },
+  });
 
   return {
     withdrawal_id: updated.withdrawal_id,
@@ -651,6 +703,254 @@ const settleDisbursement = async (requestId, adminUserId, payload = {}) => {
     gateway_transaction_ref: updated.gateway_transaction_ref,
     updated_at: updated.updated_at,
   };
+};
+
+// ─── SePay VietQR payout (giải ngân tự động) ───────────────────────────────
+
+const MAX_CODE_ATTEMPTS = 5;
+
+/** code_cd -> code_name (mã ngân hàng viết tắt, vd '1' -> 'VCB'). */
+const getBankShortCodeMap = async () => {
+  try {
+    const { data } = await supabase
+      .from('m_system_code')
+      .select('code_cd, code_name')
+      .eq('business_cd', 'BANK_CD');
+    const map = {};
+    (data || []).forEach((b) => {
+      map[String(b.code_cd)] = String(b.code_name || '').trim().toUpperCase();
+    });
+    return map;
+  } catch {
+    return {};
+  }
+};
+
+const loadWithdrawalOrThrow = async (requestId) => {
+  const { data: request, error } = await supabase
+    .from('t_withdrawal_request')
+    .select('*')
+    .eq('withdrawal_id', requestId)
+    .maybeSingle();
+
+  if (error) throw createError(500, `Lỗi khi tải yêu cầu giải ngân: ${error.message}`);
+  if (!request) throw createError(404, 'Không tìm thấy yêu cầu giải ngân.');
+  return request;
+};
+
+const statusMetaOf = (statusCd) =>
+  STATUS_MAP[String(statusCd)] || { code: 'UNKNOWN', label: 'Không xác định', color: 'default' };
+
+/**
+ * Gán (idempotent) mã giải ngân AVRWDxxxxxxxx cho yêu cầu đang ở trạng thái APR.
+ * Mã đã gán sẽ không bao giờ đổi, để QR mở lại luôn khớp với giao dịch ngân hàng đã quét.
+ */
+const ensurePaymentCode = async (request) => {
+  if (request.payment_code) return request.payment_code;
+
+  for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt += 1) {
+    const candidate = vietqr.generatePayoutCode();
+    const { data, error } = await supabase
+      .from('t_withdrawal_request')
+      .update({ payment_code: candidate, updated_at: new Date().toISOString() })
+      .eq('withdrawal_id', request.withdrawal_id)
+      .eq('status_cd', '2')
+      .is('payment_code', null)
+      .select('payment_code')
+      .maybeSingle();
+
+    if (!error) {
+      if (data?.payment_code) return data.payment_code;
+      // Không cập nhật được dòng nào: request song song đã gán mã, hoặc trạng thái vừa đổi.
+      const { data: current, error: rereadErr } = await supabase
+        .from('t_withdrawal_request')
+        .select('payment_code, status_cd')
+        .eq('withdrawal_id', request.withdrawal_id)
+        .maybeSingle();
+      if (rereadErr) throw mapDbError(rereadErr, 'Không thể đọc lại mã giải ngân');
+      if (current?.payment_code) return current.payment_code;
+      throw createError(409, 'Trạng thái yêu cầu vừa thay đổi. Vui lòng tải lại danh sách.');
+    }
+
+    if (error.code === '23505') continue; // trùng mã ngẫu nhiên -> thử mã khác
+    throw mapDbError(error, 'Không thể tạo mã giải ngân');
+  }
+
+  throw createError(500, 'Không thể sinh mã giải ngân. Vui lòng thử lại.');
+};
+
+/**
+ * Business Manager: lấy thông tin chuyển khoản + mã VietQR để chi trả cho Vendor.
+ */
+const getPaymentQr = async (requestId) => {
+  ensureClient();
+
+  const request = await loadWithdrawalOrThrow(requestId);
+  const statusCd = String(request.status_cd);
+  const meta = statusMetaOf(statusCd);
+
+  if (statusCd === '4') {
+    return {
+      withdrawal_id: request.withdrawal_id,
+      status_cd: statusCd,
+      status_code: meta.code,
+      is_settled: true,
+      gateway_transaction_ref: request.gateway_transaction_ref || null,
+      paid_at: request.paid_at || null,
+    };
+  }
+  if (statusCd === '1') {
+    throw createError(409, 'Yêu cầu này cần được phê duyệt trước khi chi trả.');
+  }
+  if (statusCd !== '2') {
+    throw createError(409, 'Chỉ có thể chi trả cho yêu cầu ở trạng thái Chờ thanh toán.');
+  }
+
+  // Thông tin ví -> khách sạn -> chủ sở hữu
+  const { data: wallet } = await supabase
+    .from('t_hotel_wallet')
+    .select('wallet_id, hotel_id')
+    .eq('wallet_id', request.wallet_id)
+    .maybeSingle();
+  const { data: hotel } = wallet
+    ? await supabase.from('m_hotel').select('hotel_id, name, owner_id').eq('hotel_id', wallet.hotel_id).maybeSingle()
+    : { data: null };
+  const { data: owner } = hotel?.owner_id
+    ? await supabase.from('m_user').select('user_id, full_name, email').eq('user_id', hotel.owner_id).maybeSingle()
+    : { data: null };
+
+  // Tài khoản ngân hàng thụ hưởng
+  const { data: bank } = request.bank_account_id
+    ? await supabase.from('m_bank_account').select('*').eq('bank_account_id', request.bank_account_id).maybeSingle()
+    : { data: null };
+  if (!bank) {
+    throw createError(422, 'Không tìm thấy tài khoản ngân hàng thụ hưởng của yêu cầu này.');
+  }
+
+  const [bankNameMap, bankShortMap] = await Promise.all([getBankNameMap(), getBankShortCodeMap()]);
+  const bankShortCode = bankShortMap[String(bank.bank_cd)] || String(bank.bank_cd || '').toUpperCase();
+  const bin = vietqr.resolveBin({ binCode: bank.bin_code, bankShortCode });
+  if (!bin) {
+    throw createError(422, 'Không xác định được mã ngân hàng (BIN) để tạo mã QR. Vui lòng kiểm tra tài khoản ngân hàng của khách sạn.');
+  }
+
+  const amount = Number(request.amount);
+  const paymentCode = await ensurePaymentCode(request);
+
+  let qrUrl;
+  try {
+    qrUrl = vietqr.buildPayoutQrUrl({
+      bin,
+      accountNumber: bank.account_number,
+      accountHolder: bank.account_holder,
+      amount,
+      paymentCode,
+    });
+  } catch (err) {
+    throw createError(422, err.message);
+  }
+
+  return {
+    withdrawal_id: request.withdrawal_id,
+    status_cd: statusCd,
+    status_code: meta.code,
+    is_settled: false,
+    hotel_name: hotel?.name || 'Khách sạn',
+    owner_name: owner?.full_name || '',
+    owner_email: owner?.email || '',
+    amount,
+    payment_code: paymentCode,
+    transfer_content: paymentCode,
+    qr_url: qrUrl,
+    bank: {
+      bank_code: bankShortCode,
+      bank_name: bankNameMap[bank.bank_cd] || `Ngân hàng (${bank.bank_cd})`,
+      bin,
+      bank_branch: bank.bank_branch || '',
+      account_number: bank.account_number,
+      account_holder: bank.account_holder,
+      is_verified: Boolean(bank.is_verify),
+    },
+  };
+};
+
+/**
+ * Business Manager: trạng thái hiện tại của yêu cầu (frontend polling chờ SePay xác nhận).
+ */
+const getPaymentStatus = async (requestId) => {
+  ensureClient();
+
+  const request = await loadWithdrawalOrThrow(requestId);
+  const meta = statusMetaOf(request.status_cd);
+
+  return {
+    withdrawal_id: request.withdrawal_id,
+    status_cd: String(request.status_cd),
+    status_code: meta.code,
+    status_label: meta.label,
+    is_settled: String(request.status_cd) === '4',
+    gateway_transaction_ref: request.gateway_transaction_ref || null,
+    paid_at: request.paid_at || null,
+    settlement_source: request.settlement_source || null,
+  };
+};
+
+/**
+ * Xử lý webhook SePay cho giao dịch TIỀN RA (transferType = 'out') mang mã AVRWDxxxxxxxx.
+ * Phần ghi DB chạy atomically trong hàm Postgres avora.fn_process_sepay_withdrawal.
+ */
+const processSepayPayout = async (payload) => {
+  ensureClient();
+
+  if (String(payload?.transferType || '').toLowerCase() !== 'out') {
+    return { result: 'IGNORED_NOT_OUTGOING' };
+  }
+
+  const paymentCode = vietqr.extractPayoutCode(payload?.content || payload?.description);
+  if (!paymentCode) return { result: 'NO_PAYOUT_CODE' };
+
+  // Chỉ chấp nhận tiền chi ra từ đúng tài khoản chi của công ty (nếu đã cấu hình).
+  const expectedAccount = String(env.SEPAY_PAYOUT_ACCOUNT_NUMBER || '').trim();
+  const sourceAccount = String(payload?.accountNumber || '').trim();
+  if (expectedAccount && sourceAccount && expectedAccount !== sourceAccount) {
+    return { result: 'IGNORED_ACCOUNT_MISMATCH', payment_code: paymentCode };
+  }
+
+  const transferAmount = Number(payload?.transferAmount);
+  if (!Number.isFinite(transferAmount) || transferAmount <= 0) {
+    return { result: 'INVALID_AMOUNT', payment_code: paymentCode };
+  }
+
+  const sepayTxId = payload?.id != null ? String(payload.id) : null;
+  const gatewayRef = String(payload?.referenceCode || payload?.code || '').trim() || null;
+
+  const { data, error } = await supabase.rpc('fn_process_sepay_withdrawal', {
+    p_payment_code: paymentCode,
+    p_transfer_amount: transferAmount,
+    p_gateway_ref: gatewayRef,
+    p_sepay_tx_id: sepayTxId,
+  });
+  if (error) throw mapDbError(error, 'Lỗi xử lý giải ngân');
+
+  const result = { ...(data || {}), payment_code: paymentCode };
+
+  if (result.result === 'SETTLED') {
+    recordAuditLog({
+      actor_user_id: null,
+      action_cd: '2',
+      entity_name: 't_withdrawal_request',
+      entity_id: result.withdrawal_id,
+      old_data: { status_cd: '2' },
+      new_data: {
+        status_cd: '4',
+        settlement_source: 'SEPAY',
+        gateway_transaction_ref: result.gateway_transaction_ref,
+        sepay_transaction_id: sepayTxId,
+      },
+    });
+  }
+
+  return result;
 };
 
 /**
@@ -741,4 +1041,7 @@ module.exports = {
   approveDisbursement,
   settleDisbursement,
   rejectDisbursement,
+  getPaymentQr,
+  getPaymentStatus,
+  processSepayPayout,
 };

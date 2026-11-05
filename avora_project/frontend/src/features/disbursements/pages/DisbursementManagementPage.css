@@ -1042,3 +1042,200 @@
     transform: rotate(360deg);
   }
 }
+
+
+/* ─── Payout QR (VietQR + SePay auto-confirm) ─── */
+.disbursement-qr-state {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: #64748B;
+  font-size: 0.9rem;
+}
+
+.disbursement-qr-banner {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.disbursement-qr-banner svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.disbursement-qr-banner--info {
+  background-color: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  color: #1E3A8A;
+}
+
+.disbursement-qr-banner--warn {
+  background-color: #FFFBEB;
+  border: 1px solid #FDE68A;
+  color: #92400E;
+}
+
+.disbursement-qr-banner--error {
+  background-color: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #991B1B;
+}
+
+.disbursement-qr-layout {
+  display: grid;
+  grid-template-columns: 250px 1fr;
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.disbursement-qr-image-box {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 250px;
+}
+
+.disbursement-qr-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 6px;
+}
+
+.disbursement-qr-image-fallback {
+  padding: 1rem;
+  text-align: center;
+  color: #991B1B;
+  font-size: 0.8rem;
+}
+
+.disbursement-qr-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+}
+
+.disbursement-qr-row__value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: right;
+  word-break: break-all;
+}
+
+.disbursement-qr-row__value--emphasis {
+  color: #059669;
+  font-size: 0.95rem;
+}
+
+.disbursement-qr-waiting {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  background-color: #F8FAFC;
+  border: 1px dashed #CBD5E1;
+  color: #475569;
+  font-size: 0.82rem;
+}
+
+.disbursement-qr-waiting__dot {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background-color: #F59E0B;
+  animation: disbursementQrPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes disbursementQrPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.8); }
+}
+
+.disbursement-qr-manual {
+  border-top: 1px solid #E2E8F0;
+  padding-top: 0.9rem;
+}
+
+.disbursement-qr-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: #003580;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.disbursement-qr-manual__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.disbursement-qr-manual__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.disbursement-qr-ack {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  font-size: 0.82rem;
+  color: #334155;
+  line-height: 1.4;
+}
+
+.disbursement-qr-ack input {
+  margin-top: 3px;
+}
+
+.disbursement-qr-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.35rem;
+  padding: 1.5rem 0.5rem;
+  color: #059669;
+}
+
+.disbursement-qr-success h3 {
+  margin: 0.4rem 0 0;
+  font-size: 1.15rem;
+}
+
+.disbursement-qr-success p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.88rem;
+}
+
+.disbursement-qr-success__ref {
+  margin-top: 0.4rem !important;
+}
+
+@media (max-width: 640px) {
+  .disbursement-qr-layout {
+    grid-template-columns: 1fr;
+  }
+  .disbursement-qr-image-box {
+    max-width: 280px;
+    margin: 0 auto;
+  }
+}

@@ -41,6 +41,8 @@ export const API_ENDPOINTS = {
   DISBURSEMENT_APPROVE: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/approve`,
   DISBURSEMENT_SETTLE: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/settle`,
   DISBURSEMENT_REJECT: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/reject`,
+  DISBURSEMENT_PAYMENT_QR: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/payment-qr`,
+  DISBURSEMENT_PAYMENT_STATUS: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/payment-status`,
   DISBURSEMENTS_VENDOR_OVERVIEW: `${API_BASE_URL}/api/vendor/disbursements/overview`,
   DISBURSEMENTS_VENDOR_HISTORY: `${API_BASE_URL}/api/vendor/disbursements/history`,
   DISBURSEMENTS_VENDOR_REQUEST: `${API_BASE_URL}/api/vendor/disbursements/request`,

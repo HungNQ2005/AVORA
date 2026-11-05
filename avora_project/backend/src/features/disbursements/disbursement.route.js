@@ -36,6 +36,20 @@ router.get(
   controller.getBusinessDisbursements
 );
 
+router.get(
+  '/business/disbursements/:id/payment-qr',
+  authenticate,
+  requireRole('BMR'),
+  controller.getPaymentQr
+);
+
+router.get(
+  '/business/disbursements/:id/payment-status',
+  authenticate,
+  requireRole('BMR'),
+  controller.getPaymentStatus
+);
+
 router.patch(
   '/business/disbursements/:id/approve',
   authenticate,
