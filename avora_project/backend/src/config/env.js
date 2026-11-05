@@ -15,6 +15,8 @@ const env = {
   BANK_CODE: process.env.BANK_CODE || '',
   ACCOUNT_NUMBER: process.env.ACCOUNT_NUMBER || '',
   ACCOUNT_HOLDER_NAME: process.env.ACCOUNT_HOLDER_NAME || '',
+  // Số tài khoản công ty dùng để CHI giải ngân cho Vendor (nếu đặt, webhook tiền ra từ tài khoản khác sẽ bị bỏ qua).
+  SEPAY_PAYOUT_ACCOUNT_NUMBER: process.env.SEPAY_PAYOUT_ACCOUNT_NUMBER || '',
 };
 
 // Validate required env vars on startup

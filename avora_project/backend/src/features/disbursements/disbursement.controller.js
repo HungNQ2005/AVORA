@@ -3,6 +3,8 @@
 const disbursementService = require('./disbursement.service');
 const { sendSuccess, sendError } = require('../../utils/responseHelper');
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 /**
  * GET /api/vendor/disbursements/overview
  * Lấy số dư ví thực tế và thông tin khách sạn của vendor
@@ -164,6 +166,40 @@ const rejectDisbursement = async (req, res, next) => {
   }
 };
 
+/**
+ * GET /api/business/disbursements/:id/payment-qr
+ * Business Manager: lấy thông tin chuyển khoản + mã VietQR để chi trả cho Vendor
+ */
+const getPaymentQr = async (req, res, next) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!UUID_REGEX.test(id)) {
+      return sendError(res, 400, 'Mã yêu cầu giải ngân không hợp lệ.');
+    }
+    const result = await disbursementService.getPaymentQr(id);
+    return sendSuccess(res, 200, 'Lấy thông tin chuyển khoản giải ngân thành công.', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/business/disbursements/:id/payment-status
+ * Business Manager: polling trạng thái giải ngân (chờ SePay tự động xác nhận)
+ */
+const getPaymentStatus = async (req, res, next) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!UUID_REGEX.test(id)) {
+      return sendError(res, 400, 'Mã yêu cầu giải ngân không hợp lệ.');
+    }
+    const result = await disbursementService.getPaymentStatus(id);
+    return sendSuccess(res, 200, 'OK', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getVendorOverview,
   getVendorHistory,
@@ -172,5 +208,7 @@ module.exports = {
   approveDisbursement,
   settleDisbursement,
   rejectDisbursement,
+  getPaymentQr,
+  getPaymentStatus,
 };
 
