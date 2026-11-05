@@ -1,4 +1,13 @@
 import React from 'react';
+import {
+  AlertTriangleIcon,
+  CalendarIcon,
+  GridIcon,
+  InboxIcon,
+  MessageCircleIcon,
+  SearchIcon,
+  UserIcon,
+} from '../../../common/components/icons';
 import './supportTicketWorkspace.css';
 
 const SupportTicketWorkspace = ({
@@ -26,16 +35,13 @@ const SupportTicketWorkspace = ({
       <div className="support-list__header">
         <div className="support-list__title-area">
           <h2>Yêu cầu hỗ trợ</h2>
-          <span className="support-ticket-count">{pagination.total || tickets.length} phiếu</span>
+          <span className="support-ticket-count">{pagination.total ?? tickets.length} phiếu</span>
         </div>
       </div>
 
       <div className="support-filters">
         <div className="support-filter-search">
-          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8" />
-            <path d="M21 21l-4.35-4.35" />
-          </svg>
+          <SearchIcon size={18} />
           <input
             type="search"
             placeholder="Tìm theo tiêu đề phiếu..."
@@ -72,10 +78,7 @@ const SupportTicketWorkspace = ({
                 onChange={(event) => setFilters((current) => ({ ...current, from: event.target.value }))}
               />
               <span aria-hidden="true">{filters.from ? formatDateOnly(filters.from) : 'Tất cả các ngày'}</span>
-              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                <rect x="3" y="5" width="18" height="16" rx="2" />
-                <path d="M16 3v4M8 3v4M3 10h18" />
-              </svg>
+              <CalendarIcon size={18} />
             </span>
           </label>
         </div>
@@ -84,13 +87,13 @@ const SupportTicketWorkspace = ({
       {isAdmin && (
         <div className="support-admin-queues" aria-label="Phân loại hàng đợi quản trị">
           <button type="button" className={filters.assigned === 'mine' ? 'is-active' : ''} onClick={() => setFilters((current) => ({ ...current, assigned: 'mine' }))}>
-            <span>👤</span> Của tôi
+            <UserIcon size={16} /> Của tôi
           </button>
           <button type="button" className={filters.assigned === 'unassigned' ? 'is-active' : ''} onClick={() => setFilters((current) => ({ ...current, assigned: 'unassigned' }))}>
-            <span>📥</span> Cần xử lý
+            <InboxIcon size={16} /> Cần xử lý
           </button>
           <button type="button" className={filters.assigned === 'all' ? 'is-active' : ''} onClick={() => setFilters((current) => ({ ...current, assigned: 'all' }))}>
-            <span>🗂️</span> Tất cả
+            <GridIcon size={16} /> Tất cả
           </button>
         </div>
       )}
@@ -100,20 +103,19 @@ const SupportTicketWorkspace = ({
           <div className="support-spinner" />
           <span>Đang tải danh sách phiếu…</span>
         </div>
-      ) : tickets.length ? (
+      ) : tickets.filter((item) => !item.is_deleted).length ? (
         <div className="support-list__items">
-          {tickets.map((item) => (
+          {tickets.filter((item) => !item.is_deleted).map((item) => (
             <button
               type="button"
               key={item.ticket_id}
               className={`support-ticket-row ${item.ticket_id === selectedTicketId ? 'is-selected' : ''}`}
               onClick={() => selectTicket(item.ticket_id)}
-              disabled={item.is_deleted}
             >
               <div className="support-ticket-row__top">
                 <strong>{item.title}</strong>
-                <span className={`support-status support-status--${item.is_deleted ? 'DELETED' : item.ticket_status_cd}`}>
-                  {item.is_deleted ? statusLabels.DELETED : statusLabels[item.ticket_status_cd] || item.ticket_status_cd}
+                <span className={`support-status support-status--${item.ticket_status_cd}`}>
+                  {statusLabels[item.ticket_status_cd] || item.ticket_status_cd}
                 </span>
               </div>
               <div className="support-ticket-row__meta">
@@ -149,7 +151,7 @@ const SupportTicketWorkspace = ({
     <section className="support-conversation" aria-label="Chi tiết phiếu hỗ trợ">
       {!selectedTicketId ? (
         <div className="support-empty support-empty--detail">
-          <div className="support-empty-icon-wrap" aria-hidden="true">💬</div>
+          <div className="support-empty-icon-wrap"><MessageCircleIcon size={28} /></div>
           <strong>Chưa chọn phiếu hỗ trợ nào</strong>
           <p>Vui lòng chọn một phiếu từ danh sách bên trái để xem nội dung chi tiết và trao đổi.</p>
         </div>
@@ -160,7 +162,7 @@ const SupportTicketWorkspace = ({
         </div>
       ) : !ticket ? (
         <div className="support-empty support-empty--detail" role="alert">
-          <div className="support-empty-icon-wrap" aria-hidden="true">⚠️</div>
+          <div className="support-empty-icon-wrap"><AlertTriangleIcon size={28} /></div>
           <strong>Không thể mở phiếu hỗ trợ</strong>
           <p>Phiếu này có thể đã bị xóa hoặc bạn không có quyền truy cập.</p>
         </div>

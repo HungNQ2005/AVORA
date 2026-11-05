@@ -2280,6 +2280,7 @@ const getBookingInvoice = async (bookingId, currentUser) => {
 
 module.exports = {
   calculatePricing,
+  formatBookingCode,
   createBooking,
   getBookingById,
   getMyBookings,

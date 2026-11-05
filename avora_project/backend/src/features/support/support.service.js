@@ -5,31 +5,39 @@ const { EventEmitter } = require('node:events');
 const sharp = require('sharp');
 const supabase = require('../../config/supabaseClient');
 const { processChat } = require('../chatbot/chatbot.service');
+const { formatBookingCode } = require('../bookings/booking.service');
 
 const BUCKET = 'support_ticket_attachments';
 const MAX_FILE_BYTES = 2 * 1024 * 1024;
 const MAX_TICKET_ATTACHMENT_BYTES = 6 * 1024 * 1024;
 const CUSTOMER_CATEGORIES = new Set(['PWC', 'PWA', 'PTO', 'RFD', 'BKI', 'GEN']);
 const VENDOR_CATEGORIES = new Set(['VBU', 'VIU', 'VPO']);
+const BOOKING_LINK_CATEGORIES = new Set(['PWC', 'PWA', 'PTO', 'RFD', 'BKI']);
 const SUPPORT_CATEGORY_LABELS = {
-  PWC: 'PWC: Pay Wrong Code',
-  PWA: 'PWA: Pay Wrong Amount',
-  PTO: 'PTO: Pay Timeout',
-  RFD: 'RFD: Refund',
-  BKI: 'BKI: Booking Issue',
-  VBU: 'VBU: Vendor Bank Update',
-  VIU: 'VIU: Vendor Info Update',
-  VPO: 'VPO: Vendor Policy',
-  GEN: 'GEN: General',
+  PWC: 'Chuyển khoản sai nội dung',
+  PWA: 'Thanh toán sai số tiền',
+  PTO: 'Thanh toán quá hạn / chưa ghi nhận',
+  RFD: 'Yêu cầu hoàn tiền',
+  BKI: 'Vấn đề đơn đặt phòng',
+  VBU: 'Cập nhật tài khoản ngân hàng',
+  VIU: 'Cập nhật thông tin nhà cung cấp / khách sạn',
+  VPO: 'Chính sách và hoa hồng',
+  GEN: 'Khác',
 };
 const ticketEvents = new EventEmitter();
 ticketEvents.setMaxListeners(0);
+let bookingLinkTableWarningLogged = false;
 
 const createError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
+const isMissingBookingLinkTable = (error) => ['42P01', 'PGRST205'].includes(error?.code);
+const logMissingBookingLinkTable = () => {
+  if (bookingLinkTableWarningLogged) return;
+  bookingLinkTableWarningLogged = true;
+  console.warn('[SUPPORT] Multiple booking links are unavailable until the support booking migration is applied.');
+};
 const getCategoryLabel = (code) => {
   const normalizedCode = String(code || '').trim().toUpperCase();
-  return SUPPORT_CATEGORY_LABELS[normalizedCode]
-    || `${normalizedCode}: ${normalizedCode.replaceAll('_', ' ')}`;
+  return SUPPORT_CATEGORY_LABELS[normalizedCode] || 'Khác';
 };
 const normalizeRole = (user) => String(user?.role_code_name || '').trim().toUpperCase();
 const isAdmin = (user) => normalizeRole(user) === 'ADM';
@@ -85,6 +93,21 @@ const getCategoryByCode = async (code) => {
   return category;
 };
 
+const isCategoryInGroup = (category, group) => (
+  group === 'all' || category.group === group || category.group === 'both'
+);
+
+const assertTicketGroup = (ticket, group, user) => {
+  if (!group || group === 'all') return;
+  const category = { code_name: ticket.ticket_type_cd };
+  if (!isCategoryInGroup({ ...category, group: categoryGroup(category) }, group)) {
+    throw createError(404, 'Không tìm thấy phiếu hỗ trợ.');
+  }
+  if (isAdmin(user) && group === 'customer' && String(ticket.requester_id) !== String(user.user_id)) {
+    throw createError(404, 'Không tìm thấy phiếu hỗ trợ.');
+  }
+};
+
 const toAttachmentDto = (ticketId, attachment) => ({
   key: attachment.key,
   name: attachment.name,
@@ -93,7 +116,7 @@ const toAttachmentDto = (ticketId, attachment) => ({
   url: `/api/support/tickets/${ticketId}/attachments/${attachment.key}`,
 });
 
-const shapeTicket = (ticket, replies = [], requester = null, assigned = null, viewer = null) => {
+const shapeTicket = (ticket, replies = [], requester = null, assigned = null, viewer = null, bookingRecords = []) => {
   const publicReplies = isAdmin(viewer) ? replies : replies.filter((reply) => !reply.is_internal_note);
   const lastPublic = [...replies].reverse().find((reply) => !reply.is_internal_note);
   const status = String(ticket.ticket_status_cd || '').trim().toUpperCase();
@@ -104,6 +127,11 @@ const shapeTicket = (ticket, replies = [], requester = null, assigned = null, vi
         || status === 'RSV' && Boolean(ticket.resolved_at))
     : (status === 'WAT' || status === 'RSV' && !ticket.resolved_at)
       && lastPublic?.sender_role === 'ADM');
+
+  const bookings = [...bookingRecords];
+  if (ticket.booking_id && !bookings.some((booking) => String(booking.booking_id) === String(ticket.booking_id))) {
+    bookings.unshift({ booking_id: ticket.booking_id, booking_code: null, hotel_name: null });
+  }
 
   return {
     ticket_id: ticket.ticket_id,
@@ -123,6 +151,8 @@ const shapeTicket = (ticket, replies = [], requester = null, assigned = null, vi
     description: ticket.description,
     hotel_id: ticket.hotel_id || null,
     booking_id: ticket.booking_id || null,
+    booking_ids: [...new Set(bookings.map((booking) => booking.booking_id))],
+    bookings,
     attachment_urls: parseJsonArray(ticket.attachment_urls).map((file) => toAttachmentDto(ticket.ticket_id, file)),
     assigned_to: ticket.assigned_to || null,
     assigned_admin: assigned ? {
@@ -152,14 +182,15 @@ const shapeTicket = (ticket, replies = [], requester = null, assigned = null, vi
   };
 };
 
-const getTicketRow = async (ticketId, { includeDeleted = false } = {}) => {
+const getTicketRow = async (ticketId) => {
   const { data: ticket, error } = await supabase
     .from('t_support_ticket')
     .select('*')
     .eq('ticket_id', ticketId)
+    .eq('is_deleted', false)
     .maybeSingle();
   if (error) throw error;
-  if (!ticket || (!includeDeleted && ticket.is_deleted)) throw createError(404, 'Không tìm thấy phiếu hỗ trợ.');
+  if (!ticket) throw createError(404, 'Không tìm thấy phiếu hỗ trợ.');
   return ticket;
 };
 
@@ -292,31 +323,62 @@ const getReplies = async (ticketId) => {
   }));
 };
 
+const getTicketBookingIds = async (tickets) => {
+  const ticketIds = tickets.map((ticket) => ticket.ticket_id);
+  if (!ticketIds.length) return new Map();
+  const { data, error } = await supabase
+    .from('t_support_ticket_booking')
+    .select('ticket_id, booking_id, booking:t_booking(booking_id, created_at, hotel:m_hotel(name))')
+    .in('ticket_id', ticketIds);
+  const bookingIdsByTicket = new Map(ticketIds.map((ticketId) => [String(ticketId), []]));
+  if (error && isMissingBookingLinkTable(error)) {
+    logMissingBookingLinkTable();
+    return bookingIdsByTicket;
+  }
+  if (error) throw error;
+  (data || []).forEach((row) => {
+    const { ticket_id: ticketId, booking_id: bookingId, booking } = row;
+    const bookings = bookingIdsByTicket.get(String(ticketId));
+    if (bookings && !bookings.some((booking) => String(booking.booking_id) === String(bookingId))) {
+      bookings.push({
+        booking_id: bookingId,
+        booking_code: booking?.created_at ? formatBookingCode(bookingId, booking.created_at) : null,
+        hotel_name: booking?.hotel?.name || null,
+      });
+    }
+  });
+  return bookingIdsByTicket;
+};
+
 const withTicketDetails = async (ticket, user) => {
-  const [replies, users] = await Promise.all([
+  const [replies, users, bookingIdsByTicket] = await Promise.all([
     getReplies(ticket.ticket_id),
     getUsersById([ticket.requester_id, ticket.assigned_to]),
+    getTicketBookingIds([ticket]),
   ]);
   return shapeTicket(
     ticket,
     replies,
     users.get(String(ticket.requester_id)),
     users.get(String(ticket.assigned_to)),
-    user
+    user,
+    bookingIdsByTicket.get(String(ticket.ticket_id)) || []
   );
 };
 
-const listCategories = async (user) => {
+const listCategories = async (user, group = 'all') => {
   const categories = await loadCategories();
-  if (isAdmin(user)) return categories;
-  return categories.filter((category) => {
-    try {
-      assertCategoryAllowed(category, user);
-      return true;
-    } catch {
-      return false;
-    }
-  });
+  return categories.filter((category) => (
+    (isAdmin(user) || (() => {
+      try {
+        assertCategoryAllowed(category, user);
+        return true;
+      } catch {
+        return false;
+      }
+    })())
+    && isCategoryInGroup(category, group)
+  ));
 };
 
 const listTickets = async (user, query) => {
@@ -324,49 +386,48 @@ const listTickets = async (user, query) => {
     throw createError(400, 'Ngày bắt đầu không được sau ngày kết thúc.');
   }
   const admin = isAdmin(user);
-  let request = supabase.from('t_support_ticket').select('*', { count: 'exact' });
-  if (!admin) request = request.eq('requester_id', user.user_id);
-  else request = request.or(`is_deleted.eq.false,assigned_to.eq.${user.user_id}`);
-  if (!admin && query.group !== 'all') {
+  const requesterView = !admin || query.group === 'customer';
+  let request = supabase.from('t_support_ticket').select('*', { count: 'exact' }).eq('is_deleted', false);
+  if (requesterView) request = request.eq('requester_id', user.user_id);
+  if (query.group !== 'all') {
     const categories = await loadCategories();
-    const codes = categories.filter((category) => category.group === query.group || category.group === 'both')
+    const codes = categories.filter((category) => isCategoryInGroup(category, query.group))
       .map((category) => category.code);
     if (!codes.length) return { items: [], pagination: { page: query.page, limit: query.limit, total: 0, total_pages: 0 } };
     request = request.in('ticket_type_cd', codes);
-  } else if (admin && query.group !== 'all') {
-    const categories = await loadCategories();
-    const codes = categories.filter((category) => category.group === query.group || category.group === 'both')
-      .map((category) => category.code);
-    request = request.in('ticket_type_cd', codes);
   }
-  if (query.category) request = request.eq('ticket_type_cd', query.category.toUpperCase());
-  if (query.category && !admin) {
+  if (query.category) {
     const category = await getCategoryByCode(query.category);
-    assertCategoryAllowed(category, user);
+    if (!isCategoryInGroup(category, query.group)) {
+      throw createError(404, 'Không tìm thấy danh mục hỗ trợ.');
+    }
+    if (!admin) assertCategoryAllowed(category, user);
+    request = request.eq('ticket_type_cd', category.code);
   }
-  if (query.status === 'DELETED') request = request.eq('is_deleted', true);
-  else if (query.status) request = request.eq('ticket_status_cd', query.status.toUpperCase()).eq('is_deleted', false);
+  if (query.status) request = request.eq('ticket_status_cd', query.status.toUpperCase());
   if (query.q) request = request.ilike('title', `%${query.q.replace(/[%_,]/g, '')}%`);
   if (query.from) request = request.gte('created_at', `${query.from}T00:00:00.000Z`);
   if (query.to) request = request.lte('created_at', `${query.to}T23:59:59.999Z`);
-  if (admin && query.status !== 'DELETED' && query.assigned === 'mine') request = request.eq('assigned_to', user.user_id);
-  if (admin && query.status !== 'DELETED' && query.assigned === 'unassigned') request = request.is('assigned_to', null).eq('ticket_status_cd', 'OPN');
+  if (admin && !requesterView && query.assigned === 'mine') request = request.eq('assigned_to', user.user_id);
+  if (admin && !requesterView && query.assigned === 'unassigned') request = request.is('assigned_to', null).eq('ticket_status_cd', 'OPN');
   const start = (query.page - 1) * query.limit;
   request = request.order('updated_at', { ascending: false }).range(start, start + query.limit - 1);
 
   const { data, error, count } = await request;
   if (error) throw error;
   const tickets = data || [];
-  const allReplies = await Promise.all(tickets.map((ticket) => (
-    ticket.is_deleted ? [] : getReplies(ticket.ticket_id)
-  )));
+  const [allReplies, bookingIdsByTicket] = await Promise.all([
+    Promise.all(tickets.map((ticket) => getReplies(ticket.ticket_id))),
+    getTicketBookingIds(tickets),
+  ]);
   const users = await getUsersById(tickets.flatMap((ticket) => [ticket.requester_id, ticket.assigned_to]));
   const items = tickets.map((ticket, index) => shapeTicket(
     ticket,
     allReplies[index],
     users.get(String(ticket.requester_id)),
     users.get(String(ticket.assigned_to)),
-    user
+    user,
+    bookingIdsByTicket.get(String(ticket.ticket_id)) || []
   ));
   return {
     items,
@@ -383,10 +444,19 @@ const createTicket = async (user, input, files) => {
   if (!isRequesterRole(user)) throw createError(403, 'Bạn không có quyền tạo phiếu hỗ trợ.');
   const category = await getCategoryByCode(input.ticket_type_cd);
   assertCategoryAllowed(category, user);
+  if (input.support_group === 'vendor' && !isVendorRole(user)) {
+    throw createError(403, 'Chỉ Nhà cung cấp mới có thể tạo yêu cầu hỗ trợ trong trang quản lý.');
+  }
+  if (!isCategoryInGroup(category, input.support_group)) {
+    throw createError(403, 'Danh mục này không thuộc nhóm hỗ trợ đang mở.');
+  }
   if (input.priority_cd === 'URGENT' && category.group !== 'vendor') {
     throw createError(400, 'Mức ưu tiên Khẩn cấp chỉ dành cho phiếu hỗ trợ Nhà cung cấp.');
   }
   const priority = category.group === 'vendor' ? input.priority_cd || 'MEDIUM' : 'MEDIUM';
+  if (category.code === 'VBU' && (!input.hotel_id || !input.bank_account_number?.trim())) {
+    throw createError(400, 'Vui lòng chọn khách sạn và nhập số tài khoản ngân hàng muốn thay đổi.');
+  }
   if (input.hotel_id) {
     if (!isVendorRole(user) || category.group !== 'vendor') {
       throw createError(400, 'Chỉ phiếu hỗ trợ Nhà cung cấp mới được liên kết khách sạn.');
@@ -401,48 +471,76 @@ const createTicket = async (user, input, files) => {
     if (error) throw error;
     if (!hotel) throw createError(404, 'Không tìm thấy khách sạn thuộc quyền quản lý của bạn.');
   }
-  if (input.booking_id) {
+  const bookingIds = [...new Set([...(input.booking_ids || []), ...(input.booking_id ? [input.booking_id] : [])])];
+  if (bookingIds.length && !BOOKING_LINK_CATEGORIES.has(category.code)) {
+    throw createError(400, 'Danh mục này không hỗ trợ liên kết đơn đặt phòng.');
+  }
+  if (bookingIds.length) {
     const { data: booking, error } = await supabase
       .from('t_booking')
-      .select('booking_id, user_id, hotel_id')
-      .eq('booking_id', input.booking_id)
-      .maybeSingle();
+      .select('booking_id, user_id')
+      .in('booking_id', bookingIds);
     if (error) throw error;
-    if (!booking) throw createError(404, 'Không tìm thấy đơn đặt phòng.');
-    const isOwnBooking = String(booking.user_id) === String(user.user_id);
-    const vendorOwnsBooking = isVendorRole(user) && input.hotel_id === booking.hotel_id
-      && category.group === 'vendor';
-    if (!isOwnBooking && !vendorOwnsBooking) throw createError(403, 'Bạn không có quyền liên kết đơn đặt phòng này.');
+    if ((booking || []).length !== bookingIds.length) throw createError(404, 'Không tìm thấy đơn đặt phòng.');
+    if ((booking || []).some((item) => String(item.user_id) !== String(user.user_id))) {
+      throw createError(403, 'Bạn chỉ có thể liên kết đơn đặt phòng của chính mình.');
+    }
   }
+
+  const description = category.code === 'VBU'
+    ? `Nội dung muốn thay đổi:\n${input.description}\n\nSố tài khoản ngân hàng muốn thay đổi:\n${input.bank_account_number.trim()}`
+    : input.description;
+  const descriptionWordCount = (description.match(/[\p{L}\p{N}]+(?:['’_-][\p{L}\p{N}]+)*/gu) || []).length;
+  if (descriptionWordCount > 500) throw createError(400, 'Mô tả không được vượt quá 500 từ.');
 
   const ticketId = randomUUID();
   const attachments = await uploadAttachments(ticketId, files);
+  let insertedTicketId = null;
   try {
     const { data, error } = await supabase.from('t_support_ticket').insert({
       ticket_id: ticketId,
       requester_id: user.user_id,
       hotel_id: input.hotel_id || null,
-      booking_id: input.booking_id || null,
+      booking_id: bookingIds[0] || null,
       ticket_type_cd: category.code,
       ticket_status_cd: 'OPN',
       priority_cd: priority,
       title: input.title,
-      description: input.description,
+      description,
       attachment_urls: attachments,
       is_deleted: false,
     }).select('*').single();
     if (error) throw error;
+    insertedTicketId = data.ticket_id;
+    if (bookingIds.length) {
+      const { error: bookingLinkError } = await supabase
+        .from('t_support_ticket_booking')
+        .insert(bookingIds.map((bookingId) => ({ ticket_id: ticketId, booking_id: bookingId })));
+      if (bookingLinkError && isMissingBookingLinkTable(bookingLinkError)) {
+        logMissingBookingLinkTable();
+        if (bookingIds.length > 1) {
+          throw createError(503, 'Liên kết nhiều đơn đặt phòng chưa khả dụng. Vui lòng áp dụng bản cập nhật cơ sở dữ liệu trước khi sử dụng tính năng này.');
+        }
+      } else if (bookingLinkError) {
+        throw bookingLinkError;
+      }
+    }
     ticketEvents.emit(ticketEmitter(ticketId));
     return await withTicketDetails(data, user);
   } catch (error) {
+    if (insertedTicketId) {
+      const { error: rollbackError } = await supabase.from('t_support_ticket').delete().eq('ticket_id', ticketId);
+      if (rollbackError) console.error(`[SUPPORT] Ticket rollback failed: ${rollbackError.message}`);
+    }
     await removeUploadedFiles(ticketId, attachments);
     throw error;
   }
 };
 
-const getTicket = async (ticketId, user) => {
+const getTicket = async (ticketId, user, group = 'all') => {
   const ticket = await getTicketRow(ticketId);
   await assertTicketAccess(ticket, user);
+  assertTicketGroup(ticket, group, user);
   return withTicketDetails(ticket, user);
 };
 
@@ -456,6 +554,7 @@ const claimTicket = async (ticketId, user) => {
     .from('t_support_ticket')
     .update({ assigned_to: user.user_id, ticket_status_cd: 'INP', updated_at: now() })
     .eq('ticket_id', ticketId)
+    .eq('is_deleted', false)
     .eq('ticket_status_cd', 'OPN')
     .is('assigned_to', null)
     .select('*')
@@ -507,6 +606,7 @@ const createReply = async (ticketId, user, input, files) => {
           updated_at: now(),
         })
         .eq('ticket_id', ticketId)
+        .eq('is_deleted', false)
         .eq('ticket_status_cd', ticket.ticket_status_cd);
       ticketUpdate = ticket.resolved_at
         ? ticketUpdate.eq('resolved_at', ticket.resolved_at)
@@ -576,6 +676,7 @@ const updateTicketStatus = async (ticketId, user, input) => {
   let statusUpdate = supabase.from('t_support_ticket')
     .update({ ...updates, updated_at: now() })
     .eq('ticket_id', ticketId)
+    .eq('is_deleted', false)
     .eq('ticket_status_cd', ticket.ticket_status_cd);
   statusUpdate = ticket.resolved_at
     ? statusUpdate.eq('resolved_at', ticket.resolved_at)
@@ -601,10 +702,14 @@ const softDeleteTicket = async (ticketId, user) => {
   if (isAdmin(user) && !isAssignedAdmin) {
     throw createError(403, 'Chỉ Quản trị viên đang phụ trách mới có thể xóa phiếu này.');
   }
-  const { error } = await supabase.from('t_support_ticket')
+  const { data: deletedTicket, error } = await supabase.from('t_support_ticket')
     .update({ is_deleted: true, updated_at: now() })
-    .eq('ticket_id', ticketId);
+    .eq('ticket_id', ticketId)
+    .eq('is_deleted', false)
+    .select('ticket_id')
+    .maybeSingle();
   if (error) throw error;
+  if (!deletedTicket) throw createError(404, 'Không tìm thấy phiếu hỗ trợ.');
   const { error: auditError } = await supabase.from('h_system_audit_log').insert({
     actor_user_id: user.user_id,
     action_cd: '3',
@@ -617,12 +722,13 @@ const softDeleteTicket = async (ticketId, user) => {
   if (auditError) {
     const { error: rollbackError } = await supabase.from('t_support_ticket')
       .update({ is_deleted: false, updated_at: now() })
-      .eq('ticket_id', ticketId);
+      .eq('ticket_id', ticketId)
+      .eq('is_deleted', true);
     if (rollbackError) console.error(`[SUPPORT] Ticket deletion rollback failed: ${rollbackError.message}`);
     throw auditError;
   }
   ticketEvents.emit(ticketEmitter(ticketId));
-  return { ticket_id: ticketId, is_deleted: true };
+  return { deleted: true };
 };
 
 const deleteAttachment = async (ticketId, key, user) => {
@@ -699,11 +805,18 @@ const subscribeToTicket = (ticketId, listener) => {
   return () => ticketEvents.off(eventName, listener);
 };
 
-const getSupportCounts = async (user) => {
-  const query = supabase.from('t_support_ticket').select('*').eq('is_deleted', false);
-  const { data, error } = isAdmin(user)
-    ? await query.eq('assigned_to', user.user_id)
-    : await query.eq('requester_id', user.user_id);
+const getSupportCounts = async (user, group = 'all') => {
+  const requesterView = !isAdmin(user) || group === 'customer';
+  let query = supabase.from('t_support_ticket').select('*').eq('is_deleted', false);
+  if (group !== 'all') {
+    const categories = await loadCategories();
+    const codes = categories.filter((category) => isCategoryInGroup(category, group)).map((category) => category.code);
+    if (!codes.length) return { unread: 0 };
+    query = query.in('ticket_type_cd', codes);
+  }
+  const { data, error } = requesterView
+    ? await query.eq('requester_id', user.user_id)
+    : await query.eq('assigned_to', user.user_id);
   if (error) throw error;
   const tickets = data || [];
   if (!tickets.length) return { unread: 0 };
@@ -712,13 +825,13 @@ const getSupportCounts = async (user) => {
   const unreadCount = tickets.reduce((count, ticket, index) => {
     const roleAwareReplies = replies[index].map((reply) => ({
       ...reply,
-      sender_role: isAdmin(user)
+      sender_role: !requesterView
         ? String(users.get(String(reply.sender_id))?.role_code_name || '').toUpperCase()
         : (String(reply.sender_id) === String(user.user_id) ? normalizeRole(user) : 'ADM'),
     }));
     const lastPublic = [...roleAwareReplies].reverse().find((reply) => !reply.is_internal_note);
     const status = String(ticket.ticket_status_cd || '').toUpperCase();
-    const unread = status !== 'CLS' && (isAdmin(user)
+    const unread = status !== 'CLS' && (!requesterView
       ? String(ticket.assigned_to || '') === String(user.user_id)
         && (lastPublic?.sender_role && lastPublic.sender_role !== 'ADM'
           || status === 'RSV' && Boolean(ticket.resolved_at))

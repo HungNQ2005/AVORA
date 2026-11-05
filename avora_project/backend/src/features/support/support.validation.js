@@ -21,7 +21,7 @@ const ticketListQuerySchema = z.object({
   group: z.enum(['customer', 'vendor', 'all']).default('all'),
   q: z.string().trim().max(120).optional(),
   category: z.string().trim().max(50).optional(),
-  status: z.enum(['OPN', 'INP', 'WAT', 'RSV', 'CLS', 'DELETED']).optional(),
+  status: z.enum(['OPN', 'INP', 'WAT', 'RSV', 'CLS']).optional(),
   assigned: z.enum(['mine', 'unassigned', 'all']).default('all'),
   from: z.string().date().optional(),
   to: z.string().date().optional(),
@@ -29,7 +29,21 @@ const ticketListQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+const supportGroupQuerySchema = z.object({
+  group: z.enum(['customer', 'vendor', 'all']).default('all'),
+});
+
+const bookingIdsSchema = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}, z.array(uuid).max(100).default([]));
+
 const createTicketBodySchema = z.object({
+  support_group: z.enum(['customer', 'vendor']).default('customer'),
   ticket_type_cd: z.string().trim().min(2).max(50),
   title: z.string().trim().min(1).max(255).refine((value) => wordCount(value) <= MAX_TITLE_WORDS, {
     message: `Tiêu đề không được vượt quá ${MAX_TITLE_WORDS} từ.`,
@@ -39,8 +53,32 @@ const createTicketBodySchema = z.object({
   }).refine(noLinks, { message: 'Mô tả không được chứa đường dẫn.' }),
   hotel_id: uuid.optional().nullable(),
   booking_id: uuid.optional().nullable(),
+  booking_ids: bookingIdsSchema,
+  bank_account_number: z.string().trim().max(100).optional(),
   priority_cd: z.enum(['LOW', 'MEDIUM', 'HIGH', 'URGENT']).optional(),
-}).strict();
+}).strict().superRefine((data, ctx) => {
+  if (data.ticket_type_cd.trim().toUpperCase() === 'VBU' && !data.bank_account_number) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['bank_account_number'],
+      message: 'Vui lòng nhập số tài khoản ngân hàng mới.',
+    });
+  }
+  if (data.bank_account_number && !noLinks(data.bank_account_number)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['bank_account_number'],
+      message: 'Số tài khoản không được chứa đường dẫn.',
+    });
+  }
+  if (data.ticket_type_cd.trim().toUpperCase() !== 'VBU' && data.bank_account_number) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['bank_account_number'],
+      message: 'Trường số tài khoản chỉ áp dụng cho yêu cầu cập nhật tài khoản ngân hàng.',
+    });
+  }
+});
 
 const createReplyBodySchema = z.object({
   message: z.string().trim().max(100000).optional().default(''),
@@ -79,6 +117,7 @@ module.exports = {
   ticketIdParamsSchema,
   attachmentParamsSchema,
   ticketListQuerySchema,
+  supportGroupQuerySchema,
   createTicketBodySchema,
   createReplyBodySchema,
   ticketStatusBodySchema,

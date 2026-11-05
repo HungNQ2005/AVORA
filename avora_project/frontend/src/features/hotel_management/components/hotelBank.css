@@ -1,0 +1,79 @@
+.hotel-bank {
+  margin-top: 1rem;
+  padding: 1.1rem;
+  border: 1px solid rgba(148, 163, 184, .22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .88);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, .04);
+}
+
+.hotel-bank__header {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+.hotel-bank__icon {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 11px;
+  background: #eaf2ff;
+  color: #003580;
+}
+
+.hotel-bank__header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 1rem;
+}
+
+.hotel-bank__header p,
+.hotel-bank__empty {
+  margin: .25rem 0 0;
+  color: #64748b;
+  font-size: .82rem;
+}
+
+.hotel-bank__verified {
+  display: flex;
+  align-items: center;
+  gap: .35rem;
+  width: fit-content;
+  margin-top: 1rem;
+  color: #15803d;
+  font-size: .78rem;
+  font-weight: 750;
+}
+
+.hotel-bank__details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .85rem 1.5rem;
+  margin: .9rem 0 0;
+}
+
+.hotel-bank__details div {
+  min-width: 0;
+}
+
+.hotel-bank__details dt {
+  color: #64748b;
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.hotel-bank__details dd {
+  overflow-wrap: anywhere;
+  margin: .2rem 0 0;
+  color: #0f172a;
+  font-size: .88rem;
+  font-weight: 650;
+}
+
+@media (max-width: 600px) {
+  .hotel-bank__details {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { loadSupportImage } from '../../../services/supportApi';
+import { CloseIcon, TrashIcon } from '../../../common/components/icons';
 import './attachmentImage.css';
 
 const AttachmentImage = ({ attachment, onDelete }) => {
@@ -58,48 +60,53 @@ const AttachmentImage = ({ attachment, onDelete }) => {
 
   if (error) return <span className="support-attachment-error" role="alert">{error}</span>;
   if (!src) return <span className="support-attachment-loading">Đang tải ảnh…</span>;
-  return (
-    <figure className="support-attachment">
-      <button
-        ref={previewButtonRef}
-        type="button"
-        className="support-attachment__preview"
-        onClick={() => setIsPreviewOpen(true)}
-        aria-label={`Phóng to ảnh ${attachment.name || ''}`}
+  const previewModal = isPreviewOpen && createPortal(
+    <div
+      className="support-image-modal"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) setIsPreviewOpen(false);
+      }}
+    >
+      <section
+        className="support-image-modal__dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-label={attachment.name || 'Ảnh đính kèm'}
       >
+        <button
+          ref={closeButtonRef}
+          type="button"
+          className="support-image-modal__close"
+          onClick={() => setIsPreviewOpen(false)}
+          aria-label="Đóng ảnh"
+        ><CloseIcon size={18} /></button>
         <img src={src} alt={attachment.name || 'Ảnh đính kèm'} />
-      </button>
-      <figcaption>
-        <span>{attachment.name || 'Ảnh đính kèm'}</span>
-        {onDelete && <button type="button" onClick={() => onDelete(attachment)}>Xóa ảnh</button>}
-      </figcaption>
-      {isPreviewOpen && (
-        <div
-          className="support-image-modal"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setIsPreviewOpen(false);
-          }}
+        {attachment.name && <p>{attachment.name}</p>}
+      </section>
+    </div>,
+    document.body
+  );
+
+  return (
+    <>
+      <figure className="support-attachment">
+        <button
+          ref={previewButtonRef}
+          type="button"
+          className="support-attachment__preview"
+          onClick={() => setIsPreviewOpen(true)}
+          aria-label={`Phóng to ảnh ${attachment.name || ''}`}
         >
-          <section
-            className="support-image-modal__dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-label={attachment.name || 'Ảnh đính kèm'}
-          >
-            <button
-              ref={closeButtonRef}
-              type="button"
-              className="support-image-modal__close"
-              onClick={() => setIsPreviewOpen(false)}
-              aria-label="Đóng ảnh"
-            >×</button>
-            <img src={src} alt={attachment.name || 'Ảnh đính kèm'} />
-            {attachment.name && <p>{attachment.name}</p>}
-          </section>
-        </div>
-      )}
-    </figure>
+          <img src={src} alt={attachment.name || 'Ảnh đính kèm'} />
+        </button>
+        <figcaption>
+          <span>{attachment.name || 'Ảnh đính kèm'}</span>
+          {onDelete && <button type="button" onClick={() => onDelete(attachment)}><TrashIcon size={14} /> Xóa ảnh</button>}
+        </figcaption>
+      </figure>
+      {previewModal}
+    </>
   );
 };
 

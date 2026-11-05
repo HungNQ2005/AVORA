@@ -164,6 +164,14 @@ const SupportManagerRoute = ({ children }) => {
   return children;
 };
 
+const CustomerSupportRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace state={{ from: location }} />;
+  return children;
+};
+
 /**
  * Redirect /admin to the appropriate dashboard based on the logged-in role.
  */
@@ -265,6 +273,16 @@ function App() {
             <Route path="/booking/:id" element={<BookingPage />} />
             <Route path="/my-bookings" element={<MyBookingsPage />} />
             <Route path="/myaccount/bookings" element={<MyBookingsPage />} />
+            <Route
+              path="/support"
+              element={
+                <CustomerSupportRoute>
+                  <Suspense fallback={<div className="support-empty">Đang tải trang hỗ trợ…</div>}>
+                    <SupportCenter mode="customer" />
+                  </Suspense>
+                </CustomerSupportRoute>
+              }
+            />
             <Route path="/my-reviews" element={<ReviewPage />} />
             <Route path="/payment/success/:bookingId" element={<PaymentSuccessScreen />} />
             <Route path="/payment/:bookingId" element={<PaymentQRScreen />} />

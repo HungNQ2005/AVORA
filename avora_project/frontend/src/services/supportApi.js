@@ -12,15 +12,17 @@ api.interceptors.request.use((config) => {
 const unwrap = (response) => response.data.data;
 const ticketPath = (ticketId) => `/support/tickets/${encodeURIComponent(ticketId)}`;
 
-export const getSupportCategories = async () => unwrap(await api.get('/support/categories'));
-export const getSupportCounts = async () => unwrap(await api.get('/support/counts'));
+export const getSupportCategories = async (group = 'all') => unwrap(await api.get('/support/categories', { params: { group } }));
+export const getSupportCounts = async (group = 'all') => unwrap(await api.get('/support/counts', { params: { group } }));
 export const listSupportTickets = async (params = {}) => unwrap(await api.get('/support/tickets', { params }));
-export const getSupportTicket = async (ticketId) => unwrap(await api.get(ticketPath(ticketId)));
+export const getSupportTicket = async (ticketId, group = 'all') => unwrap(await api.get(ticketPath(ticketId), { params: { group } }));
 
 const withAttachments = (data, files = []) => {
   const body = new FormData();
   Object.entries(data).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') body.append(key, value);
+    if (value !== undefined && value !== null && value !== '') {
+      body.append(key, Array.isArray(value) ? JSON.stringify(value) : value);
+    }
   });
   files.forEach((file) => body.append('attachments', file));
   return body;
@@ -50,10 +52,11 @@ export const loadSupportImage = async (attachmentUrl, signal) => {
   return URL.createObjectURL(response.data);
 };
 
-export const subscribeToSupportTicket = async (ticketId, signal, onUpdate) => {
+export const subscribeToSupportTicket = async (ticketId, group, signal, onUpdate) => {
   const token = localStorage.getItem('avora_token');
   if (!token) throw new Error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
-  const response = await fetch(`${API_BASE}/api${ticketPath(ticketId)}/events`, {
+  const query = new URLSearchParams({ group });
+  const response = await fetch(`${API_BASE}/api${ticketPath(ticketId)}/events?${query}`, {
     headers: { Authorization: `Bearer ${token}` },
     signal,
   });

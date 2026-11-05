@@ -1,68 +1,149 @@
 .support-attachments {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .support-attachment {
-  width: 150px;
+  width: min(220px, 100%);
   margin: 0;
   overflow: hidden;
-  border: 1px solid #dbe5f1;
-  border-radius: 8px;
+  border: 1px solid #dce5f0;
+  border-radius: 13px;
   background: #fff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, .07);
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.support-attachment:hover {
+  transform: translateY(-2px);
+  border-color: #bfdbfe;
+  box-shadow: 0 9px 22px rgba(30, 64, 175, .12);
 }
 
 .support-attachment__preview {
-  display: block;
+  position: relative;
+  display: grid;
   width: 100%;
-  height: 100px;
+  height: 142px;
+  overflow: hidden;
+  place-items: center;
   border: 0;
   padding: 0;
-  background: #f1f5f9;
+  background: linear-gradient(145deg, #eff6ff, #f8fafc);
   cursor: zoom-in;
 }
 
+.support-attachment__preview::after {
+  position: absolute;
+  inset: auto 0 0;
+  height: 44px;
+  background: linear-gradient(transparent, rgba(15, 23, 42, .38));
+  content: "";
+  opacity: 0;
+  transition: opacity .18s ease;
+}
+
+.support-attachment__preview::before {
+  position: absolute;
+  z-index: 1;
+  right: 9px;
+  bottom: 9px;
+  color: #fff;
+  content: "Xem ảnh";
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.support-attachment__preview:hover::after,
+.support-attachment__preview:hover::before,
+.support-attachment__preview:focus-visible::after,
+.support-attachment__preview:focus-visible::before {
+  opacity: 1;
+}
+
+.support-attachment__preview:hover::before,
+.support-attachment__preview:focus-visible::before {
+  transform: translateY(0);
+}
+
+.support-attachment__preview:focus-visible {
+  outline: 3px solid #60a5fa;
+  outline-offset: -3px;
+}
+
 .support-attachment__preview img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform .25s ease;
+}
+
+.support-attachment__preview:hover img {
+  transform: scale(1.035);
 }
 
 .support-attachment figcaption {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
-  gap: 4px;
-  padding: 5px;
-  font-size: 10px;
+  gap: 8px;
+  padding: 9px 10px;
 }
 
 .support-attachment figcaption span {
   overflow: hidden;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .support-attachment figcaption button {
+  display: inline-flex;
   flex: 0 0 auto;
-  border: 0;
-  background: transparent;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid #fee2e2;
+  border-radius: 7px;
+  padding: 5px 7px;
+  background: #fff7f7;
   color: #b91c1c;
   cursor: pointer;
   font-size: 10px;
+  font-weight: 700;
+  transition: background .15s ease, border-color .15s ease;
+}
+
+.support-attachment figcaption button:hover {
+  border-color: #fecaca;
+  background: #fee2e2;
+}
+
+.support-attachment-error,
+.support-attachment-loading {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  padding: 9px 12px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 11px;
 }
 
 .support-attachment-error {
+  border-color: #fecaca;
+  background: #fef2f2;
   color: #b91c1c;
-  font-size: 12px;
-}
-
-.support-attachment-loading {
-  padding: 8px;
-  color: #64748b;
-  font-size: 11px;
 }
 
 .support-image-modal {
@@ -72,7 +153,9 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: rgb(15 23 42 / 82%);
+  background: rgba(15, 23, 42, .86);
+  backdrop-filter: blur(5px);
+  animation: support-image-fade-in .16s ease-out;
 }
 
 .support-image-modal__dialog {
@@ -81,44 +164,83 @@
   justify-items: center;
   max-width: min(1100px, 100%);
   max-height: 100%;
+  animation: support-image-pop-in .2s ease-out;
 }
 
 .support-image-modal__dialog img {
   display: block;
   max-width: 100%;
   max-height: calc(100vh - 100px);
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 12px;
   object-fit: contain;
-  box-shadow: 0 20px 60px rgb(0 0 0 / 35%);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .45);
 }
 
 .support-image-modal__dialog p {
   max-width: 100%;
-  margin: 10px 0 0;
-  color: #fff;
-  font-size: 13px;
+  margin: 12px 0 0;
+  color: #e2e8f0;
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 
 .support-image-modal__close {
   position: absolute;
   z-index: 1;
-  top: -16px;
-  right: -16px;
+  top: -15px;
+  right: -15px;
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   place-items: center;
-  border: 1px solid rgb(255 255 255 / 35%);
+  border: 1px solid rgba(255, 255, 255, .65);
   border-radius: 50%;
   background: #fff;
   color: #172b4d;
-  font-size: 25px;
-  line-height: 1;
   cursor: pointer;
+  box-shadow: 0 5px 18px rgba(0, 0, 0, .22);
+  transition: transform .15s ease, background .15s ease;
+}
+
+.support-image-modal__close:hover {
+  transform: rotate(90deg);
+  background: #eff6ff;
+}
+
+@keyframes support-image-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes support-image-pop-in {
+  from { opacity: 0; transform: scale(.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 @media (max-width: 600px) {
+  .support-attachments {
+    gap: 8px;
+  }
+
+  .support-attachment {
+    width: min(170px, calc(50% - 4px));
+    border-radius: 11px;
+  }
+
+  .support-attachment__preview {
+    height: 112px;
+  }
+
+  .support-attachment figcaption {
+    gap: 5px;
+    padding: 7px;
+  }
+
+  .support-attachment figcaption button {
+    padding: 4px 5px;
+  }
+
   .support-image-modal {
     padding: 16px;
   }
@@ -126,5 +248,17 @@
   .support-image-modal__close {
     top: -12px;
     right: -8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-attachment,
+  .support-attachment__preview::before,
+  .support-attachment__preview::after,
+  .support-attachment__preview img,
+  .support-image-modal__dialog,
+  .support-image-modal__close {
+    animation: none;
+    transition: none;
   }
 }

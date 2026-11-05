@@ -1,6 +1,30 @@
 'use strict';
 
 const hotelModel = require('./models/hotel.model');
+const supabase = require('../../config/supabaseClient');
+
+const BANK_NAMES = {
+	VCB: 'Vietcombank',
+	HDB: 'HDBank',
+	SHB: 'SHB',
+	VIB: 'VIB',
+	TPB: 'TPBank',
+	LPB: 'LPBank',
+	EIB: 'Eximbank',
+	MSB: 'MSB',
+	OCB: 'OCB',
+	SSB: 'SeABank',
+	NAB: 'Nam A Bank',
+	BID: 'BIDV',
+	KLB: 'KienlongBank',
+	CTG: 'VietinBank',
+	VBA: 'Agribank',
+	TCB: 'Techcombank',
+	MBB: 'MB Bank',
+	VPB: 'VPBank',
+	ACB: 'ACB',
+	STB: 'Sacombank',
+};
 
 const createError = (message, statusCode) => {
 	const err = new Error(message);
@@ -42,7 +66,31 @@ const getHotel = async (hotelId, access) => {
 	});
 	if (!hotel) throw createError('Không tìm thấy khách sạn.', 404);
 	assertVendorOwnsHotel(hotel, access);
-	return hotelModel.toHotelDto(hotel);
+	const dto = hotelModel.toHotelDto(hotel);
+	const bankAccount = await hotelModel.getVerifiedBankAccount(hotelId);
+	if (!bankAccount) return dto;
+
+	const { data: systemCodes, error } = await supabase
+		.from('m_system_code')
+		.select('code_cd, code_name')
+		.eq('business_cd', 'BANK_CD');
+	if (error) {
+		console.error(`[HOTEL MANAGEMENT] ${error.code || 'DB_ERROR'}: ${error.message}`);
+		throw createError('Không thể tải thông tin tài khoản ngân hàng của khách sạn.', 500);
+	}
+	const storedBankCode = String(bankAccount.bank_cd || '').trim().toUpperCase();
+	const bankCode = (systemCodes || []).find((code) => (
+		String(code.code_cd).toUpperCase() === storedBankCode
+		|| String(code.code_name).toUpperCase() === storedBankCode
+	));
+	dto.bank_account = {
+		bank_name: BANK_NAMES[String(bankCode?.code_name || '').toUpperCase()] || 'Ngân hàng chưa xác định',
+		bank_branch: bankAccount.bank_branch || null,
+		bin_code: bankAccount.bin_code || null,
+		account_number: bankAccount.account_number,
+		account_holder: bankAccount.account_holder,
+	};
+	return dto;
 };
 
 const createHotel = async (input, access) => {

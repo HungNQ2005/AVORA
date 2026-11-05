@@ -1,6 +1,17 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import AttachmentImage from './AttachmentImage';
+import {
+  AlertTriangleIcon,
+  CheckCircleIcon,
+  HandIcon,
+  LightbulbIcon,
+  LockIcon,
+  PaperclipIcon,
+  SparklesIcon,
+  TrashIcon,
+  UserIcon,
+} from '../../../common/components/icons';
 import './supportTicketConversation.css';
 
 const MAX_FILES = 3;
@@ -34,7 +45,7 @@ const RequesterAccountDetails = ({ requester }) => {
       {requester.email && (
         <div className="support-requester-details__popover">
           <Link to={`/dashboard/users?search=${encodeURIComponent(requester.email)}`}>
-            <span>👤 Xem thông tin tài khoản</span>
+            <span><UserIcon size={16} /> Xem thông tin tài khoản</span>
           </Link>
         </div>
       )}
@@ -132,6 +143,19 @@ const SupportTicketConversation = ({
           <div className="support-message__body">
             <p>{ticket.description}</p>
           </div>
+          {!!ticket.bookings?.length && (
+            <div className="support-linked-bookings">
+              <strong>Đơn đặt phòng liên quan</strong>
+              <ul>
+                {ticket.bookings.map((booking) => (
+                  <li key={booking.booking_id}>
+                    <span>{booking.booking_code || booking.booking_id}</span>
+                    {booking.hotel_name && <small>{booking.hotel_name}</small>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {!!ticket.attachment_urls?.length && (
             <div className="support-attachments">
               {ticket.attachment_urls.map((attachment) => (
@@ -149,7 +173,7 @@ const SupportTicketConversation = ({
         {ticket.resolution_note && (
           <div className="support-resolution">
             <div className="support-resolution__header">
-              <span className="support-resolution__icon">💡</span>
+              <span className="support-resolution__icon"><LightbulbIcon size={18} /></span>
               <strong>Đề xuất giải quyết từ quản trị viên</strong>
             </div>
             <p>{ticket.resolution_note}</p>
@@ -196,7 +220,7 @@ const SupportTicketConversation = ({
           <section className="support-ai">
             <div className="support-ai__header">
               <div className="support-ai__title">
-                <span className="support-ai__icon">✨</span>
+                <span className="support-ai__icon"><SparklesIcon size={18} /></span>
                 <strong>Trợ lý AI AVORA</strong>
               </div>
               <button type="button" className="support-ai__close" onClick={() => setAiOpen(false)}>Đóng</button>
@@ -236,7 +260,7 @@ const SupportTicketConversation = ({
         <div className="support-toolbar">
           {isAdmin && ticket.ticket_status_cd === 'OPN' && !ticket.assigned_to && (
             <button type="button" className="support-button support-button--claim" onClick={onClaim}>
-              ✋ Nhận xử lý phiếu
+              <HandIcon size={16} /> Nhận xử lý phiếu
             </button>
           )}
 
@@ -256,13 +280,13 @@ const SupportTicketConversation = ({
                     disabled={!resolutionNote.trim()}
                     onClick={() => runStatusAction('request_resolution')}
                   >
-                    💡 Đề xuất giải quyết
+                    <LightbulbIcon size={16} /> Đề xuất giải quyết
                   </button>
                 </div>
               )}
               {ticket.ticket_status_cd === 'RSV' && ticket.resolved_at && (
                 <button type="button" className="support-button support-button--success" onClick={() => runStatusAction('close')}>
-                  ✔ Đóng phiếu
+                  <CheckCircleIcon size={16} /> Đóng phiếu
                 </button>
               )}
             </div>
@@ -271,10 +295,10 @@ const SupportTicketConversation = ({
           {!isAdmin && ticket.ticket_status_cd === 'RSV' && !ticket.resolved_at && (
             <div className="support-user-confirm-actions">
               <button type="button" className="support-button support-button--outline" onClick={() => runStatusAction('reject_resolution')}>
-                ❌ Chưa được giải quyết
+                <AlertTriangleIcon size={16} /> Chưa được giải quyết
               </button>
               <button type="button" className="support-button support-button--success" onClick={() => runStatusAction('confirm_resolution')}>
-                ✔ Xác nhận giải quyết
+                <CheckCircleIcon size={16} /> Xác nhận giải quyết
               </button>
             </div>
           )}
@@ -285,13 +309,13 @@ const SupportTicketConversation = ({
               className={`support-button support-button--ai ${aiOpen ? 'is-active' : ''}`}
               onClick={() => setAiOpen((open) => !open)}
             >
-              ✨ {aiOpen ? 'Đóng Trợ lý AI' : 'Hỏi Trợ lý AI'}
+              <SparklesIcon size={16} /> {aiOpen ? 'Đóng Trợ lý AI' : 'Hỏi Trợ lý AI'}
             </button>
           )}
 
           {(ticket.ticket_status_cd === 'CLS' ? isAdmin && isAssignedAdmin : !isAdmin || isAssignedAdmin) && (
             <button type="button" className="support-button support-button--danger" onClick={onDeleteTicket}>
-              🗑️ Xóa phiếu
+              <TrashIcon size={16} /> Xóa phiếu
             </button>
           )}
         </div>
@@ -300,12 +324,12 @@ const SupportTicketConversation = ({
         {!isClosed && (!isAdmin || ticket.assigned_to) && <ReplyComposer isAdmin={isAdmin} onSubmit={onReply} />}
         {!isClosed && isAdmin && !ticket.assigned_to && (
           <div className="support-closed-note-box">
-            <p className="support-closed-note">⚠️ Bạn cần bấm <strong>"Nhận xử lý phiếu"</strong> ở trên trước khi có thể gửi phản hồi.</p>
+            <p className="support-closed-note"><AlertTriangleIcon size={16} /> Bạn cần bấm <strong>"Nhận xử lý phiếu"</strong> ở trên trước khi có thể gửi phản hồi.</p>
           </div>
         )}
         {isClosed && (
           <div className="support-closed-note-box">
-            <p className="support-closed-note">🔒 Phiếu đã đóng. Không thể gửi thêm phản hồi.</p>
+            <p className="support-closed-note"><LockIcon size={16} /> Phiếu đã đóng. Không thể gửi thêm phản hồi.</p>
           </div>
         )}
       </footer>
@@ -367,7 +391,7 @@ const ReplyComposer = ({ isAdmin, onSubmit }) => {
         <div className="support-reply-form__top-bar">
           <label className="support-reply-form__internal">
             <input type="checkbox" checked={internal} onChange={(event) => setInternal(event.target.checked)} />
-            <span>🔒 Ghi chú nội bộ <small>(chỉ Quản trị viên mới xem được)</small></span>
+            <span><LockIcon size={16} /> Ghi chú nội bộ <small>(chỉ Quản trị viên mới xem được)</small></span>
           </label>
         </div>
       )}
@@ -385,9 +409,7 @@ const ReplyComposer = ({ isAdmin, onSubmit }) => {
         <div className="support-reply-form__tools">
           <label className="support-upload-btn">
             <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={updateFiles} />
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16">
-              <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
-            </svg>
+            <PaperclipIcon size={16} />
             <span>Đính kèm ảnh</span>
           </label>
           {files.length > 0 && <span className="support-file-badge">{files.length} ảnh được chọn</span>}

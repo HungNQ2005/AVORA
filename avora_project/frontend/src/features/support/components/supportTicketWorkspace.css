@@ -242,11 +242,6 @@
   padding-left: 16px;
 }
 
-.support-ticket-row:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
 .support-ticket-row__top {
   display: flex;
   align-items: flex-start;
@@ -281,8 +276,6 @@
 .support-status--OPEN, .support-status--NEW { background: #dbeafe; color: #1e40af; }
 .support-status--PENDING, .support-status--IN_PROGRESS { background: #fef3c7; color: #92400e; }
 .support-status--RESOLVED, .support-status--CLOSED { background: #dcfce7; color: #166534; }
-.support-status--DELETED { background: #fee2e2; color: #991b1b; }
-
 .support-ticket-row__meta {
   display: flex;
   align-items: center;

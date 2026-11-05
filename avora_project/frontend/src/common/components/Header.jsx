@@ -133,20 +133,6 @@ const SupportGreenIcon = () => (
   </svg>
 );
 
-const ClockIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
-const SendIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="22" y1="2" x2="11" y2="13" />
-    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-  </svg>
-);
-
 const LoginArrowIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
@@ -199,9 +185,11 @@ const Header = ({
   const displayName = user?.full_name || user?.email || '';
   const [internalTab, setInternalTab] = useState(null);
   const currentPath = location.pathname;
-  const currentTab = internalTab !== null
-    ? internalTab
-    : (currentPath.startsWith('/hotels') || currentPath === '/search'
+  const currentTab = currentPath.startsWith('/support')
+    ? 'contact'
+    : internalTab !== null
+      ? internalTab
+      : (currentPath.startsWith('/hotels') || currentPath === '/search'
       ? 'hotels'
       : (currentPath === '/watchlist' || currentPath === '/wishlist' || currentPath === '/favorites' || currentPath === '/saved'
         ? 'favorites'
@@ -329,26 +317,7 @@ const Header = ({
 
   const [showSupportToast, setShowSupportToast] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [contactForm, setContactForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
-  });
   const toastTimerRef = useRef(null);
-
-  // Sync contact form with logged-in user info
-  useEffect(() => {
-    if (user) {
-      setContactForm((prev) => ({
-        ...prev,
-        name: prev.name || user.full_name || '',
-        email: prev.email || user.email || '',
-        phone: prev.phone || user.phone || '',
-      }));
-    }
-  }, [user]);
 
   useEffect(() => {
     return () => {
@@ -380,10 +349,6 @@ const Header = ({
       e.preventDefault();
       setInternalTab(tabKey);
       setShowAboutModal(true);
-    } else if (tabKey === 'contact') {
-      e.preventDefault();
-      setInternalTab(tabKey);
-      setShowContactModal(true);
     } else if (tabKey === 'favorites') {
       navigate('/watchlist');
       return;
@@ -398,13 +363,6 @@ const Header = ({
       onNavClick(tabKey);
     }
   };
-
-  const handleContactSubmit = (e) => {
-    e.preventDefault();
-    setShowContactModal(false);
-    setContactForm({ name: '', email: '', phone: '', message: '' });
-  };
-
 
   return (
     <>
@@ -731,7 +689,7 @@ const Header = ({
 
               {/* Contact / Liên hệ */}
               <Link
-                to="/"
+                to="/support"
                 className={`avora-header__nav-item ${currentTab === 'contact' ? 'is-active' : ''}`}
                 onClick={handleAction('contact')}
               >
@@ -852,103 +810,6 @@ const Header = ({
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* Contact Form Popup Modal */}
-      {showContactModal && (
-
-        <div className="avora-modal-backdrop" onClick={() => setShowContactModal(false)}>
-          <div className="avora-contact-modal" onClick={(e) => e.stopPropagation()}>
-            {/* Header Dark Blue Section */}
-            <div className="avora-contact-modal__header">
-              <button
-                type="button"
-                className="avora-contact-modal__close"
-                onClick={() => setShowContactModal(false)}
-                aria-label="Đóng"
-              >
-                <CloseIcon />
-              </button>
-
-              <div className="avora-contact-modal__tagline">
-                <HeadsetIcon />
-                <span>HỖ TRỢ 24/7</span>
-              </div>
-
-              <h2 className="avora-contact-modal__title">Liên hệ Avora Việt Nam</h2>
-              <div className="avora-contact-modal__subtitle">
-                Hotline miễn cước: <strong>1900 8668</strong> · Email: <strong>hotro@avora.vn</strong>
-              </div>
-            </div>
-
-            {/* Form Body White Section */}
-            <form className="avora-contact-modal__body" onSubmit={handleContactSubmit}>
-              <div className="avora-contact-modal__field">
-                <label htmlFor="avora-contact-name">Họ và tên của bạn</label>
-                <input
-                  id="avora-contact-name"
-                  type="text"
-                  placeholder="Nhập họ và tên của bạn"
-                  value={contactForm.name}
-                  onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="avora-contact-modal__row">
-                <div className="avora-contact-modal__field">
-                  <label htmlFor="avora-contact-email">Email</label>
-                  <input
-                    id="avora-contact-email"
-                    type="email"
-                    placeholder="email@domain.com"
-                    value={contactForm.email}
-                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="avora-contact-modal__field">
-                  <label htmlFor="avora-contact-phone">Số điện thoại</label>
-                  <input
-                    id="avora-contact-phone"
-                    type="tel"
-                    placeholder="0912 345 678"
-                    value={contactForm.phone}
-                    onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="avora-contact-modal__field">
-                <label htmlFor="avora-contact-message">Nội dung cần hỗ trợ</label>
-                <textarea
-                  id="avora-contact-message"
-                  rows="4"
-                  placeholder="Bạn cần hỗ trợ về đặt phòng, đổi ngày lưu trú hoặc hợp tác khách sạn..."
-                  value={contactForm.message}
-                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                  required
-                />
-              </div>
-
-              {/* Footer */}
-              <div className="avora-contact-modal__footer">
-                <div className="avora-contact-modal__response-time">
-                  <ClockIcon />
-                  <span>Thời gian phản hồi &lt; 15 phút</span>
-                </div>
-
-                <button type="submit" className="avora-contact-modal__submit-btn">
-                  <span>Gửi tin nhắn</span>
-                  <SendIcon />
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

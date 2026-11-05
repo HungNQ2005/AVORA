@@ -7,7 +7,7 @@ const send = (res, status, message, data) => sendSuccess(res, status, message, d
 
 const getCategories = async (req, res, next) => {
   try {
-    return send(res, 200, 'Lấy danh mục hỗ trợ thành công.', await supportService.listCategories(req.user));
+    return send(res, 200, 'Lấy danh mục hỗ trợ thành công.', await supportService.listCategories(req.user, req.validated.query.group));
   } catch (error) {
     return next(error);
   }
@@ -23,7 +23,11 @@ const listTickets = async (req, res, next) => {
 
 const getTicket = async (req, res, next) => {
   try {
-    return send(res, 200, 'Lấy phiếu hỗ trợ thành công.', await supportService.getTicket(req.validated.params.ticketId, req.user));
+    return send(res, 200, 'Lấy phiếu hỗ trợ thành công.', await supportService.getTicket(
+      req.validated.params.ticketId,
+      req.user,
+      req.validated.query.group
+    ));
   } catch (error) {
     return next(error);
   }
@@ -121,7 +125,7 @@ const downloadAttachment = async (req, res, next) => {
 
 const streamTicketEvents = async (req, res, next) => {
   try {
-    await supportService.getTicket(req.validated.params.ticketId, req.user);
+    await supportService.getTicket(req.validated.params.ticketId, req.user, req.validated.query.group);
     const ticketId = req.validated.params.ticketId;
     res.set({
       'Content-Type': 'text/event-stream',
@@ -158,7 +162,10 @@ const chatWithAI = async (req, res, next) => {
 
 const getCounts = async (req, res, next) => {
   try {
-    return send(res, 200, 'Lấy thông báo hỗ trợ thành công.', await supportService.getSupportCounts(req.user));
+    return send(res, 200, 'Lấy thông báo hỗ trợ thành công.', await supportService.getSupportCounts(
+      req.user,
+      req.validated.query.group
+    ));
   } catch (error) {
     return next(error);
   }

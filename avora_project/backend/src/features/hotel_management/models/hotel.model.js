@@ -127,6 +127,20 @@ const getHotelById = async (hotelId, { ownerId = null, includeDeleted = false } 
   return (await addStatusNames([data]))[0];
 };
 
+const getVerifiedBankAccount = async (hotelId) => {
+  ensureClient();
+  const { data, error } = await supabase
+    .from('m_bank_account')
+    .select('bank_cd, bank_branch, bin_code, account_number, account_holder')
+    .eq('hotel_id', hotelId)
+    .eq('is_verify', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  checkQuery(error);
+  return data;
+};
+
 const createHotel = async (input) => {
   ensureClient();
   const { data, error } = await supabase
@@ -437,4 +451,4 @@ const toHotelDto = (hotel) => ({
   updated_at: hotel.updated_at,
 });
 
-module.exports = { listHotels, getHotelById, createHotel, updateHotel, approveHotel, deactivateHotel, addHotelImage, deleteHotelImage, setHotelImageThumbnail, toHotelDto };
+module.exports = { listHotels, getHotelById, getVerifiedBankAccount, createHotel, updateHotel, approveHotel, deactivateHotel, addHotelImage, deleteHotelImage, setHotelImageThumbnail, toHotelDto };
