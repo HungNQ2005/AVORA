@@ -2,6 +2,7 @@
 
 const hotelService = require('./hotel_management.service');
 const { sendSuccess } = require('../../utils/responseHelper');
+const { recordAuditLog } = require('../../utils/auditLogger');
 
 const getHotels = async (req, res, next) => {
 	try {
@@ -27,6 +28,13 @@ const createHotel = async (req, res, next) => {
 		const message = req.hotelAccess.isVendor
 			? 'Khách sạn đã được gửi để chờ phê duyệt.'
 			: 'Tạo khách sạn thành công.';
+		recordAuditLog({
+			req,
+			action_cd: '1',
+			entity_name: 'm_hotel',
+			entity_id: hotel?.hotel_id,
+			new_data: hotel,
+		});
 		return sendSuccess(res, 201, message, hotel);
 	} catch (err) {
 		return next(err);
@@ -36,6 +44,13 @@ const createHotel = async (req, res, next) => {
 const updateHotel = async (req, res, next) => {
 	try {
 		const hotel = await hotelService.updateHotel(req.validated.params.id, req.validated.body, req.hotelAccess);
+		recordAuditLog({
+			req,
+			action_cd: '2',
+			entity_name: 'm_hotel',
+			entity_id: req.validated.params.id,
+			new_data: hotel,
+		});
 		return sendSuccess(res, 200, 'Cập nhật thông tin khách sạn thành công.', hotel);
 	} catch (err) {
 		return next(err);
@@ -45,6 +60,13 @@ const updateHotel = async (req, res, next) => {
 const approveHotel = async (req, res, next) => {
 	try {
 		const hotel = await hotelService.approveHotel(req.validated.params.id, req.hotelAccess);
+		recordAuditLog({
+			req,
+			action_cd: '2',
+			entity_name: 'm_hotel',
+			entity_id: req.validated.params.id,
+			new_data: { is_active: true, status: 'APPROVED' },
+		});
 		return sendSuccess(res, 200, 'Phê duyệt khách sạn thành công.', hotel);
 	} catch (err) {
 		return next(err);
@@ -54,6 +76,13 @@ const approveHotel = async (req, res, next) => {
 const deleteHotel = async (req, res, next) => {
 	try {
 		const hotel = await hotelService.deleteHotel(req.validated.params.id, req.hotelAccess);
+		recordAuditLog({
+			req,
+			action_cd: '3',
+			entity_name: 'm_hotel',
+			entity_id: req.validated.params.id,
+			new_data: { is_deleted: true },
+		});
 		return sendSuccess(res, 200, 'Ngừng hoạt động khách sạn thành công.', hotel);
 	} catch (err) {
 		return next(err);

@@ -9,6 +9,7 @@ import AvatarContent from '../../../common/components/AvatarContent';
 import ReviewHistory from '../../reviews/components/ReviewHistory';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
+import { getScoreLabel } from '../../../utils/ratingHelper';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
 import './MyAccountPage.css';
 
@@ -923,7 +924,7 @@ const MyAccountPage = () => {
                       const starCount = Math.max(1, Math.min(5, Number(hotel.star_quality || hotel.star_rating || 4)));
                       const scoreNum = hotel.star_rating !== undefined && hotel.star_rating !== null ? Number(hotel.star_rating) : null;
                       const scoreFormatted = scoreNum !== null ? scoreNum.toFixed(1) : null;
-                      const scoreLabel = hotel.score_label || (scoreNum && scoreNum >= 9.0 ? 'Tuyệt hảo' : scoreNum && scoreNum >= 8.5 ? 'Tuyệt vời' : scoreNum && scoreNum >= 8.0 ? 'Rất tốt' : 'Tốt');
+                      const scoreLabel = getScoreLabel(scoreNum, hotel.score_label);
                       const reviewCount = Number(hotel.reviews_count || hotel.review_count || 0);
                       const price = Number(hotel.price || hotel.min_price || 0);
                       const img = hotel.thumbnail || hotel.images?.[0] || hotel.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';

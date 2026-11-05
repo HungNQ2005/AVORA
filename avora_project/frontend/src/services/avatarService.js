@@ -101,3 +101,4 @@ export const updateAvatar = async (file, userId) => {
  * Xóa ảnh đại diện (về lại ảnh chữ cái).
  */
 export const removeAvatar = () => saveAvatarUrl(null);
+

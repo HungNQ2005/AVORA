@@ -47,6 +47,10 @@ const handleWebhook = async (req, res) => {
   try {
     const result = await paymentService.processWebhook(req.body || {});
     console.log('[Payment] Webhook processed:', JSON.stringify(result));
+    if (['DUPLICATE_PAYOUT', 'AMOUNT_MISMATCH', 'INVALID_STATUS'].includes(result?.result)) {
+      // Giải ngân bất thường: cần kế toán / BM kiểm tra thủ công, KHÔNG tự động quyết toán.
+      console.warn('[Disbursement] ANOMALY cần kiểm tra thủ công:', JSON.stringify(result));
+    }
     return res.status(200).json({ success: true });
   } catch (error) {
     // 5xx để SePay tự động gửi lại webhook.

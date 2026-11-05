@@ -1,0 +1,211 @@
+.vbooking-cancel-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: vbookingScaleIn 0.2s ease-out;
+  overflow: hidden;
+}
+
+.vbooking-cancel-modal__header {
+  padding: 18px 24px;
+  background: #fef2f2;
+  border-bottom: 1px solid #fee2e2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.vbooking-cancel-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #ef4444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vbooking-cancel-modal__title {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #991b1b;
+}
+
+.vbooking-cancel-modal__sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: #7f1d1d;
+}
+
+.vbooking-cancel-modal__form {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Refund Information Box */
+.vbooking-refund-alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.vbooking-refund-alert--paid {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.vbooking-refund-alert--unpaid {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
+.vbooking-refund-alert__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: inherit;
+}
+
+.vbooking-refund-alert__body {
+  margin: 0;
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.95;
+}
+
+.vbooking-refund-amount {
+  color: #15803d;
+  font-weight: 700;
+}
+
+.vbooking-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.vbooking-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.vbooking-form-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.vbooking-char-counter {
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.vbooking-select {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  background-color: #ffffff;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vbooking-select:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.vbooking-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.vbooking-textarea:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+}
+
+.vbooking-textarea--error {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+
+.vbooking-form-error-msg {
+  font-size: 11.5px;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.vbooking-cancel-modal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.vbooking-btn {
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vbooking-btn--secondary {
+  background: #f1f5f9;
+  color: #475569;
+  border-color: #cbd5e1;
+}
+
+.vbooking-btn--secondary:hover:not(:disabled) {
+  background: #e2e8f0;
+  color: #1e293b;
+}
+
+.vbooking-btn--danger {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.vbooking-btn--danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.vbooking-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(35%);
+  pointer-events: none;
+}

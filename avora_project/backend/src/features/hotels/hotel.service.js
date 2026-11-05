@@ -91,6 +91,22 @@ const cleanCancellationDescription = (rawDesc, freeBeforeHours = 48, penaltyRate
  * - Sức chứa tối đa của 1 phòng = 5 người
  * - Không cho phép booking 6 người vào phòng này
  */
+
+/**
+ * Maps numeric review score (0-10) to Vietnamese standard rating labels.
+ */
+const getScoreLabel = (score) => {
+  const num = Number(score);
+  if (!num || num <= 0) return 'Chưa có đánh giá';
+  if (num >= 9.0) return 'Tuyệt hảo';
+  if (num >= 8.5) return 'Tuyệt vời';
+  if (num >= 8.0) return 'Rất tốt';
+  if (num >= 7.0) return 'Tốt';
+  if (num >= 6.0) return 'Hài lòng';
+  if (num >= 5.0) return 'Trung bình';
+  return 'Kém';
+};
+
 const getRoomTypeCapacity = (rt) => {
   if (!rt) return { standardBeds: 1, standardCapacity: 2, hasExtraBed: true, extraBedCapacity: 1, maxCapacity: 3 };
   const bedType = String(rt.bed_type || '').toLowerCase();
@@ -576,11 +592,7 @@ const searchHotels = async (params = {}) => {
     const bestRoomNumbers = bestPhysRooms.map((r) => r.room_number).filter(Boolean);
     const bestRoomFloors = [...new Set(bestPhysRooms.map((r) => r.floor).filter(Boolean))];
     // Determine score label
-    let scoreLabel = 'Rất tốt';
-    if (reviewStats.score >= 9.0) scoreLabel = 'Tuyệt hảo';
-    else if (reviewStats.score >= 8.5) scoreLabel = 'Tuyệt vời';
-    else if (reviewStats.score >= 8.0) scoreLabel = 'Rất tốt';
-    else if (reviewStats.score >= 7.0) scoreLabel = 'Tốt';
+    const scoreLabel = getScoreLabel(reviewStats.score);
 
     // Calculate distance to beach or center based on address / lat-lng
     const cityName = cityMap[hotel.city_id] || 'Đà Nẵng';
@@ -692,12 +704,14 @@ const searchHotels = async (params = {}) => {
       break;
     case 'popularity':
     default:
-      // Prioritize hotels with newly added/updated rooms in m_room, then rating score * reviews_count
+      // Prioritize high rating & review volume, with newest rooms as tiebreaker
       enrichedHotels.sort((a, b) => {
-        if ((b.latest_room_at || 0) !== (a.latest_room_at || 0)) {
-          return (b.latest_room_at || 0) - (a.latest_room_at || 0);
+        const popA = (Number(a.star_rating) || 0) * 100 + (Number(a.reviews_count) || 0) / 100;
+        const popB = (Number(b.star_rating) || 0) * 100 + (Number(b.reviews_count) || 0) / 100;
+        if (Math.abs(popB - popA) > 0.01) {
+          return popB - popA;
         }
-        return (b.star_rating * 100 + b.reviews_count / 100) - (a.star_rating * 100 + a.reviews_count / 100);
+        return (b.latest_room_at || 0) - (a.latest_room_at || 0);
       });
       break;
   }
@@ -1052,9 +1066,7 @@ const getHotelById = async (hotelId, options = {}) => {
     finalScore = Number(avg.toFixed(1));
   }
 
-  const scoreLabel = finalScore >= 9.0
-    ? 'Xuất sắc'
-    : (finalScore >= 8.0 ? 'Tuyệt vời' : (finalScore > 0 ? 'Rất tốt' : 'Chưa có đánh giá'));
+  const scoreLabel = getScoreLabel(finalScore);
 
   // Address assembly from DB
   const locationParts = [hotel.address, wardName, districtName, cityName].filter(Boolean);

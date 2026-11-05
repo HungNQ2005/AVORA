@@ -1,0 +1,144 @@
+/* Audit Log Management Page Styles */
+
+.audit-mgmt-page {
+  padding: 1.5rem 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-height: calc(100vh - 70px);
+}
+
+@media (max-width: 768px) {
+  .audit-mgmt-page {
+    padding: 1rem;
+    gap: 1rem;
+  }
+}
+
+/* Toast Notification */
+.audit-toast {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1.25rem;
+  border-radius: 10px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  font-size: 0.86rem;
+  font-weight: 500;
+  animation: auditToastSlideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes auditToastSlideIn {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.audit-toast--success {
+  background: #064e3b;
+  color: #ecfdf5;
+  border: 1px solid #059669;
+}
+
+.audit-toast--error {
+  background: #7f1d1d;
+  color: #fef2f2;
+  border: 1px solid #dc2626;
+}
+
+.audit-toast--info {
+  background: #0b1e3f;
+  color: #f8fafc;
+  border: 1px solid #1e3a8a;
+}
+
+.audit-toast__icon {
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.audit-toast__message {
+  line-height: 1.4;
+}
+
+/* Page Header */
+.audit-mgmt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.audit-mgmt-header__left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+/* Breadcrumb */
+.audit-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.audit-breadcrumb__sep {
+  color: #cbd5e1;
+}
+
+.audit-breadcrumb__current {
+  color: #0b1e3f;
+  font-weight: 600;
+}
+
+/* Title & Badge */
+.audit-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.audit-main-title {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #0b1e3f;
+  letter-spacing: -0.02em;
+}
+
+.audit-main-badge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Subtitle */
+.audit-subtitle {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #64748b;
+  max-width: 800px;
+  line-height: 1.5;
+}

@@ -1,0 +1,130 @@
+.vbooking-page {
+  padding: 24px 32px;
+  max-width: 1440px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1e293b;
+}
+
+@media (max-width: 768px) {
+  .vbooking-page {
+    padding: 16px;
+  }
+}
+
+/* Toast */
+.vbooking-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  z-index: 2000;
+  animation: toastSlideIn 0.25s ease-out;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.vbooking-toast--success {
+  border-left: 4px solid #10b981;
+}
+
+.vbooking-toast--error {
+  border-left: 4px solid #ef4444;
+}
+
+.vbooking-toast-icon {
+  font-weight: 800;
+  font-size: 14px;
+}
+
+.vbooking-toast-text {
+  line-height: 1.4;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Breadcrumb */
+.vbooking-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+
+.vbooking-breadcrumb__sep {
+  color: #cbd5e1;
+}
+
+.vbooking-breadcrumb__active {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+/* Header */
+.vbooking-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.vbooking-page__title-area {
+  flex: 1;
+  min-width: 320px;
+}
+
+.vbooking-page__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.vbooking-page__title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+}
+
+.vbooking-badge-tag {
+  background: #f0f7ff;
+  color: #003580;
+  border: 1px solid #bfdbfe;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.vbooking-page__subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.5;
+}
+

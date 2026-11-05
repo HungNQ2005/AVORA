@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
+import { getScoreLabel } from '../../../utils/ratingHelper';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
 import MapModal from '../../hotels/components/MapModal';
 import './FavoritesPage.css';
@@ -561,7 +562,7 @@ const FavoritesPage = () => {
                           <div className="fav-card__rating-box">
                             <div className="fav-card__rating-labels">
                               <span className="fav-card__score-label">
-                                {hotel.score_label || (Number(score) >= 9 ? 'Tuyệt hảo' : Number(score) >= 8 ? 'Tuyệt vời' : 'Rất tốt')}
+                                {getScoreLabel(score, hotel.score_label)}
                               </span>
                               <span className="fav-card__review-count">
                                 {hotel.reviews_count ? `${Number(hotel.reviews_count).toLocaleString('vi-VN')} đánh giá` : 'Chưa có đánh giá'}

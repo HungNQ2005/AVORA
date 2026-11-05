@@ -12,6 +12,8 @@ const {
 } = require('../hotels/hotel.availability');
 const { createInventorySeed } = require('./booking.inventory');
 const { getRoomTypesForHotel } = require('./booking.room-types');
+const walletService = require('../wallet/wallet.service');
+const { codeNameParser } = require('../../utils/codeNameParser');
 
 const PENDING_BOOKING_TTL_MS = 10 * 60 * 1000;
 
@@ -1519,6 +1521,11 @@ const getMyBookings = async ({
             : refundStatusCodeName === 'PND'
               ? 'Chờ xử lý hoàn tiền'
               : null;
+    let cancelReason = refund?.reason || '';
+    if (!cancelReason && b.special_request) {
+      const match = b.special_request.match(/\[Lý do khách sạn hủy:\s*(.+?)\]/);
+      if (match) cancelReason = match[1];
+    }
 
     // Coupon strictly from booking's linked m_coupon (null if booking did not use a coupon)
     const couponData = b.m_coupon || null;
@@ -1578,6 +1585,7 @@ const getMyBookings = async ({
       guest_name: b.guest_name || '',
       guest_phone: b.guest_phone || '',
       special_request: b.special_request || '',
+      cancellation_reason: cancelReason,
       booking_status_cd: b.booking_status_cd,
       status_code: statusInfo.status_code,
       status_code_name: statusInfo.status_code_name,
@@ -2008,9 +2016,54 @@ const changeBookingDates = async (
 /**
  * Cancel a booking using the configured cancellation status, restore inventory, and record refund request based on policy.
  */
+/**
+ * Fetch supported banks for refund bank account selection.
+ */
+const getSupportedBanks = async () => {
+  try {
+    return await walletService.getSupportedBanks();
+  } catch (err) {
+    console.warn('[Booking] getSupportedBanks via walletService failed, falling back to m_system_code query:', err.message);
+    const { data, error } = await supabase
+      .from('m_system_code')
+      .select('code_cd, code_name, sort_no')
+      .eq('business_cd', 'BANK_CD')
+      .order('sort_no', { ascending: true });
+
+    if (error) {
+      throw createError(`Unable to load supported banks: ${error.message}`, 500);
+    }
+
+    return (data || []).map((bank) => {
+      const parsed = codeNameParser(bank.code_name);
+      return {
+        bank_cd: bank.code_cd,
+        code_cd: bank.code_cd,
+        code_name: bank.code_name,
+        code: bank.code_name,
+        name: parsed !== bank.code_name ? parsed : bank.code_name,
+        short_name: parsed || bank.code_name,
+        bin: null,
+        bin_code: null,
+        logo: null,
+        logo_url: null,
+        sort_no: bank.sort_no,
+      };
+    });
+  }
+};
+
 const cancelBooking = async (
   bookingId,
-  { reason = 'Khách yêu cầu hủy phòng', vendorCancellation = false } = {},
+  {
+    reason = 'Khách yêu cầu hủy phòng',
+    vendorCancellation = false,
+    bank_name = '',
+    bank_bin = '',
+    bank_cd = '',
+    account_number = '',
+    account_holder = '',
+  } = {},
   currentUser
 ) => {
   ensureClient();
@@ -2073,6 +2126,7 @@ const cancelBooking = async (
   }
 
   // Calculate refund amount according to m_cancellation_policy and applied_penalty_rate
+  const isPaid = hasSuccessfulPayment(booking);
   const policy = booking.m_cancellation_policy || null;
   const freeCancelHours = policy?.free_cancel_before_hours != null ? Number(policy.free_cancel_before_hours) : null;
   const penaltyRate =
@@ -2092,25 +2146,66 @@ const cancelBooking = async (
 
   const appliedPenalty = isVendorCancellation || isWithinFreeWindow ? 0 : penaltyRate;
   const refundPercent = Math.max(0, 100 - appliedPenalty);
-  const calculatedRefundAmount = Math.round((Number(booking.total_amount || 0) * refundPercent) / 100);
+  const calculatedRefundAmount = isPaid
+    ? Math.round((Number(booking.total_amount || 0) * refundPercent) / 100)
+    : 0;
 
   const paymentTxns = Array.isArray(booking.t_payment_transaction) ? booking.t_payment_transaction : [];
   const latestPayment = paymentTxns[0] || null;
   const refundStatusCd = sysCodes.getCodeCd('REFUND_STS', 'PND');
-  const refundRef = `REF-${bookingId.substring(0, 8).toUpperCase()}`;
+  const refundRef = `REF-${bank_bin ? `${bank_bin}-` : ''}${bookingId.substring(0, 8).toUpperCase()}`;
 
-  const { data: refundRecord, error: refundInsertError } = await supabase
-    .from('t_refund_request')
-    .insert({
-      transaction_id: latestPayment?.transaction_id || null,
-      booking_id: bookingId,
-      refund_amount: calculatedRefundAmount,
-      refund_status_cd: refundStatusCd,
-      gateway_refund_ref: refundRef,
-      reason: `${reason}${appliedPenalty > 0 ? ` (Áp dụng phí hủy ${appliedPenalty}% theo chính sách khách sạn)` : ' (Hủy trong thời hạn miễn phí)'}`,
-    })
-    .select('*')
-    .maybeSingle();
+  let refundRecord = null;
+  let refundInsertError = null;
+
+  if (isPaid && calculatedRefundAmount > 0) {
+    let cleanBankName = String(bank_name || '').trim();
+    if (!cleanBankName && bank_cd) {
+      const { data: bankSysCode } = await supabase
+        .from('m_system_code')
+        .select('code_name')
+        .eq('business_cd', 'BANK_CD')
+        .eq('code_cd', String(bank_cd))
+        .maybeSingle();
+      if (bankSysCode?.code_name) {
+        cleanBankName = codeNameParser(bankSysCode.code_name) || bankSysCode.code_name;
+      }
+    }
+
+    const cleanAccNum = String(account_number || '').trim();
+    const cleanHolder = String(account_holder || '').trim().toUpperCase();
+    const noteParts = [
+      `Lý do: ${reason}`,
+      cleanBankName ? `Hoàn tiền về: ${cleanBankName}${bank_bin ? ` (Mã BIN: ${bank_bin})` : ''}` : null,
+      bank_cd ? `Mã ngân hàng (System Code): ${bank_cd}` : null,
+      cleanAccNum ? `Số TK: ${cleanAccNum}` : null,
+      cleanHolder ? `Chủ TK: ${cleanHolder}` : null,
+      appliedPenalty > 0 ? `Áp dụng phí hủy ${appliedPenalty}% theo chính sách khách sạn` : 'Hủy trong thời hạn miễn phí (Hoàn 100%)',
+    ].filter(Boolean);
+
+    const { data: insertedRefund, error } = await supabase
+      .from('t_refund_request')
+      .insert({
+        transaction_id: latestPayment?.transaction_id || null,
+        booking_id: bookingId,
+        refund_amount: calculatedRefundAmount,
+        refund_status_cd: refundStatusCd,
+        gateway_refund_ref: refundRef,
+        reason: noteParts.join(' • '),
+      })
+      .select('*')
+      .maybeSingle();
+
+    refundRecord = insertedRefund;
+    refundInsertError = error;
+  }
+
+  const returnMessage =
+    isPaid && calculatedRefundAmount > 0
+      ? appliedPenalty > 0
+        ? `Đã gửi yêu cầu hủy đặt phòng. Áp dụng phí phạt ${appliedPenalty}% theo chính sách hủy, số tiền hoàn dự kiến: ${calculatedRefundAmount.toLocaleString('vi-VN')} đ.`
+        : `Đã gửi yêu cầu hủy đặt phòng và hoàn tiền ${calculatedRefundAmount.toLocaleString('vi-VN')} đ thành công trong thời hạn miễn phí hủy.`
+      : 'Đã hủy đặt phòng thành công.';
 
   if (refundInsertError) {
     const rollbackErrors = [];
@@ -2139,15 +2234,10 @@ const cancelBooking = async (
     booking_id: bookingId,
     booking_status_cd: cancelledStatusCd,
     status_code_name: 'CAN',
-    message:
-      appliedPenalty > 0
-        ? `Đã hủy đặt phòng. Áp dụng phí phạt ${appliedPenalty}% theo chính sách hủy, số tiền hoàn dự kiến: ${calculatedRefundAmount.toLocaleString('vi-VN')} đ.`
-        : 'Đã hủy đặt phòng thành công trong thời hạn miễn phí hủy.',
-    refund: refundRecord || {
-      gateway_refund_ref: refundRef,
-      refund_amount: calculatedRefundAmount,
-      refund_status_cd: refundStatusCd,
-    },
+    message: returnMessage,
+    is_paid: isPaid,
+    refund_amount: calculatedRefundAmount,
+    refund: refundRecord,
   };
 };
 
@@ -2287,6 +2377,7 @@ module.exports = {
   updateBookingGuestInfo,
   changeBookingDates,
   cancelBooking,
+  getSupportedBanks,
   getBookingVoucher,
   getBookingInvoice,
   adjustInventoryForStay,

@@ -16,7 +16,7 @@ const slugify = (text) =>
     .slice(0, 40) || 'khach_san';
 
 export const getStatisticsExcelFilename = (overview) =>
-  `AVORA_Thong_ke_${slugify(overview.hotel?.name)}_${overview.range.from.replace(/-/g, '')}_${overview.range.to.replace(/-/g, '')}.xlsx`;
+  `AVORA_Thong_ke_${slugify(overview?.hotel?.name)}_${(overview?.range?.from || '').replace(/-/g, '')}_${(overview?.range?.to || '').replace(/-/g, '')}.xlsx`;
 
 /**
  * Export hotel statistics (summary + 3 breakdown tables) to an .xlsx file.
@@ -57,8 +57,8 @@ export const exportStatisticsToExcel = async (overview) => {
     const pad = (n) => String(n).padStart(2, '0');
     title(1, 'AVORA HOTELS & RESORTS', 10, GOLD);
     title(2, 'BÁO CÁO THỐNG KÊ KHÁCH SẠN', 16, NAVY);
-    title(3, `Khách sạn: ${overview.hotel.name}`, 11, 'FF0F172A');
-    title(4, `Thời gian thống kê: ${formatDisplayDate(overview.range.from)} - ${formatDisplayDate(overview.range.to)}`, 10, 'FF475569', false);
+    title(3, `Khách sạn: ${overview.hotel?.name || 'Khách sạn'}`, 11, 'FF0F172A');
+    title(4, `Thời gian thống kê: ${formatDisplayDate(overview.range?.from)} - ${formatDisplayDate(overview.range?.to)}`, 10, 'FF475569', false);
     title(5, `Thời gian xuất báo cáo: ${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}`, 9.5, 'FF475569', false);
 
     let row = 7;
@@ -103,8 +103,12 @@ export const exportStatisticsToExcel = async (overview) => {
     // Summary
     const s = overview.summary;
     const cmp = overview.comparison;
+    const periodType = overview.period_type || 'custom';
+    const compHeader = periodType === 'month' ? 'Tháng trước' : (periodType === 'year' ? 'Năm trước' : 'Kỳ trước');
+    const curHeader = periodType === 'month' ? 'Tháng này' : (periodType === 'year' ? 'Năm này' : 'Kỳ này');
+    const compTitle = periodType === 'month' ? 'THÁNG TRƯỚC' : (periodType === 'year' ? 'NĂM TRƯỚC' : 'KỲ TRƯỚC');
     if (cmp) {
-      sectionHeader('1. TỔNG QUAN & SO SÁNH KỲ TRƯỚC', ['Chỉ số', 'Kỳ này', 'Kỳ trước', 'Tăng/Giảm (%)']);
+      sectionHeader(`1. TỔNG QUAN & SO SÁNH ${compTitle}`, ['Chỉ số', curHeader, compHeader, 'Tăng/Giảm (%)']);
       const fmtPct = (val) => (val > 0 ? `+${val}%` : `${val}%`);
       dataRow(['Tổng số đơn đặt phòng', s.total_bookings, cmp.total_bookings?.previous ?? 0, fmtPct(cmp.total_bookings?.change_pct ?? 0)], [null, '#,##0', '#,##0', null]);
       dataRow(['Số đơn hợp lệ (không hủy)', s.valid_bookings, cmp.valid_bookings?.previous ?? 0, fmtPct(cmp.valid_bookings?.change_pct ?? 0)], [null, '#,##0', '#,##0', null]);
@@ -125,22 +129,31 @@ export const exportStatisticsToExcel = async (overview) => {
 
     // By status
     sectionHeader('2. ĐƠN ĐẶT PHÒNG THEO TRẠNG THÁI', ['Trạng thái', 'Số đơn', 'Tổng giá trị (VND)']);
-    if (overview.by_status.length === 0) emptyRow();
-    overview.by_status.forEach((r) => dataRow([getStatusLabel(r.code), r.count, r.amount], [null, '#,##0', '#,##0']));
+    if (!overview.by_status || overview.by_status.length === 0) {
+      emptyRow();
+    } else {
+      overview.by_status.forEach((r) => dataRow([getStatusLabel(r.code), r.count, r.amount], [null, '#,##0', '#,##0']));
+    }
     row += 1;
 
     // By room type
     sectionHeader('3. SỐ PHÒNG ĐẶT THEO LOẠI PHÒNG', ['Loại phòng', 'Số phòng đặt']);
-    if (overview.by_room_type.length === 0) emptyRow();
-    overview.by_room_type.forEach((r) => dataRow([r.name, r.quantity], [null, '#,##0']));
+    if (!overview.by_room_type || overview.by_room_type.length === 0) {
+      emptyRow();
+    } else {
+      overview.by_room_type.forEach((r) => dataRow([r.name, r.quantity], [null, '#,##0']));
+    }
     row += 1;
 
     // Time series
-    const series = buildTimeSeries(overview.by_day, overview.range.days);
-    const byMonth = overview.range.days > 62;
+    const series = buildTimeSeries(overview.by_day, overview.range?.days, overview.range?.from, overview.range?.to);
+    const byMonth = (overview.range?.days || 0) > 62;
     sectionHeader(`4. ĐƠN & DOANH THU THEO ${byMonth ? 'THÁNG' : 'NGÀY'}`, [byMonth ? 'Tháng' : 'Ngày', 'Số đơn', 'Doanh thu (VND)']);
-    if (series.length === 0) emptyRow();
-    series.forEach((r) => dataRow([r.label, r.bookings, r.revenue], [null, '#,##0', '#,##0']));
+    if (!series || series.length === 0) {
+      emptyRow();
+    } else {
+      series.forEach((r) => dataRow([r.label, r.bookings, r.revenue], [null, '#,##0', '#,##0']));
+    }
 
     const buffer = await workbook.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
