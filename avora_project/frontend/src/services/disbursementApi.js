@@ -85,6 +85,34 @@ export const rejectDisbursement = async (id, payload = {}) => {
 };
 
 /**
+ * Business Manager: get transfer info + VietQR to pay a vendor (request must be APR / Pending Payment)
+ */
+export const fetchDisbursementPaymentQr = async (id, { signal } = {}) => {
+  const response = await authenticatedFetch(API_ENDPOINTS.DISBURSEMENT_PAYMENT_QR(id), { signal });
+  const json = await response.json();
+
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể tạo mã QR chi trả.');
+  }
+
+  return json.data;
+};
+
+/**
+ * Business Manager: poll payout status (SePay webhook flips APR -> CMP automatically)
+ */
+export const fetchDisbursementPaymentStatus = async (id, { signal } = {}) => {
+  const response = await authenticatedFetch(API_ENDPOINTS.DISBURSEMENT_PAYMENT_STATUS(id), { signal });
+  const json = await response.json();
+
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể kiểm tra trạng thái chi trả.');
+  }
+
+  return json.data;
+};
+
+/**
  * Vendor: fetch wallet overview and bank accounts
  */
 export const fetchVendorDisbursementOverview = async (hotelId = null) => {

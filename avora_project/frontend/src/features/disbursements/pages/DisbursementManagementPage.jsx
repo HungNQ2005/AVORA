@@ -149,6 +149,12 @@ const DisbursementManagementPage = () => {
     }
   };
 
+  // Action: SePay (hoặc xác nhận thủ công) đã ghi nhận chi trả -> làm mới danh sách, giữ modal mở để hiển thị kết quả
+  const handleAutoSettled = () => {
+    showToast('Giải ngân thành công! Trạng thái yêu cầu đã được cập nhật.', 'success');
+    loadData(true);
+  };
+
   // Action: Open Reject Modal (Reject: PND -> REJ, refunding balance)
   const handleOpenRejectModal = (request) => {
     setRejectRequest(request);
@@ -581,6 +587,7 @@ const DisbursementManagementPage = () => {
           setSettleRequest(null);
         }}
         onConfirm={handleConfirmSettle}
+        onSettled={handleAutoSettled}
         request={settleRequest}
         loading={settleLoading}
       />

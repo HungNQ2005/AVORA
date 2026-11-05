@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 const supabase = require('../../config/supabaseClient');
 const env = require('../../config/env');
+const disbursementService = require('../disbursements/disbursement.service');
 
 const PAYMENT_HOLD_MS = 10 * 60 * 1000;
 const PAYMENT_CODE_PREFIX = 'AVORA';
@@ -250,8 +251,14 @@ const verifyWebhookRequest = (req) => {
 const processWebhook = async (payload) => {
   ensureClient();
 
-  if (String(payload?.transferType || 'in').toLowerCase() !== 'in') {
-    return { result: 'IGNORED_OUTGOING' };
+  const transferType = String(payload?.transferType || 'in').toLowerCase();
+
+  // Tiền RA (công ty chi giải ngân cho Vendor, nội dung AVRWDxxxxxxxx) -> luồng giải ngân.
+  if (transferType === 'out') {
+    return disbursementService.processSepayPayout(payload);
+  }
+  if (transferType !== 'in') {
+    return { result: 'IGNORED_UNKNOWN_TYPE' };
   }
 
   const match = String(payload?.content || payload?.description || '').match(PAYMENT_CODE_REGEX);
