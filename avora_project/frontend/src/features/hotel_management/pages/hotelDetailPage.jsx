@@ -6,6 +6,7 @@ import NotFoundNotice from '../../../common/components/NotFoundNotice';
 import LocationSelect from '../components/locationSelect';
 import HotelThumb from '../components/hotelThumb';
 import HotelImageManager from '../components/hotelImageManager';
+import HotelBank from '../components/hotelBank';
 import HotelMap from '../components/hotelMap';
 import CoordinatePickerModal from '../components/coordinatePickerModal';
 import { useAuth } from '../../../context/AuthContext';
@@ -294,6 +295,7 @@ const HotelDetailPage = () => {
       </form>
 
       <HotelImageManager hotelId={hotel.hotel_id} images={images} onImagesChange={setImages} canManage={isVendor} />
+      {(isVendor || canApprove) && <HotelBank bankAccount={hotel.bank_account || null} />}
 
       {toast && <div className="hotel-toast" role="status">{toast}</div>}
       {coordinatePickerOpen && (
@@ -319,4 +321,3 @@ const HotelDetailPage = () => {
 };
 
 export default HotelDetailPage;
-

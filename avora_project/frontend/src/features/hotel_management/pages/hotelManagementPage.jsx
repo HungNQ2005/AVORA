@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import HotelCard from '../components/hotelCard';
+import HotelImageManager from '../components/hotelImageManager';
 import EditHotelPopup from '../components/editHotelPopup';
 import Dialog from '../../../common/components/Dialog';
 import { useAuth } from '../../../context/AuthContext';
@@ -19,6 +20,7 @@ const HotelManagementPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [editingHotel, setEditingHotel] = useState(null);
+	const [imageHotel, setImageHotel] = useState(null);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState(null);
 	const [deleteError, setDeleteError] = useState('');
@@ -119,6 +121,16 @@ const HotelManagementPage = () => {
 		setToast('Đã lưu thông tin khách sạn.');
 	};
 
+	const handleImagesChange = (images) => {
+		const selectedHotelId = imageHotel?.hotel_id;
+		if (!selectedHotelId) return;
+		const thumbnail = images.find((image) => image.is_thumbnail) || images[0] || null;
+		setImageHotel((current) => current ? { ...current, images } : current);
+		setHotels((current) => current.map((hotel) => hotel.hotel_id === selectedHotelId
+			? { ...hotel, images, thumbnail_url: thumbnail?.image_url || null }
+			: hotel));
+	};
+
 	const handleDelete = async () => {
 		setDeleteError('');
 		try {
@@ -174,6 +186,20 @@ const HotelManagementPage = () => {
 			</div>
 
 			{error && <div className="hotel-notice hotel-notice--error" role="alert">{error}</div>}
+			{imageHotel && isVendor && (
+				<section className="hotel-management__images" aria-label={`Hình ảnh ${imageHotel.name}`}>
+					<div className="hotel-management__images-header">
+						<div><p>THƯ VIỆN HÌNH ẢNH</p><h2>{imageHotel.name}</h2></div>
+						<button type="button" aria-label="Đóng quản lý hình ảnh" onClick={() => setImageHotel(null)}>Đóng</button>
+					</div>
+					<HotelImageManager
+						hotelId={imageHotel.hotel_id}
+						images={imageHotel.images || []}
+						onImagesChange={handleImagesChange}
+						canManage={isVendor}
+					/>
+				</section>
+			)}
 			{loading ? (
 				<div className="hotel-state" role="status"><span className="hotel-spinner" />Đang tải dữ liệu khách sạn</div>
 			) : hotels.length ? (
@@ -186,6 +212,7 @@ const HotelManagementPage = () => {
 							isVendor={isVendor}
 							canEdit={isVendor}
 							onEdit={() => setEditingHotel(hotel)}
+							onManageImages={() => setImageHotel(hotel)}
 							onDelete={() => handleDeleteRequest(hotel)}
 							onApprove={() => handleApprove(hotel)}
 							onReactivate={() => handleReactivate(hotel)}

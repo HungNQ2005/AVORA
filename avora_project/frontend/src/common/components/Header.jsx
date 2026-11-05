@@ -4,6 +4,8 @@ import { useAuth } from '../../context/AuthContext';
 import { codeNameParser } from '../../utils/codeNameParser';
 import AvatarContent from './AvatarContent';
 import { getSavedFavorites } from '../../utils/favoritesStorage';
+import { getReviewRemovalNotifications } from '../../services/reviewApi';
+import { getSupportCounts } from '../../services/supportApi';
 import './Header.css';
 
 /* Custom SVG Icons matching the reference UI */
@@ -97,6 +99,13 @@ const CloseIcon = () => (
   </svg>
 );
 
+const BellIcon = () => (
+  <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+    <path d="M10 21h4" />
+  </svg>
+);
+
 const FlagIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#003580" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
@@ -121,20 +130,6 @@ const TagIcon = () => (
 const SupportGreenIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M3 14h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7a9 9 0 0 1 18 0v7a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3" />
-  </svg>
-);
-
-const ClockIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="10" />
-    <polyline points="12 6 12 12 16 14" />
-  </svg>
-);
-
-const SendIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="22" y1="2" x2="11" y2="13" />
-    <polygon points="22 2 15 22 11 13 2 9 22 2" />
   </svg>
 );
 
@@ -175,17 +170,26 @@ const Header = ({
   const headerRef = useRef(null);
   const userMenuRef = useRef(null);
   const accountDropdownRef = useRef(null);
+  const notificationRef = useRef(null);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [notificationState, setNotificationState] = useState({ userId: null, items: [], error: '' });
+  const [supportUnreadCount, setSupportUnreadCount] = useState(0);
+  const notifications = notificationState.userId === user?.user_id ? notificationState.items : [];
+  const notificationError = notificationState.userId === user?.user_id ? notificationState.error : '';
+  const notificationLoading = Boolean(user?.user_id && notificationState.userId !== user.user_id && !notificationError);
   const role = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
   const canManageHotels = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'BMR', 'BUSINESS_MANAGER', 'VEN', 'VENDOR'].includes(role);
   const displayName = user?.full_name || user?.email || '';
   const [internalTab, setInternalTab] = useState(null);
   const currentPath = location.pathname;
-  const currentTab = internalTab !== null
-    ? internalTab
-    : (currentPath.startsWith('/hotels') || currentPath === '/search'
+  const currentTab = currentPath.startsWith('/support')
+    ? 'contact'
+    : internalTab !== null
+      ? internalTab
+      : (currentPath.startsWith('/hotels') || currentPath === '/search'
       ? 'hotels'
       : (currentPath === '/watchlist' || currentPath === '/wishlist' || currentPath === '/favorites' || currentPath === '/saved'
         ? 'favorites'
@@ -222,10 +226,64 @@ const Header = ({
       if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target)) {
         setIsAccountDropdownOpen(false);
       }
+      if (notificationRef.current && !notificationRef.current.contains(e.target)) {
+        setIsNotificationOpen(false);
+      }
+    };
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') setIsNotificationOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, []);
+
+  useEffect(() => {
+    const userId = user?.user_id;
+    if (!userId) return undefined;
+
+    let active = true;
+    const loadNotifications = async () => {
+      try {
+        const result = await getReviewRemovalNotifications();
+        if (!active) return;
+        setNotificationState({ userId, items: Array.isArray(result) ? result : [], error: '' });
+      } catch (error) {
+        if (active) setNotificationState({ userId, items: [], error: error.message || 'Không thể tải thông báo.' });
+      }
+    };
+
+    loadNotifications();
+    const refreshTimer = window.setInterval(() => loadNotifications(), 60000);
+    const handleFocus = () => loadNotifications();
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      active = false;
+      window.clearInterval(refreshTimer);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.user_id]);
+
+  useEffect(() => {
+    if (!user?.user_id || !['CUS', 'BMR'].includes(role)) return undefined;
+    let active = true;
+    const refreshCount = () => {
+      getSupportCounts()
+        .then((counts) => {
+          if (active) setSupportUnreadCount(Number(counts?.unread || 0));
+        })
+        .catch((error) => console.error('Could not load header support unread count:', error));
+    };
+    refreshCount();
+    const interval = window.setInterval(refreshCount, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [role, user?.user_id]);
 
   const userRoleDisplayName = codeNameParser(user?.role_code_name);
 
@@ -259,26 +317,7 @@ const Header = ({
 
   const [showSupportToast, setShowSupportToast] = useState(false);
   const [showAboutModal, setShowAboutModal] = useState(false);
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [contactForm, setContactForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
-  });
   const toastTimerRef = useRef(null);
-
-  // Sync contact form with logged-in user info
-  useEffect(() => {
-    if (user) {
-      setContactForm((prev) => ({
-        ...prev,
-        name: prev.name || user.full_name || '',
-        email: prev.email || user.email || '',
-        phone: prev.phone || user.phone || '',
-      }));
-    }
-  }, [user]);
 
   useEffect(() => {
     return () => {
@@ -310,10 +349,6 @@ const Header = ({
       e.preventDefault();
       setInternalTab(tabKey);
       setShowAboutModal(true);
-    } else if (tabKey === 'contact') {
-      e.preventDefault();
-      setInternalTab(tabKey);
-      setShowContactModal(true);
     } else if (tabKey === 'favorites') {
       navigate('/watchlist');
       return;
@@ -328,13 +363,6 @@ const Header = ({
       onNavClick(tabKey);
     }
   };
-
-  const handleContactSubmit = (e) => {
-    e.preventDefault();
-    setShowContactModal(false);
-    setContactForm({ name: '', email: '', phone: '', message: '' });
-  };
-
 
   return (
     <>
@@ -376,7 +404,63 @@ const Header = ({
                 </span>
               </button>
 
-              {/* WatchList / Saved */}
+              {user && (
+                <div className="avora-header__notification" ref={notificationRef}>
+                  <button
+                    type="button"
+                    className={`avora-header__notification-btn ${isNotificationOpen ? 'is-active' : ''}`}
+                    aria-label={`Thông báo${notifications.length ? `, ${notifications.length} thông báo` : ''}`}
+                    aria-expanded={isNotificationOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => setIsNotificationOpen((open) => !open)}
+                  >
+                    <BellIcon />
+                    <span>Thông báo</span>
+                    {notifications.length > 0 && <span className="avora-header__notification-count">{notifications.length > 99 ? '99+' : notifications.length}</span>}
+                  </button>
+                  {isNotificationOpen && (
+                    <section className="avora-header__notification-panel" role="dialog" aria-label="Thông báo của bạn">
+                      <header className="avora-header__notification-header">
+                        <div><h2>Thông báo</h2><span>{notifications.length} mục</span></div>
+                        <button type="button" onClick={() => setIsNotificationOpen(false)} aria-label="Đóng thông báo"><CloseIcon /></button>
+                      </header>
+                      {notificationLoading ? (
+                        <p className="avora-header__notification-state" role="status">Đang tải thông báo...</p>
+                      ) : notificationError ? (
+                        <p className="avora-header__notification-error" role="alert">{notificationError}</p>
+                      ) : notifications.length ? (
+                        <div className="avora-header__notification-list">
+                          {notifications.map((notification) => (
+                            <button
+                              type="button"
+                              className="avora-header__notification-item"
+                              key={notification.notification_id}
+                              onClick={() => {
+                                setIsNotificationOpen(false);
+                                if (notification.hotel_id) navigate(`/hotels/${notification.hotel_id}`);
+                              }}
+                              disabled={!notification.hotel_id}
+                            >
+                              <span className="avora-header__notification-dot" aria-hidden="true" />
+                              <span className="avora-header__notification-copy">
+                                <strong>Đánh giá đã được gỡ</strong>
+                                <span>{notification.hotel_name}</span>
+                                <span>Lý do: {notification.reason}</span>
+                                {notification.comment && <span className="avora-header__notification-quote">“{notification.comment}”</span>}
+                                <time dateTime={notification.created_at}>{notification.created_at ? new Date(notification.created_at).toLocaleString('vi-VN') : ''}</time>
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="avora-header__notification-state">Bạn chưa có thông báo mới.</p>
+                      )}
+                    </section>
+                  )}
+                </div>
+              )}
+
+              {/* Favorites / Saved (Default: like Contact button, Active: default state of My Bookings) */}
               <button
                 type="button"
                 className={`avora-header__saved-btn ${(currentTab === 'favorites' || currentPath === '/watchlist' || currentPath === '/wishlist' || currentPath === '/favorites' || currentPath === '/saved' || (location.pathname === '/myaccount' && location.search.includes('tab=favorites'))) ? 'is-active' : ''}`}
@@ -436,6 +520,9 @@ const Header = ({
                         fallback={(displayName.charAt(0) || 'U').toUpperCase()}
                         alt={displayName}
                       />
+                      {supportUnreadCount > 0 && ['CUS', 'BMR'].includes(role) && (
+                        <span className="avora-header__support-unread-dot" aria-label="Có cập nhật phiếu hỗ trợ chưa đọc" title="Có cập nhật phiếu hỗ trợ chưa đọc" />
+                      )}
                     </div>
                     <span className="avora-header__user-name">{displayName}</span>
                     <ChevronDownIcon />
@@ -602,7 +689,7 @@ const Header = ({
 
               {/* Contact / Liên hệ */}
               <Link
-                to="/"
+                to="/support"
                 className={`avora-header__nav-item ${currentTab === 'contact' ? 'is-active' : ''}`}
                 onClick={handleAction('contact')}
               >
@@ -723,103 +810,6 @@ const Header = ({
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* Contact Form Popup Modal */}
-      {showContactModal && (
-
-        <div className="avora-modal-backdrop" onClick={() => setShowContactModal(false)}>
-          <div className="avora-contact-modal" onClick={(e) => e.stopPropagation()}>
-            {/* Header Dark Blue Section */}
-            <div className="avora-contact-modal__header">
-              <button
-                type="button"
-                className="avora-contact-modal__close"
-                onClick={() => setShowContactModal(false)}
-                aria-label="Đóng"
-              >
-                <CloseIcon />
-              </button>
-
-              <div className="avora-contact-modal__tagline">
-                <HeadsetIcon />
-                <span>HỖ TRỢ 24/7</span>
-              </div>
-
-              <h2 className="avora-contact-modal__title">Liên hệ Avora Việt Nam</h2>
-              <div className="avora-contact-modal__subtitle">
-                Hotline miễn cước: <strong>1900 8668</strong> · Email: <strong>hotro@avora.vn</strong>
-              </div>
-            </div>
-
-            {/* Form Body White Section */}
-            <form className="avora-contact-modal__body" onSubmit={handleContactSubmit}>
-              <div className="avora-contact-modal__field">
-                <label htmlFor="avora-contact-name">Họ và tên của bạn</label>
-                <input
-                  id="avora-contact-name"
-                  type="text"
-                  placeholder="Nhập họ và tên của bạn"
-                  value={contactForm.name}
-                  onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                  required
-                />
-              </div>
-
-              <div className="avora-contact-modal__row">
-                <div className="avora-contact-modal__field">
-                  <label htmlFor="avora-contact-email">Email</label>
-                  <input
-                    id="avora-contact-email"
-                    type="email"
-                    placeholder="email@domain.com"
-                    value={contactForm.email}
-                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="avora-contact-modal__field">
-                  <label htmlFor="avora-contact-phone">Số điện thoại</label>
-                  <input
-                    id="avora-contact-phone"
-                    type="tel"
-                    placeholder="0912 345 678"
-                    value={contactForm.phone}
-                    onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="avora-contact-modal__field">
-                <label htmlFor="avora-contact-message">Nội dung cần hỗ trợ</label>
-                <textarea
-                  id="avora-contact-message"
-                  rows="4"
-                  placeholder="Bạn cần hỗ trợ về đặt phòng, đổi ngày lưu trú hoặc hợp tác khách sạn..."
-                  value={contactForm.message}
-                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                  required
-                />
-              </div>
-
-              {/* Footer */}
-              <div className="avora-contact-modal__footer">
-                <div className="avora-contact-modal__response-time">
-                  <ClockIcon />
-                  <span>Thời gian phản hồi &lt; 15 phút</span>
-                </div>
-
-                <button type="submit" className="avora-contact-modal__submit-btn">
-                  <span>Gửi tin nhắn</span>
-                  <SendIcon />
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}

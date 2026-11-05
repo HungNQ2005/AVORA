@@ -5,6 +5,7 @@ import {
   CheckCircleIcon,
   MapPinIcon,
   FolioInvoiceIcon,
+  StarIcon,
   VoucherIcon,
 } from './BookingIcons';
 import { formatVnd, parseIsoToDate } from './bookingCardHelpers';
@@ -17,6 +18,7 @@ const CompletedBookingCard = ({
   onRebook,
   onOpenInvoice,
   onOpenVoucher,
+  onOpenReview,
 }) => {
   return (
     <div className="my-bookings-compact-card">
@@ -98,6 +100,17 @@ const CompletedBookingCard = ({
           <FolioInvoiceIcon width="13" height="13" />
           <span>Xem hóa đơn VAT</span>
         </button>
+
+        {['2', 'CFM'].includes(String(booking.booking_status_cd ?? '').trim().toUpperCase()) && onOpenReview && (
+          <button
+            type="button"
+            className="my-bookings-compact-btn-secondary my-bookings-review-button"
+            onClick={() => onOpenReview(booking)}
+          >
+            <StarIcon width="13" height="13" />
+            <span>Đánh giá</span>
+          </button>
+        )}
 
         <span
           className="my-bookings-compact-link"

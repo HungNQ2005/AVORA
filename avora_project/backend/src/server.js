@@ -17,6 +17,7 @@ const facilityRoute = require('./features/facilities/facility.route');
 const couponRoute = require('./features/coupons/coupon.route');
 const userRoute = require('./features/users/user.route');
 const chatbotRoute = require("./features/chatbot/chatbot.route");
+const reviewRoute = require('./features/review/review.route');
 const statisticsRoute = require("./features/statistics/statistics.route");
 const refundPolicyRoute = require("./features/refund_policies/refund_policy.route");
 const commissionPolicyRoute = require("./features/commission_policies/commission_policy.route");
@@ -26,11 +27,11 @@ const bookingRoute = require('./features/bookings/booking.route');
 const vendorBookingRoute = require('./features/bookings/vendor_booking.route');
 const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
 const paymentRoute = require('./features/payments/payment.route');
+const supportRoute = require('./features/support/support.route');
 const auditLogRoute = require('./features/audit_logs/audit_log.route');
 const walletRoute = require('./features/wallet/wallet.route');
 const venueWalletRoute = require('./features/venueWallet/venueWallet.route');
 const disbursementRoute = require('./features/disbursements/disbursement.route');
-
 
 const app = express();
 
@@ -80,6 +81,7 @@ app.use("/api", facilityRoute);
 app.use("/api", couponRoute);
 app.use("/api", userRoute);
 app.use("/api", chatbotRoute);
+app.use('/api', reviewRoute);
 app.use("/api", statisticsRoute);
 app.use("/api", refundPolicyRoute);
 app.use("/api", commissionPolicyRoute);
@@ -87,6 +89,7 @@ app.use("/api", bookingRoute);
 app.use("/api", vendorBookingRoute);
 app.use("/api", wishlistRoute);
 app.use("/api", paymentRoute);
+app.use('/api', supportRoute);
 app.use("/api", auditLogRoute);
 
 app.use("/api", walletRoute);

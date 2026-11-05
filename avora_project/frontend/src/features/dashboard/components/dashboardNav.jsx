@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import AvatarContent from '../../../common/components/AvatarContent';
+import { getSupportCounts } from '../../../services/supportApi';
+import { MailIcon } from '../../../common/components/icons';
 import './dashboardNav.css';
 
 const ROLE_LABELS = {
@@ -21,6 +23,7 @@ const getUserInitials = (name) => {
 const DashboardNav = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [unreadSupportCount, setUnreadSupportCount] = useState(0);
   const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
@@ -39,6 +42,24 @@ const DashboardNav = () => {
   const canViewStatistics = isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
+
+  useEffect(() => {
+    let active = true;
+    if (!isAdmin && !isVendor) return undefined;
+    const refreshUnreadCount = () => {
+      getSupportCounts(isVendor ? 'vendor' : 'all')
+        .then((counts) => {
+          if (active) setUnreadSupportCount(Number(counts?.unread || 0));
+        })
+        .catch((error) => console.error('Could not load dashboard support unread count:', error));
+    };
+    refreshUnreadCount();
+    const interval = window.setInterval(refreshUnreadCount, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [isAdmin, isVendor]);
 
   return (
     <aside className="admin-sidebar">
@@ -77,6 +98,28 @@ const DashboardNav = () => {
                 </svg>
               </span>
               <span className="admin-sidebar__label">Bảng thống kê</span>
+            </NavLink>
+          </div>
+        )}
+
+        {(isAdmin || isVendor) && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">HỖ TRỢ</div>
+            <NavLink
+              to="/dashboard/support"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon"><MailIcon size={16} /></span>
+              <span className="admin-sidebar__label">Phiếu hỗ trợ</span>
+              {unreadSupportCount > 0 && (
+                <span
+                  className="dashboard-nav__notification"
+                  aria-label={`${unreadSupportCount} phiếu có cập nhật mới`}
+                  title={`${unreadSupportCount} phiếu có cập nhật mới`}
+                />
+              )}
             </NavLink>
           </div>
         )}
@@ -160,6 +203,20 @@ const DashboardNav = () => {
               </span>
               <span className="admin-sidebar__label">Quản lý khách sạn</span>
             </div>
+          )}
+          {isAdmin && (
+            <NavLink
+              to="/dashboard/reviews"
+              className={({ isActive }) => `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`}
+            >
+              <span className="admin-sidebar__icon" aria-hidden="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 11.5a7.5 7.5 0 0 1-7.5 7.5H7l-4 3v-6.5A7.5 7.5 0 1 1 20 11.5Z" />
+                  <path d="m12 7 1.2 2.4 2.6.4-1.9 1.8.5 2.6-2.4-1.3-2.4 1.3.5-2.6-1.9-1.8 2.6-.4L12 7Z" />
+                </svg>
+              </span>
+              <span className="admin-sidebar__label">Quản lý đánh giá</span>
+            </NavLink>
           )}
           <div className="admin-sidebar__link disabled">
             <span className="admin-sidebar__icon">

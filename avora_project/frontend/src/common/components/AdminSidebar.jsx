@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { codeNameParser } from '../../utils/codeNameParser';
 import AvatarContent from './AvatarContent';
+import { getSupportCounts } from '../../services/supportApi';
 import './AdminSidebar.css';
 
 const ROLE_LABELS = {
@@ -22,6 +23,7 @@ const AdminSidebar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
     .trim().toUpperCase().replace(/[ -]+/g, '_');
@@ -38,6 +40,24 @@ const AdminSidebar = () => {
   const canViewStatistics = isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
+
+  useEffect(() => {
+    let active = true;
+    if (!isSystemAdmin && !isVendor) return undefined;
+    const refreshCount = () => {
+      getSupportCounts()
+        .then((counts) => {
+          if (active) setUnreadCount(Number(counts?.unread || 0));
+        })
+        .catch((error) => console.error('Could not load dashboard support unread count:', error));
+    };
+    refreshCount();
+    const interval = window.setInterval(refreshCount, 60000);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [isSystemAdmin, isVendor]);
 
   return (
     <aside className="admin-sidebar">
@@ -71,6 +91,22 @@ const AdminSidebar = () => {
                 </svg>
               </span>
               <span className="admin-sidebar__label">Bảng thống kê</span>
+            </NavLink>
+          </div>
+        )}
+
+        {(isSystemAdmin || isVendor) && (
+          <div className="admin-sidebar__group">
+            <div className="admin-sidebar__group-title">HỖ TRỢ</div>
+            <NavLink
+              to="/dashboard/support"
+              className={({ isActive }) =>
+                `admin-sidebar__link ${isActive || location.pathname.startsWith('/dashboard/support') ? 'admin-sidebar__link--active' : ''}`
+              }
+            >
+              <span className="admin-sidebar__icon" aria-hidden="true">✉</span>
+              <span className="admin-sidebar__label">Phiếu hỗ trợ</span>
+              {unreadCount > 0 && <span className="admin-sidebar__notification">{unreadCount > 99 ? '99+' : unreadCount}</span>}
             </NavLink>
           </div>
         )}

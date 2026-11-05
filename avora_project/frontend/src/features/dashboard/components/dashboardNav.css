@@ -138,6 +138,16 @@
   text-overflow: ellipsis;
 }
 
+.dashboard-nav__notification {
+  width: 9px;
+  height: 9px;
+  flex: none;
+  margin-left: auto;
+  border-radius: 50%;
+  background: #ef4444;
+  box-shadow: 0 0 0 2px #081127;
+}
+
 /* User Profile Footer */
 .admin-sidebar__footer {
   padding: 0.85rem 1rem;

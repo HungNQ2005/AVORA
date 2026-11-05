@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { fetchUsers, fetchUserStats, updateUserStatus } from '../../../services/userService';
 import { fetchHotels } from '../../../services/roomTypeApi';
@@ -13,20 +13,9 @@ import RoleChangeModal from '../components/RoleChangeModal';
 import Dialog from '../../../common/components/Dialog';
 import './UserManagementPage.css';
 
-const UserManagementPage = () => {
-  const { user, loading: authLoading } = useAuth();
+const UserManagementContent = ({ user }) => {
   const navigate = useNavigate();
-
-
-  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
-    .trim().toUpperCase().replace(/[ -]+/g, '_');
-  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1';
-
-  // Guard: Only System Admin (ADM) can access
-  if (!authLoading && user && !isAdmin) {
-    return <Navigate to="/forbidden" replace />;
-  }
+  const [searchParams] = useSearchParams();
 
   // Main Data States
   const [users, setUsers] = useState([]);
@@ -36,11 +25,16 @@ const UserManagementPage = () => {
   const [error, setError] = useState(null);
 
   // Filters & Search
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [searchTerm, setSearchTerm] = useState(() => searchParams.get('search') || '');
+  const [debouncedSearch, setDebouncedSearch] = useState(() => searchParams.get('search') || '');
   const [currentRole, setCurrentRole] = useState('ALL');
   const [hotelFilter, setHotelFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
+
+  // Pagination
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalUsers, setTotalUsers] = useState(0);
 
   // Debounce search query to avoid jitter and excessive queries
   useEffect(() => {
@@ -50,11 +44,6 @@ const UserManagementPage = () => {
     }, 250);
     return () => clearTimeout(timer);
   }, [searchTerm]);
-
-  // Pagination
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-  const [totalUsers, setTotalUsers] = useState(0);
 
   // Status Change Dialog
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -484,6 +473,17 @@ const UserManagementPage = () => {
       />
     </div>
   );
+};
+
+const UserManagementPage = () => {
+  const { user, loading: authLoading } = useAuth();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode) || roleCd === '1';
+
+  if (!authLoading && user && !isAdmin) return <Navigate to="/forbidden" replace />;
+  return <UserManagementContent user={user} />;
 };
 
 export default UserManagementPage;
