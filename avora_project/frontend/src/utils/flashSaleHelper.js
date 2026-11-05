@@ -32,6 +32,22 @@ export const isFlashSaleActive = (sale, currentTime = new Date()) => {
 };
 
 /**
+ * Trích xuất ưu đãi Flash Sale cho một khách sạn:
+ * Chỉ công nhận khi khách sạn thực sự có active_flash_sale hợp lệ trong khung giờ vàng từ DB/API.
+ * Tuyệt đối không suy luận bừa bãi từ original_price để tránh gán nhãn Flash Sale cho mọi khách sạn.
+ *
+ * @param {Object} hotel
+ * @returns {Object|null}
+ */
+export const resolveHotelFlashSale = (hotel) => {
+  if (!hotel) return null;
+  if (isFlashSaleActive(hotel.active_flash_sale)) {
+    return hotel.active_flash_sale;
+  }
+  return null;
+};
+
+/**
  * Định dạng nhãn phần trăm hoặc số tiền giảm giá.
  * Khớp hoàn toàn với hợp đồng E2E (T1.6.4: Label Formatting Contract):
  * - Phần trăm: -X% (ví dụ: -20%)
@@ -109,8 +125,9 @@ export const calculateDisplayPricing = (basePrice, sale, fallbackOriginalPrice =
   const active = isFlashSaleActive(sale);
 
   if (!active) {
+    const orig = fallbackOriginalPrice ? Number(fallbackOriginalPrice) : null;
     return {
-      originalPrice: fallbackOriginalPrice && fallbackOriginalPrice > price ? fallbackOriginalPrice : null,
+      originalPrice: orig && orig > price ? orig : null,
       currentPrice: price,
       discountAmount: 0,
       hasFlashSale: false,

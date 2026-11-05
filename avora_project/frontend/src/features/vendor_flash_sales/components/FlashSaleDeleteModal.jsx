@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../coupons/components/DeleteConfirmModal.css';
 
-const FlashSaleDeleteModal = ({ isOpen, onClose, onConfirm, flashSale, loading = false }) => {
+const FlashSaleDeleteModal = ({ isOpen, onClose, onConfirm, flashSale, loading = false, error = '' }) => {
   if (!isOpen || !flashSale) return null;
 
   return (
@@ -30,6 +30,17 @@ const FlashSaleDeleteModal = ({ isOpen, onClose, onConfirm, flashSale, loading =
           <p className="rt-delete-modal-warning">
             ⚡ Chương trình khuyến mãi giờ vàng này sẽ kết thúc ngay lập tức và không còn tự động áp dụng cho các lượt đặt phòng mới. Lịch sử đặt phòng trước đây vẫn được lưu trữ nguyên vẹn.
           </p>
+
+          {error && (
+            <p className="rt-form-error" role="alert" style={{ margin: '14px 0 0' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{error}</span>
+            </p>
+          )}
         </div>
 
         <div className="rt-delete-modal-footer">

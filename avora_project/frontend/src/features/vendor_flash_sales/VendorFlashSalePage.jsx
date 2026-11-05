@@ -55,8 +55,10 @@ const VendorFlashSalePage = () => {
   // Modals state
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [modalSubmitError, setModalSubmitError] = useState('');
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [deletingItem, setDeletingItem] = useState(null);
+  const [deleteModalError, setDeleteModalError] = useState('');
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailItem, setDetailItem] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -159,16 +161,19 @@ const VendorFlashSalePage = () => {
   // Handlers
   const handleOpenCreate = () => {
     setEditingItem(null);
+    setModalSubmitError('');
     setIsModalOpen(true);
   };
 
   const handleOpenEdit = (item) => {
     setEditingItem(item);
+    setModalSubmitError('');
     setIsModalOpen(true);
   };
 
   const handleOpenDelete = (item) => {
     setDeletingItem(item);
+    setDeleteModalError('');
     setIsDeleteModalOpen(true);
   };
 
@@ -179,6 +184,7 @@ const VendorFlashSalePage = () => {
 
   const handleModalSubmit = async (payload) => {
     setSubmitting(true);
+    setModalSubmitError('');
     try {
       if (editingItem) {
         await updateVendorFlashSale(editingItem.coupon_id, payload);
@@ -190,7 +196,7 @@ const VendorFlashSalePage = () => {
       setIsModalOpen(false);
       loadData(true);
     } catch (err) {
-      alert(err.message || 'Lỗi khi lưu Flash Sale.');
+      setModalSubmitError(err.message || 'Không thể lưu chương trình Flash Sale. Vui lòng kiểm tra lại.');
     } finally {
       setSubmitting(false);
     }
@@ -199,13 +205,14 @@ const VendorFlashSalePage = () => {
   const handleDeleteConfirm = async () => {
     if (!deletingItem) return;
     setSubmitting(true);
+    setDeleteModalError('');
     try {
       await deleteVendorFlashSale(deletingItem.coupon_id);
       showToast('Đã vô hiệu hóa chương trình Flash Sale thành công.');
       setIsDeleteModalOpen(false);
       loadData(true);
     } catch (err) {
-      alert(err.message || 'Lỗi khi vô hiệu hóa Flash Sale.');
+      setDeleteModalError(err.message || 'Không thể vô hiệu hóa chương trình Flash Sale. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -303,61 +310,50 @@ const VendorFlashSalePage = () => {
         </div>
       </header>
 
-      {/* Stat Cards Strip */}
-      <section className="promo-stat-grid" aria-label="Thống kê Flash Sale">
+      {/* Stat Cards Strip (Đồng bộ chuẩn 4 thẻ template với Quản lý Coupon) */}
+      <section className="promo-stats-grid" aria-label="Thống kê Flash Sale">
         <StatCard
-          label="Tổng Flash Sale"
-          value={stats?.total ?? flashSales.length}
-          sub="Chương trình đã tạo"
+          label="Tổng số Flash Sale"
+          value={loading ? '—' : (stats?.total ?? flashSales.length)}
+          sub={`${stats?.active ?? tabCounts.ACTIVE} đang hoạt động`}
+          accent="blue"
           icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect>
-              <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+              <line x1="7" y1="7" x2="7.01" y2="7"></line>
             </svg>
           }
         />
         <StatCard
           label="Đang diễn ra ⚡"
-          value={stats?.active ?? tabCounts.ACTIVE}
-          sub="Trong khung giờ vàng"
-          accent="active"
+          value={loading ? '—' : (stats?.active ?? tabCounts.ACTIVE)}
+          sub={`${stats?.upcoming ?? tabCounts.UPCOMING} sắp diễn ra`}
+          accent="green"
           icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
             </svg>
           }
         />
         <StatCard
-          label="Sắp diễn ra"
-          value={stats?.upcoming ?? tabCounts.UPCOMING}
-          sub="Đã lên lịch trước"
-          accent="upcoming"
-          icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-          }
-        />
-        <StatCard
           label="Lượt đã đặt"
-          value={`${stats?.total_usage ?? 0} lượt`}
+          value={loading ? '—' : `${(stats?.total_usage ?? 0).toLocaleString('vi-VN')} lượt`}
           sub="Áp dụng thành công"
           accent="purple"
           icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+              <polyline points="17 6 23 6 23 12"></polyline>
             </svg>
           }
         />
         <StatCard
-          label="Tổng tiền đã ưu đãi"
-          value={formatCurrency(stats?.total_discount_given ?? 0)}
+          label="Tổng ưu đãi đã cấp"
+          value={loading ? '—' : formatCurrency(stats?.total_discount_given ?? 0)}
           sub="Tiết kiệm cho khách hàng"
-          accent="emerald"
+          accent="orange"
           icon={
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="12" y1="1" x2="12" y2="23"></line>
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
@@ -699,6 +695,7 @@ const VendorFlashSalePage = () => {
         initialData={editingItem}
         hotels={hotels}
         loading={submitting}
+        submitError={modalSubmitError}
       />
 
       {/* Delete / Deactivate Confirm Modal */}
@@ -708,6 +705,7 @@ const VendorFlashSalePage = () => {
         onConfirm={handleDeleteConfirm}
         flashSale={deletingItem}
         loading={submitting}
+        error={deleteModalError}
       />
 
       {/* Detail Modal */}

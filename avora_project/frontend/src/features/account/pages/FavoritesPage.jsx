@@ -4,6 +4,12 @@ import { useAuth } from '../../../context/AuthContext';
 import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
 import { getScoreLabel } from '../../../utils/ratingHelper';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
+import {
+  isFlashSaleActive,
+  getFlashSaleDiscountText,
+  calculateDisplayPricing,
+  resolveHotelFlashSale,
+} from '../../../utils/flashSaleHelper';
 import MapModal from '../../hotels/components/MapModal';
 import './FavoritesPage.css';
 
@@ -498,6 +504,9 @@ const FavoritesPage = () => {
                   ? Number(hotel.star_rating).toFixed(1)
                   : null;
                 const isSoldOut = hotel.available_rooms !== undefined && Number(hotel.available_rooms) <= 0;
+                const flashSale = resolveHotelFlashSale(hotel);
+                const flashDiscountText = flashSale ? getFlashSaleDiscountText(flashSale) : '';
+                const pricing = calculateDisplayPricing(hotel.price, flashSale, hotel.original_price);
 
                 // Resolved Facilities from Database
                 const facilitiesList = Array.isArray(hotel.facilities)
@@ -534,6 +543,11 @@ const FavoritesPage = () => {
 
                       {/* Bottom-Left Image Badges */}
                       <div className="fav-card__image-badges">
+                        {flashSale && (
+                          <span className="badge-saved-room" style={{ background: '#f59e0b', color: '#1e293b', fontWeight: 800 }}>
+                            ⚡ Flash Sale {flashDiscountText}
+                          </span>
+                        )}
                         <span className="badge-hotel-star">
                           Khách sạn {starCount} sao
                         </span>
@@ -587,6 +601,16 @@ const FavoritesPage = () => {
                         <span>{hotel.address || 'Địa chỉ đang cập nhật'}</span>
                       </div>
 
+                      {/* Dòng thông báo hộp vàng chữ đen nhận biết Flash Sale */}
+                      {flashSale && (
+                        <div className="avora-flash-alert-gold" title={`Khuyến mãi giờ vàng (${flashSale.code || 'FLASH_SALE'})`}>
+                          <span className="avora-flash-alert-gold__icon">⚡</span>
+                          <span className="avora-flash-alert-gold__text">
+                            <strong>FLASH SALE {flashDiscountText}</strong> • Ưu đãi khung giờ vàng
+                          </span>
+                        </div>
+                      )}
+
                       {/* Amenity tags from database */}
                       {facilitiesList.length > 0 && (
                         <div className="fav-card__tags">
@@ -629,17 +653,23 @@ const FavoritesPage = () => {
                       {/* Bottom Footer: Price & Action */}
                       <div className="fav-card__footer">
                         <div className="fav-card__price-box">
-                          {hotel.original_price && hotel.price && hotel.original_price > hotel.price && (
+                          {pricing.originalPrice && pricing.originalPrice > pricing.currentPrice && (
                             <span className="fav-card__orig-price">
-                              {formatPriceVND(hotel.original_price)}
+                              {formatPriceVND(pricing.originalPrice)}
                             </span>
                           )}
-                          <div className="fav-card__main-price">
-                            {hotel.price ? formatPriceVND(hotel.price) : 'Liên hệ đặt phòng'}
+                          <div className="fav-card__main-price" style={flashSale ? { color: '#e11d48', fontWeight: 800 } : {}}>
+                            {pricing.currentPrice ? formatPriceVND(pricing.currentPrice) : (hotel.price ? formatPriceVND(hotel.price) : 'Liên hệ đặt phòng')}
                           </div>
-                          <span className="fav-card__price-subtext">
-                            Đã bao gồm thuế & phí
-                          </span>
+                          {flashSale ? (
+                            <span className="fav-card__price-subtext" style={{ color: '#e11d48', fontWeight: 600 }}>
+                              ⚡ Đã áp dụng Flash Sale {flashDiscountText}
+                            </span>
+                          ) : (
+                            <span className="fav-card__price-subtext">
+                              Đã bao gồm thuế &amp; phí
+                            </span>
+                          )}
                         </div>
 
                         {!isSoldOut ? (

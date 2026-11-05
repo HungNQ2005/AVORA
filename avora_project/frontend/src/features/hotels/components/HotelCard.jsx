@@ -5,6 +5,7 @@ import {
   isFlashSaleActive,
   getFlashSaleDiscountText,
   calculateDisplayPricing,
+  resolveHotelFlashSale,
 } from '../../../utils/flashSaleHelper';
 
 import {
@@ -58,7 +59,7 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
   }
 
   // Calculate Flash Sale & Dynamic pricing
-  const flashSale = isFlashSaleActive(hotel.active_flash_sale) ? hotel.active_flash_sale : null;
+  const flashSale = resolveHotelFlashSale(hotel);
   const flashDiscountText = flashSale ? getFlashSaleDiscountText(flashSale) : '';
   const pricing = calculateDisplayPricing(hotel.price, flashSale, hotel.original_price);
 
@@ -186,6 +187,16 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
           <LocationPinIcon />
           <span>{hotel.address || hotel.city_name}</span>
         </div>
+
+        {/* Dòng thông báo hộp vàng chữ đen nhận biết Flash Sale */}
+        {flashSale && (
+          <div className="avora-flash-alert-gold" title={`Khuyến mãi giờ vàng (${flashSale.code || 'FLASH_SALE'})`}>
+            <span className="avora-flash-alert-gold__icon">⚡</span>
+            <span className="avora-flash-alert-gold__text">
+              <strong>FLASH SALE {flashDiscountText}</strong> • Ưu đãi khung giờ vàng
+            </span>
+          </div>
+        )}
 
         {/* Highlighted Room Type Box */}
         {hotel.room_highlight && (

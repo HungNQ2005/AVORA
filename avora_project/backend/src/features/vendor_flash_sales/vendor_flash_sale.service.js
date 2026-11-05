@@ -168,9 +168,9 @@ const getVendorFlashSales = async ({ userId, hotelId = 'ALL', status = 'ALL', se
 
   // Lọc chỉ các coupon Flash Sale thuộc khách sạn của Vendor
   const vendorCoupons = (rawCoupons || []).filter((c) => {
-    const code = String(c.code || '');
+    const code = String(c.code || '').trim().toUpperCase();
     if (!code.startsWith('FS_')) return false;
-    const prefix = code.split('_')[1];
+    const prefix = code.split('_')[1] || '';
     return targetPrefixes.includes(prefix);
   });
 

@@ -557,11 +557,10 @@ const calculatePricing = async ({
   let bestFlashSale = null;
   let flashDiscount = 0;
 
-  if (flashPrefix && Array.isArray(activeCouponsRes.data)) {
+  if (Array.isArray(activeCouponsRes.data)) {
     const candidateFlashSales = activeCouponsRes.data.filter((c) => {
       const code = String(c.code || '').toUpperCase();
-      const isPercent = ['FLASH_PERCENT', 'PERCENT'].includes(c.discount_type);
-      return code.startsWith(flashPrefix) && isPercent;
+      return Boolean(flashPrefix && code.startsWith(flashPrefix));
     });
 
     for (const candidate of candidateFlashSales) {
@@ -569,7 +568,9 @@ const calculatePricing = async ({
       if (check.valid) {
         const discount = calculateCouponDiscount(candidate, subtotal);
         if (discount > 0) {
-          if (!bestFlashSale || discount > flashDiscount) {
+          const isCandSpecific = flashPrefix && String(candidate.code || '').toUpperCase().startsWith(flashPrefix);
+          const isCurrSpecific = flashPrefix && bestFlashSale && String(bestFlashSale.code || '').toUpperCase().startsWith(flashPrefix);
+          if (!bestFlashSale || (isCandSpecific && !isCurrSpecific) || discount > flashDiscount) {
             bestFlashSale = candidate;
             flashDiscount = discount;
           }

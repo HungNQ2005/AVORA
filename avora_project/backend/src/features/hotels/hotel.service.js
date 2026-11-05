@@ -367,9 +367,7 @@ const searchHotels = async (params = {}) => {
       .from('m_coupon')
       .select('coupon_id, code, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, valid_from, valid_to')
       .or('is_deleted.is.null,is_deleted.eq.false')
-      .lte('valid_from', nowIso)
-      .gte('valid_to', nowIso)
-      .ilike('code', 'FS_%'),
+      .in('discount_type', ['FLASH_PERCENT', 'PERCENT']),
   ]);
 
   // City lookup map
@@ -396,17 +394,21 @@ const searchHotels = async (params = {}) => {
     }
   });
 
-  // Map active Flash Sale for each hotel
+  // Map active Flash Sale for each hotel (Chỉ khách sạn nào có mã Flash Sale FS_<prefix>_ mới có)
   const activeFlashSaleByHotel = new Map();
+
   if (flashSalesRes?.data && Array.isArray(flashSalesRes.data)) {
-    flashSalesRes.data.forEach((coupon) => {
-      const code = String(coupon.code || '');
+    const nowTime = Date.now();
+    const validFlashCoupons = flashSalesRes.data.filter((c) => {
+      if (!['FLASH_PERCENT', 'PERCENT'].includes(c.discount_type)) return false;
+      if (c.valid_from && new Date(c.valid_from).getTime() > nowTime) return false;
+      if (c.valid_to && new Date(c.valid_to).getTime() < nowTime) return false;
+      return true;
+    });
+
+    validFlashCoupons.forEach((coupon) => {
+      const code = String(coupon.code || '').trim();
       const parts = code.split('_');
-      if (parts.length < 3 || parts[0].toUpperCase() !== 'FS') return;
-      if (!['FLASH_PERCENT', 'PERCENT'].includes(coupon.discount_type)) return;
-      const prefix = parts[1].toUpperCase();
-      const matchedHotelId = hotelIdByPrefix.get(prefix);
-      if (!matchedHotelId) return;
 
       const candidate = {
         coupon_id: coupon.coupon_id,
@@ -419,13 +421,19 @@ const searchHotels = async (params = {}) => {
         valid_to: coupon.valid_to ? new Date(coupon.valid_to).toISOString() : null,
       };
 
-      const existing = activeFlashSaleByHotel.get(matchedHotelId);
-      if (!existing || candidate.discount_value > existing.discount_value) {
-        activeFlashSaleByHotel.set(matchedHotelId, candidate);
+      // Chỉ gán Flash Sale cho khách sạn có mã khớp tiền tố FS_<prefix>_<name>
+      if (parts.length >= 3 && parts[0].toUpperCase() === 'FS') {
+        const prefix = parts[1].toUpperCase();
+        const matchedHotelId = hotelIdByPrefix.get(prefix);
+        if (matchedHotelId) {
+          const existing = activeFlashSaleByHotel.get(matchedHotelId);
+          if (!existing || candidate.discount_value > existing.discount_value) {
+            activeFlashSaleByHotel.set(matchedHotelId, candidate);
+          }
+        }
       }
     });
   }
-
 
   // Group images by hotel_id
   const imagesByHotel = {};
@@ -894,27 +902,35 @@ const getHotelById = async (hotelId, options = {}) => {
     .from('m_coupon')
     .select('coupon_id, code, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, valid_from, valid_to')
     .or('is_deleted.is.null,is_deleted.eq.false')
-    .lte('valid_from', nowIso)
-    .gte('valid_to', nowIso)
-    .ilike('code', `FS_${hotelPrefix}_%`)
     .in('discount_type', ['FLASH_PERCENT', 'PERCENT']);
 
   let activeFlashSale = null;
   if (dbFlashSales && dbFlashSales.length > 0) {
-    const sorted = [...dbFlashSales].sort(
-      (a, b) => Number(b.discount_value || 0) - Number(a.discount_value || 0)
-    );
-    const best = sorted[0];
-    activeFlashSale = {
-      coupon_id: best.coupon_id,
-      code: best.code,
-      discount_type: best.discount_type,
-      discount_value: Number(best.discount_value || 0),
-      max_discount_amount: best.max_discount_amount ? Number(best.max_discount_amount) : null,
-      min_order_amount: best.min_order_amount ? Number(best.min_order_amount) : null,
-      valid_from: best.valid_from ? new Date(best.valid_from).toISOString() : null,
-      valid_to: best.valid_to ? new Date(best.valid_to).toISOString() : null,
-    };
+    const nowTime = Date.now();
+    const validFlashCoupons = dbFlashSales.filter((c) => {
+      if (c.valid_from && new Date(c.valid_from).getTime() > nowTime) return false;
+      if (c.valid_to && new Date(c.valid_to).getTime() < nowTime) return false;
+      return true;
+    });
+
+    // Ưu tiên 1: Mã có tiền tố FS_<hotelPrefix>_ dành riêng cho khách sạn này
+    const hotelSpecific = validFlashCoupons
+      .filter((c) => String(c.code || '').toUpperCase().startsWith(`FS_${hotelPrefix}_`))
+      .sort((a, b) => Number(b.discount_value || 0) - Number(a.discount_value || 0));
+
+    const best = hotelSpecific[0] || null;
+    if (best) {
+      activeFlashSale = {
+        coupon_id: best.coupon_id,
+        code: best.code,
+        discount_type: best.discount_type,
+        discount_value: Number(best.discount_value || 0),
+        max_discount_amount: best.max_discount_amount ? Number(best.max_discount_amount) : null,
+        min_order_amount: best.min_order_amount ? Number(best.min_order_amount) : null,
+        valid_from: best.valid_from ? new Date(best.valid_from).toISOString() : null,
+        valid_to: best.valid_to ? new Date(best.valid_to).toISOString() : null,
+      };
+    }
   }
 
   // 2. Query location names (city, district, ward) from DB

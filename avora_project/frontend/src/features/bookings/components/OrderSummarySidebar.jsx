@@ -1,5 +1,5 @@
 import React from 'react';
-import { getScoreLabel } from '../../../utils/ratingHelper';
+
 
 const formatCurrency = (val) => {
   return Number(val || 0).toLocaleString('vi-VN') + ' đ';

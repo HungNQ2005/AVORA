@@ -54,9 +54,11 @@ const FlashSaleModal = ({
   initialData = null,
   hotels = [],
   loading = false,
+  submitError = '',
 }) => {
   const [form, setForm] = useState(EMPTY_FORM);
   const [errors, setErrors] = useState({});
+  const [validationError, setValidationError] = useState('');
 
   const isEdit = Boolean(initialData);
 
@@ -91,6 +93,7 @@ const FlashSaleModal = ({
       });
     }
     setErrors({});
+    setValidationError('');
   }, [isOpen, initialData, hotels]);
 
   if (!isOpen) return null;
@@ -104,6 +107,7 @@ const FlashSaleModal = ({
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
     }
+    setValidationError('');
   };
 
   const handleCodeNameChange = (val) => {
@@ -120,37 +124,37 @@ const FlashSaleModal = ({
     }
 
     if (!cleanCodeName) {
-      errs.code_name = 'Vui lòng nhập tên mã khuyến mãi.';
+      errs.code_name = 'Vui lòng nhập tên mã Flash Sale.';
     } else if (!/^[A-Z0-9_-]{1,38}$/.test(cleanCodeName)) {
       errs.code_name = 'Tên mã chỉ chứa chữ cái, số, gạch nối hoặc gạch dưới (1-38 ký tự).';
     } else if (`FS_${currentPrefix}_${cleanCodeName}`.length > 50) {
-      errs.code_name = 'Tổng độ dài mã khuyến mãi không được vượt quá 50 ký tự.';
+      errs.code_name = 'Tổng độ dài mã Flash Sale không được vượt quá 50 ký tự.';
     }
 
     if (!form.discount_value || Number(form.discount_value) <= 0) {
-      errs.discount_value = 'Giá trị giảm phải là số lớn hơn 0.';
-    } else if (['FLASH_PERCENT', 'PERCENT'].includes(form.discount_type) && Number(form.discount_value) > 100) {
+      errs.discount_value = 'Vui lòng nhập mức giảm ưu đãi hợp lệ (từ 1% đến 100%).';
+    } else if (Number(form.discount_value) > 100) {
       errs.discount_value = 'Tỷ lệ giảm theo phần trăm không được vượt quá 100%.';
     }
 
     if (form.max_discount_amount && Number(form.max_discount_amount) < 0) {
-      errs.max_discount_amount = 'Mức giảm tối đa không được âm.';
+      errs.max_discount_amount = 'Mức giảm tối đa (VNĐ trần) phải là số không âm.';
     }
 
     if (form.min_order_amount && Number(form.min_order_amount) < 0) {
-      errs.min_order_amount = 'Đơn tối thiểu không được âm.';
+      errs.min_order_amount = 'Đơn tối thiểu phải là số không âm.';
     }
 
     if (form.usage_limit && (!Number.isInteger(Number(form.usage_limit)) || Number(form.usage_limit) <= 0)) {
-      errs.usage_limit = 'Giới hạn số lượt phải là số nguyên dương.';
+      errs.usage_limit = 'Số lượt áp dụng phải là số nguyên dương lớn hơn 0.';
     }
 
     if (!form.valid_from) {
-      errs.valid_from = 'Vui lòng chọn thời gian bắt đầu giờ vàng.';
+      errs.valid_from = 'Vui lòng chọn thời gian bắt đầu khung giờ vàng.';
     }
 
     if (!form.valid_to) {
-      errs.valid_to = 'Vui lòng chọn thời gian kết thúc giờ vàng.';
+      errs.valid_to = 'Vui lòng chọn thời gian kết thúc khung giờ vàng.';
     }
 
     if (form.valid_from && form.valid_to) {
@@ -160,12 +164,18 @@ const FlashSaleModal = ({
       if (toTime <= fromTime) {
         errs.valid_to = 'Thời gian kết thúc phải sau thời gian bắt đầu.';
       } else if (!isEdit && toTime <= Date.now()) {
-        errs.valid_to = 'Thời gian kết thúc giờ vàng không thể ở trong quá khứ.';
+        errs.valid_to = 'Thời gian kết thúc khung giờ vàng không thể ở trong quá khứ.';
       }
     }
 
     setErrors(errs);
-    return Object.keys(errs).length === 0;
+    const hasErrors = Object.keys(errs).length > 0;
+    if (hasErrors) {
+      setValidationError('Vui lòng kiểm tra lại các thông tin chưa hợp lệ bên dưới.');
+    } else {
+      setValidationError('');
+    }
+    return !hasErrors;
   };
 
   const handleSubmit = (e) => {
@@ -196,6 +206,7 @@ const FlashSaleModal = ({
         className="rt-modal-content fs-modal-content"
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
+        noValidate
       >
         {/* Modal Header */}
         <div className="rt-modal-header fs-modal-header">
@@ -315,11 +326,11 @@ const FlashSaleModal = ({
                   className={`rt-input ${errors.discount_value ? 'rt-input--error' : ''}`}
                   type="number"
                   min="1"
-                  max="100"
                   step="1"
                   placeholder="Ví dụ: 15, 20, 30, 50..."
                   value={form.discount_value}
                   onChange={(e) => handleChange('discount_value', e.target.value)}
+                  onInvalid={(e) => e.preventDefault()}
                   disabled={loading}
                 />
                 {errors.discount_value && <span className="rt-field-error">{errors.discount_value}</span>}
@@ -341,6 +352,7 @@ const FlashSaleModal = ({
                     placeholder="Ví dụ: 300000 (Bỏ trống = không giới hạn trần)"
                     value={form.max_discount_amount}
                     onChange={(e) => handleChange('max_discount_amount', e.target.value)}
+                    onInvalid={(e) => e.preventDefault()}
                     disabled={loading}
                   />
                   {errors.max_discount_amount && (
@@ -379,6 +391,7 @@ const FlashSaleModal = ({
                   type="datetime-local"
                   value={form.valid_from}
                   onChange={(e) => handleChange('valid_from', e.target.value)}
+                  onInvalid={(e) => e.preventDefault()}
                   disabled={loading}
                 />
                 {errors.valid_from && <span className="rt-field-error">{errors.valid_from}</span>}
@@ -396,6 +409,7 @@ const FlashSaleModal = ({
                   min={form.valid_from || undefined}
                   value={form.valid_to}
                   onChange={(e) => handleChange('valid_to', e.target.value)}
+                  onInvalid={(e) => e.preventDefault()}
                   disabled={loading}
                 />
                 {errors.valid_to && <span className="rt-field-error">{errors.valid_to}</span>}
@@ -416,6 +430,7 @@ const FlashSaleModal = ({
                   placeholder="Bỏ trống = Áp dụng mọi đơn"
                   value={form.min_order_amount}
                   onChange={(e) => handleChange('min_order_amount', e.target.value)}
+                  onInvalid={(e) => e.preventDefault()}
                   disabled={loading}
                 />
                 {errors.min_order_amount && (
@@ -438,6 +453,7 @@ const FlashSaleModal = ({
                   placeholder="Bỏ trống = Không giới hạn số lượt"
                   value={form.usage_limit}
                   onChange={(e) => handleChange('usage_limit', e.target.value)}
+                  onInvalid={(e) => e.preventDefault()}
                   disabled={loading}
                 />
                 {errors.usage_limit && (
@@ -446,6 +462,28 @@ const FlashSaleModal = ({
               </div>
             </div>
           </div>
+
+          {/* Validation & Submit Errors matching RoomTypeFormModal */}
+          {validationError && (
+            <p className="rt-form-error" role="alert">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{validationError}</span>
+            </p>
+          )}
+          {submitError && (
+            <p className="rt-form-error" role="alert">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ flexShrink: 0 }}>
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              <span>{submitError}</span>
+            </p>
+          )}
         </div>
 
         {/* Modal Footer */}
