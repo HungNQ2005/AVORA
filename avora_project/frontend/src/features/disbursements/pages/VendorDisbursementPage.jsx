@@ -190,9 +190,12 @@ const VendorDisbursementPage = () => {
   const filteredHistory = useMemo(() => {
     return history.filter((req) => {
       const status = getRequestStatus(req);
-      if (activeTab === 'PENDING' && status.code !== 'PENDING') return false;
-      if (activeTab === 'COMPLETED' && status.code !== 'COMPLETED') return false;
-      if (statusFilter !== 'ALL' && String(req.status_cd) !== statusFilter) return false;
+      if (statusFilter !== 'ALL') {
+        if (String(req.status_cd) !== statusFilter) return false;
+      } else {
+        if (activeTab === 'PENDING' && !['1', '2', '3'].includes(String(req.status_cd))) return false;
+        if (activeTab === 'COMPLETED' && String(req.status_cd) !== '4') return false;
+      }
 
       const term = searchTerm.trim().toLocaleLowerCase('vi');
       if (term) {
@@ -354,7 +357,10 @@ const VendorDisbursementPage = () => {
                 <button
                   type="button"
                   className={`vd-tab ${activeTab === 'ALL' ? 'vd-tab--active' : ''}`}
-                  onClick={() => setActiveTab('ALL')}
+                  onClick={() => {
+                    setActiveTab('ALL');
+                    setStatusFilter('ALL');
+                  }}
                 >
                   <span>Tất cả</span>
                   <span className="vd-tab__count">{tabCounts.ALL}</span>
@@ -362,7 +368,10 @@ const VendorDisbursementPage = () => {
                 <button
                   type="button"
                   className={`vd-tab ${activeTab === 'PENDING' ? 'vd-tab--active' : ''}`}
-                  onClick={() => setActiveTab('PENDING')}
+                  onClick={() => {
+                    setActiveTab('PENDING');
+                    if (['4', '5', '6', '7'].includes(statusFilter)) setStatusFilter('ALL');
+                  }}
                 >
                   <span>Đợi giải ngân</span>
                   <span className="vd-tab__count vd-tab__count--warning">{tabCounts.PENDING}</span>
@@ -370,7 +379,10 @@ const VendorDisbursementPage = () => {
                 <button
                   type="button"
                   className={`vd-tab ${activeTab === 'COMPLETED' ? 'vd-tab--active' : ''}`}
-                  onClick={() => setActiveTab('COMPLETED')}
+                  onClick={() => {
+                    setActiveTab('COMPLETED');
+                    setStatusFilter('4');
+                  }}
                 >
                   <span>Giải ngân</span>
                   <span className="vd-tab__count vd-tab__count--success">{tabCounts.COMPLETED}</span>
@@ -391,7 +403,17 @@ const VendorDisbursementPage = () => {
                   <span className="vd-status-filter__label">Trạng thái</span>
                   <select
                     value={statusFilter}
-                    onChange={(event) => setStatusFilter(event.target.value)}
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setStatusFilter(val);
+                      if (['1', '2', '3'].includes(val)) {
+                        setActiveTab('PENDING');
+                      } else if (val === '4') {
+                        setActiveTab('COMPLETED');
+                      } else {
+                        setActiveTab('ALL');
+                      }
+                    }}
                     aria-label="Lọc theo trạng thái"
                   >
                     <option value="ALL">Tất cả trạng thái</option>
