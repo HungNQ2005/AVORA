@@ -188,14 +188,32 @@ const handleGetProfile = async (req, res, next) => {
  */
 const handleUpdateProfile = async (req, res, next) => {
   try {
-    const { full_name, phone } = req.body;
-    const user = await authService.updateUserProfile(req.user.user_id, { fullName: full_name, phone });
+    const {
+      full_name,
+      phone,
+      refund_bank_cd,
+      refund_account_number,
+      refund_account_holder,
+    } = req.body;
+    const user = await authService.updateUserProfile(req.user.user_id, {
+      fullName: full_name,
+      phone,
+      refundBankCd: refund_bank_cd,
+      refundAccountNumber: refund_account_number,
+      refundAccountHolder: refund_account_holder,
+    });
     recordAuditLog({
       actor_user_id: req.user.user_id,
       action_cd: '2', // UPD
       entity_name: 'm_user',
       entity_id: req.user.user_id,
-      new_data: { full_name, phone },
+      new_data: {
+        full_name,
+        phone,
+        refund_bank_cd: user.refund_bank_cd,
+        refund_account_number: user.refund_account_number,
+        refund_account_holder: user.refund_account_holder,
+      },
       req,
     });
 

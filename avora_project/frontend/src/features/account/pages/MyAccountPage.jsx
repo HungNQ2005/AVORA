@@ -5,6 +5,7 @@ import { getProfile, updateProfile, changePassword, requestDeactivateOtp } from 
 import Dialog from '../../../common/components/Dialog';
 import DeactivateOtpModal from '../components/DeactivateOtpModal';
 import AvatarUploadModal from '../components/AvatarUploadModal';
+import RefundBankCard from '../components/RefundBankCard';
 import AvatarContent from '../../../common/components/AvatarContent';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
@@ -661,6 +662,7 @@ const MyAccountPage = () => {
           <main className="profile-content-area">
             {/* ════ TAB 1: THÔNG TIN CÁ NHÂN ════ */}
             {activeTab === 'info' && (
+              <>
               <div className="profile-card profile-info-card">
                 <div className="profile-card__header">
                   <div>
@@ -865,6 +867,8 @@ const MyAccountPage = () => {
                   )}
                 </form>
               </div>
+              <RefundBankCard user={user} setUser={setUser} />
+              </>
             )}
 
             {/* ════ TAB 2: WATCHLIST (CHỖ NGHỈ ĐÃ LƯU) ════ */}

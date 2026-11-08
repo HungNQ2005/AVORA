@@ -45,6 +45,10 @@ export const getValidBookingPage = (requestedPage, totalPages) => (
 );
 
 export const getBookingPaymentDeadline = (booking) => {
+  if (booking?.sharing_group?.expires_at) {
+    const groupExpires = parseIsoToDate(booking.sharing_group.expires_at);
+    if (groupExpires) return groupExpires;
+  }
   if (!booking?.created_at) return null;
   const createdAt = parseIsoToDate(booking.created_at);
   if (!createdAt) return null;
@@ -57,16 +61,22 @@ export const getBookingCountdown = (booking, currentTime) => {
 
   const remainingMs = Math.max(0, deadline.getTime() - currentTime);
   const totalSeconds = Math.ceil(remainingMs / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
+
+  const label =
+    hours > 0
+      ? `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+      : `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
   return {
     deadline,
     remainingMs,
     totalSeconds,
-    minutes,
+    minutes: Math.floor(totalSeconds / 60),
     seconds,
     expired: remainingMs <= 0,
-    label: `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+    label,
   };
 };
