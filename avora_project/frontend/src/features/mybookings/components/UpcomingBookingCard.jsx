@@ -25,6 +25,7 @@ import {
   parseIsoToDate,
   canEditBooking,
 } from './bookingCardHelpers';
+import { getScoreLabel } from '../../../utils/ratingHelper';
 
 /**
  * Hero Card: Chuyến Đi Sắp Tới Của Bạn
@@ -37,6 +38,7 @@ const UpcomingBookingCard = ({
   onOpenDateChange,
   onOpenCancel,
   onPayNow,
+  onGroupPay,
 }) => {
   const countdown = (booking.status_badge_variant === 'amber' || booking.status_badge_variant === 'pending') &&
     booking.payment?.is_paid !== true
@@ -268,7 +270,20 @@ const UpcomingBookingCard = ({
               className="my-bookings-btn-primary"
               onClick={() => onPayNow(booking)}
             >
-              <span>Thanh toán ngay ({countdown.label})</span>
+              <span>
+                {booking.sharing_group
+                  ? `Phòng thanh toán nhóm (${countdown.label})`
+                  : `Thanh toán ngay (${countdown.label})`}
+              </span>
+            </button>
+          )}
+          {countdown && !countdown.expired && !booking.sharing_group && onGroupPay && (
+            <button
+              type="button"
+              className="my-bookings-btn-secondary"
+              onClick={() => onGroupPay(booking)}
+            >
+              <span>Chia tiền nhóm (Giữ chỗ 2h)</span>
             </button>
           )}
           <button

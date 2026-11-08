@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
-import { createPaymentQr, fetchPaymentStatus } from '../../../services/paymentApi';
+import { createPaymentQr, fetchPaymentGroupByBooking, fetchPaymentStatus } from '../../../services/paymentApi';
 import './payment.css';
 
 const POLL_INTERVAL_MS = 3000;
@@ -201,11 +201,34 @@ const PaymentQRScreen = () => {
     <div className="pay-page">
       <div className="pay-container">
         {/* Header */}
-        <header className="pay-header">
-          <button type="button" className="pay-back-btn" onClick={() => navigate(-1)} aria-label="Quay lại">
-            <BackIcon />
-          </button>
-          <h1 className="pay-title">Thanh toán đơn hàng</h1>
+        <header className="pay-header" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button type="button" className="pay-back-btn" onClick={() => navigate(-1)} aria-label="Quay lại">
+              <BackIcon />
+            </button>
+            <h1 className="pay-title" style={{ margin: 0 }}>Thanh toán đơn hàng</h1>
+          </div>
+          {!isPaid && !isExpired && (
+            <button
+              type="button"
+              className="pay-btn pay-btn--primary"
+              style={{ background: '#059669', fontSize: 13.5 }}
+              onClick={async () => {
+                try {
+                  const grp = await fetchPaymentGroupByBooking(bookingId).catch(() => null);
+                  if (grp?.invite_link_hash) {
+                    navigate(`/payment/group/${grp.invite_link_hash}`);
+                  } else {
+                    navigate(`/payment/group/setup/${bookingId}`);
+                  }
+                } catch {
+                  navigate(`/payment/group/setup/${bookingId}`);
+                }
+              }}
+            >
+              Chia tiền thanh toán nhóm (Giữ chỗ 2 giờ)
+            </button>
+          )}
         </header>
 
         {/* Expired state */}

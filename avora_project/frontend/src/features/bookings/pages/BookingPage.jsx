@@ -7,6 +7,7 @@ import SpecialRequestsCard from '../components/SpecialRequestsCard';
 import OrderSummarySidebar from '../components/OrderSummarySidebar';
 import BookingSuccessModal from '../components/BookingSuccessModal';
 import BookingErrorModal from '../components/BookingErrorModal';
+import RefundBankPromptModal from '../components/RefundBankPromptModal';
 import { calculateBookingPricing, createBooking } from '../../../services/bookingApi';
 import { useAuth } from '../../../context/AuthContext';
 import './booking.css';
@@ -19,7 +20,7 @@ const BookingPage = () => {
   const { id: routeParamId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, loading: authLoading } = useAuth();
+  const { user, setUser, loading: authLoading } = useAuth();
 
   const stateData = location.state || {};
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
@@ -338,6 +339,8 @@ const BookingPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSubmittingRef = useRef(false);
   const [createdBookingResult, setCreatedBookingResult] = useState(null);
+  const [refundBankPromptOpen, setRefundBankPromptOpen] = useState(false);
+  const skipRefundBankRef = useRef(false);
 
   const handleConfirmBooking = async () => {
     // Chặn triệt để double-click ngay lập tức
@@ -383,6 +386,15 @@ const BookingPage = () => {
 
     if (roomsCount > MAX_ROOMS_PER_BOOKING) {
       setErrorMessage(`Số lượng phòng tối đa cho mỗi đơn đặt phòng trực tuyến là ${MAX_ROOMS_PER_BOOKING} phòng. Để đặt số lượng lớn hơn, vui lòng liên hệ dịch vụ khách đoàn.`);
+      return;
+    }
+
+    // Kiểm tra 3 trường STK hoàn tiền trong m_user: nếu đang NULL và khách chưa bấm Bỏ qua thì mở modal nhắc
+    const hasRefundBankInfo = Boolean(
+      user?.refund_bank_cd && user?.refund_account_number && user?.refund_account_holder
+    );
+    if (!hasRefundBankInfo && !skipRefundBankRef.current) {
+      setRefundBankPromptOpen(true);
       return;
     }
 
@@ -531,6 +543,26 @@ const BookingPage = () => {
         </div>
       )}
 
+      {/* Refund Bank Account Prompt Modal (shown if m_user refund fields are NULL) */}
+      <RefundBankPromptModal
+        isOpen={refundBankPromptOpen}
+        user={user}
+        onClose={() => setRefundBankPromptOpen(false)}
+        onSkipAndContinue={() => {
+          skipRefundBankRef.current = true;
+          setRefundBankPromptOpen(false);
+          handleConfirmBooking();
+        }}
+        onSavedAndContinue={(updatedUser) => {
+          if (updatedUser && typeof setUser === 'function') {
+            setUser(updatedUser);
+          }
+          skipRefundBankRef.current = true;
+          setRefundBankPromptOpen(false);
+          handleConfirmBooking();
+        }}
+      />
+
       {/* Success Modal */}
       {createdBookingResult && (
         <BookingSuccessModal
@@ -543,6 +575,7 @@ const BookingPage = () => {
             navigate('/my-bookings');
           }}
           onPayNow={() => navigate(`/payment/${createdBookingResult.booking_id}`)}
+          onGroupPay={() => navigate(`/payment/group/setup/${createdBookingResult.booking_id}`)}
         />
       )}
       <BookingErrorModal

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const supabase = require('../../config/supabaseClient');
 const env = require('../../config/env');
 const disbursementService = require('../disbursements/disbursement.service');
+const paymentSharingService = require('../payment_sharing/payment_sharing.service');
 
 const PAYMENT_HOLD_MS = 10 * 60 * 1000;
 const PAYMENT_CODE_PREFIX = 'AVORA';
@@ -119,6 +120,21 @@ const createQr = async (bookingId, currentUser) => {
   const statusName = statusCodes.nameOf(booking.booking_status_cd);
   if (statusName === 'CFM') throw createError('Đơn đặt phòng này đã được thanh toán.', 409, 'ALREADY_PAID');
   if (statusName !== 'PND') throw createError('Đơn đặt phòng không còn ở trạng thái chờ thanh toán.', 400, 'NOT_PENDING');
+
+  // Nếu đơn này đang có nhóm thanh toán đã gom tiền, không tạo QR đơn lẻ chồng chéo
+  const { data: sharingGroup } = await supabase
+    .from('t_payment_sharing_group')
+    .select('group_id, invite_link_hash, total_collected, share_status_cd')
+    .eq('booking_id', booking.booking_id)
+    .maybeSingle();
+
+  if (sharingGroup && Number(sharingGroup.total_collected || 0) > 0) {
+    throw createError(
+      'Đơn đặt phòng này đang được thanh toán theo nhóm và đã có thành viên đóng tiền. Vui lòng tiếp tục tại trang Thanh toán nhóm.',
+      409,
+      'GROUP_PAYMENT_IN_PROGRESS'
+    );
+  }
 
   const remainingSeconds = getRemainingSeconds(booking.created_at);
   if (remainingSeconds <= 0) {
@@ -261,7 +277,19 @@ const processWebhook = async (payload) => {
     return { result: 'IGNORED_UNKNOWN_TYPE' };
   }
 
-  const match = String(payload?.content || payload?.description || '').match(PAYMENT_CODE_REGEX);
+  const contentText = String(payload?.content || payload?.description || '');
+
+  // Tiền VÀO mang mã AVRGPxxxxxxxx -> luồng Thanh toán nhóm
+  const groupPaymentCode = paymentSharingService.extractGroupPaymentCode(contentText);
+  if (groupPaymentCode) {
+    const groupAmount = Number(payload?.transferAmount);
+    if (!Number.isFinite(groupAmount) || groupAmount <= 0) {
+      return { result: 'INVALID_AMOUNT', payment_code: groupPaymentCode };
+    }
+    return paymentSharingService.processGroupWebhook(groupPaymentCode, groupAmount);
+  }
+
+  const match = contentText.match(PAYMENT_CODE_REGEX);
   if (!match) return { result: 'NO_PAYMENT_CODE' };
 
   const paymentCode = match[0].toUpperCase();

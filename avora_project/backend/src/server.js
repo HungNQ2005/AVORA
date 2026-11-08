@@ -26,6 +26,7 @@ const bookingRoute = require('./features/bookings/booking.route');
 const vendorBookingRoute = require('./features/bookings/vendor_booking.route');
 const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
 const paymentRoute = require('./features/payments/payment.route');
+const paymentSharingRoute = require('./features/payment_sharing/payment_sharing.route');
 const auditLogRoute = require('./features/audit_logs/audit_log.route');
 const walletRoute = require('./features/wallet/wallet.route');
 const venueWalletRoute = require('./features/venueWallet/venueWallet.route');
@@ -89,6 +90,7 @@ app.use("/api", vendorBookingRoute);
 app.use("/api/vendor/flash-sales", vendorFlashSaleRoute);
 app.use("/api", wishlistRoute);
 app.use("/api", paymentRoute);
+app.use("/api", paymentSharingRoute);
 app.use("/api", auditLogRoute);
 
 app.use("/api", walletRoute);
