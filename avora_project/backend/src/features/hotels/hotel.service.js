@@ -1,6 +1,12 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+
+let customClient = null;
+const setCustomClient = (client) => {
+  customClient = client;
+};
+const getClient = () => customClient || supabase;
 const { validateStayDates } = require('../bookings/booking.validation');
 const { loadActiveBookingHolds } = require('../bookings/booking.service');
 const {
@@ -165,7 +171,8 @@ const getRoomTypeCapacity = (rt) => {
  * @returns {Promise<{ hotels: Array, total: number, filterStats: Object }>}
  */
 const searchHotels = async (params = {}) => {
-  if (!supabase) {
+  const client = getClient();
+  if (!client) {
     throw new Error('Database client is not initialized.');
   }
 
@@ -289,6 +296,7 @@ const searchHotels = async (params = {}) => {
 
   const hotelIds = rawHotels.map((h) => h.hotel_id);
 
+  const nowIso = new Date().toISOString();
   // 3. Fetch auxiliary data in parallel: images, rooms (m_room joined with m_room_type), facility maps, policies, reviews, cities
   const [
     imagesRes,
@@ -298,6 +306,7 @@ const searchHotels = async (params = {}) => {
     policiesRes,
     reviewsRes,
     citiesRes,
+    flashSalesRes,
   ] = await Promise.all([
     supabase
       .from('m_hotel_image')
@@ -354,6 +363,11 @@ const searchHotels = async (params = {}) => {
     supabase
       .from('m_city')
       .select('city_id, city_name'),
+    getClient()
+      .from('m_coupon')
+      .select('coupon_id, code, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, valid_from, valid_to')
+      .or('is_deleted.is.null,is_deleted.eq.false')
+      .in('discount_type', ['FLASH_PERCENT', 'PERCENT']),
   ]);
 
   // City lookup map
@@ -369,6 +383,55 @@ const searchHotels = async (params = {}) => {
   if (allFacilitiesRes.data) {
     allFacilitiesRes.data.forEach((f) => {
       facilityLookup[f.facility_id] = f;
+    });
+  }
+
+  // Map Hotel Prefix -> Hotel ID
+  const hotelIdByPrefix = new Map();
+  hotelIds.forEach((id) => {
+    if (id) {
+      hotelIdByPrefix.set(String(id).split('-')[0].toUpperCase(), id);
+    }
+  });
+
+  // Map active Flash Sale for each hotel (Chỉ khách sạn nào có mã Flash Sale FS_<prefix>_ mới có)
+  const activeFlashSaleByHotel = new Map();
+
+  if (flashSalesRes?.data && Array.isArray(flashSalesRes.data)) {
+    const nowTime = Date.now();
+    const validFlashCoupons = flashSalesRes.data.filter((c) => {
+      if (!['FLASH_PERCENT', 'PERCENT'].includes(c.discount_type)) return false;
+      if (c.valid_from && new Date(c.valid_from).getTime() > nowTime) return false;
+      if (c.valid_to && new Date(c.valid_to).getTime() < nowTime) return false;
+      return true;
+    });
+
+    validFlashCoupons.forEach((coupon) => {
+      const code = String(coupon.code || '').trim();
+      const parts = code.split('_');
+
+      const candidate = {
+        coupon_id: coupon.coupon_id,
+        code: coupon.code,
+        discount_type: coupon.discount_type,
+        discount_value: Number(coupon.discount_value || 0),
+        max_discount_amount: coupon.max_discount_amount ? Number(coupon.max_discount_amount) : null,
+        min_order_amount: coupon.min_order_amount ? Number(coupon.min_order_amount) : null,
+        valid_from: coupon.valid_from ? new Date(coupon.valid_from).toISOString() : null,
+        valid_to: coupon.valid_to ? new Date(coupon.valid_to).toISOString() : null,
+      };
+
+      // Chỉ gán Flash Sale cho khách sạn có mã khớp tiền tố FS_<prefix>_<name>
+      if (parts.length >= 3 && parts[0].toUpperCase() === 'FS') {
+        const prefix = parts[1].toUpperCase();
+        const matchedHotelId = hotelIdByPrefix.get(prefix);
+        if (matchedHotelId) {
+          const existing = activeFlashSaleByHotel.get(matchedHotelId);
+          if (!existing || candidate.discount_value > existing.discount_value) {
+            activeFlashSaleByHotel.set(matchedHotelId, candidate);
+          }
+        }
+      }
     });
   }
 
@@ -633,6 +696,7 @@ const searchHotels = async (params = {}) => {
           policy.penalty_rate
         ),
       },
+      active_flash_sale: activeFlashSaleByHotel.get(hotel.hotel_id) || null,
       tag: hotel.star_quality === 5 ? 'Ưu đãi mùa hè - Giảm 20%' : (minPriceForHotel < 2000000 ? 'Giá tốt nhất cho kỳ nghỉ này' : 'Ưu đãi chớp nhoáng'),
       is_genius: hotel.star_quality >= 4,
     };
@@ -793,7 +857,8 @@ function computeEmptyFilterStats() {
  * @returns {Promise<Object>}
  */
 const getHotelById = async (hotelId, options = {}) => {
-  if (!supabase) {
+  const client = getClient();
+  if (!client) {
     throw new Error('Database client is not initialized.');
   }
 
@@ -812,7 +877,7 @@ const getHotelById = async (hotelId, options = {}) => {
   const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const isUuid = hotelId && uuidPattern.test(String(hotelId).trim());
   if (isUuid) {
-    const { data } = await supabase
+    const { data } = await client
       .from('m_hotel')
       .select('*')
       .eq('hotel_id', String(hotelId).trim())
@@ -830,16 +895,54 @@ const getHotelById = async (hotelId, options = {}) => {
 
   const activeHotelId = hotel.hotel_id;
 
+  const nowIso = new Date().toISOString();
+  const hotelPrefix = activeHotelId.split('-')[0].toUpperCase();
+
+  const { data: dbFlashSales } = await getClient()
+    .from('m_coupon')
+    .select('coupon_id, code, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, valid_from, valid_to')
+    .or('is_deleted.is.null,is_deleted.eq.false')
+    .in('discount_type', ['FLASH_PERCENT', 'PERCENT']);
+
+  let activeFlashSale = null;
+  if (dbFlashSales && dbFlashSales.length > 0) {
+    const nowTime = Date.now();
+    const validFlashCoupons = dbFlashSales.filter((c) => {
+      if (c.valid_from && new Date(c.valid_from).getTime() > nowTime) return false;
+      if (c.valid_to && new Date(c.valid_to).getTime() < nowTime) return false;
+      return true;
+    });
+
+    // Ưu tiên 1: Mã có tiền tố FS_<hotelPrefix>_ dành riêng cho khách sạn này
+    const hotelSpecific = validFlashCoupons
+      .filter((c) => String(c.code || '').toUpperCase().startsWith(`FS_${hotelPrefix}_`))
+      .sort((a, b) => Number(b.discount_value || 0) - Number(a.discount_value || 0));
+
+    const best = hotelSpecific[0] || null;
+    if (best) {
+      activeFlashSale = {
+        coupon_id: best.coupon_id,
+        code: best.code,
+        discount_type: best.discount_type,
+        discount_value: Number(best.discount_value || 0),
+        max_discount_amount: best.max_discount_amount ? Number(best.max_discount_amount) : null,
+        min_order_amount: best.min_order_amount ? Number(best.min_order_amount) : null,
+        valid_from: best.valid_from ? new Date(best.valid_from).toISOString() : null,
+        valid_to: best.valid_to ? new Date(best.valid_to).toISOString() : null,
+      };
+    }
+  }
+
   // 2. Query location names (city, district, ward) from DB
   const [cityRes, districtRes, wardRes] = await Promise.all([
     hotel.city_id
-      ? supabase.from('m_city').select('city_name').eq('city_id', hotel.city_id).maybeSingle()
+      ? client.from('m_city').select('city_name').eq('city_id', hotel.city_id).maybeSingle()
       : Promise.resolve({ data: null }),
     hotel.district_id
-      ? supabase.from('m_district').select('district_name').eq('district_id', hotel.district_id).maybeSingle()
+      ? client.from('m_district').select('district_name').eq('district_id', hotel.district_id).maybeSingle()
       : Promise.resolve({ data: null }),
     hotel.ward_id
-      ? supabase.from('m_ward').select('ward_name').eq('ward_id', hotel.ward_id).maybeSingle()
+      ? client.from('m_ward').select('ward_name').eq('ward_id', hotel.ward_id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
@@ -848,7 +951,7 @@ const getHotelById = async (hotelId, options = {}) => {
   const wardName = wardRes.data?.ward_name || '';
 
   // 3. Query facilities mapped to this hotel in DB
-  const { data: facMaps } = await supabase
+  const { data: facMaps } = await client
     .from('m_hotel_facility_map')
     .select('facility_id')
     .eq('hotel_id', activeHotelId);
@@ -856,7 +959,7 @@ const getHotelById = async (hotelId, options = {}) => {
   let facilities = [];
   if (facMaps && facMaps.length > 0) {
     const facIds = facMaps.map((m) => m.facility_id);
-    const { data: facData } = await supabase
+    const { data: facData } = await client
       .from('m_facility')
       .select('facility_id, facility_name, type, icon')
       .in('facility_id', facIds);
@@ -872,7 +975,7 @@ const getHotelById = async (hotelId, options = {}) => {
   }
 
   // 4. Query images from m_hotel_image
-  const { data: dbImages } = await supabase
+  const { data: dbImages } = await client
     .from('m_hotel_image')
     .select('image_id, image_url, is_thumbnail, sort_order')
     .eq('hotel_id', activeHotelId)
@@ -885,7 +988,7 @@ const getHotelById = async (hotelId, options = {}) => {
   const thumbnail = dbImages?.find((img) => img.is_thumbnail)?.image_url || images[0] || '';
 
   // 5. Query cancellation policy from m_cancellation_policy
-  const { data: policy } = await supabase
+  const { data: policy } = await client
     .from('m_cancellation_policy')
     .select('*')
     .or(`hotel_id.eq.${activeHotelId},hotel_id.is.null`)
@@ -894,7 +997,7 @@ const getHotelById = async (hotelId, options = {}) => {
     .maybeSingle();
 
   // 6. Query physical rooms from m_room (joined with m_room_type) & inventory from t_inventory
-  const { data: dbRooms } = await supabase
+  const { data: dbRooms } = await client
     .from('m_room')
     .select(`
       room_id,
@@ -926,7 +1029,7 @@ const getHotelById = async (hotelId, options = {}) => {
   const roomTypeIds = [...new Set(activeRoomsList.map((r) => r.room_type_id).filter(Boolean))];
   let inventoryByRoom = {};
   if (roomTypeIds.length > 0) {
-    let invQuery = supabase
+    let invQuery = client
       .from('t_inventory')
       .select('*')
       .in('room_type_id', roomTypeIds);
@@ -1036,7 +1139,7 @@ const getHotelById = async (hotelId, options = {}) => {
   });
 
   // 7. Query reviews from t_review via t_booking in DB
-  const { data: bookings } = await supabase
+  const { data: bookings } = await client
     .from('t_booking')
     .select('booking_id, guest_name, hotel_id')
     .eq('hotel_id', activeHotelId);
@@ -1044,7 +1147,7 @@ const getHotelById = async (hotelId, options = {}) => {
   let reviews = [];
   if (bookings && bookings.length > 0) {
     const bIds = bookings.map((b) => b.booking_id);
-    const { data: dbReviews } = await supabase
+    const { data: dbReviews } = await client
       .from('t_review')
       .select('*')
       .in('booking_id', bIds);
@@ -1103,6 +1206,7 @@ const getHotelById = async (hotelId, options = {}) => {
         policy.penalty_rate ?? policy.cancellation_penalty_rate
       ),
     } : null,
+    active_flash_sale: activeFlashSale,
     rooms: rooms,
     reviews: reviews,
   };
@@ -1111,4 +1215,5 @@ const getHotelById = async (hotelId, options = {}) => {
 module.exports = {
   searchHotels,
   getHotelById,
+  setCustomClient,
 };

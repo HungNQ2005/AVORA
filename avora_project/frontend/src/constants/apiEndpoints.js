@@ -61,4 +61,8 @@ export const API_ENDPOINTS = {
   WALLET_HOTELS: `${API_BASE_URL}/api/wallet/hotels`,
   WALLET_HOTEL: (hotelId) => `${API_BASE_URL}/api/wallet/hotels/${hotelId}`,
   WALLET_LINK_BANK: (hotelId) => `${API_BASE_URL}/api/wallet/hotels/${hotelId}/bank-account`,
+
+  // Vendor Flash Sales API
+  VENDOR_FLASH_SALES: `${API_BASE_URL}/api/vendor/flash-sales`,
+  VENDOR_FLASH_SALE_DETAIL: (id) => `${API_BASE_URL}/api/vendor/flash-sales/${encodeURIComponent(id)}`,
 };

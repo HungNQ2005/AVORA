@@ -515,7 +515,8 @@
   border: 1.5px solid rgba(255, 255, 255, 0.9);
   color: #1e293b;
   padding: 6px 16px 6px 10px;
-  border-radius: 9999px; /* 100% bo tròn capsule */
+  border-radius: 9999px;
+  /* 100% bo tròn capsule */
   font-size: 13.5px;
   font-weight: 600;
   font-family: inherit;
@@ -1095,8 +1096,8 @@
 
 .avora-hotel-card__btn {
   width: 100%;
-  background-color: #0066ff;
-  color: #ffffff;
+  background-color: #ffc72c;
+  color: #000000;
   font-size: 14px;
   font-weight: 700;
   border: none;
@@ -1122,8 +1123,13 @@
 }
 
 @keyframes avoraSkeletonLoading {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 .avora-skeleton-line {
@@ -1384,4 +1390,113 @@
   margin-bottom: 12px;
   font-weight: 500;
   line-height: 1.35;
-}
+}
+
+/* ─── ⚡ Flash Sale Hộp Vàng Chữ Đen Styles trên HomePage ─── */
+.avora-hotel-card__badge--flash-sale {
+  background: #ffc72c !important;
+  /* Hộp vàng */
+  color: #111827 !important;
+  /* Chữ đen */
+  font-weight: 800 !important;
+  border: 1px solid #f59e0b !important;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.45) !important;
+  display: inline-flex !important;
+  align-items: center;
+  gap: 4px;
+}
+
+.avora-flash-alert-gold {
+  background: #ffc72c !important;
+  /* Hộp vàng đặc trưng */
+  color: #111827 !important;
+  /* Chữ đen đậm rõ nét */
+  border: 1px solid #f59e0b !important;
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 8px 0;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2);
+}
+
+.avora-flash-alert-gold__icon {
+  font-size: 13px;
+  color: #92400e;
+  flex-shrink: 0;
+}
+
+.avora-flash-alert-gold__text strong {
+  font-weight: 800;
+  color: #000000;
+}
+
+.avora-hotel-card__current-price--flash {
+  color: #dc2626 !important;
+  font-weight: 800;
+}
+
+.avora-hotel-card__tax-note--flash {
+  color: #dc2626 !important;
+  font-weight: 700;
+}
+
+/* ─── Dải Flash Sale Chạy Nhẹ Ngang (Ticker / Marquee) ─── */
+.avora-flash-ticker {
+  background: linear-gradient(90deg, #fffbeb 0%, #fef3c7 50%, #fffbeb 100%);
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 9px 16px;
+  margin-bottom: 22px;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.avora-flash-ticker__track {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+  animation: flashTickerSlide 35s linear infinite;
+}
+
+.avora-flash-ticker:hover .avora-flash-ticker__track {
+  animation-play-state: paused;
+}
+
+@keyframes flashTickerSlide {
+  0% {
+    transform: translateX(0%);
+  }
+
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.avora-flash-ticker__badge {
+  background: #ffc72c;
+  color: #111827;
+  font-weight: 800;
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+  border: 1px solid #f59e0b;
+}
+
+.avora-flash-ticker__content {
+  font-size: 13px;
+  color: #78350f;
+  font-weight: 600;
+}

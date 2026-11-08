@@ -15,6 +15,12 @@ const { getRoomTypesForHotel } = require('./booking.room-types');
 
 const PENDING_BOOKING_TTL_MS = 10 * 60 * 1000;
 
+let customClient = null;
+const setCustomClient = (client) => {
+  customClient = client;
+};
+const getClient = () => customClient || supabase;
+
 const createError = (message, statusCode = 500, code = null) => {
   const err = new Error(message);
   err.statusCode = statusCode;
@@ -23,16 +29,96 @@ const createError = (message, statusCode = 500, code = null) => {
 };
 
 const ensureClient = () => {
-  if (!supabase) {
+  const client = getClient();
+  if (!client) {
     throw createError('Database client is not initialized.', 503);
   }
+};
+
+/**
+ * Helper to compute discount amount based on coupon and subtotal
+ */
+const calculateCouponDiscount = (couponRecord, subtotal) => {
+  if (!couponRecord || !subtotal || subtotal <= 0) return 0;
+  const discountType = String(couponRecord.discount_type || '').toUpperCase();
+  const discountVal = Number(couponRecord.discount_value || 0);
+  const hasMax = couponRecord.max_discount_amount !== null &&
+    couponRecord.max_discount_amount !== undefined &&
+    couponRecord.max_discount_amount !== '' &&
+    !isNaN(Number(couponRecord.max_discount_amount));
+  const maxDiscount = hasMax ? Math.max(0, Number(couponRecord.max_discount_amount)) : Infinity;
+
+  let rawDiscount = 0;
+  if (discountType === 'FLASH_PERCENT' || discountType === 'PERCENT') {
+    rawDiscount = (subtotal * discountVal) / 100;
+  } else if (discountType === 'FIXED_AMOUNT' || discountType === 'FIXED') {
+    rawDiscount = discountVal;
+  } else {
+    rawDiscount = 0;
+  }
+
+  const finalDiscount = Math.min(rawDiscount, maxDiscount, subtotal);
+  return Math.max(0, Math.round(finalDiscount));
+};
+
+/**
+ * Helper to check coupon eligibility (valid dates, min_order_amount, usage_limit)
+ * Returns { valid: boolean, message: string | null }
+ */
+const verifyCouponEligibility = async (dbCoupon, subtotal, now, excludeBookingId = null, dbClient = null) => {
+  const client = dbClient || getClient();
+  const validFrom = dbCoupon.valid_from ? new Date(dbCoupon.valid_from) : null;
+  const validTo = dbCoupon.valid_to ? new Date(dbCoupon.valid_to) : null;
+
+  if (validFrom && now < validFrom) {
+    return { valid: false, message: 'Mã giảm giá chưa đến ngày có hiệu lực.' };
+  }
+  if (validTo && now > validTo) {
+    return { valid: false, message: 'Mã giảm giá đã hết hạn sử dụng.' };
+  }
+  if (dbCoupon.min_order_amount && subtotal < Number(dbCoupon.min_order_amount)) {
+    return {
+      valid: false,
+      message: `Đơn hàng tối thiểu để áp dụng mã là ${Number(dbCoupon.min_order_amount).toLocaleString('vi-VN')} đ.`,
+    };
+  }
+
+  if (dbCoupon.usage_limit != null) {
+    const { pending, confirmed } = await getBookingStatusCodes();
+    const cutoff = new Date(Date.now() - PENDING_BOOKING_TTL_MS).toISOString();
+    let confirmedQuery = client
+      .from('t_booking')
+      .select('booking_id', { count: 'exact', head: true })
+      .eq('coupon_id', dbCoupon.coupon_id)
+      .eq('booking_status_cd', confirmed);
+    let pendingQuery = client
+      .from('t_booking')
+      .select('booking_id', { count: 'exact', head: true })
+      .eq('coupon_id', dbCoupon.coupon_id)
+      .eq('booking_status_cd', pending)
+      .gt('created_at', cutoff);
+    if (excludeBookingId) {
+      confirmedQuery = confirmedQuery.neq('booking_id', excludeBookingId);
+      pendingQuery = pendingQuery.neq('booking_id', excludeBookingId);
+    }
+    const [confirmedCount, pendingCount] = await Promise.all([confirmedQuery, pendingQuery]);
+    if (confirmedCount.error || pendingCount.error) {
+      throw createError(`Lỗi kiểm tra lượt sử dụng coupon: ${(confirmedCount.error || pendingCount.error).message}`);
+    }
+    const usageCount = (confirmedCount.count || 0) + (pendingCount.count || 0);
+    if (usageCount >= dbCoupon.usage_limit) {
+      return { valid: false, message: 'Mã giảm giá đã đạt giới hạn lượt sử dụng.' };
+    }
+  }
+
+  return { valid: true, message: null };
 };
 
 /**
  * Load system codes from m_system_code for dynamic code_cd <-> code_name resolution.
  */
 const loadSystemCodes = async () => {
-  const { data: rows, error } = await supabase
+  const { data: rows, error } = await getClient()
     .from('m_system_code')
     .select('business_cd, code_cd, code_name, sort_no');
   if (error) throw createError(`Không thể tải mã hệ thống: ${error.message}`);
@@ -154,7 +240,7 @@ const loadActiveBookingHolds = async (roomTypeIds, checkInStr, checkOutStr, excl
   if (roomTypeIds.length === 0) return new Map();
 
   const [{ data: details, error }, statusCodes] = await Promise.all([
-    supabase
+    getClient()
       .from('t_booking_detail')
       .select('room_type_id, quantity, check_in_date, check_out_date, t_booking!inner(booking_id, booking_status_cd, created_at)')
       .in('room_type_id', roomTypeIds)
@@ -210,7 +296,7 @@ const ensureBookingAccess = async (booking, currentUser, { allowHotelOwner = fal
   ).trim().toUpperCase();
 
   if (!roleName && currentUser.role_cd) {
-    const { data: role, error } = await supabase
+    const { data: role, error } = await getClient()
       .from('m_system_code')
       .select('code_name')
       .eq('business_cd', 'USER_ROLE')
@@ -223,7 +309,7 @@ const ensureBookingAccess = async (booking, currentUser, { allowHotelOwner = fal
   if (roleName === 'ADM') return;
 
   if (allowHotelOwner && roleName === 'VEN') {
-    const { data: hotel, error } = await supabase
+    const { data: hotel, error } = await getClient()
       .from('m_hotel')
       .select('owner_id')
       .eq('hotel_id', booking.hotel_id)
@@ -250,6 +336,7 @@ const calculatePricing = async ({
   excluded_details = [],
 }) => {
   ensureClient();
+  const client = getClient();
 
   const now = new Date();
   const dateErrors = validateStayDates(check_in_date, check_out_date);
@@ -263,7 +350,7 @@ const calculatePricing = async ({
   // 1. Resolve hotel from m_hotel
   const activeHotelId = hotel_id;
 
-  const { data: foundHotel, error: hotelError } = await supabase
+  const { data: foundHotel, error: hotelError } = await client
     .from('m_hotel')
     .select('hotel_id, name, description, address, city_id, district_id, ward_id, star_rating, star_quality, hotel_status, is_deleted')
     .eq('hotel_id', activeHotelId)
@@ -287,12 +374,12 @@ const calculatePricing = async ({
     throw createError('Vui lòng chọn ít nhất 1 hạng phòng để đặt.', 400);
   }
   const [{ data: roomTypeRows, error: rtError }, { data: hotelRoomRows, error: hotelRoomError }] = await Promise.all([
-    supabase
+    client
       .from('m_room_type')
       .select('room_type_id, hotel_id, type_name, default_price, bed_type, room_size, max_adults, max_children')
       .in('room_type_id', requestedRoomTypeIds)
       .or('is_deleted.is.null,is_deleted.eq.false'),
-    supabase
+    client
       .from('m_room')
       .select('room_type_id')
       .eq('hotel_id', activeHotelId)
@@ -322,36 +409,36 @@ const calculatePricing = async ({
     policyRes,
     activeCouponsRes,
   ] = await Promise.all([
-    supabase
+    client
       .from('t_inventory')
       .select('room_type_id, target_date, available_rooms, locked_rooms, current_price')
       .in('room_type_id', validRoomTypeIds)
       .gte('target_date', checkInStr)
       .lt('target_date', checkOutStr),
-    supabase
+    client
       .from('m_room_facility_map')
       .select('room_type_id, m_facility(facility_id, facility_name, type, icon)')
       .in('room_type_id', validRoomTypeIds),
-    supabase
+    client
       .from('m_room')
       .select('room_id, room_type_id, room_number, floor, status_cd')
       .in('room_type_id', validRoomTypeIds)
       .eq('is_deleted', false),
     activeHotelId
-      ? supabase
+      ? client
         .from('m_hotel_image')
         .select('image_id, image_url, is_thumbnail, sort_order')
         .eq('hotel_id', activeHotelId)
         .order('sort_order', { ascending: true })
       : Promise.resolve({ data: [] }),
     activeHotelId
-      ? supabase
+      ? client
         .from('t_booking')
         .select('booking_id, t_review(rating_score)')
         .eq('hotel_id', activeHotelId)
       : Promise.resolve({ data: [] }),
     activeHotelId
-      ? supabase
+      ? client
         .from('m_cancellation_policy')
         .select('*')
         .or(`hotel_id.eq.${activeHotelId},hotel_id.is.null`)
@@ -359,7 +446,7 @@ const calculatePricing = async ({
         .limit(1)
         .maybeSingle()
       : Promise.resolve({ data: null }),
-    supabase
+    client
       .from('m_coupon')
       .select('coupon_id, code, discount_type, discount_value, max_discount_amount, min_order_amount, usage_limit, valid_from, valid_to')
       .eq('is_deleted', false)
@@ -448,90 +535,166 @@ const calculatePricing = async ({
     };
   });
 
-  // Filter valid active coupons from DB for client hints
+  const hotelPrefix = activeHotelId ? String(activeHotelId).split('-')[0].toUpperCase() : '';
+  const flashPrefix = hotelPrefix ? `FS_${hotelPrefix}_` : null;
+
+  // Filter valid active coupons from DB for client hints, excluding flash sales of other hotels
   const availableCoupons = (activeCouponsRes.data || []).filter((c) => {
     const vFrom = c.valid_from ? new Date(c.valid_from) : null;
     const vTo = c.valid_to ? new Date(c.valid_to) : null;
     if (vFrom && now < vFrom) return false;
     if (vTo && now > vTo) return false;
+    const code = String(c.code || '').toUpperCase();
+    if (code.startsWith('FS_')) {
+      if (!flashPrefix || !code.startsWith(flashPrefix)) {
+        return false;
+      }
+    }
     return true;
   });
 
-  // Validate coupon if provided
-  let coupon = null;
-  let discount_amount = 0;
-  let couponMessage = null;
+  // 1. Auto-detect active hotel Flash Sale during golden hours
+  let bestFlashSale = null;
+  let flashDiscount = 0;
 
-  if (coupon_code && String(coupon_code).trim()) {
-    const cleanCode = String(coupon_code).trim().toUpperCase();
-    const { data: dbCoupon, error: couponError } = await supabase
-      .from('m_coupon')
-      .select('*')
-      .ilike('code', cleanCode)
-      .eq('is_deleted', false)
-      .maybeSingle();
+  if (Array.isArray(activeCouponsRes.data)) {
+    const candidateFlashSales = activeCouponsRes.data.filter((c) => {
+      const code = String(c.code || '').toUpperCase();
+      return Boolean(flashPrefix && code.startsWith(flashPrefix));
+    });
 
-    if (couponError) {
-      throw createError(`Lỗi kiểm tra coupon: ${couponError.message}`);
-    }
-
-    if (!dbCoupon) {
-      couponMessage = `Mã giảm giá "${cleanCode}" không tồn tại trong hệ thống.`;
-    } else {
-      const validFrom = dbCoupon.valid_from ? new Date(dbCoupon.valid_from) : null;
-      const validTo = dbCoupon.valid_to ? new Date(dbCoupon.valid_to) : null;
-
-      if (validFrom && now < validFrom) {
-        couponMessage = 'Mã giảm giá chưa đến ngày có hiệu lực.';
-      } else if (validTo && now > validTo) {
-        couponMessage = 'Mã giảm giá đã hết hạn sử dụng.';
-      } else if (dbCoupon.min_order_amount && subtotal < Number(dbCoupon.min_order_amount)) {
-        couponMessage = `Đơn hàng tối thiểu để áp dụng mã là ${Number(dbCoupon.min_order_amount).toLocaleString('vi-VN')} đ.`;
-      } else {
-        if (dbCoupon.usage_limit != null) {
-          const { pending, confirmed } = await getBookingStatusCodes();
-          const cutoff = new Date(Date.now() - PENDING_BOOKING_TTL_MS).toISOString();
-          let confirmedQuery = supabase
-            .from('t_booking')
-            .select('booking_id', { count: 'exact', head: true })
-            .eq('coupon_id', dbCoupon.coupon_id)
-            .eq('booking_status_cd', confirmed);
-          let pendingQuery = supabase
-            .from('t_booking')
-            .select('booking_id', { count: 'exact', head: true })
-            .eq('coupon_id', dbCoupon.coupon_id)
-            .eq('booking_status_cd', pending)
-            .gt('created_at', cutoff);
-          if (exclude_booking_id) {
-            confirmedQuery = confirmedQuery.neq('booking_id', exclude_booking_id);
-            pendingQuery = pendingQuery.neq('booking_id', exclude_booking_id);
+    for (const candidate of candidateFlashSales) {
+      const check = await verifyCouponEligibility(candidate, subtotal, now, exclude_booking_id, client);
+      if (check.valid) {
+        const discount = calculateCouponDiscount(candidate, subtotal);
+        if (discount > 0) {
+          const isCandSpecific = flashPrefix && String(candidate.code || '').toUpperCase().startsWith(flashPrefix);
+          const isCurrSpecific = flashPrefix && bestFlashSale && String(bestFlashSale.code || '').toUpperCase().startsWith(flashPrefix);
+          if (!bestFlashSale || (isCandSpecific && !isCurrSpecific) || discount > flashDiscount) {
+            bestFlashSale = candidate;
+            flashDiscount = discount;
           }
-          const [confirmedCount, pendingCount] = await Promise.all([confirmedQuery, pendingQuery]);
-          if (confirmedCount.error || pendingCount.error) {
-            throw createError(`Lỗi kiểm tra lượt sử dụng coupon: ${(confirmedCount.error || pendingCount.error).message}`);
-          }
-          const usageCount = (confirmedCount.count || 0) + (pendingCount.count || 0);
-          if (usageCount >= dbCoupon.usage_limit) {
-            couponMessage = 'Mã giảm giá đã đạt giới hạn lượt sử dụng.';
-          }
-        }
-
-        if (!couponMessage) {
-          coupon = dbCoupon;
-          const discountVal = Number(dbCoupon.discount_value || 0);
-          const maxDiscount = dbCoupon.max_discount_amount ? Number(dbCoupon.max_discount_amount) : Infinity;
-
-          if (dbCoupon.discount_type === 'PERCENT') {
-            discount_amount = Math.min((subtotal * discountVal) / 100, maxDiscount);
-          } else {
-            discount_amount = Math.min(discountVal, maxDiscount, subtotal);
-          }
-          discount_amount = Math.round(discount_amount);
-          couponMessage = `Đã áp dụng mã ${dbCoupon.code} (-${discount_amount.toLocaleString('vi-VN')} đ)`;
         }
       }
     }
   }
+
+  // 2. Validate manual coupon input if provided
+  let manualCoupon = null;
+  let manualDiscount = 0;
+  let manualCouponError = null;
+  const trimmedCoupon = String(coupon_code || '').trim();
+
+  if (trimmedCoupon) {
+    const cleanCode = trimmedCoupon.toUpperCase();
+    if (bestFlashSale && String(bestFlashSale.code).toUpperCase() === cleanCode) {
+      manualCoupon = bestFlashSale;
+      manualDiscount = flashDiscount;
+    } else {
+      const { data: dbCoupon, error: couponError } = await client
+        .from('m_coupon')
+        .select('*')
+        .ilike('code', cleanCode)
+        .eq('is_deleted', false)
+        .maybeSingle();
+
+      if (couponError) {
+        throw createError(`Lỗi kiểm tra coupon: ${couponError.message}`);
+      }
+
+      if (!dbCoupon) {
+        manualCouponError = `Mã giảm giá "${cleanCode}" không tồn tại trong hệ thống.`;
+      } else if (String(dbCoupon.code || '').toUpperCase().startsWith('FS_') && (!flashPrefix || !String(dbCoupon.code || '').toUpperCase().startsWith(flashPrefix))) {
+        manualCouponError = 'Mã Flash Sale này thuộc về khách sạn khác và không thể áp dụng cho khách sạn đã chọn.';
+      } else {
+        const check = await verifyCouponEligibility(dbCoupon, subtotal, now, exclude_booking_id, client);
+        if (!check.valid) {
+          manualCouponError = check.message;
+        } else {
+          manualCoupon = dbCoupon;
+          manualDiscount = calculateCouponDiscount(dbCoupon, subtotal);
+        }
+      }
+    }
+  }
+
+  // 3. Conflict Resolution Matrix (Strict 1 promo per booking, best value protection)
+  let coupon = null;
+  let discount_amount = 0;
+  let applied_type = null;
+  let couponMessage = null;
+
+  if (bestFlashSale && manualCoupon) {
+    if (String(manualCoupon.code).toUpperCase() === String(bestFlashSale.code).toUpperCase()) {
+      coupon = bestFlashSale;
+      discount_amount = flashDiscount;
+      applied_type = 'FLASH_SALE';
+      couponMessage = `⚡ Đã áp dụng ưu đãi Flash Sale ${bestFlashSale.code} (-${flashDiscount.toLocaleString('vi-VN')} đ)`;
+    } else if (manualDiscount > flashDiscount) {
+      coupon = manualCoupon;
+      discount_amount = manualDiscount;
+      applied_type = 'MANUAL_COUPON';
+      couponMessage = `Đã áp dụng mã ${manualCoupon.code} (-${manualDiscount.toLocaleString('vi-VN')} đ), thay thế Flash Sale của khách sạn.`;
+    } else if (flashDiscount > manualDiscount) {
+      coupon = bestFlashSale;
+      discount_amount = flashDiscount;
+      applied_type = 'FLASH_SALE';
+      couponMessage = `Ưu đãi Flash Sale (-${flashDiscount.toLocaleString('vi-VN')} đ) có lợi hơn mã ${manualCoupon.code} (-${manualDiscount.toLocaleString('vi-VN')} đ). Hệ thống đã giữ ưu đãi Flash Sale.`;
+    } else {
+      // Equal discount: deterministic tie-break keeps Flash Sale
+      coupon = bestFlashSale;
+      discount_amount = flashDiscount;
+      applied_type = 'FLASH_SALE';
+      couponMessage = `Ưu đãi Flash Sale (-${flashDiscount.toLocaleString('vi-VN')} đ) có giá trị tương đương mã ${manualCoupon.code} (-${manualDiscount.toLocaleString('vi-VN')} đ). Hệ thống ưu tiên giữ ưu đãi Flash Sale của khách sạn.`;
+    }
+  } else if (bestFlashSale && !trimmedCoupon) {
+    coupon = bestFlashSale;
+    discount_amount = flashDiscount;
+    applied_type = 'FLASH_SALE';
+    couponMessage = `⚡ Đã tự động áp dụng ưu đãi Flash Sale khung giờ vàng (-${flashDiscount.toLocaleString('vi-VN')} đ)`;
+  } else if (bestFlashSale && manualCouponError) {
+    coupon = bestFlashSale;
+    discount_amount = flashDiscount;
+    applied_type = 'FLASH_SALE';
+    couponMessage = `${manualCouponError} Đơn phòng tiếp tục áp dụng ưu đãi Flash Sale của khách sạn (-${flashDiscount.toLocaleString('vi-VN')} đ).`;
+  } else if (!bestFlashSale && manualCoupon) {
+    coupon = manualCoupon;
+    discount_amount = manualDiscount;
+    applied_type = 'MANUAL_COUPON';
+    couponMessage = `Đã áp dụng mã ${manualCoupon.code} (-${manualDiscount.toLocaleString('vi-VN')} đ)`;
+  } else if (!bestFlashSale && manualCouponError) {
+    coupon = null;
+    discount_amount = 0;
+    applied_type = null;
+    couponMessage = manualCouponError;
+  } else {
+    coupon = null;
+    discount_amount = 0;
+    applied_type = null;
+    couponMessage = null;
+  }
+
+  const promotion_details = {
+    applied_type,
+    flash_sale_available: Boolean(bestFlashSale),
+    flash_sale_discount: bestFlashSale ? flashDiscount : 0,
+    manual_coupon_discount: manualCoupon ? manualDiscount : 0,
+    message: couponMessage,
+  };
+
+  const active_flash_sale = bestFlashSale
+    ? {
+      coupon_id: bestFlashSale.coupon_id,
+      code: bestFlashSale.code,
+      discount_type: bestFlashSale.discount_type,
+      discount_value: Number(bestFlashSale.discount_value),
+      max_discount_amount: bestFlashSale.max_discount_amount ? Number(bestFlashSale.max_discount_amount) : null,
+      min_order_amount: bestFlashSale.min_order_amount ? Number(bestFlashSale.min_order_amount) : null,
+      valid_from: bestFlashSale.valid_from ? new Date(bestFlashSale.valid_from).toISOString() : null,
+      valid_to: bestFlashSale.valid_to ? new Date(bestFlashSale.valid_to).toISOString() : null,
+      discount_amount: flashDiscount,
+    }
+    : null;
 
   // Hotel review summary from DB
   const reviewScores = [];
@@ -588,6 +751,8 @@ const calculatePricing = async ({
       }
       : null,
     coupon_message: couponMessage,
+    promotion_details,
+    active_flash_sale,
     available_coupons: availableCoupons.map((c) => ({
       coupon_id: c.coupon_id,
       code: c.code,
@@ -620,12 +785,12 @@ const requiresCouponRemovalConfirmation = (booking, pricing) => (
 const loadInventoryFallback = async (rooms, checkInStr, checkOutStr, excludeBookingId = null) => {
   const roomTypeIds = [...new Set(rooms.map((room) => room.room_type_id))];
   const [{ data: physicalRooms, error }, { data: roomTypes, error: roomTypeError }, heldByRoomType] = await Promise.all([
-    supabase
+    getClient()
       .from('m_room')
       .select('room_type_id, status_cd')
       .in('room_type_id', roomTypeIds)
       .eq('is_deleted', false),
-    supabase
+    getClient()
       .from('m_room_type')
       .select('room_type_id, default_price')
       .in('room_type_id', roomTypeIds),
@@ -655,13 +820,13 @@ const loadNightlyAvailability = async (rooms, checkInStr, checkOutStr, excludeBo
   const roomTypeIds = [...new Set(rooms.map((room) => room.room_type_id))];
   const [{ data: inventoryRows, error: inventoryError }, { data: physicalRooms, error: roomsError }, heldByRoomType] =
     await Promise.all([
-      supabase
+      getClient()
         .from('t_inventory')
         .select('room_type_id, target_date, available_rooms')
         .in('room_type_id', roomTypeIds)
         .gte('target_date', checkInStr)
         .lt('target_date', checkOutStr),
-      supabase
+      getClient()
         .from('m_room')
         .select('room_type_id, status_cd')
         .in('room_type_id', roomTypeIds)
@@ -698,7 +863,7 @@ const loadNightlyAvailability = async (rooms, checkInStr, checkOutStr, excludeBo
 };
 
 const readInventoryRow = async (roomTypeId, dateStr) => {
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from('t_inventory')
     .select('available_rooms, locked_rooms, version')
     .eq('room_type_id', roomTypeId)
@@ -714,7 +879,7 @@ const applyInventoryDeltaForNight = async (roomTypeId, dateStr, quantity, deltaS
     const held = fallback.heldByRoomType.get(roomTypeId)?.get(dateStr) || 0;
     const totalRooms = fallback.roomsByType.get(roomTypeId) || 0;
     const inventorySeed = createInventorySeed(totalRooms, held);
-    const { error } = await supabase
+    const { error } = await getClient()
       .from('t_inventory')
       .upsert({
         room_type_id: roomTypeId,
@@ -734,7 +899,7 @@ const applyInventoryDeltaForNight = async (roomTypeId, dateStr, quantity, deltaS
 
     const nextAvailable = Number(inventory.available_rooms || 0) - deltaSign * quantity;
     if (nextAvailable < 0) throw createSoldOutError([dateStr]);
-    const { data: updated, error } = await supabase
+    const { data: updated, error } = await getClient()
       .from('t_inventory')
       .update({
         available_rooms: nextAvailable,
@@ -820,6 +985,26 @@ const adjustInventoryForStay = async (
 
 // In-memory Mutex Set to prevent duplicate concurrent booking submissions
 const activeBookingLocks = new Set();
+const couponLocks = new Map();
+
+const acquireCouponLock = async (couponKey) => {
+  if (!couponKey) return () => {};
+  const key = String(couponKey).trim().toUpperCase();
+  while (couponLocks.has(key)) {
+    await couponLocks.get(key);
+  }
+  let release;
+  const promise = new Promise((resolve) => {
+    release = resolve;
+  });
+  couponLocks.set(key, promise);
+  return () => {
+    if (couponLocks.get(key) === promise) {
+      couponLocks.delete(key);
+    }
+    release();
+  };
+};
 
 /**
  * Create a new booking in t_booking and t_booking_detail using the configured pending status.
@@ -844,9 +1029,14 @@ const createBooking = async (payload, currentUser = null) => {
     );
   }
   activeBookingLocks.add(lockKey);
+  const couponLockTarget = payload.coupon_code
+    ? `CPN_${String(payload.coupon_code).trim().toUpperCase()}`
+    : `HOTEL_PROMO_${payload.hotel_id}`;
+  const releaseCouponLock = await acquireCouponLock(couponLockTarget);
 
   try {
     ensureClient();
+    const client = getClient();
 
     const [pricing, sysCodes] = await Promise.all([
       calculatePricing({
@@ -861,12 +1051,23 @@ const createBooking = async (payload, currentUser = null) => {
       loadSystemCodes(),
     ]);
 
+    if (payload.coupon_code) {
+      const cleanRequestedCode = String(payload.coupon_code).trim().toUpperCase();
+      const appliedCode = pricing.coupon?.code ? String(pricing.coupon.code).trim().toUpperCase() : null;
+      if (appliedCode !== cleanRequestedCode) {
+        const promoMsg = pricing.promotion_details?.message || '';
+        if (promoMsg && (promoMsg.includes('hết hạn') || promoMsg.includes('chưa đến') || promoMsg.includes('giới hạn') || promoMsg.includes('không tồn tại'))) {
+          throw createError(promoMsg, 400);
+        }
+      }
+    }
+
     const pendingStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'PND');
     const bookingActionCd = sysCodes.getCodeCd('USER_ACTION', 'BOK');
 
     // Kiểm tra đơn trùng lặp trong vòng 60 giây gần nhất (Idempotency)
     const recentWindow = new Date(Date.now() - 60 * 1000).toISOString();
-    const { data: recentBookings } = await supabase
+    const { data: recentBookings } = await client
       .from('t_booking')
       .select(`
         booking_id,
@@ -967,7 +1168,7 @@ const createBooking = async (payload, currentUser = null) => {
       applied_penalty_rate: pricing.cancellation_policy?.penalty_rate ?? 0,
     };
 
-    const { data: createdBooking, error: bookingError } = await supabase
+    const { data: createdBooking, error: bookingError } = await client
       .from('t_booking')
       .insert(bookingInsertPayload)
       .select('*')
@@ -987,13 +1188,13 @@ const createBooking = async (payload, currentUser = null) => {
       unit_price: room.unit_price,
     }));
 
-    const { data: createdDetails, error: detailsError } = await supabase
+    const { data: createdDetails, error: detailsError } = await client
       .from('t_booking_detail')
       .insert(detailRows)
       .select('*');
 
     if (detailsError) {
-      await supabase.from('t_booking').delete().eq('booking_id', createdBooking.booking_id);
+      await client.from('t_booking').delete().eq('booking_id', createdBooking.booking_id);
       throw createError(`Lỗi lưu chi tiết đặt phòng: ${detailsError.message}`);
     }
 
@@ -1006,11 +1207,11 @@ const createBooking = async (payload, currentUser = null) => {
         createdBooking.booking_id
       );
     } catch (inventoryError) {
-      const { error: detailCleanupError } = await supabase
+      const { error: detailCleanupError } = await client
         .from('t_booking_detail')
         .delete()
         .eq('booking_id', createdBooking.booking_id);
-      const { error: bookingCleanupError } = await supabase
+      const { error: bookingCleanupError } = await client
         .from('t_booking')
         .delete()
         .eq('booking_id', createdBooking.booking_id);
@@ -1027,7 +1228,7 @@ const createBooking = async (payload, currentUser = null) => {
     // Log user behavior using the configured booking action.
     try {
       if (userId) {
-        await supabase.from('h_user_behavior').insert({
+        await client.from('h_user_behavior').insert({
           user_id: userId,
           action_type_cd: bookingActionCd,
           search_criteria: {
@@ -1059,6 +1260,7 @@ const createBooking = async (payload, currentUser = null) => {
       created_at: ensureUtcIsoString(createdBooking.created_at),
     };
   } finally {
+    releaseCouponLock();
     activeBookingLocks.delete(lockKey);
   }
 };
@@ -1069,7 +1271,7 @@ const createBooking = async (payload, currentUser = null) => {
 const getBookingById = async (bookingId, currentUser, options = {}) => {
   ensureClient();
 
-  const { data: booking, error } = await supabase
+  const { data: booking, error } = await getClient()
     .from('t_booking')
     .select(`
       booking_id,
@@ -1205,7 +1407,7 @@ const getMyBookings = async ({
     throw createError('Thông tin phân trang không hợp lệ.', 400);
   }
 
-  let query = supabase
+  let query = getClient()
     .from('t_booking')
     .select(`
       booking_id,
@@ -1313,19 +1515,19 @@ const getMyBookings = async ({
 
   const [hotelPoliciesRes, hotelReviewsRes, roomFacilitiesRes] = await Promise.all([
     hotelIds.length > 0
-      ? supabase
+      ? getClient()
         .from('m_cancellation_policy')
         .select('cancellation_policy_id, hotel_id, free_cancel_before_hours, penalty_rate, description')
         .in('hotel_id', hotelIds)
       : Promise.resolve({ data: [] }),
     hotelIds.length > 0
-      ? supabase
+      ? getClient()
         .from('t_booking')
         .select('hotel_id, t_review(rating_score)')
         .in('hotel_id', hotelIds)
       : Promise.resolve({ data: [] }),
     roomTypeIds.length > 0
-      ? supabase
+      ? getClient()
         .from('m_room_facility_map')
         .select('room_type_id, m_facility(facility_id, facility_name, type, icon)')
         .in('room_type_id', roomTypeIds)
@@ -1774,7 +1976,7 @@ const updateBookingGuestInfo = async (bookingId, { guest_name, guest_phone, spec
     updatePayload.special_request = normalizeSpecialRequest(special_request);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await getClient()
     .from('t_booking')
     .update(updatePayload)
     .eq('booking_id', bookingId)
@@ -1890,7 +2092,7 @@ const changeBookingDates = async (
   const rollbackDateChange = async () => {
     let rollbackFailure = null;
     for (const detail of changedDetails.reverse()) {
-      const { error } = await supabase
+      const { error } = await getClient()
         .from('t_booking_detail')
         .update({
           check_in_date: detail.check_in_date,
@@ -1901,7 +2103,7 @@ const changeBookingDates = async (
       if (error) rollbackFailure = error;
     }
     if (bookingTotalsUpdated) {
-      const { error } = await supabase
+      const { error } = await getClient()
         .from('t_booking')
         .update({
           total_amount: existingBooking.total_amount,
@@ -1945,7 +2147,7 @@ const changeBookingDates = async (
 
     for (const roomPricing of recalculated.rooms) {
       for (const detail of oldDetails.filter((row) => row.room_type_id === roomPricing.room_type_id)) {
-        const { error: detailError } = await supabase
+        const { error: detailError } = await getClient()
           .from('t_booking_detail')
           .update({
             check_in_date: newCheckIn,
@@ -1962,7 +2164,7 @@ const changeBookingDates = async (
       }
     }
 
-    const { data: updatedBooking, error: bookingUpdateErr } = await supabase
+    const { data: updatedBooking, error: bookingUpdateErr } = await getClient()
       .from('t_booking')
       .update({
         total_amount: recalculated.total_amount,
@@ -2016,7 +2218,7 @@ const getSupportedBanks = async () => {
     return await walletService.getSupportedBanks();
   } catch (err) {
     console.warn('[Booking] getSupportedBanks via walletService failed, falling back to m_system_code query:', err.message);
-    const { data, error } = await supabase
+    const { data, error } = await getClient()
       .from('m_system_code')
       .select('code_cd, code_name, sort_no')
       .eq('business_cd', 'BANK_CD')
@@ -2064,7 +2266,7 @@ const cancelBooking = async (
   const cancelledStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'CAN');
 
   // Persist the cancellation code configured in m_system_code.
-  const { error: updateErr } = await supabase
+  const { error: updateErr } = await getClient()
     .from('t_booking')
     .update({
       booking_status_cd: cancelledStatusCd,
@@ -2082,7 +2284,7 @@ const cancelBooking = async (
     try {
       await adjustInventoryForStay(details, details[0].check_in_date, details[0].check_out_date, -1);
     } catch (inventoryError) {
-      const { error: statusRollbackError } = await supabase
+      const { error: statusRollbackError } = await getClient()
         .from('t_booking')
         .update({ booking_status_cd: booking.booking_status_cd })
         .eq('booking_id', bookingId);
@@ -2133,7 +2335,7 @@ const cancelBooking = async (
   if (isPaid && calculatedRefundAmount > 0) {
     let cleanBankName = String(bank_name || '').trim();
     if (!cleanBankName && bank_cd) {
-      const { data: bankSysCode } = await supabase
+      const { data: bankSysCode } = await getClient()
         .from('m_system_code')
         .select('code_name')
         .eq('business_cd', 'BANK_CD')
@@ -2155,7 +2357,7 @@ const cancelBooking = async (
       appliedPenalty > 0 ? `Áp dụng phí hủy ${appliedPenalty}% theo chính sách khách sạn` : 'Hủy trong thời hạn miễn phí (Hoàn 100%)',
     ].filter(Boolean);
 
-    const { data: insertedRefund } = await supabase
+    const { data: insertedRefund } = await getClient()
       .from('t_refund_request')
       .insert({
         transaction_id: latestPayment?.transaction_id || null,
@@ -2334,4 +2536,7 @@ module.exports = {
   adjustInventoryForStay,
   loadActiveBookingHolds,
   requiresCouponRemovalConfirmation,
+  setCustomClient,
+  calculateCouponDiscount,
+  verifyCouponEligibility,
 };
