@@ -15,6 +15,7 @@
 .hotel-management__eyebrow { margin-bottom: .45rem; color: var(--hm-blue); font-size: .72rem; font-weight: 800; letter-spacing: .08em; }
 .hotel-management__header h1 { color: var(--hm-ink); font-size: 1.75rem; }
 .hotel-management__lede { margin-top: .35rem; color: var(--hm-muted); font-size: .9rem; }
+.hotel-management__actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
 .hotel-button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: .4rem; padding: .55rem .9rem; border: 1px solid transparent; border-radius: 8px; cursor: pointer; font: inherit; font-size: .82rem; font-weight: 700; transition: background .16s ease, border-color .16s ease, box-shadow .16s ease; }
 .hotel-button:focus-visible { outline: 3px solid rgba(0, 53, 128, .24); outline-offset: 2px; }
 .hotel-button:disabled { cursor: wait; opacity: .58; }
@@ -24,6 +25,95 @@
 .hotel-button--quiet:hover:not(:disabled) { border-color: #94a3b8; background: #f8fafc; }
 .hotel-button--danger { border-color: #dc2626; background: #dc2626; color: #fff; }
 .hotel-button--danger:hover:not(:disabled) { border-color: #b91c1c; background: #b91c1c; }
+
+/* Luxury Hotel Style - Navy & Gold Excel Button (Synchronized with Amenities & Rooms) */
+.hotel-btn-excel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #ffffff;
+  border: 1.5px solid #d4af37;
+  color: #0b1e3f;
+  padding: 0.55rem 1.05rem;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 6px rgba(11, 30, 63, 0.06), 0 0 0 1px rgba(212, 175, 55, 0.15);
+  user-select: none;
+  white-space: nowrap;
+  min-height: 40px;
+}
+
+.hotel-btn-excel:hover:not(:disabled) {
+  background: linear-gradient(180deg, #ffffff 0%, #fdfbf7 100%);
+  border-color: #b38e46;
+  color: #002244;
+  box-shadow: 0 4px 14px rgba(212, 175, 55, 0.25), 0 1px 3px rgba(11, 30, 63, 0.08);
+  transform: translateY(-1px);
+}
+
+.hotel-btn-excel:active:not(:disabled) {
+  transform: scale(0.98);
+  box-shadow: 0 1px 3px rgba(11, 30, 63, 0.1);
+}
+
+.hotel-btn-excel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  border-color: #cbd5e1;
+  color: #94a3b8;
+  box-shadow: none;
+  transform: none;
+  pointer-events: none;
+}
+
+.hotel-excel-icon {
+  color: #d4af37;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.hotel-btn-excel:hover:not(:disabled) .hotel-excel-icon {
+  transform: translateY(-0.5px);
+  color: #b38e46;
+}
+
+.hotel-excel-badge {
+  background: #f1f5f9;
+  color: #0b1e3f;
+  border: 1px solid #e2e8f0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 10px;
+  line-height: 1.2;
+}
+
+.hotel-btn-excel:hover:not(:disabled) .hotel-excel-badge {
+  background: #fef9ee;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+/* Modal Overlay for Export Confirmation */
+.rt-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
 .hotel-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .75rem; padding: 1rem; border: 1px solid var(--hm-border); border-radius: 10px; background: #fff; box-shadow: 0 2px 8px rgba(15, 23, 42, .04); }
 .hotel-search { position: relative; flex: 1 1 280px; min-width: 200px; }
 .hotel-search input, .hotel-filter input, .hotel-filter select { width: 100%; height: 42px; padding: .55rem .7rem; border: 1px solid #cbd5e1; border-radius: 8px; outline: none; background: #fff; color: var(--hm-ink); font: inherit; font-size: .84rem; }

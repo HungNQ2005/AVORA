@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import HotelCard from '../components/hotelCard';
 import EditHotelPopup from '../components/editHotelPopup';
 import Dialog from '../../../common/components/Dialog';
+import ExportExcelModal from '../../amenities/components/ExportExcelModal';
+import { exportHotelsToExcel, getHotelExportExcelFilename } from '../../../utils/exportHotelExcel';
 import { useAuth } from '../../../context/AuthContext';
 import { approveHotel, createHotel, deleteHotel, getCities, getHotels, updateHotel } from '../../../services/hotelManagementService';
 import './hotelManagementPage.css';
@@ -23,6 +25,8 @@ const HotelManagementPage = () => {
 	const [deleteTarget, setDeleteTarget] = useState(null);
 	const [deleteError, setDeleteError] = useState('');
 	const [toast, setToast] = useState(() => location.state?.notice || '');
+	const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+	const [isExporting, setIsExporting] = useState(false);
 	const userRole = String(user?.role_code_name || '').trim().toUpperCase();
 	const hasActiveFilters = Boolean(debouncedKeyword || filters.city_id || filters.star_quality);
 	const isVendor = userRole === 'VEN';
@@ -36,7 +40,7 @@ const HotelManagementPage = () => {
 
 	useEffect(() => {
 		let active = true;
-		getCities().then((data) => { if (active) setCities(data); }).catch(() => {});
+		getCities().then((data) => { if (active) setCities(data); }).catch(() => { });
 		return () => { active = false; };
 	}, []);
 
@@ -127,7 +131,54 @@ const HotelManagementPage = () => {
 			setToast(`${deleteTarget.name} đã ngừng hoạt động.`);
 			setDeleteTarget(null);
 		} catch (err) {
-					setDeleteError(err.response?.data?.message || 'Không thể ngừng hoạt động khách sạn này.');
+			setDeleteError(err.response?.data?.message || 'Không thể ngừng hoạt động khách sạn này.');
+		}
+	};
+
+	const handleOpenExportModal = () => {
+		if (pagination.total_items === 0 && hotels.length === 0) {
+			setToast('Không có dữ liệu khách sạn để xuất file.');
+			return;
+		}
+		setIsExportModalOpen(true);
+	};
+
+	const handleConfirmExport = async () => {
+		setIsExporting(true);
+		try {
+			let exportList = hotels;
+			// If there are multiple pages, fetch all items matching active filters
+			if (pagination.total_pages > 1) {
+				const promises = [];
+				for (let p = 1; p <= pagination.total_pages; p++) {
+					promises.push(
+						getHotels({
+							page: p,
+							keyword: debouncedKeyword,
+							city_id: filters.city_id,
+							star_quality: filters.star_quality,
+						})
+					);
+				}
+				const results = await Promise.all(promises);
+				exportList = results.flatMap((res) => res.items || []);
+			}
+
+			const filename = getHotelExportExcelFilename();
+			const result = await exportHotelsToExcel(exportList, filename);
+			if (result && result.success) {
+				setToast(`Đã xuất thành công ${result.count || exportList.length} khách sạn ra file Excel!`);
+				setIsExportModalOpen(false);
+			} else {
+				setError(result?.message || 'Không thể xuất file Excel.');
+				setIsExportModalOpen(false);
+			}
+		} catch (err) {
+			console.error('Export hotels error:', err);
+			setError('Có lỗi xảy ra trong quá trình xuất file Excel.');
+			setIsExportModalOpen(false);
+		} finally {
+			setIsExporting(false);
 		}
 	};
 
@@ -139,11 +190,43 @@ const HotelManagementPage = () => {
 					<h1>Quản lý khách sạn</h1>
 					<p className="hotel-management__lede">Xem thông tin chi tiết, trạng thái và kho phòng của từng khách sạn.</p>
 				</div>
-				{isVendor && (
-					<button className="hotel-button hotel-button--primary" type="button" onClick={() => setCreateOpen(true)}>
-						<span aria-hidden="true">+</span> Thêm khách sạn mới
+				<div className="hotel-management__actions">
+					{/* Button: Xuất Excel (Luxury Hotel Style - Navy & Gold) */}
+					<button
+						type="button"
+						className="hotel-btn-excel"
+						onClick={handleOpenExportModal}
+						disabled={loading || isExporting}
+						title="Xuất danh sách khách sạn ra file Excel"
+					>
+						{isExporting ? (
+							<>
+								<span className="hotel-spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
+								<span>Đang xuất...</span>
+							</>
+						) : (
+							<>
+								<svg className="hotel-excel-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+									<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+									<polyline points="14 2 14 8 20 8" />
+									<line x1="8" y1="13" x2="16" y2="13" />
+									<line x1="8" y1="17" x2="16" y2="17" />
+									<polyline points="10 9 9 9 8 9" />
+								</svg>
+								<span>Xuất Excel</span>
+								{pagination.total_items > 0 && (
+									<span className="hotel-excel-badge">{pagination.total_items}</span>
+								)}
+							</>
+						)}
 					</button>
-				)}
+
+					{isVendor && (
+						<button className="hotel-button hotel-button--primary" type="button" onClick={() => setCreateOpen(true)}>
+							<span aria-hidden="true">+</span> Thêm khách sạn mới
+						</button>
+					)}
+				</div>
 			</header>
 
 			<div className="hotel-toolbar" role="search">
@@ -174,56 +257,67 @@ const HotelManagementPage = () => {
 			</div>
 
 			{error && <div className="hotel-notice hotel-notice--error" role="alert">{error}</div>}
-			{loading ? (
-				<div className="hotel-state" role="status"><span className="hotel-spinner" />Đang tải dữ liệu khách sạn</div>
-			) : hotels.length ? (
-				<div className="hotel-list">
-					{hotels.map((hotel) => (
-						<HotelCard
-							key={hotel.hotel_id}
-							hotel={hotel}
-							canApprove={canApprove}
-							isVendor={isVendor}
-							canEdit={isVendor}
-							onEdit={() => setEditingHotel(hotel)}
-							onDelete={() => handleDeleteRequest(hotel)}
-							onApprove={() => handleApprove(hotel)}
-							onReactivate={() => handleReactivate(hotel)}
-						/>
-					))}
-				</div>
-			) : (
-				<div className="hotel-state hotel-state--empty">
-					<span className="hotel-state__mark" aria-hidden="true">⌂</span>
-					<h2>{vendorHasNoHotels ? 'Chưa có khách sạn nào' : 'Không tìm thấy khách sạn'}</h2>
-					<p>{vendorHasNoHotels ? 'Khách sạn mới của bạn sẽ hiển thị tại đây, kể cả khi đang chờ duyệt.' : 'Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc, hoặc tạo khách sạn mới.'}</p>
-				</div>
-			)}
+				{loading ? (
+					<div className="hotel-state" role="status"><span className="hotel-spinner" />Đang tải dữ liệu khách sạn</div>
+				) : hotels.length ? (
+					<div className="hotel-list">
+						{hotels.map((hotel) => (
+							<HotelCard
+								key={hotel.hotel_id}
+								hotel={hotel}
+								canApprove={canApprove}
+								isVendor={isVendor}
+								canEdit={isVendor}
+								onEdit={() => setEditingHotel(hotel)}
+								onDelete={() => handleDeleteRequest(hotel)}
+								onApprove={() => handleApprove(hotel)}
+								onReactivate={() => handleReactivate(hotel)}
+							/>
+						))}
+					</div>
+				) : (
+					<div className="hotel-state hotel-state--empty">
+						<span className="hotel-state__mark" aria-hidden="true">⌂</span>
+						<h2>{vendorHasNoHotels ? 'Chưa có khách sạn nào' : 'Không tìm thấy khách sạn'}</h2>
+						<p>{vendorHasNoHotels ? 'Khách sạn mới của bạn sẽ hiển thị tại đây, kể cả khi đang chờ duyệt.' : 'Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc, hoặc tạo khách sạn mới.'}</p>
+					</div>
+				)}
 
-			<footer className="hotel-pagination">
-				<span>Trang {pagination.page} / {Math.max(pagination.total_pages, 1)}</span>
-				<div>
-					<button type="button" aria-label="Trang trước" disabled={pagination.page <= 1 || loading} onClick={() => { setLoading(true); setPagination((current) => ({ ...current, page: current.page - 1 })); }}>←</button>
-					<button type="button" aria-label="Trang sau" disabled={pagination.page >= pagination.total_pages || loading} onClick={() => { setLoading(true); setPagination((current) => ({ ...current, page: current.page + 1 })); }}>→</button>
-				</div>
-			</footer>
+				<footer className="hotel-pagination">
+					<span>Trang {pagination.page} / {Math.max(pagination.total_pages, 1)}</span>
+					<div>
+						<button type="button" aria-label="Trang trước" disabled={pagination.page <= 1 || loading} onClick={() => { setLoading(true); setPagination((current) => ({ ...current, page: current.page - 1 })); }}>←</button>
+						<button type="button" aria-label="Trang sau" disabled={pagination.page >= pagination.total_pages || loading} onClick={() => { setLoading(true); setPagination((current) => ({ ...current, page: current.page + 1 })); }}>→</button>
+					</div>
+				</footer>
 
-			{toast && <div className="hotel-toast" role="status">{toast}</div>}
-			{createOpen && <EditHotelPopup isOpen mode="create" submitLabel={isVendor ? 'Gửi chờ duyệt' : 'Tạo khách sạn'} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />}
-			{editingHotel && <EditHotelPopup isOpen mode="edit" hotel={editingHotel} onClose={() => setEditingHotel(null)} onSubmit={handleUpdate} />}
-			<Dialog
-				isOpen={Boolean(deleteTarget)}
-				onClose={() => { setDeleteTarget(null); setDeleteError(''); }}
-				onConfirm={handleDelete}
-				title="Ngừng hoạt động khách sạn này?"
-				message={deleteError || `"${deleteTarget?.name || ''}" sẽ chuyển sang trạng thái Ngừng hoạt động và toàn bộ đặt phòng đang chờ hoặc sắp diễn ra sẽ bị hủy. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
-				variant="confirm"
-				cancelLabel="Đóng"
-				confirmLabel="Ngừng hoạt động"
-			/>
+				{toast && <div className="hotel-toast" role="status">{toast}</div>}
+				{createOpen && <EditHotelPopup isOpen mode="create" submitLabel={isVendor ? 'Gửi chờ duyệt' : 'Tạo khách sạn'} onClose={() => setCreateOpen(false)} onSubmit={handleCreate} />}
+				{editingHotel && <EditHotelPopup isOpen mode="edit" hotel={editingHotel} onClose={() => setEditingHotel(null)} onSubmit={handleUpdate} />}
+				<Dialog
+					isOpen={Boolean(deleteTarget)}
+					onClose={() => { setDeleteTarget(null); setDeleteError(''); }}
+					onConfirm={handleDelete}
+					title="Ngừng hoạt động khách sạn này?"
+					message={deleteError || `"${deleteTarget?.name || ''}" sẽ chuyển sang trạng thái Ngừng hoạt động và toàn bộ đặt phòng đang chờ hoặc sắp diễn ra sẽ bị hủy. Khách sạn sẽ không bị xóa khỏi dữ liệu.`}
+					variant="confirm"
+					cancelLabel="Đóng"
+					confirmLabel="Ngừng hoạt động"
+				/>
+
+				{/* Export Excel Confirmation Modal */}
+				<ExportExcelModal
+					isOpen={isExportModalOpen}
+					onClose={() => !isExporting && setIsExportModalOpen(false)}
+					onConfirm={handleConfirmExport}
+					totalRecords={pagination.total_items || hotels.length}
+					filename={getHotelExportExcelFilename()}
+					isExporting={isExporting}
+					title="Xuất Danh Sách Khách Sạn"
+					unitLabel="khách sạn"
+				/>
 		</section>
 	);
 };
 
 export default HotelManagementPage;
-

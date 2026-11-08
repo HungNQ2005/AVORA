@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import {
   createVendorDisbursementRequest,
+  cancelVendorDisbursementRequest,
   fetchVendorDisbursementHistory,
   fetchVendorDisbursementOverview,
 } from '../../../services/disbursementApi';
@@ -13,6 +14,8 @@ import {
   AlertTriangleIcon,
   CloseIcon,
   InfoIcon,
+  SearchIcon,
+  TrashIcon,
 } from '../../../common/components/icons';
 import './VendorDisbursementPage.css';
 
@@ -44,6 +47,10 @@ const VendorDisbursementPage = () => {
 
   // Status filter tabs
   const [activeTab, setActiveTab] = useState('ALL'); // ALL | PENDING | COMPLETED
+  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [cancellingId, setCancellingId] = useState('');
+  const [cancelTarget, setCancelTarget] = useState(null);
 
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
@@ -143,6 +150,12 @@ const VendorDisbursementPage = () => {
     if (code === '5') {
       return { label: 'Bị từ chối', color: 'error', code: 'REJECTED' };
     }
+    if (code === '6') {
+      return { label: 'Thất bại', color: 'error', code: 'FAILED' };
+    }
+    if (code === '7') {
+      return { label: 'Đã hủy', color: 'default', code: 'CANCELLED' };
+    }
     return {
       label: request.status_label || 'Khác',
       color: request.status_color || 'default',
@@ -157,15 +170,53 @@ const VendorDisbursementPage = () => {
     setError('');
   };
 
-  // Filter requests by the selected status tab
+  const confirmCancelRequest = async () => {
+    if (!cancelTarget) return;
+    const requestId = cancelTarget.withdrawal_id;
+    setCancellingId(requestId);
+    try {
+      await cancelVendorDisbursementRequest(requestId);
+      setCancelTarget(null);
+      showToast('Đã hủy yêu cầu và hoàn số dư vào ví khách sạn.', 'success');
+      setReloadKey((value) => value + 1);
+    } catch (cancelError) {
+      showToast(cancelError.message || 'Không thể hủy yêu cầu giải ngân.', 'error');
+    } finally {
+      setCancellingId('');
+    }
+  };
+
+  // Filter requests by status tabs, status selector, and searchable request details.
   const filteredHistory = useMemo(() => {
     return history.filter((req) => {
       const status = getRequestStatus(req);
-      if (activeTab === 'PENDING' && status.code !== 'PENDING') return false;
-      if (activeTab === 'COMPLETED' && status.code !== 'COMPLETED') return false;
+      if (statusFilter !== 'ALL') {
+        if (String(req.status_cd) !== statusFilter) return false;
+      } else {
+        if (activeTab === 'PENDING' && !['1', '2', '3'].includes(String(req.status_cd))) return false;
+        if (activeTab === 'COMPLETED' && String(req.status_cd) !== '4') return false;
+      }
+
+      const term = searchTerm.trim().toLocaleLowerCase('vi');
+      if (term) {
+        const searchableValues = [
+          req.withdrawal_id,
+          req.withdrawal_id ? `WD-${req.withdrawal_id.slice(0, 8)}` : '',
+          req.bank_info?.bank_name,
+          req.bank_info?.account_number,
+          req.bank_info?.account_holder,
+          req.amount,
+          formatCurrency(req.amount),
+          formatDate(req.created_at),
+          status.label,
+        ];
+        if (!searchableValues.some((value) => String(value || '').toLocaleLowerCase('vi').includes(term))) {
+          return false;
+        }
+      }
       return true;
     });
-  }, [history, activeTab]);
+  }, [history, activeTab, statusFilter, searchTerm]);
 
   const tabCounts = useMemo(() => {
     return {
@@ -306,7 +357,10 @@ const VendorDisbursementPage = () => {
                 <button
                   type="button"
                   className={`vd-tab ${activeTab === 'ALL' ? 'vd-tab--active' : ''}`}
-                  onClick={() => setActiveTab('ALL')}
+                  onClick={() => {
+                    setActiveTab('ALL');
+                    setStatusFilter('ALL');
+                  }}
                 >
                   <span>Tất cả</span>
                   <span className="vd-tab__count">{tabCounts.ALL}</span>
@@ -314,7 +368,10 @@ const VendorDisbursementPage = () => {
                 <button
                   type="button"
                   className={`vd-tab ${activeTab === 'PENDING' ? 'vd-tab--active' : ''}`}
-                  onClick={() => setActiveTab('PENDING')}
+                  onClick={() => {
+                    setActiveTab('PENDING');
+                    if (['4', '5', '6', '7'].includes(statusFilter)) setStatusFilter('ALL');
+                  }}
                 >
                   <span>Đợi giải ngân</span>
                   <span className="vd-tab__count vd-tab__count--warning">{tabCounts.PENDING}</span>
@@ -322,13 +379,54 @@ const VendorDisbursementPage = () => {
                 <button
                   type="button"
                   className={`vd-tab ${activeTab === 'COMPLETED' ? 'vd-tab--active' : ''}`}
-                  onClick={() => setActiveTab('COMPLETED')}
+                  onClick={() => {
+                    setActiveTab('COMPLETED');
+                    setStatusFilter('4');
+                  }}
                 >
                   <span>Giải ngân</span>
                   <span className="vd-tab__count vd-tab__count--success">{tabCounts.COMPLETED}</span>
                 </button>
               </div>
-
+              <div className="vd-toolbar__filters">
+                <label className="vd-search" htmlFor="disbursement-search">
+                  <SearchIcon size={17} />
+                  <input
+                    id="disbursement-search"
+                    type="search"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder="Tìm mã yêu cầu, ngân hàng, số tài khoản..."
+                  />
+                </label>
+                <label className="vd-status-filter">
+                  <span className="vd-status-filter__label">Trạng thái</span>
+                  <select
+                    value={statusFilter}
+                    onChange={(event) => {
+                      const val = event.target.value;
+                      setStatusFilter(val);
+                      if (['1', '2', '3'].includes(val)) {
+                        setActiveTab('PENDING');
+                      } else if (val === '4') {
+                        setActiveTab('COMPLETED');
+                      } else {
+                        setActiveTab('ALL');
+                      }
+                    }}
+                    aria-label="Lọc theo trạng thái"
+                  >
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="1">Đợi giải ngân</option>
+                    <option value="2">Đã phê duyệt</option>
+                    <option value="3">Đang xử lý</option>
+                    <option value="4">Đã giải ngân</option>
+                    <option value="5">Bị từ chối</option>
+                    <option value="6">Thất bại</option>
+                    <option value="7">Đã hủy</option>
+                  </select>
+                </label>
+              </div>
             </div>
 
             {/* Table Content */}
@@ -341,8 +439,12 @@ const VendorDisbursementPage = () => {
               ) : filteredHistory.length === 0 ? (
                 <div className="vd-empty-card">
                   <CreditCardIcon size={44} className="vd-empty-icon" />
-                  <h3>Chưa có yêu cầu giải ngân nào</h3>
-                  <p>Khi bạn gửi yêu cầu rút tiền từ số dư ví, danh sách sẽ hiển thị tại đây.</p>
+                  <h3>{history.length ? 'Không tìm thấy yêu cầu phù hợp' : 'Chưa có yêu cầu giải ngân nào'}</h3>
+                  <p>
+                    {history.length
+                      ? 'Thử thay đổi từ khóa tìm kiếm hoặc trạng thái lọc.'
+                      : 'Khi bạn gửi yêu cầu rút tiền từ số dư ví, danh sách sẽ hiển thị tại đây.'}
+                  </p>
                 </div>
               ) : (
                 <table className="vd-table">
@@ -353,6 +455,7 @@ const VendorDisbursementPage = () => {
                       <th>Thông tin nhận tiền</th>
                       <th>Số tiền yêu cầu</th>
                       <th>Trạng thái</th>
+                      <th>Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -395,6 +498,20 @@ const VendorDisbursementPage = () => {
                               {status.label}
                             </span>
                           </td>
+                          <td>
+                            {String(request.status_cd) === '1' && (
+                              <button
+                                type="button"
+                                className="vd-btn vd-btn--danger vd-btn--sm"
+                                onClick={() => setCancelTarget(request)}
+                                disabled={cancellingId === request.withdrawal_id}
+                                aria-label={`Hủy yêu cầu ${shortId}`}
+                              >
+                                <TrashIcon size={15} />
+                                <span>{cancellingId === request.withdrawal_id ? 'Đang hủy...' : 'Hủy yêu cầu'}</span>
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
@@ -403,6 +520,58 @@ const VendorDisbursementPage = () => {
               )}
             </div>
           </section>
+
+          {cancelTarget && (
+            <div
+              className="vd-modal-overlay vd-confirm-overlay"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget && !cancellingId) {
+                  setCancelTarget(null);
+                }
+              }}
+            >
+              <div
+                className="vd-confirm-modal"
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="cancel-confirm-title"
+                aria-describedby="cancel-confirm-description"
+              >
+                <div className="vd-confirm-modal__icon">
+                  <AlertTriangleIcon size={25} />
+                </div>
+                <h2 id="cancel-confirm-title">Hủy yêu cầu giải ngân?</h2>
+                <p id="cancel-confirm-description">
+                  Yêu cầu <strong>
+                    WD-{cancelTarget.withdrawal_id.slice(0, 8).toUpperCase()}
+                  </strong> sẽ được hủy. Số tiền{' '}
+                  <strong>{formatCurrency(cancelTarget.amount)}</strong> sẽ được hoàn lại vào ví khách sạn.
+                </p>
+                <div className="vd-confirm-modal__notice">
+                  Bạn chỉ có thể hủy yêu cầu khi yêu cầu vẫn đang chờ duyệt.
+                </div>
+                <div className="vd-confirm-modal__actions">
+                  <button
+                    type="button"
+                    className="vd-btn vd-btn--outline"
+                    onClick={() => setCancelTarget(null)}
+                    disabled={Boolean(cancellingId)}
+                  >
+                    Giữ lại
+                  </button>
+                  <button
+                    type="button"
+                    className="vd-btn vd-btn--danger vd-confirm-modal__submit"
+                    onClick={confirmCancelRequest}
+                    disabled={Boolean(cancellingId)}
+                  >
+                    <TrashIcon size={16} />
+                    {cancellingId ? 'Đang hủy yêu cầu...' : 'Xác nhận hủy'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Modal Tạo yêu cầu giải ngân */}
           {requestFormOpen && (
