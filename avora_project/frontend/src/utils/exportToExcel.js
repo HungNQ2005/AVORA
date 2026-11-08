@@ -1617,3 +1617,5 @@ export const exportCommissionPoliciesToExcel = async (policies = [], customFilen
   }
 };
 
+
+export { exportHotelsToExcel, getHotelExportExcelFilename } from './exportHotelExcel';
