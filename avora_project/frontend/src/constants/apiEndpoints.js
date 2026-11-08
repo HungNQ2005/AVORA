@@ -43,6 +43,7 @@ export const API_ENDPOINTS = {
   DISBURSEMENTS_VENDOR_OVERVIEW: `${API_BASE_URL}/api/vendor/disbursements/overview`,
   DISBURSEMENTS_VENDOR_HISTORY: `${API_BASE_URL}/api/vendor/disbursements/history`,
   DISBURSEMENTS_VENDOR_REQUEST: `${API_BASE_URL}/api/vendor/disbursements/request`,
+  DISBURSEMENT_VENDOR_CANCEL: (id) => `${API_BASE_URL}/api/vendor/disbursements/${id}`,
   WISHLIST: `${API_BASE_URL}/api/wishlist`,
   WATCHLIST: `${API_BASE_URL}/api/watchlist`,
   WISHLIST_CHECK: (id) => `${API_BASE_URL}/api/wishlist/check/${id}`,

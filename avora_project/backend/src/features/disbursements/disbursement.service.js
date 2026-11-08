@@ -375,6 +375,131 @@ const createVendorDisbursementRequest = async (userId, payload) => {
 };
 
 /**
+ * Vendor hủy yêu cầu đang chờ duyệt và hoàn lại số dư đã tạm giữ
+ */
+const cancelVendorDisbursementRequest = async (userId, requestId) => {
+  ensureClient();
+
+  const { data: request, error: requestErr } = await supabase
+    .from('t_withdrawal_request')
+    .select('*')
+    .eq('withdrawal_id', requestId)
+    .maybeSingle();
+
+  if (requestErr) {
+    throw createError(500, `Không thể tải yêu cầu giải ngân: ${requestErr.message}`);
+  }
+  if (!request) {
+    throw createError(404, 'Không tìm thấy yêu cầu giải ngân.');
+  }
+  if (String(request.status_cd) !== '1') {
+    throw createError(400, 'Chỉ có thể hủy yêu cầu đang ở trạng thái Chờ phê duyệt.');
+  }
+
+  const { data: wallet, error: walletErr } = await supabase
+    .from('t_hotel_wallet')
+    .select('*')
+    .eq('wallet_id', request.wallet_id)
+    .maybeSingle();
+
+  if (walletErr) {
+    throw createError(500, `Không thể tải thông tin ví: ${walletErr.message}`);
+  }
+  if (!wallet) {
+    throw createError(404, 'Không tìm thấy ví của khách sạn.');
+  }
+
+  const { data: hotel, error: hotelErr } = await supabase
+    .from('m_hotel')
+    .select('hotel_id, owner_id')
+    .eq('hotel_id', wallet.hotel_id)
+    .eq('is_deleted', false)
+    .maybeSingle();
+
+  if (hotelErr) {
+    throw createError(500, `Không thể xác minh khách sạn: ${hotelErr.message}`);
+  }
+  if (!hotel || hotel.owner_id !== userId) {
+    throw createError(403, 'Bạn không có quyền hủy yêu cầu giải ngân này.');
+  }
+
+  const now = new Date().toISOString();
+  const refundAmount = Number(request.amount);
+  const { data: cancelledRequest, error: cancelErr } = await supabase
+    .from('t_withdrawal_request')
+    .update({ status_cd: '7', updated_at: now })
+    .eq('withdrawal_id', requestId)
+    .eq('status_cd', '1')
+    .select('withdrawal_id')
+    .maybeSingle();
+
+  if (cancelErr) {
+    throw createError(500, `Không thể hủy yêu cầu: ${cancelErr.message}`);
+  }
+  if (!cancelledRequest) {
+    throw createError(409, 'Yêu cầu đã được xử lý. Vui lòng tải lại danh sách.');
+  }
+
+  const newAvailable = Number(wallet.available_balance || 0) + refundAmount;
+  const { error: walletUpdateErr } = await supabase
+    .from('t_hotel_wallet')
+    .update({ available_balance: newAvailable, updated_at: now })
+    .eq('wallet_id', wallet.wallet_id);
+
+  if (walletUpdateErr) {
+    const { error: restoreRequestErr } = await supabase
+      .from('t_withdrawal_request')
+      .update({ status_cd: '1', updated_at: now })
+      .eq('withdrawal_id', requestId)
+      .eq('status_cd', '7');
+    if (restoreRequestErr) {
+      console.error('[DISBURSEMENT] Không thể khôi phục yêu cầu sau lỗi hoàn tiền:', restoreRequestErr);
+    }
+    throw createError(500, `Không thể hoàn số dư vào ví: ${walletUpdateErr.message}`);
+  }
+
+  const { error: ledgerErr } = await supabase.from('t_wallet_ledger').insert({
+    wallet_id: wallet.wallet_id,
+    transaction_type_cd: '4',
+    amount_change: refundAmount,
+    current_balance: newAvailable,
+    reference_id: requestId,
+    created_at: now,
+    updated_at: now,
+  });
+
+  if (ledgerErr) {
+    const { error: reverseWalletErr } = await supabase
+      .from('t_hotel_wallet')
+      .update({ available_balance: wallet.available_balance, updated_at: now })
+      .eq('wallet_id', wallet.wallet_id);
+    if (reverseWalletErr) {
+      console.error('[DISBURSEMENT] Không thể hoàn tác số dư sau lỗi ghi sổ:', reverseWalletErr);
+    } else {
+      const { error: restoreRequestErr } = await supabase
+        .from('t_withdrawal_request')
+        .update({ status_cd: '1', updated_at: now })
+        .eq('withdrawal_id', requestId)
+        .eq('status_cd', '7');
+      if (restoreRequestErr) {
+        console.error('[DISBURSEMENT] Không thể khôi phục yêu cầu sau lỗi ghi sổ:', restoreRequestErr);
+      }
+    }
+    throw createError(500, `Không thể ghi nhận hoàn tiền vào sổ cái: ${ledgerErr.message}`);
+  }
+
+  return {
+    withdrawal_id: cancelledRequest.withdrawal_id,
+    status_cd: '7',
+    status_code: 'CAN',
+    status_label: STATUS_MAP['7'].label,
+    refunded_amount: refundAmount,
+    available_balance: newAvailable,
+    updated_at: now,
+  };
+};
+
+/**
  * Business Manager: Lấy danh sách toàn bộ yêu cầu giải ngân với các tab lọc
  */
 const getBusinessDisbursements = async ({ status, search, page = 1, pageSize = 10 }) => {
@@ -737,6 +862,7 @@ module.exports = {
   getVendorOverview,
   getVendorHistory,
   createVendorDisbursementRequest,
+  cancelVendorDisbursementRequest,
   getBusinessDisbursements,
   approveDisbursement,
   settleDisbursement,
