@@ -17,7 +17,7 @@ const getAllCoupons = async (req, res, next) => {
     if (
       (req.query.search !== undefined && typeof req.query.search !== "string") ||
       (req.query.discount_type !== undefined &&
-        !["ALL", "PERCENT", "FIXED"].includes(req.query.discount_type)) ||
+        !["ALL", "PERCENT", "FIXED", "FLASH_PERCENT", "FIXED_AMOUNT"].includes(req.query.discount_type)) ||
       (req.query.include_deleted !== undefined &&
         !["true", "false"].includes(req.query.include_deleted))
     ) {

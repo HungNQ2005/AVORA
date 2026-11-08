@@ -1529,3 +1529,100 @@
   background-color: #0057b8 !important;
 }
 
+/* ─── ⚡ Flash Sale Badges & Styling trên HotelCard ─── */
+.hotel-card__flash-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffc72c !important;
+  color: #111827 !important;
+  border: 1px solid #f59e0b !important;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.45);
+  animation: pulse-flash 2s infinite ease-in-out;
+}
+
+.hotel-card__flash-icon {
+  font-size: 12px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.hotel-card__flash-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #ffc72c !important;
+  color: #111827 !important;
+  border: 1px solid #f59e0b !important;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-left: 6px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.3);
+}
+
+.hotel-card__current-price--flash {
+  color: #dc2626 !important;
+  font-weight: 800;
+}
+
+.hotel-card__flash-savings {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+@keyframes pulse-flash {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.6);
+  }
+}
+
+
+
+.avora-flash-alert-gold {
+  background: #ffc72c !important;
+  color: #111827 !important;
+  border: 1px solid #f59e0b !important;
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 8px 0;
+  line-height: 1.35;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2);
+}
+.avora-flash-alert-gold__icon {
+  font-size: 13px;
+  color: #92400e;
+  flex-shrink: 0;
+}
+.avora-flash-alert-gold__text strong {
+  font-weight: 800;
+  color: #000000;
+}

@@ -10,6 +10,11 @@ import { codeNameParser } from '../../../utils/codeNameParser';
 import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
 import { getScoreLabel } from '../../../utils/ratingHelper';
 import { API_ENDPOINTS } from '../../../constants/apiEndpoints';
+import {
+  isFlashSaleActive,
+  getFlashSaleDiscountText,
+  calculateDisplayPricing,
+} from '../../../utils/flashSaleHelper';
 import './MyAccountPage.css';
 
 /**
@@ -899,6 +904,9 @@ const MyAccountPage = () => {
                       const scoreLabel = getScoreLabel(scoreNum, hotel.score_label);
                       const reviewCount = Number(hotel.reviews_count || hotel.review_count || 0);
                       const price = Number(hotel.price || hotel.min_price || 0);
+                      const flashSale = isFlashSaleActive(hotel.active_flash_sale) ? hotel.active_flash_sale : null;
+                      const flashDiscountText = flashSale ? getFlashSaleDiscountText(flashSale) : '';
+                      const pricing = calculateDisplayPricing(price, flashSale, hotel.original_price);
                       const img = hotel.thumbnail || hotel.images?.[0] || hotel.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
 
                       return (
@@ -919,6 +927,11 @@ const MyAccountPage = () => {
                               }}
                             />
                             <span className="saved-hotel-card__city-badge">{city}</span>
+                            {flashSale && (
+                              <span className="saved-hotel-card__city-badge" style={{ top: 'auto', bottom: '8px', left: '8px', right: 'auto', background: '#f59e0b', color: '#1e293b', fontWeight: 800 }}>
+                                ⚡ Flash Sale {flashDiscountText}
+                              </span>
+                            )}
                           </div>
 
                           <div className="saved-hotel-card__content">
@@ -957,9 +970,19 @@ const MyAccountPage = () => {
                             <div className="saved-hotel-card__bottom">
                               <div className="saved-hotel-card__price-box">
                                 <span className="price-label">Giá mỗi đêm từ</span>
-                                <div className="price-amount">
-                                  {price > 0 ? `${price.toLocaleString('vi-VN')} đ` : 'Liên hệ'}
+                                {pricing.originalPrice && pricing.originalPrice > pricing.currentPrice && (
+                                  <span style={{ textDecoration: 'line-through', color: '#64748b', fontSize: '0.82rem', display: 'block' }}>
+                                    {pricing.originalPrice.toLocaleString('vi-VN')} đ
+                                  </span>
+                                )}
+                                <div className="price-amount" style={flashSale ? { color: '#e11d48' } : {}}>
+                                  {pricing.currentPrice > 0 ? `${pricing.currentPrice.toLocaleString('vi-VN')} đ` : (price > 0 ? `${price.toLocaleString('vi-VN')} đ` : 'Liên hệ')}
                                 </div>
+                                {flashSale && (
+                                  <span style={{ color: '#e11d48', fontSize: '0.75rem', fontWeight: 600 }}>
+                                    ⚡ Flash Sale {flashDiscountText}
+                                  </span>
+                                )}
                               </div>
 
                               <button

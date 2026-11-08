@@ -285,13 +285,21 @@ const BookingPage = () => {
         });
 
         setPricing(res);
-        if (codeToApply && codeToApply.trim()) {
-          setCouponMessage(res.coupon_message || null);
-        } else {
-          setCouponMessage(null);
+
+        // Always display transparent notification message from backend (whether auto-applied or manual or conflict)
+        const bannerMessage = res.coupon_message || res.promotion_details?.message || null;
+        setCouponMessage(bannerMessage);
+
+        // If backend applied a manual coupon, synchronize the couponCode field with the applied coupon code
+        if (res.promotion_details?.applied_type === 'MANUAL_COUPON' && res.coupon?.code) {
+          setCouponCode(res.coupon.code);
+        } else if (res.promotion_details?.applied_type === 'FLASH_SALE' && !codeToApply) {
+          // If auto-applied Flash Sale and user hasn't typed anything, keep input empty for typing manual coupons
+          setCouponCode('');
         }
       } catch (err) {
         console.warn('[BookingPage] Không thể đồng bộ biểu giá:', err.message);
+        setCouponMessage(err.message || 'Mã giảm giá không hợp lệ hoặc chưa đủ điều kiện.');
         if (!stateData.hotel && !pricing.hotel) {
           setErrorMessage(err.message || 'Không thể tải thông tin giá phòng. Vui lòng thử lại.');
         }
@@ -318,6 +326,7 @@ const BookingPage = () => {
   const handleRemoveCoupon = async () => {
     setCouponCode('');
     setCouponMessage(null);
+    // Passing empty string explicitly signals removing manual coupon, restoring auto-applied Flash Sale
     await syncBookingPricing('');
   };
 
