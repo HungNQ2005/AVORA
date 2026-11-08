@@ -9,6 +9,7 @@ import HotelImageManager from '../components/hotelImageManager';
 import HotelBank from '../components/hotelBank';
 import HotelMap from '../components/hotelMap';
 import CoordinatePickerModal from '../components/coordinatePickerModal';
+import { exportHotelsToExcel, getHotelExportExcelFilename } from '../../../utils/exportHotelExcel';
 import { useAuth } from '../../../context/AuthContext';
 import { approveHotel, deleteHotel, getHotel, updateHotel } from '../../../services/hotelManagementService';
 import '../components/hotelThumb.css';
@@ -37,6 +38,7 @@ const HotelDetailPage = () => {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [coordinatePickerOpen, setCoordinatePickerOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [toast, setToast] = useState('');
   const role = String(user?.role_code_name || '').trim().toUpperCase();
   const isVendor = role === 'VEN';
@@ -60,6 +62,7 @@ const HotelDetailPage = () => {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id]);
+
   useEffect(() => {
     if (!toast) return undefined;
     const timer = setTimeout(() => setToast(''), 3000);
@@ -99,28 +102,28 @@ const HotelDetailPage = () => {
     try {
       const payload = {
         name: form.name.trim(),
-        description: form.description.trim() || null,
+        description: form.description?.trim() || null,
         address: form.address.trim(),
         city_id: form.city_id || null,
         district_id: form.district_id || null,
         ward_id: form.ward_id || null,
         star_quality: stars,
-        ...(latitude !== undefined ? { lat: latitude } : {}),
-        ...(longitude !== undefined ? { lng: longitude } : {}),
+        lat: latitude,
+        lng: longitude,
       };
-
       const updated = await updateHotel(id, payload);
       setHotel(updated);
       setForm(toHotelForm(updated));
       setToast('Đã lưu thông tin khách sạn.');
     } catch (err) {
-      setError(err.response?.data?.message || 'Không thể lưu thông tin khách sạn.');
+      setError(err.response?.data?.message || 'Không thể lưu thay đổi khách sạn.');
     } finally {
       setActionLoading(false);
     }
   };
 
   const handleCancelChanges = () => {
+    if (!hotel) return;
     setForm(toHotelForm(hotel));
     setError('');
   };
@@ -162,6 +165,33 @@ const HotelDetailPage = () => {
     setForm((current) => ({ ...current, lat: String(lat), lng: String(lng) }));
     setCoordinatePickerOpen(false);
     setError('');
+  };
+
+  const handleExportProfile = async () => {
+    if (!hotel) return;
+    setIsExporting(true);
+    try {
+      const slugName = String(hotel.name || 'Khach_san')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/đ/gi, 'd')
+        .replace(/[^a-zA-Z0-9]+/g, '_')
+        .slice(0, 30);
+      const filename = getHotelExportExcelFilename(`Ho_so_${slugName}`);
+      const res = await exportHotelsToExcel([hotel], filename, {
+        title: `HỒ SƠ CƠ SỞ LƯU TRÚ • ${(hotel.name || '').toUpperCase()}`,
+      });
+      if (res && res.success) {
+        setToast(`Đã xuất hồ sơ "${hotel.name}" ra file Excel!`);
+      } else {
+        setError(res?.message || 'Lỗi khi xuất file Excel.');
+      }
+    } catch (err) {
+      console.error('Export hotel error:', err);
+      setError('Lỗi khi tải xuống file Excel.');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -213,6 +243,22 @@ const HotelDetailPage = () => {
           <p className="hotel-detail__location">{addressParts.join(', ') || 'Chưa có vị trí'}</p>
         </div>
         <div className="hotel-detail__actions">
+          <button
+            type="button"
+            className="hotel-button hotel-button--quiet"
+            onClick={handleExportProfile}
+            disabled={actionLoading || isExporting}
+            title="Xuất thông tin hồ sơ khách sạn này ra file Excel"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#d4af37" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="8" y1="13" x2="16" y2="13" />
+              <line x1="8" y1="17" x2="16" y2="17" />
+              <polyline points="10 9 9 9 8 9" />
+            </svg>
+            <span>{isExporting ? 'Đang xuất…' : 'Xuất hồ sơ (Excel)'}</span>
+          </button>
           {canApprove && !hotel.is_deleted && isPending && <button type="button" className="hotel-button hotel-button--primary" onClick={handleApprove} disabled={actionLoading}>{actionLoading ? 'Đang duyệt…' : 'Phê duyệt'}</button>}
           {isVendor && !hotel.is_deleted && isInactive && <button type="button" className="hotel-button hotel-button--primary" onClick={handleReactivate} disabled={actionLoading}>Yêu cầu mở lại</button>}
           {vendorCanDeactivate && <button type="button" className="hotel-button hotel-button--danger" onClick={requestDelete} disabled={actionLoading}>Ngừng hoạt động</button>}
@@ -275,9 +321,9 @@ const HotelDetailPage = () => {
               </div>
             )}
             <label className="hotel-detail__field hotel-detail__field--wide">
-                <span>Chủ sở hữu</span>
-                <input value={hotel.owner?.full_name || hotel.owner_name || 'Chưa gán'} readOnly />
-              </label>
+              <span>Chủ sở hữu</span>
+              <input value={hotel.owner?.full_name || hotel.owner_name || 'Chưa gán'} readOnly />
+            </label>
             {canApprove && hotel.owner && <p className="hotel-detail__owner-contact">Chủ sở hữu hiện tại: {hotel.owner.full_name} · {hotel.owner.phone || 'Chưa có số điện thoại'} · {hotel.owner.email}</p>}
             <p className="hotel-detail__room-total"><strong>{hotel.total_rooms ?? hotel.room_count ?? 0}</strong> phòng thực tế · <strong>{hotel.total_room_types ?? 0}</strong> loại phòng</p>
             <a href={`https://www.google.com/maps?q=${encodeURIComponent(`${form?.lat},${form?.lng}`)}`} target="_blank" rel="noreferrer">Xem tọa độ trên bản đồ ↗</a>

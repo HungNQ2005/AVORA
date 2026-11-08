@@ -53,6 +53,7 @@ export const API_ENDPOINTS = {
   DISBURSEMENTS_VENDOR_OVERVIEW: `${API_BASE_URL}/api/vendor/disbursements/overview`,
   DISBURSEMENTS_VENDOR_HISTORY: `${API_BASE_URL}/api/vendor/disbursements/history`,
   DISBURSEMENTS_VENDOR_REQUEST: `${API_BASE_URL}/api/vendor/disbursements/request`,
+  DISBURSEMENT_VENDOR_CANCEL: (id) => `${API_BASE_URL}/api/vendor/disbursements/${id}`,
   WISHLIST: `${API_BASE_URL}/api/wishlist`,
   WATCHLIST: `${API_BASE_URL}/api/watchlist`,
   WISHLIST_CHECK: (id) => `${API_BASE_URL}/api/wishlist/check/${id}`,
@@ -67,4 +68,8 @@ export const API_ENDPOINTS = {
   WALLET_HOTELS: `${API_BASE_URL}/api/wallet/hotels`,
   WALLET_HOTEL: (hotelId) => `${API_BASE_URL}/api/wallet/hotels/${hotelId}`,
   WALLET_LINK_BANK: (hotelId) => `${API_BASE_URL}/api/wallet/hotels/${hotelId}/bank-account`,
+
+  // Vendor Flash Sales API
+  VENDOR_FLASH_SALES: `${API_BASE_URL}/api/vendor/flash-sales`,
+  VENDOR_FLASH_SALE_DETAIL: (id) => `${API_BASE_URL}/api/vendor/flash-sales/${encodeURIComponent(id)}`,
 };

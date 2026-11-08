@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { isHotelSaved, toggleFavoriteHotel } from '../../../utils/favoritesStorage';
 import { getScoreLabel } from '../../../utils/ratingHelper';
+import {
+  isFlashSaleActive,
+  getFlashSaleDiscountText,
+  calculateDisplayPricing,
+  resolveHotelFlashSale,
+} from '../../../utils/flashSaleHelper';
 
 import {
   StarIcon,
@@ -41,16 +47,21 @@ const cleanPolicyText = (raw) => {
  * Single Hotel Card Component matching the reference UI exactly.
  */
 const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
-  if (!hotel || (hotel.hotel_status && hotel.hotel_status !== 'ACTIVE')) {
-    return null;
-  }
-
   const [selectedImageIdx, setSelectedImageIdx] = useState(0);
   const [isFavorite, setIsFavorite] = useState(() => isHotelSaved(hotel?.hotel_id || hotel?.id));
 
   useEffect(() => {
     setIsFavorite(isHotelSaved(hotel?.hotel_id || hotel?.id));
   }, [hotel]);
+
+  if (!hotel || (hotel.hotel_status && hotel.hotel_status !== 'ACTIVE')) {
+    return null;
+  }
+
+  // Calculate Flash Sale & Dynamic pricing
+  const flashSale = resolveHotelFlashSale(hotel);
+  const flashDiscountText = flashSale ? getFlashSaleDiscountText(flashSale) : '';
+  const pricing = calculateDisplayPricing(hotel.price, flashSale, hotel.original_price);
 
   const images = hotel.images && hotel.images.length > 0 ? hotel.images : (hotel.thumbnail ? [hotel.thumbnail] : []);
   const currentImage = images[selectedImageIdx] || images[0] || '';
@@ -83,6 +94,14 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
             loading="lazy"
           />
 
+          {/* Huy hiệu ⚡ Flash Sale nổi bật góc trên bên trái ảnh */}
+          {flashSale && (
+            <div className="hotel-card__flash-badge" title={`Đang trong khung giờ vàng (${flashSale.code})`}>
+              <span className="hotel-card__flash-icon">⚡</span>
+              <span className="hotel-card__flash-text">Flash Sale {flashDiscountText}</span>
+            </div>
+          )}
+
           {/* Top Favorite Heart Button */}
           <button
             type="button"
@@ -95,7 +114,7 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
           </button>
 
           {/* Bottom Promotion Tag Overlay */}
-          {hotel.tag && (
+          {hotel.tag && !flashSale && (
             <div className="hotel-card__promo-tag">
               {hotel.tag}
             </div>
@@ -135,6 +154,12 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
               {hotel.is_genius && (
                 <span className="hotel-card__genius-badge">Genius VIP</span>
               )}
+              {/* Pill Flash Sale cạnh sao */}
+              {flashSale && (
+                <span className="hotel-card__flash-pill">
+                  ⚡ Flash Sale {flashDiscountText}
+                </span>
+              )}
             </div>
 
             {/* Hotel Name */}
@@ -162,6 +187,16 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
           <LocationPinIcon />
           <span>{hotel.address || hotel.city_name}</span>
         </div>
+
+        {/* Dòng thông báo hộp vàng chữ đen nhận biết Flash Sale */}
+        {flashSale && (
+          <div className="avora-flash-alert-gold" title={`Khuyến mãi giờ vàng (${flashSale.code || 'FLASH_SALE'})`}>
+            <span className="avora-flash-alert-gold__icon">⚡</span>
+            <span className="avora-flash-alert-gold__text">
+              <strong>FLASH SALE {flashDiscountText}</strong> • Khung giờ vàng
+            </span>
+          </div>
+        )}
 
         {/* Highlighted Room Type Box */}
         {hotel.room_highlight && (
@@ -222,14 +257,19 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
           </div>
 
           <div className="hotel-card__pricing-group">
-            {hotel.original_price && hotel.original_price > hotel.price && (
+            {pricing.originalPrice && pricing.originalPrice > pricing.currentPrice && (
               <span className="hotel-card__original-price">
-                {formatPrice(hotel.original_price)}
+                {formatPrice(pricing.originalPrice)}
               </span>
             )}
-            <div className="hotel-card__current-price">
-              {formatPrice(hotel.price)}
+            <div className={`hotel-card__current-price ${flashSale ? 'hotel-card__current-price--flash' : ''}`}>
+              {formatPrice(pricing.currentPrice)}
             </div>
+            {pricing.hasFlashSale && (
+              <span className="hotel-card__flash-savings">
+                ⚡ Tiết kiệm {formatPrice(pricing.discountAmount)}
+              </span>
+            )}
             <div className="hotel-card__tax-note">
               Đã bao gồm thuế và phí
             </div>

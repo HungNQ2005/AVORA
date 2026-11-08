@@ -9,6 +9,12 @@ import { getRoomCapacityDetails } from '../../utils/roomCapacityHelper';
 import { authenticatedFetch } from '../../services/authenticatedFetch';
 import ReviewCard from './components/ReviewCard';
 import { getScoreLabel } from '../../utils/ratingHelper';
+import {
+  isFlashSaleActive,
+  getFlashSaleDiscountText,
+  calculateFlashSaleDiscount,
+  formatGoldenHourRange,
+} from '../../utils/flashSaleHelper';
 import './HotelDetailPage.css';
 
 import {
@@ -360,6 +366,9 @@ const HotelDetailPage = () => {
   const mainImage = images[0] || hotel?.thumbnail || '';
   const sideImage = images[1] || mainImage;
 
+  const flashSale = isFlashSaleActive(hotel?.active_flash_sale) ? hotel.active_flash_sale : null;
+  const flashDiscountText = flashSale ? getFlashSaleDiscountText(flashSale) : '';
+
   return (
     <div className="hotel-detail-page">
       {/* Toast Alert */}
@@ -482,6 +491,41 @@ const HotelDetailPage = () => {
             </div>
           </div>
         </section>
+
+        {/* ─── FLASH SALE GOLDEN HOURS BANNER ─── */}
+        {flashSale && (
+          <div className="hotel-flash-sale-banner">
+            <div className="hotel-flash-sale-banner__left">
+              <div className="hotel-flash-sale-banner__badge">
+                <span className="hotel-flash-sale-banner__icon">⚡</span>
+                <span>FLASH SALE KHUNG GIỜ VÀNG</span>
+              </div>
+              <div className="hotel-flash-sale-banner__content">
+                <h3 className="hotel-flash-sale-banner__title">
+                  Giảm {flashDiscountText} cho toàn bộ các hạng phòng
+                  {flashSale.max_discount_amount && (
+                    <span className="hotel-flash-sale-banner__max">
+                      {' '}(Tối đa {formatPrice(flashSale.max_discount_amount)})
+                    </span>
+                  )}
+                </h3>
+                <p className="hotel-flash-sale-banner__time">
+                  ⏰ Khung giờ vàng: {formatGoldenHourRange(flashSale.valid_from, flashSale.valid_to)}
+                  {flashSale.min_order_amount > 0 && ` · Đơn tối thiểu ${formatPrice(flashSale.min_order_amount)}`}
+                  {' '}· Tự động áp dụng giá ưu đãi tốt nhất khi đặt phòng hôm nay!
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="hotel-flash-sale-banner__btn"
+              onClick={handleScrollToRooms}
+            >
+              <span>Xem phòng Flash Sale</span>
+              <ChevronRightIcon />
+            </button>
+          </div>
+        )}
 
         {/* ─── 3. PHOTO GALLERY ─── */}
         <section className="hotel-gallery-grid">
@@ -667,9 +711,15 @@ const HotelDetailPage = () => {
                   >
                     {/* Column 1: Info & Photo */}
                     <div className="room-card-col-info">
-                      <span className="room-badge room-badge--default">
-                        Hạng phòng tiêu chuẩn
-                      </span>
+                      {flashSale ? (
+                        <span className="room-badge room-badge--flash-sale">
+                          ⚡ Flash Sale {flashDiscountText}
+                        </span>
+                      ) : (
+                        <span className="room-badge room-badge--default">
+                          Hạng phòng tiêu chuẩn
+                        </span>
+                      )}
 
                       <h3 className="room-name">{room.name}</h3>
 
@@ -778,19 +828,41 @@ const HotelDetailPage = () => {
 
                     {/* Column 3: Price & Action */}
                     <div className="room-card-col-pricing">
-                      {room.original_price && room.original_price > room.price && (
-                        <span className="room-original-price">
-                          {formatPrice(room.original_price)}
-                        </span>
+                      {flashSale ? (
+                        (() => {
+                          const roomDiscount = calculateFlashSaleDiscount(room.price, flashSale);
+                          const roomCurrentPrice = Math.max(0, room.price - roomDiscount);
+                          return (
+                            <>
+                              <span className="room-original-price">
+                                {formatPrice(room.price)}
+                              </span>
+                              <div className="room-current-price room-current-price--flash">
+                                {formatPrice(roomCurrentPrice)}
+                              </div>
+                              <span className="room-tax-note room-tax-note--flash">
+                                ⚡ Đã áp dụng Flash Sale {flashDiscountText} (-{formatPrice(roomDiscount)})
+                              </span>
+                            </>
+                          );
+                        })()
+                      ) : (
+                        <>
+                          {room.original_price && room.original_price > room.price && (
+                            <span className="room-original-price">
+                              {formatPrice(room.original_price)}
+                            </span>
+                          )}
+
+                          <div className="room-current-price">
+                            {formatPrice(room.price)}
+                          </div>
+
+                          <span className="room-tax-note">
+                            Giá niêm yết (chưa gồm thuế &amp; phí)
+                          </span>
+                        </>
                       )}
-
-                      <div className="room-current-price">
-                        {formatPrice(room.price)}
-                      </div>
-
-                      <span className="room-tax-note">
-                        Giá niêm yết (chưa gồm thuế &amp; phí)
-                      </span>
 
                       {isCapacityExceeded ? (
                         <button

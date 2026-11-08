@@ -32,6 +32,7 @@ const auditLogRoute = require('./features/audit_logs/audit_log.route');
 const walletRoute = require('./features/wallet/wallet.route');
 const venueWalletRoute = require('./features/venueWallet/venueWallet.route');
 const disbursementRoute = require('./features/disbursements/disbursement.route');
+const vendorFlashSaleRoute = require('./features/vendor_flash_sales/vendor_flash_sale.route');
 
 const app = express();
 
@@ -87,6 +88,7 @@ app.use("/api", refundPolicyRoute);
 app.use("/api", commissionPolicyRoute);
 app.use("/api", bookingRoute);
 app.use("/api", vendorBookingRoute);
+app.use("/api/vendor/flash-sales", vendorFlashSaleRoute);
 app.use("/api", wishlistRoute);
 app.use("/api", paymentRoute);
 app.use('/api', supportRoute);

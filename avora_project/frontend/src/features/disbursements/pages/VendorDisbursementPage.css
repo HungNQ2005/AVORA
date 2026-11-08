@@ -225,6 +225,22 @@
   color: #0b1e3f;
 }
 
+.vd-btn--danger {
+  background: #fff;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.vd-btn--danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.vd-btn--sm {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.78rem;
+}
+
 .vd-btn--lg {
   padding: 0.75rem 1.35rem;
   font-size: 0.92rem;
@@ -470,6 +486,29 @@
   .vd-summary-card__right .vd-btn {
     width: 100%;
   }
+  .vd-toolbar__filters {
+    min-width: 100%;
+    flex-wrap: wrap;
+  }
+  .vd-search {
+    max-width: none;
+  }
+  .vd-status-filter {
+    flex: 1;
+  }
+  .vd-status-filter select {
+    flex: 1;
+    min-width: 0;
+  }
+  .vd-confirm-modal {
+    padding: 1.5rem 1.2rem;
+  }
+  .vd-confirm-modal__actions {
+    flex-direction: column-reverse;
+  }
+  .vd-confirm-modal__actions .vd-btn {
+    width: 100%;
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -488,11 +527,83 @@
   padding: 1rem 1.25rem;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 1rem;
   border-bottom: 1px solid #e2e8f0;
   flex-wrap: wrap;
   background: #ffffff;
+}
+
+.vd-toolbar__filters {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex: 1;
+  justify-content: flex-end;
+  min-width: min(100%, 420px);
+}
+
+.vd-search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 220px;
+  max-width: 390px;
+  flex: 1;
+  padding: 0.48rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  background: #fff;
+}
+
+.vd-search:focus-within,
+.vd-status-filter:focus-within {
+  border-color: #003580;
+  box-shadow: 0 0 0 3px rgba(0, 53, 128, 0.1);
+}
+
+.vd-search input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #0f172a;
+  font: inherit;
+  font-size: 0.8rem;
+  background: transparent;
+}
+
+.vd-search input::placeholder {
+  color: #94a3b8;
+}
+
+.vd-status-filter {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.vd-status-filter__label {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.vd-status-filter select {
+  border: 0;
+  outline: 0;
+  color: #334155;
+  font: inherit;
+  font-size: 0.8rem;
+  background: transparent;
+  cursor: pointer;
 }
 
 .vd-tabs {
@@ -729,6 +840,16 @@
   background: #ef4444;
 }
 
+.vd-status-badge--default {
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+
+.vd-status-badge--default .vd-status-badge__dot {
+  background: #64748b;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    MODAL: TẠO YÊU CẦU GIẢI NGÂN
    AVORA Enterprise Dialog Style: Deep Navy #003580 Header + Gold Accent line
@@ -756,6 +877,80 @@
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.05);
   overflow: hidden;
   animation: vdModalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vd-confirm-overlay {
+  z-index: 10000;
+}
+
+.vd-confirm-modal {
+  width: min(100%, 440px);
+  padding: 2rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.25);
+  text-align: center;
+  animation: vdModalFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.vd-confirm-modal__icon {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 1rem;
+  place-items: center;
+  border: 1px solid #fed7aa;
+  border-radius: 50%;
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.vd-confirm-modal h2 {
+  margin: 0 0 0.65rem;
+  color: #0b1e3f;
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.vd-confirm-modal p {
+  margin: 0;
+  color: #475569;
+  font-size: 0.9rem;
+  line-height: 1.65;
+}
+
+.vd-confirm-modal p strong {
+  color: #0f172a;
+}
+
+.vd-confirm-modal__notice {
+  margin-top: 1rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #64748b;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.vd-confirm-modal__actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+  margin-top: 1.5rem;
+}
+
+.vd-confirm-modal__submit {
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+}
+
+.vd-confirm-modal__submit:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
 }
 
 @keyframes vdModalFadeIn {

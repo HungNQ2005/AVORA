@@ -105,8 +105,8 @@ const validateCouponPayload = (body, { partial = false } = {}) => {
       return validationError("Loại giảm giá không hợp lệ.");
     }
     const discountType = body.discount_type.trim().toUpperCase();
-    if (!["PERCENT", "FIXED"].includes(discountType)) {
-      return validationError("Loại giảm giá chỉ được là PERCENT hoặc FIXED.");
+    if (!["PERCENT", "FIXED", "FLASH_PERCENT", "FIXED_AMOUNT"].includes(discountType)) {
+      return validationError("Loại giảm giá chỉ được là PERCENT, FIXED, FLASH_PERCENT hoặc FIXED_AMOUNT.");
     }
     payload.discount_type = discountType;
   }
@@ -152,7 +152,7 @@ const validateCouponPayload = (body, { partial = false } = {}) => {
     return validationError("Ngày kết thúc phải sau ngày bắt đầu.");
   }
 
-  if (payload.discount_type === "PERCENT" && payload.discount_value > 100) {
+  if (["PERCENT", "FLASH_PERCENT"].includes(payload.discount_type) && payload.discount_value > 100) {
     return validationError("Giá trị giảm theo phần trăm không được vượt quá 100%.");
   }
 

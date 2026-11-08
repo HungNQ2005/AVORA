@@ -28,6 +28,13 @@ router.post(
   controller.createDisbursementRequest
 );
 
+router.delete(
+  '/vendor/disbursements/:id',
+  authenticate,
+  requireRole('VEN'),
+  controller.cancelVendorDisbursementRequest
+);
+
 // ─── BUSINESS MANAGER PROCESSING ENDPOINTS ────────────────────────────────
 router.get(
   '/business/disbursements',
@@ -72,4 +79,3 @@ router.patch(
 );
 
 module.exports = router;
-

@@ -34,8 +34,8 @@ const selectRowsByIds = async (table, columns, key, ids) => {
   return rows;
 };
 
-const getHotelReviewRows = async (hotelId) => {
-  const { data: bookings, error: bookingError } = await supabase
+const getHotelReviewRows = async (hotelId, client = supabase) => {
+  const { data: bookings, error: bookingError } = await client
     .from('t_booking')
     .select('booking_id, user_id')
     .eq('hotel_id', hotelId);
@@ -43,7 +43,7 @@ const getHotelReviewRows = async (hotelId) => {
   if (bookingError) throw bookingError;
   if (!bookings?.length) return { bookings: [], reviews: [] };
 
-  const { data: reviews, error: reviewError } = await supabase
+  const { data: reviews, error: reviewError } = await client
     .from('t_review')
     .select('review_id, booking_id, rating_score, comment, created_at')
     .in('booking_id', bookings.map((booking) => booking.booking_id))
@@ -54,8 +54,8 @@ const getHotelReviewRows = async (hotelId) => {
   return { bookings, reviews: reviews || [] };
 };
 
-const getHotelReviews = async (hotelId, viewerId = null) => {
-  const { data: hotel, error: hotelError } = await supabase
+const getHotelReviews = async (hotelId, viewerId = null, client = supabase) => {
+  const { data: hotel, error: hotelError } = await client
     .from('m_hotel')
     .select('hotel_id, hotel_status, is_deleted, star_rating')
     .eq('hotel_id', hotelId)
@@ -66,7 +66,7 @@ const getHotelReviews = async (hotelId, viewerId = null) => {
     return { reviews: [], star_rating: hotel?.star_rating ?? null, reviews_count: 0 };
   }
 
-  const { bookings, reviews } = await getHotelReviewRows(hotelId);
+  const { bookings, reviews } = await getHotelReviewRows(hotelId, client);
   if (!reviews.length) {
     return { reviews: [], star_rating: hotel.star_rating ?? null, reviews_count: 0 };
   }
@@ -74,7 +74,7 @@ const getHotelReviews = async (hotelId, viewerId = null) => {
   const bookingById = new Map(bookings.map((booking) => [booking.booking_id, booking]));
   const userIds = [...new Set(bookings.map((booking) => booking.user_id).filter(Boolean))];
   const { data: users, error: usersError } = userIds.length
-    ? await supabase.from('m_user').select('user_id, full_name, avatar_url').in('user_id', userIds)
+    ? await client.from('m_user').select('user_id, full_name, avatar_url').in('user_id', userIds)
     : { data: [], error: null };
   if (usersError) throw usersError;
 

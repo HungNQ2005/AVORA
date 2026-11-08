@@ -164,3 +164,18 @@ export const createVendorDisbursementRequest = async (payload) => {
   return json.data;
 };
 
+/**
+ * Vendor: cancel a pending disbursement request
+ */
+export const cancelVendorDisbursementRequest = async (id) => {
+  const response = await authenticatedFetch(API_ENDPOINTS.DISBURSEMENT_VENDOR_CANCEL(id), {
+    method: 'DELETE',
+  });
+  const json = await response.json();
+
+  if (!response.ok || json.status === 'error') {
+    throw new Error(json.message || 'Không thể hủy yêu cầu giải ngân.');
+  }
+
+  return json.data;
+};

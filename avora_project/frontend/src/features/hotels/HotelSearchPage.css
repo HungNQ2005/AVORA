@@ -13,7 +13,8 @@
 
 /* ─── 1. TOP COMPACT SEARCH BAR STRIP ─────────────────────────────────────── */
 .search-bar-strip {
-  background-color: #003580; /* Booking navy blue header strip background */
+  background-color: #003580;
+  /* Booking navy blue header strip background */
   padding: 18px 16px 20px;
   position: relative;
   z-index: 10;
@@ -26,7 +27,8 @@
 
 .compact-search-box {
   background-color: #ffb700;
-  border: 4px solid #ffb700; /* Signature yellow accent border */
+  border: 4px solid #ffb700;
+  /* Signature yellow accent border */
   border-radius: 8px;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
   position: relative;
@@ -499,7 +501,7 @@
 .filter-map-card__bg {
   position: absolute;
   inset: 0;
-  background-image: 
+  background-image:
     radial-gradient(#ffffff 15%, transparent 16%),
     radial-gradient(#ffffff 15%, transparent 16%);
   background-size: 24px 24px;
@@ -1026,7 +1028,8 @@
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #15803d; /* Green */
+  color: #15803d;
+  /* Green */
   font-weight: 500;
 }
 
@@ -1036,7 +1039,8 @@
 }
 
 .hotel-card__amenity-item--urgency {
-  color: #b91c1c; /* Red urgency */
+  color: #b91c1c;
+  /* Red urgency */
   font-weight: 600;
 }
 
@@ -1127,8 +1131,13 @@
 }
 
 @keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* ─── 7. EMPTY STATES (EXACT TEXT PER REQUIREMENTS) ───────────────────────── */
@@ -1253,7 +1262,7 @@
   height: 100%;
   position: relative;
   background: #dfe6e9;
-  background-image: 
+  background-image:
     linear-gradient(#f0f0f0 1px, transparent 1px),
     linear-gradient(90deg, #f0f0f0 1px, transparent 1px);
   background-size: 30px 30px;
@@ -1529,3 +1538,291 @@
   background-color: #0057b8 !important;
 }
 
+/* ─── Leaflet VietMap Modal Extensions ────────────────────────────────────── */
+.map-modal-leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 1;
+}
+
+.map-modal-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.map-modal-geo-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #059669;
+  background-color: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  padding: 4px 10px;
+  border-radius: 16px;
+}
+
+.map-modal-geo-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #003580;
+  background-color: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  padding: 4px 10px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.map-modal-geo-btn:hover {
+  background-color: #DBEAFE;
+  border-color: #93C5FD;
+}
+
+
+  /* ─── Floating Controls on Top of Leaflet Map ────────────────────────────── */
+  .map-modal-floating-toolbar {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 1000;
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .map-modal-recenter-btn {
+    background-color: #FFFFFF;
+    color: #003580;
+    border: 1.5px solid #003580;
+    border-radius: 20px;
+    padding: 7px 16px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 53, 128, 0.25);
+    transition: all 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    pointer-events: auto !important;
+  }
+
+  .map-modal-recenter-btn:hover {
+    background-color: #003580;
+    color: #FFFFFF;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 53, 128, 0.35);
+  }
+
+  .map-modal-recenter-btn:active {
+    transform: translateY(0);
+  }
+
+  .map-modal-recenter-icon {
+    font-size: 14px;
+  }
+
+  /* ─── User Live Location Marker ('Bạn đang ở đây') ────────────────────────── */
+    .user-live-map-marker-container {
+      background: transparent !important;
+      border: none !important;
+      overflow: visible !important;
+      pointer-events: auto !important;
+    }
+
+    .user-live-pin {
+      display: flex !important;
+      align-items: center !important;
+      gap: 8px !important;
+      position: relative !important;
+      cursor: pointer !important;
+      user-select: none !important;
+    }
+
+      .user-live-pin__beacon {
+        position: relative !important;
+        z-index: 2 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        filter: drop-shadow(0 2px 6px rgba(0, 53, 128, 0.45)) !important;
+      }
+
+
+        .user-live-pin__pulse-ring {
+          position: absolute !important;
+          left: -6px !important;
+          top: 50% !important;
+          transform: translateY(-50%) !important;
+          width: 34px !important;
+          height: 34px !important;
+          border-radius: 50% !important;
+          background-color: rgba(37, 99, 235, 0.45) !important;
+          animation: userLivePulseRing 1.8s infinite ease-out !important;
+          pointer-events: none !important;
+          z-index: 1 !important;
+        }
+
+          @keyframes userLivePulseRing {
+            0% {
+              transform: translateY(-50%) scale(0.5);
+              opacity: 0.95;
+            }
+
+            100% {
+              transform: translateY(-50%) scale(2.3);
+              opacity: 0;
+            }
+          }
+
+
+            .user-live-pin__label-box {
+              background: #003580 !important;
+              color: #FFFFFF !important;
+              font-size: 11.5px !important;
+              font-weight: 700 !important;
+              padding: 4px 10px !important;
+              border-radius: 16px !important;
+              white-space: nowrap !important;
+              box-shadow: 0 3px 10px rgba(0, 53, 128, 0.4) !important;
+              border: 1.5px solid #FFFFFF !important;
+              line-height: 1.3 !important;
+              z-index: 3 !important;
+            }
+
+            /* ─── Leaflet Hotel Markers ───────────────────────────────────────────────── */
+            .hotel-leaflet-marker {
+              background: transparent !important;
+              border: none !important;
+              overflow: visible !important;
+            }
+
+            .map-hotel-pin-pill {
+              display: inline-flex !important;
+              align-items: center !important;
+              justify-content: center !important;
+              background-color: #FFFFFF !important;
+              color: #0F172A !important;
+              font-size: 11.5px !important;
+              font-weight: 700 !important;
+              padding: 4px 10px !important;
+              border-radius: 16px !important;
+              border: 1.5px solid #003580 !important;
+              box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25) !important;
+              cursor: pointer !important;
+              transition: all 0.15s ease !important;
+              white-space: nowrap !important;
+            }
+
+            .map-hotel-pin-pill:hover,
+            .map-hotel-pin-pill.is-selected {
+              background-color: #003580 !important;
+              color: #FFFFFF !important;
+              border-color: #003580 !important;
+              transform: scale(1.1) !important;
+              box-shadow: 0 4px 12px rgba(0, 53, 128, 0.45) !important;
+              z-index: 100 !important;
+            }
+/* ─── ⚡ Flash Sale Badges & Styling trên HotelCard ─── */
+.hotel-card__flash-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffc72c !important;
+  color: #111827 !important;
+  border: 1px solid #f59e0b !important;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.45);
+  animation: pulse-flash 2s infinite ease-in-out;
+}
+
+.hotel-card__flash-icon {
+  font-size: 12px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.hotel-card__flash-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #ffc72c !important;
+  color: #111827 !important;
+  border: 1px solid #f59e0b !important;
+  font-size: 10.5px;
+  font-weight: 800;
+  padding: 2px 7px;
+  border-radius: 4px;
+  margin-left: 6px;
+  letter-spacing: 0.2px;
+  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.3);
+}
+
+.hotel-card__current-price--flash {
+  color: #dc2626 !important;
+  font-weight: 800;
+}
+
+.hotel-card__flash-savings {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #b91c1c;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 2px;
+}
+
+@keyframes pulse-flash {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.03);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.6);
+  }
+}
+
+
+
+.avora-flash-alert-gold {
+  background: #ffc72c !important;
+  color: #111827 !important;
+  border: 1px solid #f59e0b !important;
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 11.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 8px 0;
+  line-height: 1.35;
+  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2);
+}
+.avora-flash-alert-gold__icon {
+  font-size: 13px;
+  color: #92400e;
+  flex-shrink: 0;
+}
+.avora-flash-alert-gold__text strong {
+  font-weight: 800;
+  color: #000000;
+}
