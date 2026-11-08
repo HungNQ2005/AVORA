@@ -67,6 +67,26 @@ const createDisbursementRequest = async (req, res, next) => {
 };
 
 /**
+ * DELETE /api/vendor/disbursements/:id
+ * Vendor hủy yêu cầu đang chờ duyệt và nhận lại số dư đã tạm giữ
+ */
+const cancelVendorDisbursementRequest = async (req, res, next) => {
+  try {
+    const userId = req.user?.user_id;
+    const { id } = req.params;
+
+    if (!id) {
+      return sendError(res, 400, 'Thiếu mã yêu cầu giải ngân.');
+    }
+
+    const result = await disbursementService.cancelVendorDisbursementRequest(userId, id);
+    return sendSuccess(res, 200, 'Đã hủy yêu cầu giải ngân và hoàn lại số dư vào ví.', result);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * GET /api/business/disbursements
  * Business Manager: Lấy danh sách giải ngân kèm bộ lọc & thống kê
  */
@@ -204,6 +224,7 @@ module.exports = {
   getVendorOverview,
   getVendorHistory,
   createDisbursementRequest,
+  cancelVendorDisbursementRequest,
   getBusinessDisbursements,
   approveDisbursement,
   settleDisbursement,
@@ -211,4 +232,3 @@ module.exports = {
   getPaymentQr,
   getPaymentStatus,
 };
-
