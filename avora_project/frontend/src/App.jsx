@@ -314,7 +314,7 @@ function App() {
             <Route
               path="flash-sales"
               element={
-                <HotelManagerRoute>
+                <HotelManagerRoute allowedRoles={['VEN']}>
                   <VendorFlashSalePage />
                 </HotelManagerRoute>
               }

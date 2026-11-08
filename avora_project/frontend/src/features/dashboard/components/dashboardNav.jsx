@@ -32,7 +32,7 @@ const DashboardNav = () => {
   const canManageRooms = isAdmin || isVendor;
   const canManageBookings = isVendor;
   const canManageHotels = isAdmin || isVendor;
-  const canManageFlashSales = isVendor || isAdmin;
+  const canManageFlashSales = isVendor;
   const canManageCoupons = isBmr;
   const canManageRefundPolicies = isBmr;
   const canManageCommissionPolicies = isBmr;
