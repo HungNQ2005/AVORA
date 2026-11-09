@@ -40,6 +40,7 @@ const DashboardNav = () => {
   const canManageRefundPolicies = isBmr;
   const canManageCommissionPolicies = isBmr;
   const canAccessDisbursements = isVendor || isBmr;
+  const canManageCustomerRefunds = isBmr;
   const canViewStatistics = isVendor;
   const userName = user?.full_name?.trim() || user?.email || 'Người dùng';
   const userRole = ROLE_LABELS[roleCode] || (roleCode ? codeNameParser(roleCode) : 'Chưa xác định');
@@ -394,6 +395,22 @@ const DashboardNav = () => {
                   </svg>
                 </span>
                 <span className="admin-sidebar__label">{isVendor ? 'Yêu cầu giải ngân' : 'Quản lý giải ngân'}</span>
+              </NavLink>
+            )}
+            {canManageCustomerRefunds && (
+              <NavLink
+                to="/dashboard/refund-requests"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <polyline points="1 4 1 10 7 10"></polyline>
+                    <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path>
+                  </svg>
+                </span>
+                <span className="admin-sidebar__label">Quản lý hoàn tiền khách</span>
               </NavLink>
             )}
             {canViewStatistics && (

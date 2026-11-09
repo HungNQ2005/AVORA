@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const supabase = require('../../config/supabaseClient');
 const env = require('../../config/env');
 const disbursementService = require('../disbursements/disbursement.service');
+const refundRequestService = require('../refund_requests/refund_request.service');
 const paymentSharingService = require('../payment_sharing/payment_sharing.service');
 
 const PAYMENT_HOLD_MS = 10 * 60 * 1000;
@@ -269,8 +270,14 @@ const processWebhook = async (payload) => {
 
   const transferType = String(payload?.transferType || 'in').toLowerCase();
 
-  // Tiền RA (công ty chi giải ngân cho Vendor, nội dung AVRWDxxxxxxxx) -> luồng giải ngân.
+  // Tiền RA:
+  // - Nếu nội dung có mã AVRRFxxxxxxxx -> luồng hoàn tiền cho khách hàng (Refund Request)
+  // - Ngược lại (AVRWDxxxxxxxx) -> luồng giải ngân cho Vendor (Disbursement)
   if (transferType === 'out') {
+    const outContent = String(payload?.content || payload?.description || '');
+    if (refundRequestService.extractRefundPayoutCode(outContent)) {
+      return refundRequestService.processSepayRefundPayout(payload);
+    }
     return disbursementService.processSepayPayout(payload);
   }
   if (transferType !== 'in') {

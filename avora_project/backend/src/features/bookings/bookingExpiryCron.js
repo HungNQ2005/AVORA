@@ -88,6 +88,12 @@ const ensureHostGroupRefund = async ({ booking, refundAmount, refundPndCd }) => 
   await supabase.from("t_refund_request").insert({
     transaction_id: paidTx?.transaction_id || null,
     booking_id: booking.booking_id,
+    requester_id: booking.user_id || null,
+    bank_cd: hostUser?.refund_bank_cd ? String(hostUser.refund_bank_cd).trim() : null,
+    account_number: hostUser?.refund_account_number ? String(hostUser.refund_account_number).trim() : null,
+    account_holder: hostUser?.refund_account_holder
+      ? String(hostUser.refund_account_holder).trim().toUpperCase()
+      : null,
     refund_amount: cleanAmount,
     refund_status_cd: refundPndCd,
     gateway_refund_ref: `REF-GRP-${String(booking.booking_id).slice(0, 8).toUpperCase()}`,
