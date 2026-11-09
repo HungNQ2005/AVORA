@@ -17,6 +17,7 @@ const facilityRoute = require('./features/facilities/facility.route');
 const couponRoute = require('./features/coupons/coupon.route');
 const userRoute = require('./features/users/user.route');
 const chatbotRoute = require("./features/chatbot/chatbot.route");
+const reviewRoute = require('./features/review/review.route');
 const statisticsRoute = require("./features/statistics/statistics.route");
 const refundPolicyRoute = require("./features/refund_policies/refund_policy.route");
 const commissionPolicyRoute = require("./features/commission_policies/commission_policy.route");
@@ -26,13 +27,14 @@ const bookingRoute = require('./features/bookings/booking.route');
 const vendorBookingRoute = require('./features/bookings/vendor_booking.route');
 const { startBookingExpiryCron } = require('./features/bookings/bookingExpiryCron');
 const paymentRoute = require('./features/payments/payment.route');
+const supportRoute = require('./features/support/support.route');
 const paymentSharingRoute = require('./features/payment_sharing/payment_sharing.route');
 const auditLogRoute = require('./features/audit_logs/audit_log.route');
 const walletRoute = require('./features/wallet/wallet.route');
 const venueWalletRoute = require('./features/venueWallet/venueWallet.route');
 const disbursementRoute = require('./features/disbursements/disbursement.route');
+const refundRequestRoute = require('./features/refund_requests/refund_request.route');
 const vendorFlashSaleRoute = require('./features/vendor_flash_sales/vendor_flash_sale.route');
-
 
 const app = express();
 
@@ -82,6 +84,7 @@ app.use("/api", facilityRoute);
 app.use("/api", couponRoute);
 app.use("/api", userRoute);
 app.use("/api", chatbotRoute);
+app.use('/api', reviewRoute);
 app.use("/api", statisticsRoute);
 app.use("/api", refundPolicyRoute);
 app.use("/api", commissionPolicyRoute);
@@ -90,12 +93,14 @@ app.use("/api", vendorBookingRoute);
 app.use("/api/vendor/flash-sales", vendorFlashSaleRoute);
 app.use("/api", wishlistRoute);
 app.use("/api", paymentRoute);
+app.use('/api', supportRoute);
 app.use("/api", paymentSharingRoute);
 app.use("/api", auditLogRoute);
 
 app.use("/api", walletRoute);
 app.use("/api", venueWalletRoute);
 app.use("/api", disbursementRoute);
+app.use("/api", refundRequestRoute);
 
 app.use((_req, _res, next) => {
   const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');

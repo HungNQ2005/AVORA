@@ -127,6 +127,20 @@ const getHotelById = async (hotelId, { ownerId = null, includeDeleted = false } 
   return (await addStatusNames([data]))[0];
 };
 
+const getVerifiedBankAccount = async (hotelId) => {
+  ensureClient();
+  const { data, error } = await supabase
+    .from('m_bank_account')
+    .select('bank_cd, bank_branch, bin_code, account_number, account_holder')
+    .eq('hotel_id', hotelId)
+    .eq('is_verify', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  checkQuery(error);
+  return data;
+};
+
 const createHotel = async (input) => {
   ensureClient();
   const { data, error } = await supabase
@@ -246,7 +260,8 @@ const deactivateHotel = async ({ hotelId, access, options = {} }) => {
   return (await addStatusNames([data]))[0];
 };
 
-const HOTEL_IMAGE_BUCKET = 'hotel-images';
+const HOTEL_IMAGE_BUCKET = 'hotel_images';
+const HOTEL_IMAGE_LIMIT = 5;
 
 // Confirms the hotel exists and belongs to the Vendor performing the image operation.
 const assertHotelAccess = async (hotelId, access) => {
@@ -262,16 +277,34 @@ const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbn
   ensureClient();
   if (!(await assertHotelAccess(hotelId, access))) return null;
 
+  const { count, error: countError } = await supabase
+    .from('m_hotel_image')
+    .select('image_id', { count: 'exact', head: true })
+    .eq('hotel_id', hotelId);
+  checkQuery(countError);
+  if (count >= HOTEL_IMAGE_LIMIT) {
+    const err = new Error('Mỗi khách sạn chỉ được tải lên tối đa 5 hình ảnh.');
+    err.statusCode = 409;
+    throw err;
+  }
+
   const fileExt = (originalName?.split('.').pop() || 'jpg').toLowerCase();
   const objectPath = `${hotelId}/${Date.now()}-${Math.round(Math.random() * 1e6)}.${fileExt}`;
 
   const { error: uploadError } = await supabase.storage
     .from(HOTEL_IMAGE_BUCKET)
     .upload(objectPath, buffer, { contentType: mimeType, upsert: false });
+  if (uploadError) console.error(`[HOTEL IMAGE STORAGE] Upload to ${HOTEL_IMAGE_BUCKET} failed: ${uploadError.message}`);
   checkQuery(uploadError);
 
   const { data: publicUrlData } = supabase.storage.from(HOTEL_IMAGE_BUCKET).getPublicUrl(objectPath);
   const imageUrl = publicUrlData?.publicUrl;
+  if (!imageUrl) {
+    await supabase.storage.from(HOTEL_IMAGE_BUCKET).remove([objectPath]);
+    const err = new Error('Không thể tạo đường dẫn công khai cho ảnh khách sạn. Kiểm tra cấu hình bucket hotel_images.');
+    err.statusCode = 500;
+    throw err;
+  }
 
   if (isThumbnail) {
     const { error: resetError } = await supabase
@@ -280,11 +313,6 @@ const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbn
       .eq('hotel_id', hotelId);
     checkQuery(resetError);
   }
-
-  const { count } = await supabase
-    .from('m_hotel_image')
-    .select('image_id', { count: 'exact', head: true })
-    .eq('hotel_id', hotelId);
 
   const { data, error } = await supabase
     .from('m_hotel_image')
@@ -296,6 +324,10 @@ const addHotelImage = async (hotelId, { buffer, mimeType, originalName, isThumbn
     })
     .select('image_id, image_url, is_thumbnail, sort_order')
     .single();
+  if (error) {
+    const { error: cleanupError } = await supabase.storage.from(HOTEL_IMAGE_BUCKET).remove([objectPath]);
+    if (cleanupError) console.warn(`[HOTEL IMAGE STORAGE] Cleanup failed: ${cleanupError.message}`);
+  }
   checkQuery(error);
   return data;
 };
@@ -419,4 +451,4 @@ const toHotelDto = (hotel) => ({
   updated_at: hotel.updated_at,
 });
 
-module.exports = { listHotels, getHotelById, createHotel, updateHotel, approveHotel, deactivateHotel, addHotelImage, deleteHotelImage, setHotelImageThumbnail, toHotelDto };
+module.exports = { listHotels, getHotelById, getVerifiedBankAccount, createHotel, updateHotel, approveHotel, deactivateHotel, addHotelImage, deleteHotelImage, setHotelImageThumbnail, toHotelDto };

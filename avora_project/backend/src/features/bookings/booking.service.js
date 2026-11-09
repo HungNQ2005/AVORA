@@ -12,6 +12,8 @@ const {
 } = require('../hotels/hotel.availability');
 const { createInventorySeed } = require('./booking.inventory');
 const { getRoomTypesForHotel } = require('./booking.room-types');
+const walletService = require('../wallet/wallet.service');
+const { codeNameParser } = require('../../utils/codeNameParser');
 
 const PENDING_BOOKING_TTL_MS = 10 * 60 * 1000;
 
@@ -196,6 +198,16 @@ const formatDateString = (date) => date.toISOString().slice(0, 10);
 const getVietnamToday = () => new Intl.DateTimeFormat('en-CA', {
   timeZone: 'Asia/Ho_Chi_Minh',
 }).format(new Date());
+
+const addCalendarMonth = (dateOnly) => {
+  const date = new Date(`${dateOnly}T00:00:00.000Z`);
+  const day = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + 1);
+  const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+  date.setUTCDate(Math.min(day, lastDay));
+  return date.toISOString().slice(0, 10);
+};
 
 const getStayDates = (checkInStr, checkOutStr) => {
   const dates = [];
@@ -2285,12 +2297,8 @@ const changeBookingDates = async (
 /**
  * Cancel a booking using the configured cancellation status, restore inventory, and record refund request based on policy.
  */
-const walletService = require('../wallet/wallet.service');
-const { codeNameParser } = require('../../utils/codeNameParser');
-
 /**
- * Fetch supported banks list from m_system_code (business_cd = 'BANK_CD')
- * for refund bank account selection
+ * Fetch supported banks for refund bank account selection.
  */
 const getSupportedBanks = async () => {
   try {
@@ -2303,21 +2311,24 @@ const getSupportedBanks = async () => {
       .eq('business_cd', 'BANK_CD')
       .order('sort_no', { ascending: true });
 
-    if (error || !data) return [];
-    return data.map((b) => {
-      const parsed = codeNameParser(b.code_name);
+    if (error) {
+      throw createError(`Unable to load supported banks: ${error.message}`, 500);
+    }
+
+    return (data || []).map((bank) => {
+      const parsed = codeNameParser(bank.code_name);
       return {
-        bank_cd: b.code_cd,
-        code_cd: b.code_cd,
-        code_name: b.code_name,
-        code: b.code_name,
-        name: parsed !== b.code_name ? parsed : b.code_name,
-        short_name: parsed || b.code_name,
+        bank_cd: bank.code_cd,
+        code_cd: bank.code_cd,
+        code_name: bank.code_name,
+        code: bank.code_name,
+        name: parsed !== bank.code_name ? parsed : bank.code_name,
+        short_name: parsed || bank.code_name,
         bin: null,
         bin_code: null,
         logo: null,
         logo_url: null,
-        sort_no: b.sort_no,
+        sort_no: bank.sort_no,
       };
     });
   }
@@ -2327,6 +2338,7 @@ const cancelBooking = async (
   bookingId,
   {
     reason = 'Khách yêu cầu hủy phòng',
+    vendorCancellation = false,
     bank_name = '',
     bank_bin = '',
     bank_cd = '',
@@ -2337,10 +2349,26 @@ const cancelBooking = async (
 ) => {
   ensureClient();
 
+  const isVendorCancellation = vendorCancellation === true
+    && String(currentUser?.role_code_name || '').trim().toUpperCase() === 'VEN';
   const [booking, sysCodes] = await Promise.all([
-    getBookingById(bookingId, currentUser),
+    getBookingById(bookingId, currentUser, { allowHotelOwner: isVendorCancellation }),
     loadSystemCodes(),
   ]);
+
+  if (vendorCancellation && !isVendorCancellation) {
+    throw createError('Chỉ Nhà cung cấp mới có thể hủy đơn thay mặt khách.', 403);
+  }
+  if (isVendorCancellation) {
+    if (!hasSuccessfulPayment(booking)) throw createError('Chỉ được hủy đơn đặt phòng đã thanh toán.', 409);
+    const firstDetail = booking.t_booking_detail?.[0];
+    if (!firstDetail?.check_in_date || String(firstDetail.check_in_date).slice(0, 10) < addCalendarMonth(getVietnamToday())) {
+      throw createError('Chỉ có thể hủy đơn trước ngày nhận phòng ít nhất một tháng.', 409);
+    }
+    if (typeof reason !== 'string' || reason.trim().length < 3 || reason.trim().length > 500) {
+      throw createError('Lý do hủy phải từ 3 đến 500 ký tự.', 400);
+    }
+  }
 
   const cancelledStatusCd = sysCodes.getCodeCd('BOOKING_STS', 'CAN');
 
@@ -2456,8 +2484,8 @@ const cancelBooking = async (
   const refundRef = `REF-${bank_bin ? `${bank_bin}-` : ''}${bookingId.substring(0, 8).toUpperCase()}`;
 
   let refundRecord = null;
+  let refundInsertError = null;
 
-  // Trường hợp 2: Đơn đã thanh toán và số tiền hoàn > 0đ
   if (isPaid && calculatedRefundAmount > 0) {
     let cleanBankName = String(bank_name || '').trim();
     if (!cleanBankName && resolvedBankCd) {
@@ -2487,11 +2515,15 @@ const cancelBooking = async (
           : 'Hủy trong thời hạn miễn phí (Hoàn 100%)',
     ].filter(Boolean);
 
-    const { data: insertedRefund } = await getClient()
+    const { data: insertedRefund, error: insertRefundErr } = await getClient()
       .from('t_refund_request')
       .insert({
         transaction_id: latestPayment?.transaction_id || null,
         booking_id: bookingId,
+        requester_id: booking.user_id || null,
+        bank_cd: resolvedBankCd || null,
+        account_number: cleanAccNum || null,
+        account_holder: cleanHolder || null,
         refund_amount: calculatedRefundAmount,
         refund_status_cd: refundStatusCd,
         gateway_refund_ref: refundRef,
@@ -2501,6 +2533,7 @@ const cancelBooking = async (
       .maybeSingle();
 
     refundRecord = insertedRefund;
+    refundInsertError = insertRefundErr;
   }
 
   const returnMessage =
@@ -2510,6 +2543,29 @@ const cancelBooking = async (
         : `Đã gửi yêu cầu hủy đặt phòng và hoàn tiền ${calculatedRefundAmount.toLocaleString('vi-VN')} đ thành công trong thời hạn miễn phí hủy.`
       : 'Đã hủy đặt phòng thành công.';
 
+  if (refundInsertError) {
+    const rollbackErrors = [];
+    const { error: statusRollbackError } = await supabase
+      .from('t_booking')
+      .update({ booking_status_cd: booking.booking_status_cd, updated_at: new Date().toISOString() })
+      .eq('booking_id', bookingId);
+    if (statusRollbackError) rollbackErrors.push(`khôi phục trạng thái đơn: ${statusRollbackError.message}`);
+    if (details.length > 0 && details[0].check_in_date && details[0].check_out_date) {
+      try {
+        await adjustInventoryForStay(details, details[0].check_in_date, details[0].check_out_date, 1, bookingId);
+      } catch (inventoryRollbackError) {
+        rollbackErrors.push(`khôi phục tồn kho: ${inventoryRollbackError.message}`);
+      }
+    }
+    if (rollbackErrors.length) {
+      throw createError(
+        `Không thể tạo yêu cầu hoàn tiền: ${refundInsertError.message}; ${rollbackErrors.join('; ')}`,
+        500
+      );
+    }
+    throw createError(`Không thể tạo yêu cầu hoàn tiền: ${refundInsertError.message}`, 500);
+  }
+
   return {
     booking_id: bookingId,
     booking_status_cd: cancelledStatusCd,
@@ -2517,11 +2573,7 @@ const cancelBooking = async (
     message: returnMessage,
     is_paid: isPaid,
     refund_amount: calculatedRefundAmount,
-    refund: refundRecord || {
-      gateway_refund_ref: refundRef,
-      refund_amount: calculatedRefundAmount,
-      refund_status_cd: refundStatusCd,
-    },
+    refund: refundRecord,
   };
 };
 
@@ -2654,6 +2706,7 @@ const getBookingInvoice = async (bookingId, currentUser) => {
 
 module.exports = {
   calculatePricing,
+  formatBookingCode,
   createBooking,
   getBookingById,
   getMyBookings,

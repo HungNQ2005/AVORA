@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import HotelCard from '../components/hotelCard';
+import HotelImageManager from '../components/hotelImageManager';
 import EditHotelPopup from '../components/editHotelPopup';
 import Dialog from '../../../common/components/Dialog';
 import ExportExcelModal from '../../amenities/components/ExportExcelModal';
@@ -21,6 +22,7 @@ const HotelManagementPage = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState('');
 	const [editingHotel, setEditingHotel] = useState(null);
+	const [imageHotel, setImageHotel] = useState(null);
 	const [createOpen, setCreateOpen] = useState(false);
 	const [deleteTarget, setDeleteTarget] = useState(null);
 	const [deleteError, setDeleteError] = useState('');
@@ -121,6 +123,16 @@ const HotelManagementPage = () => {
 		setHotels((current) => current.map((hotel) => hotel.hotel_id === result.hotel_id ? result : hotel));
 		setEditingHotel(null);
 		setToast('Đã lưu thông tin khách sạn.');
+	};
+
+	const handleImagesChange = (images) => {
+		const selectedHotelId = imageHotel?.hotel_id;
+		if (!selectedHotelId) return;
+		const thumbnail = images.find((image) => image.is_thumbnail) || images[0] || null;
+		setImageHotel((current) => current ? { ...current, images } : current);
+		setHotels((current) => current.map((hotel) => hotel.hotel_id === selectedHotelId
+			? { ...hotel, images, thumbnail_url: thumbnail?.image_url || null }
+			: hotel));
 	};
 
 	const handleDelete = async () => {
@@ -257,31 +269,46 @@ const HotelManagementPage = () => {
 			</div>
 
 			{error && <div className="hotel-notice hotel-notice--error" role="alert">{error}</div>}
-				{loading ? (
-					<div className="hotel-state" role="status"><span className="hotel-spinner" />Đang tải dữ liệu khách sạn</div>
-				) : hotels.length ? (
-					<div className="hotel-list">
-						{hotels.map((hotel) => (
-							<HotelCard
-								key={hotel.hotel_id}
-								hotel={hotel}
-								canApprove={canApprove}
-								isVendor={isVendor}
-								canEdit={isVendor}
-								onEdit={() => setEditingHotel(hotel)}
-								onDelete={() => handleDeleteRequest(hotel)}
-								onApprove={() => handleApprove(hotel)}
-								onReactivate={() => handleReactivate(hotel)}
-							/>
-						))}
+			{imageHotel && isVendor && (
+				<section className="hotel-management__images" aria-label={`Hình ảnh ${imageHotel.name}`}>
+					<div className="hotel-management__images-header">
+						<div><p>THƯ VIỆN HÌNH ẢNH</p><h2>{imageHotel.name}</h2></div>
+						<button type="button" aria-label="Đóng quản lý hình ảnh" onClick={() => setImageHotel(null)}>Đóng</button>
 					</div>
-				) : (
-					<div className="hotel-state hotel-state--empty">
-						<span className="hotel-state__mark" aria-hidden="true">⌂</span>
-						<h2>{vendorHasNoHotels ? 'Chưa có khách sạn nào' : 'Không tìm thấy khách sạn'}</h2>
-						<p>{vendorHasNoHotels ? 'Khách sạn mới của bạn sẽ hiển thị tại đây, kể cả khi đang chờ duyệt.' : 'Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc, hoặc tạo khách sạn mới.'}</p>
-					</div>
-				)}
+					<HotelImageManager
+						hotelId={imageHotel.hotel_id}
+						images={imageHotel.images || []}
+						onImagesChange={handleImagesChange}
+						canManage={isVendor}
+					/>
+				</section>
+			)}
+			{loading ? (
+				<div className="hotel-state" role="status"><span className="hotel-spinner" />Đang tải dữ liệu khách sạn</div>
+			) : hotels.length ? (
+				<div className="hotel-list">
+					{hotels.map((hotel) => (
+						<HotelCard
+							key={hotel.hotel_id}
+							hotel={hotel}
+							canApprove={canApprove}
+							isVendor={isVendor}
+							canEdit={isVendor}
+							onEdit={() => setEditingHotel(hotel)}
+							onManageImages={() => setImageHotel(hotel)}
+							onDelete={() => handleDeleteRequest(hotel)}
+							onApprove={() => handleApprove(hotel)}
+							onReactivate={() => handleReactivate(hotel)}
+						/>
+					))}
+				</div>
+			) : (
+				<div className="hotel-state hotel-state--empty">
+					<span className="hotel-state__mark" aria-hidden="true">⌂</span>
+					<h2>{vendorHasNoHotels ? 'Chưa có khách sạn nào' : 'Không tìm thấy khách sạn'}</h2>
+					<p>{vendorHasNoHotels ? 'Khách sạn mới của bạn sẽ hiển thị tại đây, kể cả khi đang chờ duyệt.' : 'Hãy thử thay đổi từ khóa tìm kiếm hoặc bộ lọc, hoặc tạo khách sạn mới.'}</p>
+				</div>
+			)}
 
 				<footer className="hotel-pagination">
 					<span>Trang {pagination.page} / {Math.max(pagination.total_pages, 1)}</span>

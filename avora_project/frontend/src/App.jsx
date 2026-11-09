@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, Outlet, useParams } from 'react-router-dom';
 import MainLayout from './common/components/MainLayout';
 import HomePage from './features/home/HomePage';
@@ -24,6 +24,7 @@ import CommissionPolicyManagementPage from './features/commission_policies/pages
 import CommissionPolicyDetailPage from './features/commission_policies/pages/CommissionPolicyDetailPage';
 import DisbursementManagementPage from './features/disbursements/pages/DisbursementManagementPage';
 import VendorDisbursementPage from './features/disbursements/pages/VendorDisbursementPage';
+import RefundRequestManagementPage from './features/refund_requests/pages/RefundRequestManagementPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import HotelWalletPage from './features/wallet/pages/HotelWalletPage';
 import VenueWalletPage from './features/venueWallet/pages/VenueWalletPage';
@@ -40,10 +41,14 @@ import VendorFlashSalePage from './features/vendor_flash_sales/VendorFlashSalePa
 import AIChatWidget from './features/chatbot/AIChatWidget';
 import BookingPage from './features/bookings/pages/BookingPage';
 import MyBookingsPage from './features/mybookings/screens/MyBookingsPage';
+import ReviewPage from './features/reviews/pages/ReviewPage';
+import AdminReviewManagementPage from './features/reviews/pages/AdminReviewManagementPage';
 import PaymentQRScreen from './features/payments/pages/PaymentQRScreen';
 import PaymentSuccessScreen from './features/payments/pages/PaymentSuccessScreen';
 import GroupPaymentSetupPage from './features/payments/pages/GroupPaymentSetupPage';
 import GroupPaymentRoomPage from './features/payments/pages/GroupPaymentRoomPage';
+
+const SupportCenter = lazy(() => import('./features/support/pages/SupportCenter'));
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -147,6 +152,36 @@ const VendorRoute = ({ children }) => {
   return children;
 };
 
+const RoleSupportCenter = () => {
+  const { user } = useAuth();
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const isAdmin = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN'].includes(roleCode)
+    || String(user?.role_cd) === '1';
+  return <SupportCenter mode={isAdmin ? 'admin' : 'vendor'} />;
+};
+
+const SupportManagerRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace />;
+  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || user?.role_cd || '')
+    .trim().toUpperCase().replace(/[ -]+/g, '_');
+  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
+  const canManageSupport = ['ADM', 'ADMIN', 'ADMINISTRATOR', 'SYSTEM_ADMIN', 'VEN', 'VENDOR'].includes(roleCode)
+    || ['1', '4'].includes(roleCd);
+  if (!canManageSupport) return <Navigate to="/forbidden" replace />;
+  return children;
+};
+
+const CustomerSupportRoute = ({ children }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
+  if (loading) return null;
+  if (!user) return <Navigate to="/signin" replace state={{ from: location }} />;
+  return children;
+};
+
 const DisbursementRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
@@ -158,7 +193,6 @@ const DisbursementRoute = ({ children }) => {
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
   if (['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4') return <VendorDisbursementPage />;
   if (['BMR', 'BUSINESS_MANAGER'].includes(roleCode) || roleCd === '3') return children;
-
   return <Navigate to="/forbidden" replace />;
 };
 
@@ -263,6 +297,17 @@ function App() {
             <Route path="/booking/:id" element={<BookingPage />} />
             <Route path="/my-bookings" element={<MyBookingsPage />} />
             <Route path="/myaccount/bookings" element={<MyBookingsPage />} />
+            <Route
+              path="/support"
+              element={
+                <CustomerSupportRoute>
+                  <Suspense fallback={<div className="support-empty">Đang tải trang hỗ trợ…</div>}>
+                    <SupportCenter mode="customer" />
+                  </Suspense>
+                </CustomerSupportRoute>
+              }
+            />
+            <Route path="/my-reviews" element={<ReviewPage />} />
             <Route path="/payment/group/setup/:bookingId" element={<GroupPaymentSetupPage />} />
             <Route path="/payment/group/:inviteHash" element={<GroupPaymentRoomPage />} />
             <Route path="/payment/success/:bookingId" element={<PaymentSuccessScreen />} />
@@ -284,6 +329,14 @@ function App() {
           >
             <Route index element={<DashboardIndexRedirect />} />
             <Route
+              path="reviews"
+              element={
+                <AdminRoute>
+                  <AdminReviewManagementPage />
+                </AdminRoute>
+              }
+            />
+            <Route
               path="hotel-management"
               element={
                 <HotelManagerRoute>
@@ -297,6 +350,16 @@ function App() {
                 <HotelManagerRoute>
                   <HotelManagementDetailPage />
                 </HotelManagerRoute>
+              }
+            />
+            <Route
+              path="support"
+              element={
+                <SupportManagerRoute>
+                  <Suspense fallback={<div className="support-empty">Đang tải trung tâm hỗ trợ…</div>}>
+                    <RoleSupportCenter />
+                  </Suspense>
+                </SupportManagerRoute>
               }
             />
             <Route
@@ -444,6 +507,14 @@ function App() {
               }
             />
             <Route
+              path="refund-requests"
+              element={
+                <BusinessPolicyRoute>
+                  <RefundRequestManagementPage />
+                </BusinessPolicyRoute>
+              }
+            />
+            <Route
               path="users"
               element={
                 <AdminRoute>
@@ -503,6 +574,8 @@ function App() {
           <Route path="/commission-policies" element={<Navigate to="/dashboard/commission-policies" replace />} />
           <Route path="/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
           <Route path="/disbursements" element={<Navigate to="/dashboard/disbursements" replace />} />
+          <Route path="/refund-requests" element={<Navigate to="/dashboard/refund-requests" replace />} />
+          <Route path="/admin/refund-requests" element={<Navigate to="/dashboard/refund-requests" replace />} />
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
           <Route path="/admin/audit-logs" element={<Navigate to="/dashboard/audit-logs" replace />} />

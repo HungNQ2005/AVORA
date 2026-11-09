@@ -1,6 +1,7 @@
 'use strict';
 
 const supabase = require('../../config/supabaseClient');
+const reviewService = require('../review/review.service');
 
 let customClient = null;
 const setCustomClient = (client) => {
@@ -304,7 +305,6 @@ const searchHotels = async (params = {}) => {
     facilitiesMapRes,
     allFacilitiesRes,
     policiesRes,
-    reviewsRes,
     citiesRes,
     flashSalesRes,
   ] = await Promise.all([
@@ -357,10 +357,6 @@ const searchHotels = async (params = {}) => {
       .or(`hotel_id.in.(${hotelIds.join(',')}),hotel_id.is.null`),
 
     supabase
-      .from('t_review')
-      .select('review_id, rating_score, comment'),
-
-    supabase
       .from('m_city')
       .select('city_id, city_name'),
     getClient()
@@ -369,6 +365,31 @@ const searchHotels = async (params = {}) => {
       .or('is_deleted.is.null,is_deleted.eq.false')
       .in('discount_type', ['FLASH_PERCENT', 'PERCENT']),
   ]);
+
+  const { data: hotelBookings, error: bookingsError } = await supabase
+    .from('t_booking')
+    .select('booking_id, hotel_id')
+    .in('hotel_id', hotelIds);
+  if (bookingsError) throw new Error(`Failed to query hotel bookings: ${bookingsError.message}`);
+
+  const bookingHotelMap = new Map((hotelBookings || []).map((booking) => [booking.booking_id, booking.hotel_id]));
+  const hotelReviewStats = {};
+  if (hotelBookings?.length) {
+    const { data: activeReviews, error: reviewsError } = await supabase
+      .from('t_review')
+      .select('booking_id, rating_score')
+      .in('booking_id', hotelBookings.map((booking) => booking.booking_id))
+      .or('is_deleted.is.null,is_deleted.eq.false');
+    if (reviewsError) throw new Error(`Failed to query hotel reviews: ${reviewsError.message}`);
+
+    (activeReviews || []).forEach((review) => {
+      const hotelId = bookingHotelMap.get(review.booking_id);
+      if (!hotelId) return;
+      if (!hotelReviewStats[hotelId]) hotelReviewStats[hotelId] = { total: 0, count: 0 };
+      hotelReviewStats[hotelId].total += Number(review.rating_score) || 0;
+      hotelReviewStats[hotelId].count += 1;
+    });
+  }
 
   // City lookup map
   const cityMap = {};
@@ -531,11 +552,10 @@ const searchHotels = async (params = {}) => {
     });
   }
 
-  // Calculate review score & count per hotel
-  // If reviews have hotel linkage via booking, or use star_rating field
+  // Review data is associated through bookings; never synthesize customer ratings.
   const reviewsStatsByHotel = {};
-  // For each hotel, calculate or fall back to m_hotel.star_rating
   rawHotels.forEach((h) => {
+    const stats = hotelReviewStats[h.hotel_id];
     let baseScore = Number(h.star_rating) || Number(h.star_quality) || 8.8;
     if (baseScore <= 5) {
       baseScore = Number((baseScore * 1.8 + 0.4).toFixed(1));
@@ -543,8 +563,8 @@ const searchHotels = async (params = {}) => {
     const idHash = (String(h.hotel_id) || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const count = 450 + (idHash * 37) % 3600;
     reviewsStatsByHotel[h.hotel_id] = {
-      score: Number(baseScore.toFixed(1)),
-      count: count,
+      score: stats?.count ? Number((stats.total / stats.count).toFixed(1)) : Number(h.star_rating) || 0,
+      count: stats?.count || 0,
     };
   });
 
@@ -863,7 +883,7 @@ const getHotelById = async (hotelId, options = {}) => {
     throw new Error('Database client is not initialized.');
   }
 
-  const { checkIn, checkOut, adults = 2, children = 0, rooms: requestedRooms = 1 } = options;
+  const { checkIn, checkOut, adults = 2, children = 0, rooms: requestedRooms = 1, viewerId = null } = options;
   const stayDates = resolveStayDates(checkIn, checkOut);
   const inventoryCheckIn = checkIn ? String(checkIn).trim() : null;
   const inventoryCheckOut = checkOut ? String(checkOut).trim() : null;
@@ -1140,40 +1160,11 @@ const getHotelById = async (hotelId, options = {}) => {
     };
   });
 
-  // 7. Query reviews from t_review via t_booking in DB
-  const { data: bookings } = await client
-    .from('t_booking')
-    .select('booking_id, guest_name, hotel_id')
-    .eq('hotel_id', activeHotelId);
+  // Reviews are exposed only for active hotels and omit booking/account identifiers.
+  const reviewData = await reviewService.getHotelReviews(activeHotelId, viewerId, client);
+  const reviews = reviewData.reviews;
 
-  let reviews = [];
-  if (bookings && bookings.length > 0) {
-    const bIds = bookings.map((b) => b.booking_id);
-    const { data: dbReviews } = await client
-      .from('t_review')
-      .select('*')
-      .in('booking_id', bIds);
-
-    if (dbReviews && dbReviews.length > 0) {
-      reviews = dbReviews.map((r) => {
-        const booking = bookings.find((b) => b.booking_id === r.booking_id);
-        return {
-          review_id: r.review_id,
-          guest_name: booking?.guest_name || 'Khách hàng Avora',
-          score: Number(r.rating_score),
-          comment: r.comment,
-          created_at: r.created_at,
-        };
-      });
-    }
-  }
-
-  // Calculate review score from actual DB reviews
-  let finalScore = Number(hotel.star_rating) || 5.0;
-  if (reviews.length > 0) {
-    const avg = reviews.reduce((sum, rev) => sum + rev.score, 0) / reviews.length;
-    finalScore = Number(avg.toFixed(1));
-  }
+  const finalScore = Number(reviewData.star_rating ?? hotel.star_rating) || 0;
 
   const scoreLabel = getScoreLabel(finalScore);
 
@@ -1198,7 +1189,7 @@ const getHotelById = async (hotelId, options = {}) => {
     city_name: cityName,
     star_quality: Number(hotel.star_quality) || 5,
     star_rating: finalScore,
-    reviews_count: reviews.length,
+    reviews_count: reviewData.reviews_count,
     score_label: scoreLabel,
     price: minRoomPrice,
     min_price: minRoomPrice,

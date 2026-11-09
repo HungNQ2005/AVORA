@@ -5,7 +5,7 @@ import HotelThumb from './hotelThumb';
 import './hotelThumb.css';
 import './hotelCard.css';
 
-const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onReactivate, canApprove, canEdit, isVendor }) => {
+const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onReactivate, onManageImages, canApprove, canEdit, isVendor }) => {
   const location = [hotel.city_name, hotel.ward_name].filter(Boolean).join(' · ') || hotel.address;
   const isPending = hotel.status_cd === 'PENDING';
   const isInactive = hotel.status_cd === 'INACTIVE';
@@ -57,6 +57,9 @@ const HotelCard = ({ hotel, onEdit, onDelete, onApprove, onReactivate, canApprov
         )}
         {canEdit && !hotel.is_deleted && (
           <button type="button" onClick={onEdit} aria-label={`Sửa ${hotel.name}`}>Sửa</button>
+        )}
+        {isVendor && !hotel.is_deleted && (
+          <button type="button" onClick={onManageImages} aria-label={`Quản lý hình ảnh ${hotel.name}`}>Quản lý ảnh</button>
         )}
         {vendorCanDeactivate && (
           <button type="button" className="hotel-card__delete" onClick={onDelete} aria-label={`Ngừng hoạt động ${hotel.name}`}>Ngừng hoạt động</button>

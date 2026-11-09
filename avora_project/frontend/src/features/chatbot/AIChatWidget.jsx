@@ -2,6 +2,12 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
+import { createSupportTicket, getSupportCategories } from '../../services/supportApi';
+import { CloseIcon, MessageCircleIcon, PinIcon, SendIcon } from '../../common/components/icons';
+
+const TicketCreateDialog = React.lazy(() => import('../support/pages/SupportCenter').then((module) => ({
+    default: module.CreateTicketDialog,
+})));
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 const HOTEL_PATH_RE = /^\/(?:hotels?|hotel-detail)\/([0-9a-f-]{36})/i;
@@ -22,10 +28,10 @@ const QUICK_PROMPTS = [
 
 const LOCATION_LABEL = {
     idle: 'Luôn sẵn sàng hỗ trợ',
-    asking: '📍 Đang xin quyền vị trí…',
-    granted: '📍 Đã nhận vị trí của bạn',
-    denied: '📍 Chưa có vị trí (bạn đã từ chối)',
-    unavailable: '📍 Trình duyệt không hỗ trợ định vị',
+    asking: 'Đang xin quyền vị trí…',
+    granted: 'Đã nhận vị trí của bạn',
+    denied: 'Chưa có vị trí (bạn đã từ chối)',
+    unavailable: 'Trình duyệt không hỗ trợ định vị',
 };
 
 /** Chuẩn hóa markdown: bảng → danh sách, bỏ tiêu đề, gạch đầu dòng → •. */
@@ -86,10 +92,16 @@ const AIChatWidget = () => {
     const [loading, setLoading] = useState(false);
     const [userLocation, setUserLocation] = useState(null);
     const [geoStatus, setGeoStatus] = useState('idle');
+    const [supportCategories, setSupportCategories] = useState([]);
+    const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
+    const [ticketDialogLoading, setTicketDialogLoading] = useState(false);
+    const [ticketDialogError, setTicketDialogError] = useState('');
     const askedGeoRef = useRef(false);
     const endRef = useRef(null);
 
     const isLoggedIn = Boolean(user && token);
+    const userRole = String(user?.role_code_name || '').trim().toUpperCase();
+    const canCreateSupportTicket = isLoggedIn && ['CUS', 'VEN', 'BMR'].includes(userRole);
     const currentHotelId =
         (location.pathname.match(HOTEL_PATH_RE) || [])[1] ||
         new URLSearchParams(location.search).get('hotelId') ||
@@ -181,6 +193,30 @@ const AIChatWidget = () => {
         navigate('/signin');
     };
 
+    const openSupportTicket = async () => {
+        setTicketDialogError('');
+        setTicketDialogLoading(true);
+        try {
+            setSupportCategories(await getSupportCategories('customer'));
+            setTicketDialogOpen(true);
+        } catch (error) {
+            setTicketDialogError(error.response?.data?.message || 'Không thể tải danh mục hỗ trợ.');
+        } finally {
+            setTicketDialogLoading(false);
+        }
+    };
+
+    const createTicketFromChat = async (data, files) => {
+        try {
+            const created = await createSupportTicket(data, files);
+            setTicketDialogOpen(false);
+            setOpen(false);
+            navigate(`/support?ticketId=${encodeURIComponent(created.ticket_id)}`);
+        } catch (error) {
+            throw new Error(error.response?.data?.message || error.message || 'Không thể tạo phiếu hỗ trợ.');
+        }
+    };
+
     return (
         <>
             <style>{`
@@ -215,6 +251,8 @@ const AIChatWidget = () => {
         .avora-chat__send:disabled{opacity:.5;cursor:not-allowed}
         .avora-chat__login{padding:12px;border-top:1px solid #e2e8f0;background:#fff;display:flex;justify-content:center}
         .avora-chat__login button{border:2px solid #ffc107;border-radius:24px;padding:11px 20px;background:linear-gradient(135deg,#003580,#006ce4);color:#fff;font-weight:600;cursor:pointer}
+        .avora-chat__support-cta{align-self:center;border:1px solid #bfdbfe;border-radius:18px;padding:7px 12px;background:#fff;color:#003580;font-size:12px;font-weight:700;cursor:pointer}
+        .avora-chat__support-error{align-self:center;color:#b91c1c;font-size:11px;text-align:center}
       `}</style>
 
             {open && (
@@ -223,16 +261,16 @@ const AIChatWidget = () => {
                         <div>
                             <h3>Trợ lý AI AVORA</h3>
                             {geoStatus === 'denied' ? (
-                                <small>
+                                <small className="avora-chat__location">
                                     <button type="button" className="avora-chat__geo" onClick={() => requestLocation(true)}>
-                                        {LOCATION_LABEL[geoStatus]} – bấm để cấp quyền lại
+                                    <PinIcon size={13} /> {LOCATION_LABEL[geoStatus]} – bấm để cấp quyền lại
                                     </button>
                                 </small>
                             ) : (
-                                <small>{LOCATION_LABEL[geoStatus]}</small>
+                            <small className="avora-chat__location"><PinIcon size={13} /> {LOCATION_LABEL[geoStatus]}</small>
                             )}
                         </div>
-                        <button type="button" className="avora-chat__close" onClick={() => setOpen(false)} aria-label="Đóng">✕</button>
+                        <button type="button" className="avora-chat__close" onClick={() => setOpen(false)} aria-label="Đóng"><CloseIcon size={18} /></button>
                     </div>
 
                     <div className="avora-chat__body">
@@ -250,6 +288,20 @@ const AIChatWidget = () => {
                                     </button>
                                 ))}
                             </div>
+                        )}
+
+                        {canCreateSupportTicket && (
+                            <>
+                                <button
+                                    type="button"
+                                    className="avora-chat__support-cta"
+                                    onClick={openSupportTicket}
+                                    disabled={ticketDialogLoading}
+                                >
+                                    {ticketDialogLoading ? 'Đang tải danh mục…' : 'Vẫn cần trợ giúp? Tạo phiếu hỗ trợ'}
+                                </button>
+                                {ticketDialogError && <span className="avora-chat__support-error" role="alert">{ticketDialogError}</span>}
+                            </>
                         )}
 
                         {loading && <div className="avora-chat__typing">Trợ lý đang soạn câu trả lời…</div>}
@@ -276,7 +328,7 @@ const AIChatWidget = () => {
                                 disabled={loading || !input.trim()}
                                 aria-label="Gửi"
                             >
-                                ➤
+                                <SendIcon size={17} />
                             </button>
                         </div>
                     ) : (
@@ -289,14 +341,26 @@ const AIChatWidget = () => {
                 </div>
             )}
 
+            {ticketDialogOpen && (
+                <React.Suspense fallback={null}>
+                    <TicketCreateDialog
+                        mode="customer"
+                        categories={supportCategories}
+                        onClose={() => setTicketDialogOpen(false)}
+                        onSubmit={createTicketFromChat}
+                    />
+                </React.Suspense>
+            )}
+
             <button
                 type="button"
                 id="avora-ai-chat-fab"
                 className="avora-chat__fab"
                 onClick={() => setOpen((v) => !v)}
-                aria-label="Mở Trợ lý AI AVORA"
+                aria-label={open ? 'Đóng Trợ lý AI AVORA' : 'Mở Trợ lý AI AVORA'}
+                aria-expanded={open}
             >
-                {open ? '✕' : '💬'}
+                {open ? <CloseIcon size={22} /> : <MessageCircleIcon size={24} />}
             </button>
         </>
     );
