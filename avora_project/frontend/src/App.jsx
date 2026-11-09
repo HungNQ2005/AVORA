@@ -24,6 +24,7 @@ import CommissionPolicyManagementPage from './features/commission_policies/pages
 import CommissionPolicyDetailPage from './features/commission_policies/pages/CommissionPolicyDetailPage';
 import DisbursementManagementPage from './features/disbursements/pages/DisbursementManagementPage';
 import VendorDisbursementPage from './features/disbursements/pages/VendorDisbursementPage';
+import RefundRequestManagementPage from './features/refund_requests/pages/RefundRequestManagementPage';
 import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import HotelWalletPage from './features/wallet/pages/HotelWalletPage';
 import VenueWalletPage from './features/venueWallet/pages/VenueWalletPage';
@@ -506,6 +507,14 @@ function App() {
               }
             />
             <Route
+              path="refund-requests"
+              element={
+                <BusinessPolicyRoute>
+                  <RefundRequestManagementPage />
+                </BusinessPolicyRoute>
+              }
+            />
+            <Route
               path="users"
               element={
                 <AdminRoute>
@@ -565,6 +574,8 @@ function App() {
           <Route path="/commission-policies" element={<Navigate to="/dashboard/commission-policies" replace />} />
           <Route path="/commission-policies/:id" element={<DynamicParamRedirect toPrefix="/dashboard/commission-policies" />} />
           <Route path="/disbursements" element={<Navigate to="/dashboard/disbursements" replace />} />
+          <Route path="/refund-requests" element={<Navigate to="/dashboard/refund-requests" replace />} />
+          <Route path="/admin/refund-requests" element={<Navigate to="/dashboard/refund-requests" replace />} />
           <Route path="/users" element={<Navigate to="/dashboard/users" replace />} />
           <Route path="/roles" element={<Navigate to="/dashboard/roles" replace />} />
           <Route path="/admin/audit-logs" element={<Navigate to="/dashboard/audit-logs" replace />} />
