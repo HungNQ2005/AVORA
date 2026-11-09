@@ -31,6 +31,7 @@ const STATUS_LABELS = {
 };
 const MAX_FILES = 3;
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
+const TICKET_PAGE_SIZE = 5;
 const LINK_PATTERN = /(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/\S*)?/i;
 
 const countWords = (text) => (String(text).match(/[\p{L}\p{N}]+(?:['’_-][\p{L}\p{N}]+)*/gu) || []).length;
@@ -68,12 +69,14 @@ const SupportCenter = ({ mode = 'customer' }) => {
   const [pagination, setPagination] = useState({ page: 1, total_pages: 1, total: 0 });
   const [filters, setFilters] = useState({ q: '', status: '', category: '', assigned: 'all', from: '' });
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [showCreate, setShowCreate] = useState(false);
   const selectedTicketId = searchParams.get('ticketId');
   const { user } = useAuth();
+  const ticketRequestId = useRef(0);
 
   const categoryLabelByCode = useMemo(
     () => new Map(categories.map((category) => [category.code, category.label])),
@@ -88,26 +91,39 @@ const SupportCenter = ({ mode = 'customer' }) => {
     }
   }, [supportGroup]);
 
-  const loadTickets = useCallback(async (page = 1) => {
-    setLoading(true);
+  const loadTickets = useCallback(async (page = 1, append = false) => {
+    const requestId = ++ticketRequestId.current;
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     setError('');
     try {
       const result = await listSupportTickets({
         group: supportGroup,
         page,
-        limit: 20,
+        limit: TICKET_PAGE_SIZE,
         ...(filters.status ? { status: filters.status } : {}),
         ...(filters.category ? { category: filters.category } : {}),
         ...(filters.q.trim() ? { q: filters.q.trim() } : {}),
         ...(filters.from ? { from: filters.from } : {}),
         ...(isAdmin ? { assigned: filters.assigned } : {}),
       });
-      setTickets((result.items || []).filter((item) => !item.is_deleted));
+      if (requestId !== ticketRequestId.current) return;
+      const items = (result.items || []).filter((item) => !item.is_deleted);
+      setTickets((current) => {
+        if (!append) return items;
+        const byId = new Map(current.map((item) => [item.ticket_id, item]));
+        items.forEach((item) => byId.set(item.ticket_id, item));
+        return [...byId.values()];
+      });
       setPagination(result.pagination || { page: 1, total_pages: 1, total: 0 });
     } catch (loadError) {
+      if (requestId !== ticketRequestId.current) return;
       setError(getErrorMessage(loadError, 'Không thể tải danh sách phiếu hỗ trợ.'));
     } finally {
-      setLoading(false);
+      if (requestId === ticketRequestId.current) {
+        setLoading(false);
+        setLoadingMore(false);
+      }
     }
   }, [filters, isAdmin, supportGroup]);
 
@@ -128,6 +144,38 @@ const SupportCenter = ({ mode = 'customer' }) => {
     }
   }, [supportGroup]);
 
+  const refreshLoadedTickets = useCallback(async () => {
+    const requestId = ticketRequestId.current;
+    const pagesToRefresh = Array.from({ length: pagination.page }, (_, index) => index + 1);
+    try {
+      const pages = await Promise.all(pagesToRefresh.map((page) => listSupportTickets({
+        group: supportGroup,
+        page,
+        limit: TICKET_PAGE_SIZE,
+        ...(filters.status ? { status: filters.status } : {}),
+        ...(filters.category ? { category: filters.category } : {}),
+        ...(filters.q.trim() ? { q: filters.q.trim() } : {}),
+        ...(filters.from ? { from: filters.from } : {}),
+        ...(isAdmin ? { assigned: filters.assigned } : {}),
+      })));
+      if (requestId !== ticketRequestId.current) return;
+      const byId = new Map();
+      pages.flatMap((result) => result.items || [])
+        .filter((item) => !item.is_deleted)
+        .forEach((item) => byId.set(item.ticket_id, item));
+      setTickets([...byId.values()]);
+      if (pages.length) {
+        const nextPagination = pages[0].pagination || { page: 1, total_pages: 1, total: 0 };
+        setPagination({
+          ...nextPagination,
+          page: Math.min(pagesToRefresh.length, nextPagination.total_pages || 1),
+        });
+      }
+    } catch (refreshError) {
+      setError(getErrorMessage(refreshError, 'Không thể làm mới danh sách phiếu hỗ trợ.'));
+    }
+  }, [filters, isAdmin, pagination.page, supportGroup]);
+
   useEffect(() => {
     loadCategories();
   }, [loadCategories]);
@@ -146,12 +194,12 @@ const SupportCenter = ({ mode = 'customer' }) => {
     const controller = new AbortController();
     subscribeToSupportTicket(selectedTicketId, supportGroup, controller.signal, () => {
       loadTicket(selectedTicketId, false);
-      loadTickets(pagination.page);
+      refreshLoadedTickets();
     }).catch((streamError) => {
       if (streamError.name !== 'AbortError') console.error('Support ticket event stream failed:', streamError);
     });
     return () => controller.abort();
-  }, [loadTicket, loadTickets, pagination.page, selectedTicketId, supportGroup]);
+  }, [loadTicket, refreshLoadedTickets, selectedTicketId, supportGroup]);
 
   const selectTicket = (ticketId) => {
     setNotice('');
@@ -234,8 +282,9 @@ const SupportCenter = ({ mode = 'customer' }) => {
   const handleDeleteTicket = async () => {
     if (!ticket) return;
     const isClosed = ticket.ticket_status_cd === 'CLS';
-    const confirmation = isClosed
-      ? 'Xóa phiếu đã đóng? Chỉ quản trị viên mới có thể thực hiện thao tác này.'
+    const isResolved = ticket.ticket_status_cd === 'RSV';
+    const confirmation = isClosed || isResolved
+      ? 'Xóa phiếu đã giải quyết hoặc đã đóng? Chỉ quản trị viên phụ trách mới có thể thực hiện thao tác này.'
       : 'Xóa phiếu hỗ trợ này? Phiếu sẽ được lưu trong lịch sử kiểm toán nhưng không thể mở lại.';
     if (!window.confirm(confirmation)) return;
     try {
@@ -283,6 +332,7 @@ const SupportCenter = ({ mode = 'customer' }) => {
         loading={loading}
         pagination={pagination}
         loadTickets={loadTickets}
+        loadingMore={loadingMore}
         selectTicket={selectTicket}
         detailLoading={detailLoading}
         ticket={ticket}
