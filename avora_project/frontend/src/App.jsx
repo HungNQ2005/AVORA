@@ -44,6 +44,8 @@ import ReviewPage from './features/reviews/pages/ReviewPage';
 import AdminReviewManagementPage from './features/reviews/pages/AdminReviewManagementPage';
 import PaymentQRScreen from './features/payments/pages/PaymentQRScreen';
 import PaymentSuccessScreen from './features/payments/pages/PaymentSuccessScreen';
+import GroupPaymentSetupPage from './features/payments/pages/GroupPaymentSetupPage';
+import GroupPaymentRoomPage from './features/payments/pages/GroupPaymentRoomPage';
 
 const SupportCenter = lazy(() => import('./features/support/pages/SupportCenter'));
 
@@ -305,6 +307,8 @@ function App() {
               }
             />
             <Route path="/my-reviews" element={<ReviewPage />} />
+            <Route path="/payment/group/setup/:bookingId" element={<GroupPaymentSetupPage />} />
+            <Route path="/payment/group/:inviteHash" element={<GroupPaymentRoomPage />} />
             <Route path="/payment/success/:bookingId" element={<PaymentSuccessScreen />} />
             <Route path="/payment/:bookingId" element={<PaymentQRScreen />} />
             <Route path="/search" element={<HotelSearchPage />} />

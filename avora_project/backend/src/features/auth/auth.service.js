@@ -5,6 +5,7 @@ const otpService = require('../otp/otp.service');
 const { sendMail } = require('../../common/services/email/email.service');
 const { hashPassword, comparePassword } = require('../../utils/passwordHelper');
 const { signJwt, generateSecureToken } = require('../../utils/tokenHelper');
+const { codeNameParser } = require('../../utils/codeNameParser');
 
 // Account status codes aligned with m_system_code values
 const STATUS = {
@@ -117,7 +118,7 @@ const verifyEmail = async (token) => {
 const signInUser = async (email, password) => {
   const { data: user, error } = await supabase
     .from('m_user')
-    .select('user_id, email, full_name, phone, role_cd, account_status, password_hash, avatar_url')
+    .select('user_id, email, full_name, phone, role_cd, account_status, password_hash, avatar_url, refund_bank_cd, refund_account_number, refund_account_holder')
     .eq('email', email.toLowerCase())
     .eq('is_deleted', false)
     .maybeSingle();
@@ -184,10 +185,28 @@ const signInUser = async (email, password) => {
  * @param {string} userId
  * @returns {object} user profile with role_code_name resolved
  */
+const resolveBankMeta = async (bankCd) => {
+  if (!bankCd) return { refund_bank_code_name: null, refund_bank_name: null };
+  const { data: bankCode } = await supabase
+    .from('m_system_code')
+    .select('code_cd, code_name')
+    .eq('business_cd', 'BANK_CD')
+    .eq('code_cd', String(bankCd).trim())
+    .maybeSingle();
+  if (!bankCode?.code_name) {
+    return { refund_bank_code_name: String(bankCd), refund_bank_name: codeNameParser(String(bankCd)) };
+  }
+  const shortCode = String(bankCode.code_name).trim().toUpperCase();
+  return {
+    refund_bank_code_name: shortCode,
+    refund_bank_name: codeNameParser(shortCode),
+  };
+};
+
 const getUserProfile = async (userId) => {
   const { data: user, error } = await supabase
     .from('m_user')
-    .select('user_id, email, full_name, phone, role_cd, account_status, avatar_url, is_email_verified, created_at')
+    .select('user_id, email, full_name, phone, role_cd, account_status, avatar_url, is_email_verified, refund_bank_cd, refund_account_number, refund_account_holder, created_at')
     .eq('user_id', userId)
     .eq('is_deleted', false)
     .single();
@@ -197,7 +216,6 @@ const getUserProfile = async (userId) => {
     err.statusCode = 404;
     throw err;
   }
-
 
   // Resolve role_cd (code_cd) -> code_name from m_system_code lookup table
   let role_code_name = user.role_cd; // fallback to raw value
@@ -214,7 +232,9 @@ const getUserProfile = async (userId) => {
     }
   }
 
-  return { ...user, role_code_name };
+  const bankMeta = await resolveBankMeta(user.refund_bank_cd);
+
+  return { ...user, role_code_name, ...bankMeta };
 };
 
 /**
@@ -223,16 +243,76 @@ const getUserProfile = async (userId) => {
  * @param {{ fullName?: string, phone?: string }} fields
  * @returns {object} updated user profile
  */
-const updateUserProfile = async (userId, { fullName, phone }) => {
+const ACCOUNT_NUMBER_REGEX = /^[0-9A-Za-z]{4,30}$/;
+
+const updateUserProfile = async (
+  userId,
+  { fullName, phone, refundBankCd, refundAccountNumber, refundAccountHolder }
+) => {
   const updates = { updated_at: new Date().toISOString() };
   if (fullName !== undefined) updates.full_name = fullName;
   if (phone !== undefined) updates.phone = phone;
+
+  const hasRefundFields =
+    refundBankCd !== undefined ||
+    refundAccountNumber !== undefined ||
+    refundAccountHolder !== undefined;
+
+  if (hasRefundFields) {
+    const rawBank = String(refundBankCd ?? '').trim();
+    const rawAcc = String(refundAccountNumber ?? '').trim();
+    const rawHolder = String(refundAccountHolder ?? '').trim().toUpperCase();
+
+    if (!rawBank && !rawAcc && !rawHolder) {
+      updates.refund_bank_cd = null;
+      updates.refund_account_number = null;
+      updates.refund_account_holder = null;
+    } else {
+      if (!rawBank || !rawAcc || !rawHolder) {
+        const err = new Error('Vui lòng điền đầy đủ Ngân hàng, Số tài khoản và Tên chủ tài khoản nhận hoàn tiền.');
+        err.statusCode = 400;
+        throw err;
+      }
+      if (!ACCOUNT_NUMBER_REGEX.test(rawAcc)) {
+        const err = new Error('Số tài khoản ngân hàng không hợp lệ (4–30 ký tự chữ/số, không chứa khoảng trắng).');
+        err.statusCode = 400;
+        throw err;
+      }
+      if (rawHolder.length < 2 || rawHolder.length > 120) {
+        const err = new Error('Tên chủ tài khoản không hợp lệ (2–120 ký tự).');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      // Resolve bank_cd from either code_cd ('1') or code_name ('VCB')
+      const { data: bankRows } = await supabase
+        .from('m_system_code')
+        .select('code_cd, code_name')
+        .eq('business_cd', 'BANK_CD');
+      const matchedBank = (bankRows || []).find(
+        (b) =>
+          String(b.code_cd).trim() === rawBank ||
+          String(b.code_name || '').trim().toUpperCase() === rawBank.toUpperCase()
+      );
+      if (!matchedBank) {
+        const err = new Error('Ngân hàng được chọn không nằm trong danh sách hỗ trợ.');
+        err.statusCode = 400;
+        throw err;
+      }
+
+      updates.refund_bank_cd = String(matchedBank.code_cd).trim();
+      updates.refund_account_number = rawAcc;
+      updates.refund_account_holder = rawHolder;
+    }
+  }
 
   const { data: user, error } = await supabase
     .from('m_user')
     .update(updates)
     .eq('user_id', userId)
-    .select('user_id, email, full_name, phone, role_cd, account_status, avatar_url')
+    .select(
+      'user_id, email, full_name, phone, role_cd, account_status, avatar_url, refund_bank_cd, refund_account_number, refund_account_holder'
+    )
     .single();
 
   if (error) {
@@ -241,7 +321,8 @@ const updateUserProfile = async (userId, { fullName, phone }) => {
     throw err;
   }
 
-  return user;
+  const bankMeta = await resolveBankMeta(user.refund_bank_cd);
+  return { ...user, ...bankMeta };
 };
 
 /**

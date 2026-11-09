@@ -1,0 +1,51 @@
+-- ===========================================================================
+-- CHUYỂN SANG SCHEMA AVORA
+-- ===========================================================================
+SET search_path TO avora;
+
+-- ===========================================================================
+-- 1. TẠO BẢNG T_TRAVEL_FEED (Lưu trữ bài đăng)
+-- ===========================================================================
+CREATE TABLE t_travel_feed (
+    feed_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    
+    -- Khóa ngoại xác thực
+    user_id UUID REFERENCES m_user(user_id) NOT NULL,
+    booking_id UUID REFERENCES t_booking(booking_id) NOT NULL, -- Bắt buộc phải có đơn đặt phòng mới được đăng
+    
+    -- Nội dung bài đăng
+    message TEXT NOT NULL,                  -- Lời chia sẻ cảm nghĩ
+    image_url VARCHAR(255) NOT NULL,        -- Link ảnh (Lưu trên Supabase Storage)
+    
+    -- Thống kê tương tác
+    likes_count INT DEFAULT 0,              -- Tổng số lượt Thả tim
+    
+    -- Cờ hệ thống
+    is_deleted BOOLEAN DEFAULT FALSE,       -- Soft delete (Nếu User hoặc Admin muốn ẩn bài)
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Tạo Index để tối ưu API lướt New Feed (Sắp xếp bài mới nhất lên đầu)
+CREATE INDEX idx_travel_feed_timeline ON t_travel_feed(created_at DESC);
+CREATE INDEX idx_travel_feed_user ON t_travel_feed(user_id);
+CREATE INDEX idx_travel_feed_booking ON t_travel_feed(booking_id);
+
+-- ===========================================================================
+-- 2. TẠO BẢNG T_TRAVEL_FEED_LIKE (Quản lý lượt Thả tim)
+-- ===========================================================================
+CREATE TABLE t_travel_feed_like (
+    user_id UUID REFERENCES m_user(user_id) ON DELETE CASCADE,
+    feed_id UUID REFERENCES t_travel_feed(feed_id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    
+    -- Đảm bảo 1 user chỉ được thả tim 1 lần cho 1 bài viết
+    PRIMARY KEY (user_id, feed_id)
+);
+
+-- ===========================================================================
+-- 3. CẬP NHẬT TRIGGER UPDATED_AT (Nếu cần)
+-- ===========================================================================
+CREATE TRIGGER trg_update_travel_feed_modtime
+BEFORE UPDATE ON t_travel_feed
+FOR EACH ROW EXECUTE FUNCTION update_modified_column();

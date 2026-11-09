@@ -446,7 +446,12 @@ const MyBookingsPage = () => {
                     onOpenDateChange={handleOpenDateChange}
                     onOpenCancel={handleOpenCancel}
                     onOpenReview={handleOpenReview}
-                    onPayNow={(b) => navigate(`/payment/${b.booking_id}`)}
+                    onPayNow={(b) =>
+                      b.sharing_group?.invite_link_hash
+                        ? navigate(`/payment/group/${b.sharing_group.invite_link_hash}`)
+                        : navigate(`/payment/${b.booking_id}`)
+                    }
+                    onGroupPay={(b) => navigate(`/payment/group/setup/${b.booking_id}`)}
                   />
                 ))}
               </section>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { AlertTriangleIcon, CalendarCancelIcon, ShieldCheckIcon } from './BookingIcons';
 import { formatVnd } from './bookingCardHelpers';
 import { fetchRefundBanks } from '../../../services/bookingApi';
+import { useAuth } from '../../../context/AuthContext';
 import './CancelBookingModal.css';
 
 /**
@@ -40,14 +41,18 @@ const CancelBookingModal = ({
   // Determine branch:
   // Trường hợp 1: Đơn chưa thanh toán HOẶC số tiền hoàn = 0đ
   // Trường hợp 2: Đơn đã thanh toán VÀ số tiền hoàn > 0đ
+  const { user } = useAuth();
+
   const isPaid = Boolean(
-    booking.payment?.is_paid &&
-    Number(booking.payment?.amount_paid || 0) > 0
+    (booking.payment?.is_paid || booking.payment?.has_partial_payment) &&
+    Number(booking.payment?.total_paid_amount || booking.payment?.amount_paid || 0) > 0
   );
 
   const estimatedRefundAmount = Number(
-    booking.cancellation?.estimated_refund_amount ??
-    (isPaid ? booking.total_amount : 0)
+    booking.status_code_name === 'PND' && booking.payment?.total_paid_amount > 0
+      ? booking.payment.total_paid_amount
+      : booking.cancellation?.estimated_refund_amount ??
+        (isPaid ? booking.total_amount : 0)
   );
 
   const isCase2 = isPaid && estimatedRefundAmount > 0;
@@ -62,8 +67,8 @@ const CancelBookingModal = ({
   const [selectedBank, setSelectedBank] = useState(null);
   const [isBankDropdownOpen, setIsBankDropdownOpen] = useState(false);
   const [bankSearchQuery, setBankSearchQuery] = useState('');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [accountHolder, setAccountHolder] = useState('');
+  const [accountNumber, setAccountNumber] = useState(user?.refund_account_number || '');
+  const [accountHolder, setAccountHolder] = useState(user?.refund_account_holder || '');
 
   // Field validation errors
   const [errors, setErrors] = useState({});
@@ -79,7 +84,14 @@ const CancelBookingModal = ({
     fetchRefundBanks()
       .then((bankList) => {
         if (!active) return;
-        setBanks(bankList || []);
+        const list = bankList || [];
+        setBanks(list);
+        if (user?.refund_bank_cd) {
+          const defaultBank = list.find(
+            (b) => String(b.bank_cd || b.code_cd) === String(user.refund_bank_cd)
+          );
+          if (defaultBank) setSelectedBank(defaultBank);
+        }
       })
       .catch((err) => {
         console.warn('Failed to load banks for refund:', err);

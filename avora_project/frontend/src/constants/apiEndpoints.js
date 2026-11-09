@@ -44,6 +44,12 @@ export const API_ENDPOINTS = {
   BOOKING_DATES: (id) => `${API_BASE_URL}/api/bookings/${id}/dates`,
   PAYMENT_CREATE_QR: `${API_BASE_URL}/api/payment/create-qr`,
   PAYMENT_STATUS: (bookingId) => `${API_BASE_URL}/api/payment/status/${bookingId}`,
+  PAYMENT_GROUPS: `${API_BASE_URL}/api/payment/groups`,
+  PAYMENT_GROUP_BY_BOOKING: (bookingId) => `${API_BASE_URL}/api/payment/groups/by-booking/${bookingId}`,
+  PAYMENT_GROUP_BY_HASH: (inviteHash) => `${API_BASE_URL}/api/payment/groups/share/${encodeURIComponent(inviteHash)}`,
+  PAYMENT_GROUP_CLAIM_MEMBER: (inviteHash, memberId) =>
+    `${API_BASE_URL}/api/payment/groups/share/${encodeURIComponent(inviteHash)}/members/${encodeURIComponent(memberId)}/claim`,
+  PAYMENT_GROUP_PAY_REMAINING: (groupId) => `${API_BASE_URL}/api/payment/groups/${encodeURIComponent(groupId)}/pay-remaining`,
   DISBURSEMENTS_BUSINESS: `${API_BASE_URL}/api/business/disbursements`,
   DISBURSEMENT_APPROVE: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/approve`,
   DISBURSEMENT_SETTLE: (id) => `${API_BASE_URL}/api/business/disbursements/${id}/settle`,
