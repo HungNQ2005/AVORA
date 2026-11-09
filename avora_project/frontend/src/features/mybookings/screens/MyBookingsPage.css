@@ -54,6 +54,65 @@
   line-height: 1.5;
 }
 
+.my-bookings-history-link {
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #15569a;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.my-bookings-history-link:hover { color: #0d3e70; }
+
+.my-bookings-guarantee-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 18px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.my-bookings-guarantee-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: #e0f2fe;
+  color: #0284c7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.my-bookings-guarantee-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.my-bookings-guarantee-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.my-bookings-guarantee-desc {
+  font-size: 12px;
+  color: #10b981;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* ─── 2. TABS & SEARCH FILTER BAR ─────────────────────────────────────── */
 .my-bookings-tabs-bar {
   display: flex;
@@ -580,11 +639,49 @@
 }
 
 .my-bookings-view-map-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
   font-size: 13px;
   font-weight: 600;
+  font-family: inherit;
   color: #0284c7;
   text-decoration: underline;
   cursor: pointer;
+}
+
+.my-bookings-view-map-link:hover { color: #0369a1; }
+
+.my-bookings-booking-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 6px 0 14px;
+  color: #475569;
+  font-size: 13px;
+}
+
+.my-bookings-booking-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.my-bookings-booking-meta .my-bookings-coupon-meta {
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.my-bookings-special-request {
+  margin-bottom: 10px;
+  color: #475569;
+  font-size: 12.5px;
 }
 
 .my-bookings-hero-address {
@@ -740,6 +837,18 @@
   border-color: #94a3b8;
 }
 
+.my-bookings-review-button {
+  border-color: #f3d18a;
+  background: #fffbeb;
+  color: #784800;
+}
+
+.my-bookings-review-button:hover {
+  border-color: #e7b34f;
+  background: #fff4cf;
+  color: #633b00;
+}
+
 .my-bookings-btn-danger {
   background: #ffffff;
   border: 1px solid #fca5a5;
@@ -838,11 +947,19 @@
 }
 
 .my-bookings-compact-stay-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   color: #64748b;
   font-weight: 500;
 }
 
+.my-bookings-compact-stay-time--cancelled { color: #dc2626; }
+
 .my-bookings-compact-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   font-weight: 700;
   padding: 3px 10px;
@@ -936,6 +1053,9 @@
 }
 
 .my-bookings-compact-address {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 12.5px;
   color: #64748b;
   margin: 0;
@@ -946,6 +1066,8 @@
   color: #475569;
   margin: 0;
 }
+
+.my-bookings-compact-stay-details > span { display: inline-flex; align-items: center; gap: 4px; }
 
 .my-bookings-compact-payment-line {
   font-size: 13px;
@@ -1034,6 +1156,10 @@
 }
 
 .my-bookings-compact-link {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
   font-size: 11.5px;
   color: #64748b;
   text-align: center;

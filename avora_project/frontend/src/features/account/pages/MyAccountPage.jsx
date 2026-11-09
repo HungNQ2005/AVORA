@@ -7,6 +7,7 @@ import DeactivateOtpModal from '../components/DeactivateOtpModal';
 import AvatarUploadModal from '../components/AvatarUploadModal';
 import RefundBankCard from '../components/RefundBankCard';
 import AvatarContent from '../../../common/components/AvatarContent';
+import ReviewHistory from '../../reviews/components/ReviewHistory';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import { getSavedFavorites, removeFavoriteHotel, syncFavoritesWithServer } from '../../../utils/favoritesStorage';
 import { getScoreLabel } from '../../../utils/ratingHelper';
@@ -17,6 +18,7 @@ import {
   calculateDisplayPricing,
 } from '../../../utils/flashSaleHelper';
 import './MyAccountPage.css';
+
 
 /**
  * Icons used throughout the Profile page matching the reference design.
@@ -115,6 +117,12 @@ const StarIcon = () => (
   </svg>
 );
 
+const ReviewStarIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+  </svg>
+);
+
 const TrashIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="3 6 5 6 21 6" />
@@ -148,9 +156,9 @@ const MyAccountPage = () => {
   const { user, setUser, logout, loading } = useAuth();
 
   const tabParam = searchParams.get('tab');
-  // Active navigation tab: 'info' | 'favorites' | 'security'
+  // Active navigation tab: 'info' | 'favorites' | 'reviews' | 'security'
   const [activeTab, setActiveTab] = useState(() => {
-    if (tabParam && ['info', 'favorites', 'security'].includes(tabParam)) {
+    if (tabParam && ['info', 'favorites', 'reviews', 'security'].includes(tabParam)) {
       return tabParam;
     }
     return 'info';
@@ -159,10 +167,12 @@ const MyAccountPage = () => {
   // Sync activeTab when query param changes
   useEffect(() => {
     const currentTab = searchParams.get('tab');
-    if (currentTab && ['info', 'favorites', 'security'].includes(currentTab)) {
+    if (currentTab === 'support') {
+      navigate('/support', { replace: true });
+    } else if (currentTab && ['info', 'favorites', 'reviews', 'security'].includes(currentTab)) {
       setActiveTab(currentTab);
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   // Tab switcher helper
   const switchTab = (tabKey) => {
@@ -460,7 +470,13 @@ const MyAccountPage = () => {
             <span className="breadcrumb-link" onClick={() => switchTab('info')}>Tài khoản của tôi</span>
             <span className="breadcrumb-separator">&gt;</span>
             <span className="breadcrumb-current">
-              {activeTab === 'favorites' ? 'Danh sách yêu thích' : activeTab === 'security' ? 'Bảo mật tài khoản' : 'Quản lý hồ sơ'}
+              {activeTab === 'favorites'
+                ? 'Danh sách yêu thích'
+                : activeTab === 'reviews'
+                  ? 'Lịch sử đánh giá'
+                  : activeTab === 'security'
+                      ? 'Bảo mật tài khoản'
+                      : 'Quản lý hồ sơ'}
             </span>
           </nav>
 
@@ -604,6 +620,18 @@ const MyAccountPage = () => {
                 <div className="profile-nav-item__left">
                   <LuggageIcon />
                   <span>Đặt chỗ của tôi</span>
+                </div>
+                <ChevronRightIcon />
+              </button>
+
+              <button
+                type="button"
+                className={`profile-nav-item ${activeTab === 'reviews' ? 'is-active' : ''}`}
+                onClick={() => switchTab('reviews')}
+              >
+                <div className="profile-nav-item__left">
+                  <ReviewStarIcon />
+                  <span>Lịch sử đánh giá</span>
                 </div>
                 <ChevronRightIcon />
               </button>
@@ -1028,7 +1056,13 @@ const MyAccountPage = () => {
               </div>
             )}
 
-            {/* ════ TAB 3: BẢO MẬT TÀI KHOẢN ════ */}
+            {activeTab === 'reviews' && (
+              <div className="profile-card profile-review-card">
+                <ReviewHistory />
+              </div>
+            )}
+
+            {/* ════ TAB 4: BẢO MẬT TÀI KHOẢN ════ */}
             {activeTab === 'security' && (
               <div className="profile-security-stack">
                 {/* 1. 2FA Banner */}

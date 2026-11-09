@@ -135,6 +135,53 @@ export const LightbulbIcon = createIcon('LightbulbIcon', () => (
   </>
 ));
 
+export const InboxIcon = createIcon('InboxIcon', () => (
+  <>
+    <path d="M4 4h16l2 11v4a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-4L4 4z" />
+    <path d="M2 14h5l2 3h6l2-3h5" />
+  </>
+));
+
+export const MessageCircleIcon = createIcon('MessageCircleIcon', () => (
+  <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" />
+));
+
+export const LockIcon = createIcon('LockIcon', () => (
+  <>
+    <rect x="3" y="11" width="18" height="11" rx="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </>
+));
+
+export const SparklesIcon = createIcon('SparklesIcon', () => (
+  <>
+    <path d="m12 3 1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3z" />
+    <path d="m19 14 1 2.5 2.5 1-2.5 1L19 21l-1-2.5-2.5-1 2.5-1L19 14z" />
+  </>
+));
+
+export const HandIcon = createIcon('HandIcon', () => (
+  <path d="M8 11V5a2 2 0 0 1 4 0v5-7a2 2 0 0 1 4 0v8-6a2 2 0 0 1 4 0v8a7 7 0 0 1-7 7h-1a7 7 0 0 1-5.6-2.8L3 14a2 2 0 0 1 3-2.6L8 13" />
+));
+
+export const MailIcon = createIcon('MailIcon', () => (
+  <>
+    <rect x="3" y="5" width="18" height="14" rx="2" />
+    <path d="m3 7 9 6 9-6" />
+  </>
+));
+
+export const SendIcon = createIcon('SendIcon', () => (
+  <>
+    <path d="m22 2-7 20-4-9-9-4 20-7z" />
+    <path d="M22 2 11 13" />
+  </>
+));
+
+export const PaperclipIcon = createIcon('PaperclipIcon', () => (
+  <path d="m21.4 11.1-9.2 9.2a6 6 0 0 1-8.5-8.5l9.2-9.2a4 4 0 0 1 5.7 5.7l-9.2 9.2a2 2 0 0 1-2.8-2.8l8.5-8.5" />
+));
+
 export const AwardIcon = createIcon('AwardIcon', () => (
   <>
     <circle cx="12" cy="8" r="6" />
