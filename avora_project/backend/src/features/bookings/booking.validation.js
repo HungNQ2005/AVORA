@@ -37,6 +37,7 @@ const BOOKING_PAYLOAD_FIELDS = new Set([
   'special_request_options',
   'estimated_arrival_time',
   'coupon_code',
+  'force_coupon',
 ]);
 const GUEST_INFO_FIELDS = new Set(['guest_name', 'guest_phone', 'special_request']);
 

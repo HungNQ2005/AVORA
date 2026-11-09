@@ -385,6 +385,7 @@ const calculatePricing = async ({
   coupon_code,
   exclude_booking_id,
   excluded_details = [],
+  force_coupon = false,
 }) => {
   ensureClient();
   const client = getClient();
@@ -593,14 +594,14 @@ const calculatePricing = async ({
   const availableCoupons = (activeCouponsRes.data || []).filter((c) => {
     const vFrom = c.valid_from ? new Date(c.valid_from) : null;
     const vTo = c.valid_to ? new Date(c.valid_to) : null;
-    if (vFrom && now < vFrom) return false;
-    if (vTo && now > vTo) return false;
     const code = String(c.code || '').toUpperCase();
     if (code.startsWith('FS_')) {
       if (!flashPrefix || !code.startsWith(flashPrefix)) {
         return false;
       }
     }
+    if (vFrom && now < vFrom) return false;
+    if (vTo && now > vTo) return false;
     return true;
   });
 
@@ -681,6 +682,11 @@ const calculatePricing = async ({
       discount_amount = flashDiscount;
       applied_type = 'FLASH_SALE';
       couponMessage = `⚡ Đã áp dụng ưu đãi Flash Sale ${bestFlashSale.code} (-${flashDiscount.toLocaleString('vi-VN')} đ)`;
+    } else if (force_coupon) {
+      coupon = manualCoupon;
+      discount_amount = manualDiscount;
+      applied_type = 'MANUAL_COUPON';
+      couponMessage = `Đã áp dụng mã ${manualCoupon.code} (-${manualDiscount.toLocaleString('vi-VN')} đ), thay thế Flash Sale theo lựa chọn của bạn.`;
     } else if (manualDiscount > flashDiscount) {
       coupon = manualCoupon;
       discount_amount = manualDiscount;
@@ -1098,6 +1104,7 @@ const createBooking = async (payload, currentUser = null) => {
         check_in_date: payload.check_in_date,
         check_out_date: payload.check_out_date,
         coupon_code: payload.coupon_code,
+        force_coupon: Boolean(payload.force_coupon),
       }),
       loadSystemCodes(),
     ]);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, Link, useNavigate, useLocation } from 'react-router-dom';
 import NotFoundNotice from '../../common/components/NotFoundNotice';
 import { API_ENDPOINTS } from '../../constants/apiEndpoints';
 import MapModal from './components/MapModal';
@@ -14,6 +14,7 @@ import {
   getFlashSaleDiscountText,
   calculateFlashSaleDiscount,
   formatGoldenHourRange,
+  resolveHotelFlashSale,
 } from '../../utils/flashSaleHelper';
 import './HotelDetailPage.css';
 
@@ -46,6 +47,9 @@ import {
   CloseIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  BoltIcon,
+  TimerIcon,
+  TagIcon,
 } from '../../common/components/icons';
 
 /* Icon mapper for 8 Highlighted Amenities */
@@ -366,7 +370,12 @@ const HotelDetailPage = () => {
   const mainImage = images[0] || hotel?.thumbnail || '';
   const sideImage = images[1] || mainImage;
 
-  const flashSale = isFlashSaleActive(hotel?.active_flash_sale) ? hotel.active_flash_sale : null;
+  const location = useLocation();
+  const flashSaleFromState = location.state?.flashSale || null;
+  const resolvedSale = resolveHotelFlashSale(hotel);
+  const flashSale = resolvedSale || (isFlashSaleActive(hotel?.active_flash_sale)
+    ? hotel.active_flash_sale
+    : (isFlashSaleActive(flashSaleFromState) ? flashSaleFromState : null));
   const flashDiscountText = flashSale ? getFlashSaleDiscountText(flashSale) : '';
 
   return (
@@ -497,7 +506,7 @@ const HotelDetailPage = () => {
           <div className="hotel-flash-sale-banner">
             <div className="hotel-flash-sale-banner__left">
               <div className="hotel-flash-sale-banner__badge">
-                <span className="hotel-flash-sale-banner__icon">⚡</span>
+                <BoltIcon size={12} color="#111827" />
                 <span>FLASH SALE KHUNG GIỜ VÀNG</span>
               </div>
               <div className="hotel-flash-sale-banner__content">
@@ -510,7 +519,7 @@ const HotelDetailPage = () => {
                   )}
                 </h3>
                 <p className="hotel-flash-sale-banner__time">
-                  ⏰ Khung giờ vàng: {formatGoldenHourRange(flashSale.valid_from, flashSale.valid_to)}
+                  <TimerIcon size={13} color="#78350f" /> Khung giờ vàng: {formatGoldenHourRange(flashSale.valid_from, flashSale.valid_to)}
                   {flashSale.min_order_amount > 0 && ` · Đơn tối thiểu ${formatPrice(flashSale.min_order_amount)}`}
                   {' '}· Tự động áp dụng giá ưu đãi tốt nhất khi đặt phòng hôm nay!
                 </p>
@@ -713,7 +722,7 @@ const HotelDetailPage = () => {
                     <div className="room-card-col-info">
                       {flashSale ? (
                         <span className="room-badge room-badge--flash-sale">
-                          ⚡ Flash Sale {flashDiscountText}
+                          <BoltIcon size={12} color="#111827" /> Flash Sale {flashDiscountText}
                         </span>
                       ) : (
                         <span className="room-badge room-badge--default">
@@ -790,6 +799,14 @@ const HotelDetailPage = () => {
                           </span>
                           <span>Thanh toán tại quầy lễ tân khi nhận phòng</span>
                         </li>
+                        {flashSale && (
+                          <li className="benefit-item benefit-item--flash" style={{ color: '#b45309', fontWeight: 600 }}>
+                            <span className="benefit-icon">
+                              <BoltIcon size={14} color="#d97706" />
+                            </span>
+                            <span>Áp dụng ưu đãi Flash Sale khung giờ vàng ({flashDiscountText})</span>
+                          </li>
+                        )}
                       </ul>
 
                       {/* Capacity Status Notice */}
@@ -841,7 +858,7 @@ const HotelDetailPage = () => {
                                 {formatPrice(roomCurrentPrice)}
                               </div>
                               <span className="room-tax-note room-tax-note--flash">
-                                ⚡ Đã áp dụng Flash Sale {flashDiscountText} (-{formatPrice(roomDiscount)})
+                                <TagIcon size={12} color="#dc2626" /> Đã áp dụng Flash Sale {flashDiscountText} {roomDiscount > 0 ? `(tiết kiệm ${formatPrice(roomDiscount)})` : ''}
                               </span>
                             </>
                           );
@@ -1009,7 +1026,10 @@ const HotelDetailPage = () => {
       <MapModal
         isOpen={isMapModalOpen}
         onClose={() => setIsMapModalOpen(false)}
-        hotels={hotel ? [hotel] : []}
+        hotels={hotel ? [{
+          ...hotel,
+          price: hotel.price ?? (hotel.rooms?.length ? Math.min(...hotel.rooms.map((r) => r.price || r.default_price).filter(Boolean)) : hotel.min_price),
+        }] : []}
         destination={city_name || address || ''}
       />
     </div>
