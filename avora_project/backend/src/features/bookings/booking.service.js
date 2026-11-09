@@ -2508,11 +2508,15 @@ const cancelBooking = async (
           : 'Hủy trong thời hạn miễn phí (Hoàn 100%)',
     ].filter(Boolean);
 
-    const { data: insertedRefund } = await getClient()
+    const { data: insertedRefund, error: insertRefundErr } = await getClient()
       .from('t_refund_request')
       .insert({
         transaction_id: latestPayment?.transaction_id || null,
         booking_id: bookingId,
+        requester_id: booking.user_id || null,
+        bank_cd: resolvedBankCd || null,
+        account_number: cleanAccNum || null,
+        account_holder: cleanHolder || null,
         refund_amount: calculatedRefundAmount,
         refund_status_cd: refundStatusCd,
         gateway_refund_ref: refundRef,
@@ -2522,7 +2526,7 @@ const cancelBooking = async (
       .maybeSingle();
 
     refundRecord = insertedRefund;
-    refundInsertError = error;
+    refundInsertError = insertRefundErr;
   }
 
   const returnMessage =
