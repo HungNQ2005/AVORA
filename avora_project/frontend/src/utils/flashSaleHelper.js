@@ -94,11 +94,7 @@ export const getFlashSaleBadgeLabel = (sale) => {
  */
 export const calculateFlashSaleDiscount = (basePrice, sale) => {
   const price = Number(basePrice) || 0;
-  if (price <= 0) return 0;
-  if (!sale || sale.discount_value === null || sale.discount_value === undefined) return 0;
-
-  const isVendorActive = sale.code && String(sale.code).startsWith('FS_') && Number(sale.discount_value) > 0;
-  if (!isFlashSaleActive(sale) && !isVendorActive) return 0;
+  if (price <= 0 || !isFlashSaleActive(sale)) return 0;
 
   const type = String(sale.discount_type || 'FLASH_PERCENT').toUpperCase();
   const val = Number(sale.discount_value) || 0;
@@ -126,8 +122,7 @@ export const calculateFlashSaleDiscount = (basePrice, sale) => {
  */
 export const calculateDisplayPricing = (basePrice, sale, fallbackOriginalPrice = null) => {
   const price = Number(basePrice) || 0;
-  const isVendorActive = sale && sale.code && String(sale.code).startsWith('FS_') && Number(sale.discount_value) > 0;
-  const active = isFlashSaleActive(sale) || isVendorActive;
+  const active = isFlashSaleActive(sale);
 
   if (!active) {
     const orig = fallbackOriginalPrice ? Number(fallbackOriginalPrice) : null;
