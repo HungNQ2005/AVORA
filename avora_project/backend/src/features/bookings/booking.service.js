@@ -70,12 +70,10 @@ const verifyCouponEligibility = async (dbCoupon, subtotal, now, excludeBookingId
   const validFrom = dbCoupon.valid_from ? new Date(dbCoupon.valid_from) : null;
   const validTo = dbCoupon.valid_to ? new Date(dbCoupon.valid_to) : null;
 
-  const isVendorFlash = dbCoupon.code && String(dbCoupon.code).toUpperCase().startsWith('FS_');
-
-  if (validFrom && now < validFrom && !isVendorFlash) {
+  if (validFrom && now < validFrom) {
     return { valid: false, message: 'Mã giảm giá chưa đến ngày có hiệu lực.' };
   }
-  if (validTo && now > validTo && !isVendorFlash) {
+  if (validTo && now > validTo) {
     return { valid: false, message: 'Mã giảm giá đã hết hạn sử dụng.' };
   }
   if (dbCoupon.min_order_amount && subtotal < Number(dbCoupon.min_order_amount)) {
@@ -375,6 +373,7 @@ const calculatePricing = async ({
   coupon_code,
   exclude_booking_id,
   excluded_details = [],
+  force_coupon = false,
 }) => {
   ensureClient();
   const client = getClient();
@@ -588,7 +587,6 @@ const calculatePricing = async ({
       if (!flashPrefix || !code.startsWith(flashPrefix)) {
         return false;
       }
-      return true;
     }
     if (vFrom && now < vFrom) return false;
     if (vTo && now > vTo) return false;
@@ -672,6 +670,11 @@ const calculatePricing = async ({
       discount_amount = flashDiscount;
       applied_type = 'FLASH_SALE';
       couponMessage = `⚡ Đã áp dụng ưu đãi Flash Sale ${bestFlashSale.code} (-${flashDiscount.toLocaleString('vi-VN')} đ)`;
+    } else if (force_coupon) {
+      coupon = manualCoupon;
+      discount_amount = manualDiscount;
+      applied_type = 'MANUAL_COUPON';
+      couponMessage = `Đã áp dụng mã ${manualCoupon.code} (-${manualDiscount.toLocaleString('vi-VN')} đ), thay thế Flash Sale theo lựa chọn của bạn.`;
     } else if (manualDiscount > flashDiscount) {
       coupon = manualCoupon;
       discount_amount = manualDiscount;
@@ -1089,6 +1092,7 @@ const createBooking = async (payload, currentUser = null) => {
         check_in_date: payload.check_in_date,
         check_out_date: payload.check_out_date,
         coupon_code: payload.coupon_code,
+        force_coupon: Boolean(payload.force_coupon),
       }),
       loadSystemCodes(),
     ]);

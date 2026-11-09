@@ -146,13 +146,13 @@ const OrderSummarySidebar = ({
     data: {},
   });
 
-  const handleApplyCouponWithModal = async (codeToUse) => {
+  const handleApplyCouponWithModal = async (codeToUse, forceCoupon = false) => {
     if (!onApplyCoupon) return;
     const targetCode = typeof codeToUse === 'string' ? codeToUse : couponCode;
     if (!targetCode || !targetCode.trim()) return;
 
     try {
-      const res = await onApplyCoupon(targetCode);
+      const res = await onApplyCoupon(targetCode, forceCoupon);
       const hasFlashSale = Boolean(
         res?.promotion_details?.flash_sale_available ||
         res?.active_flash_sale ||
@@ -705,7 +705,7 @@ const OrderSummarySidebar = ({
           const codeToApply = targetCode || policyModal.pendingCouponCode || policyModal.data?.manualCouponCode;
           if (codeToApply) {
             onCouponChange(codeToApply);
-            handleApplyCouponWithModal(codeToApply);
+            handleApplyCouponWithModal(codeToApply, true);
           }
         }}
       />

@@ -1392,28 +1392,28 @@
   line-height: 1.35;
 }
 
-/* ─── ⚡ Flash Sale Hộp Vàng Chữ Đen Styles trên HomePage ─── */
+/* ─── ⚡ Flash Sale Styles trên HomePage (Booking / Clean Design System) ─── */
 .avora-hotel-card__badge--flash-sale {
-  background: #ffc72c !important;
-  /* Hộp vàng */
-  color: #111827 !important;
-  /* Chữ đen */
-  font-weight: 800 !important;
-  border: 1px solid #f59e0b !important;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.45) !important;
+  background: linear-gradient(135deg, #e11d48 0%, #dc2626 100%) !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.35) !important;
   display: inline-flex !important;
   align-items: center;
   gap: 4px;
+  letter-spacing: 0.02em;
 }
 
 .avora-flash-alert-gold {
-  background: #ffc72c !important;
-  /* Hộp vàng đặc trưng */
-  color: #111827 !important;
-  /* Chữ đen đậm rõ nét */
-  border: 1px solid #f59e0b !important;
+  background: #fffbeb !important;
+  color: #92400e !important;
+  border: 1px solid #fef3c7 !important;
   border-radius: 6px;
-  padding: 5px 9px;
+  padding: 5px 10px;
   font-size: 11.5px;
   font-weight: 600;
   display: flex;
@@ -1424,18 +1424,18 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2);
+  box-shadow: none !important;
 }
 
 .avora-flash-alert-gold__icon {
   font-size: 13px;
-  color: #92400e;
+  color: #d97706;
   flex-shrink: 0;
 }
 
 .avora-flash-alert-gold__text strong {
-  font-weight: 800;
-  color: #000000;
+  font-weight: 700;
+  color: #78350f;
 }
 
 .avora-hotel-card__current-price--flash {
@@ -1445,60 +1445,102 @@
 
 .avora-hotel-card__tax-note--flash {
   color: #dc2626 !important;
-  font-weight: 700;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
-/* ─── Dải Flash Sale Chạy Nhẹ Ngang (Ticker / Marquee) ─── */
-.avora-flash-ticker {
-  background: #f8fafc;
+/* ─── Dải Banner Flash Sale Hiện Đại (Sleek Deal Strip) ─── */
+.avora-flash-strip {
+  background: #ffffff;
   border: 1px solid #e2e8f0;
+  border-left: 4px solid #f59e0b;
   border-radius: 8px;
-  padding: 9px 16px;
-  margin-bottom: 22px;
-  overflow: hidden;
-  position: relative;
+  padding: 10px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.avora-flash-strip__left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.avora-flash-strip__pill {
+  background: #dc2626;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.04em;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.avora-flash-strip__pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #ffffff;
+  animation: flashPulseDot 1.5s infinite ease-in-out;
+}
+
+@keyframes flashPulseDot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+}
+
+.avora-flash-strip__title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.avora-flash-strip__dot {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.avora-flash-strip__subtitle {
+  font-size: 13px;
+  color: #475569;
+}
+
+.avora-flash-strip__right {
   display: flex;
   align-items: center;
 }
 
-.avora-flash-ticker__track {
-  display: inline-flex;
-  align-items: center;
-  gap: 16px;
+.avora-flash-strip__count {
+  font-size: 12.5px;
+  color: #003580;
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  padding: 3px 10px;
+  border-radius: 9999px;
   white-space: nowrap;
-  animation: flashTickerSlide 35s linear infinite;
 }
 
-.avora-flash-ticker:hover .avora-flash-ticker__track {
-  animation-play-state: paused;
-}
-
-@keyframes flashTickerSlide {
-  0% {
-    transform: translateX(0%);
-  }
-
-  100% {
-    transform: translateX(-50%);
-  }
-}
-
-.avora-flash-ticker__badge {
-  background: #ffc72c;
-  color: #111827;
+.avora-flash-strip__count strong {
   font-weight: 800;
-  font-size: 11px;
-  padding: 3px 8px;
-  border-radius: 4px;
-  letter-spacing: 0.03em;
-  flex-shrink: 0;
-  border: 1px solid #f59e0b;
-}
-
-.avora-flash-ticker__content {
-  font-size: 13px;
-  color: #334155;
-  font-weight: 600;
+  color: #003580;
 }
 
 /* ─── Hàng Flash Sale (Flash Sale Section) ─── */
@@ -1513,15 +1555,17 @@
 
 .avora-section--flash-sale .avora-hotel-card {
   border: 1px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .avora-section--flash-sale .avora-hotel-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 8px 20px rgba(0, 53, 128, 0.12);
-  border-color: #003580;
+  box-shadow: 0 10px 24px rgba(0, 53, 128, 0.12);
+  border-color: #93c5fd;
 }
 
 .avora-section--flash-sale .avora-hotel-card__btn {
@@ -1531,4 +1575,61 @@
 
 .avora-section--flash-sale .avora-hotel-card__btn:hover {
   background-color: #00224f !important;
+}
+
+/* ─── Trạng thái khi chưa có Flash Sale hoạt động ─── */
+.avora-flash-strip--empty {
+  border-left-color: #94a3b8;
+  background: #f8fafc;
+}
+
+.avora-flash-strip__pill--muted {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.avora-flash-strip__count--muted {
+  background: #f1f5f9;
+  border-color: #e2e8f0;
+  color: #64748b;
+}
+
+.avora-flash-empty-state {
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 36px 24px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.avora-flash-empty-state__icon {
+  background: #fef3c7;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+}
+
+.avora-flash-empty-state__title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0;
+}
+
+.avora-flash-empty-state__desc {
+  font-size: 13.5px;
+  color: #64748b;
+  max-width: 620px;
+  line-height: 1.55;
+  margin: 0;
 }

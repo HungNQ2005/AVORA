@@ -1006,7 +1006,10 @@ const HotelDetailPage = () => {
       <MapModal
         isOpen={isMapModalOpen}
         onClose={() => setIsMapModalOpen(false)}
-        hotels={hotel ? [hotel] : []}
+        hotels={hotel ? [{
+          ...hotel,
+          price: hotel.price ?? (hotel.rooms?.length ? Math.min(...hotel.rooms.map((r) => r.price || r.default_price).filter(Boolean)) : hotel.min_price),
+        }] : []}
         destination={city_name || address || ''}
       />
     </div>

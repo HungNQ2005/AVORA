@@ -44,33 +44,6 @@ export const resolveHotelFlashSale = (hotel) => {
   if (isFlashSaleActive(hotel.active_flash_sale)) {
     return hotel.active_flash_sale;
   }
-  // Nếu khách sạn có active_flash_sale bắt đầu bằng FS_ được tạo bởi vendor, đảm bảo valid_to luôn còn hạn
-  if (hotel.active_flash_sale && String(hotel.active_flash_sale.code || '').startsWith('FS_')) {
-    const val = Number(hotel.active_flash_sale.discount_value);
-    if (!isNaN(val) && val > 0) {
-      return {
-        ...hotel.active_flash_sale,
-        valid_to: new Date(Date.now() + 365 * 86400000).toISOString(),
-      };
-    }
-  }
-  // Khớp với Sheraton Can Tho nếu mã khách sạn là 80ed3e49
-  if (String(hotel.hotel_id || '').toLowerCase().startsWith('80ed3e49') || String(hotel.name || '').toLowerCase().includes('sheraton')) {
-    if (hotel.active_flash_sale) {
-      return {
-        ...hotel.active_flash_sale,
-        valid_to: new Date(Date.now() + 365 * 86400000).toISOString(),
-      };
-    }
-    return {
-      coupon_id: '5ccef643-bff0-48f7-bedb-b907be103d7a',
-      code: 'FS_80ED3E49_20-10',
-      discount_type: 'PERCENT',
-      discount_value: 10,
-      max_discount_amount: 300000,
-      valid_to: new Date(Date.now() + 365 * 86400000).toISOString(),
-    };
-  }
   return null;
 };
 

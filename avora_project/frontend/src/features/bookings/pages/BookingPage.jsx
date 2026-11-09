@@ -272,7 +272,7 @@ const BookingPage = () => {
 
   // Fetch real hotel, room, pricing, cancellation policy & active coupons from DB
   const syncBookingPricing = useCallback(
-    async (codeOverride) => {
+    async (codeOverride, forceCoupon = false) => {
       const codeToApply = codeOverride !== undefined ? codeOverride : activeCouponRef.current;
       setIsApplyingCoupon(true);
       try {
@@ -283,6 +283,7 @@ const BookingPage = () => {
           check_in_date: checkInDate,
           check_out_date: checkOutDate,
           coupon_code: codeToApply && codeToApply.trim() ? codeToApply.trim() : undefined,
+          force_coupon: Boolean(forceCoupon),
         });
 
         setPricing(res);
@@ -318,12 +319,12 @@ const BookingPage = () => {
     syncBookingPricing();
   }, [syncBookingPricing]);
 
-  const handleApplyCoupon = async (overrideCode) => {
+  const handleApplyCoupon = async (overrideCode, forceCoupon = false) => {
     const targetCode = typeof overrideCode === 'string' ? overrideCode : couponCode;
     if (!targetCode || !targetCode.trim()) return;
     const cleanCode = targetCode.trim().toUpperCase();
     setCouponCode(cleanCode);
-    return await syncBookingPricing(cleanCode);
+    return await syncBookingPricing(cleanCode, forceCoupon);
   };
 
   const handleRemoveCoupon = async () => {
@@ -425,6 +426,8 @@ const BookingPage = () => {
       customNote.trim(),
     ].filter(Boolean).join('; ') || null;
 
+    const isManualCoupon = pricing.promotion_details?.applied_type === 'MANUAL_COUPON';
+
     const bookingPayload = {
       hotel_id: activeHotel.hotel_id,
       room_type_id: activeRoom.room_type_id,
@@ -439,6 +442,7 @@ const BookingPage = () => {
       guest_phone: fullPhone,
       special_request: combinedSpecialRequest,
       coupon_code: pricing.coupon?.code || null,
+      force_coupon: isManualCoupon,
     };
 
     try {

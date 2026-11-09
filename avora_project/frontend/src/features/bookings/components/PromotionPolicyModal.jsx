@@ -300,13 +300,25 @@ const PromotionPolicyModal = ({
               </button>
             </>
           ) : type === 'conflict_kept' ? (
-            <button
-              type="button"
-              className="booking-modal-btn-primary"
-              onClick={onClose}
-            >
-              Đã hiểu & Tiếp tục với Flash Sale
-            </button>
+            <>
+              <button
+                type="button"
+                className="booking-modal-btn-secondary"
+                onClick={onClose}
+              >
+                Tiếp tục với Flash Sale
+              </button>
+              <button
+                type="button"
+                className="booking-modal-btn-primary"
+                onClick={() => {
+                  if (onAcceptCoupon) onAcceptCoupon(manualCouponCode);
+                  onClose();
+                }}
+              >
+                Vẫn dùng mã {manualCouponCode || 'này'}
+              </button>
+            </>
           ) : (
             <button
               type="button"
