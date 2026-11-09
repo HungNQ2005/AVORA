@@ -1096,19 +1096,19 @@
 
 .avora-hotel-card__btn {
   width: 100%;
-  background-color: #ffc72c;
-  color: #000000;
+  background-color: #003580;
+  color: #ffffff;
   font-size: 14px;
   font-weight: 700;
   border: none;
   padding: 10px;
   border-radius: 6px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
 .avora-hotel-card__btn:hover {
-  background-color: #0052cc;
+  background-color: #00224f;
 }
 
 /* Skeleton Loading State for Database Hotels */
@@ -1450,8 +1450,8 @@
 
 /* ─── Dải Flash Sale Chạy Nhẹ Ngang (Ticker / Marquee) ─── */
 .avora-flash-ticker {
-  background: linear-gradient(90deg, #fffbeb 0%, #fef3c7 50%, #fffbeb 100%);
-  border: 1px solid #fde68a;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
   border-radius: 8px;
   padding: 9px 16px;
   margin-bottom: 22px;
@@ -1497,6 +1497,38 @@
 
 .avora-flash-ticker__content {
   font-size: 13px;
-  color: #78350f;
+  color: #334155;
   font-weight: 600;
+}
+
+/* ─── Hàng Flash Sale (Flash Sale Section) ─── */
+.avora-section--flash-sale {
+  background: transparent;
+  border-top: none;
+  border-bottom: none;
+  padding: 16px 0 32px;
+  margin: 16px 0;
+  position: relative;
+}
+
+.avora-section--flash-sale .avora-hotel-card {
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.avora-section--flash-sale .avora-hotel-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0, 53, 128, 0.12);
+  border-color: #003580;
+}
+
+.avora-section--flash-sale .avora-hotel-card__btn {
+  background-color: #003580 !important;
+  color: #ffffff !important;
+}
+
+.avora-section--flash-sale .avora-hotel-card__btn:hover {
+  background-color: #00224f !important;
 }

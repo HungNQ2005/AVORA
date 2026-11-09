@@ -5,6 +5,7 @@ import HotelCard from './components/HotelCard';
 import FilterSidebar from './components/FilterSidebar';
 import MapModal from './components/MapModal';
 import { getMinRoomsRequired, validateGuestRoomCapacity, MAX_ROOM_CAPACITY } from '../../utils/roomCapacityHelper';
+import { resolveHotelFlashSale } from '../../utils/flashSaleHelper';
 import './HotelSearchPage.css';
 
 import {
@@ -948,7 +949,8 @@ const HotelSearchPage = () => {
                     nights={nights}
                     guests={adults}
                     onSelectHotel={(h) => {
-                      navigate(`/hotels/${h.hotel_id}`);
+                      const flashSale = resolveHotelFlashSale(h);
+                      navigate(`/hotels/${h.hotel_id}`, { state: { flashSale } });
                     }}
                   />
                 ))}

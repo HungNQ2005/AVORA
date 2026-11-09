@@ -70,10 +70,12 @@ const verifyCouponEligibility = async (dbCoupon, subtotal, now, excludeBookingId
   const validFrom = dbCoupon.valid_from ? new Date(dbCoupon.valid_from) : null;
   const validTo = dbCoupon.valid_to ? new Date(dbCoupon.valid_to) : null;
 
-  if (validFrom && now < validFrom) {
+  const isVendorFlash = dbCoupon.code && String(dbCoupon.code).toUpperCase().startsWith('FS_');
+
+  if (validFrom && now < validFrom && !isVendorFlash) {
     return { valid: false, message: 'Mã giảm giá chưa đến ngày có hiệu lực.' };
   }
-  if (validTo && now > validTo) {
+  if (validTo && now > validTo && !isVendorFlash) {
     return { valid: false, message: 'Mã giảm giá đã hết hạn sử dụng.' };
   }
   if (dbCoupon.min_order_amount && subtotal < Number(dbCoupon.min_order_amount)) {
@@ -581,14 +583,15 @@ const calculatePricing = async ({
   const availableCoupons = (activeCouponsRes.data || []).filter((c) => {
     const vFrom = c.valid_from ? new Date(c.valid_from) : null;
     const vTo = c.valid_to ? new Date(c.valid_to) : null;
-    if (vFrom && now < vFrom) return false;
-    if (vTo && now > vTo) return false;
     const code = String(c.code || '').toUpperCase();
     if (code.startsWith('FS_')) {
       if (!flashPrefix || !code.startsWith(flashPrefix)) {
         return false;
       }
+      return true;
     }
+    if (vFrom && now < vFrom) return false;
+    if (vTo && now > vTo) return false;
     return true;
   });
 

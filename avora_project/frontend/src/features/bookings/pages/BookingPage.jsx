@@ -298,12 +298,14 @@ const BookingPage = () => {
           // If auto-applied Flash Sale and user hasn't typed anything, keep input empty for typing manual coupons
           setCouponCode('');
         }
+        return res;
       } catch (err) {
         console.warn('[BookingPage] Không thể đồng bộ biểu giá:', err.message);
         setCouponMessage(err.message || 'Mã giảm giá không hợp lệ hoặc chưa đủ điều kiện.');
         if (!stateData.hotel && !pricing.hotel) {
           setErrorMessage(err.message || 'Không thể tải thông tin giá phòng. Vui lòng thử lại.');
         }
+        throw err;
       } finally {
         setIsApplyingCoupon(false);
         setIsLoadingPricing(false);
@@ -321,7 +323,7 @@ const BookingPage = () => {
     if (!targetCode || !targetCode.trim()) return;
     const cleanCode = targetCode.trim().toUpperCase();
     setCouponCode(cleanCode);
-    await syncBookingPricing(cleanCode);
+    return await syncBookingPricing(cleanCode);
   };
 
   const handleRemoveCoupon = async () => {
