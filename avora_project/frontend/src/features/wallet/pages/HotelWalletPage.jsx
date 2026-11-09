@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import {
@@ -86,6 +86,7 @@ export const validateBankFormFields = (formData, banks = []) => {
 
 const HotelWalletPage = () => {
   const { user, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
   const roleCode = String(user?.role_code_name || '').trim().toUpperCase();
   const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
@@ -341,7 +342,8 @@ const HotelWalletPage = () => {
   };
 
   const handleRequestChangeBank = () => {
-    showToast('Hệ thống hỗ trợ gửi ticket thay đổi tài khoản ngân hàng thụ hưởng đang được chuẩn bị. Vui lòng liên hệ Admin để đổi tài khoản.');
+    const hotelParam = selectedHotelId ? `&hotelId=${encodeURIComponent(selectedHotelId)}` : '';
+    navigate(`/dashboard/support?create=true&category=VBU${hotelParam}`);
   };
 
   const selectedHotel = hotels.find((h) => h.hotel_id === selectedHotelId);
