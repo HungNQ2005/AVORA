@@ -33,6 +33,7 @@ const auditLogRoute = require('./features/audit_logs/audit_log.route');
 const walletRoute = require('./features/wallet/wallet.route');
 const venueWalletRoute = require('./features/venueWallet/venueWallet.route');
 const disbursementRoute = require('./features/disbursements/disbursement.route');
+const refundRequestRoute = require('./features/refund_requests/refund_request.route');
 const vendorFlashSaleRoute = require('./features/vendor_flash_sales/vendor_flash_sale.route');
 const hotelBankRequestRoute = require('./features/hotel_bank_requests/hotel_bank_requests.route');
 
@@ -100,7 +101,9 @@ app.use("/api", auditLogRoute);
 app.use("/api", walletRoute);
 app.use("/api", venueWalletRoute);
 app.use("/api", disbursementRoute);
+
 app.use("/api", hotelBankRequestRoute);
+app.use("/api", refundRequestRoute);
 
 app.use((_req, _res, next) => {
   const err = new Error('Không tìm thấy đường dẫn API yêu cầu.');
