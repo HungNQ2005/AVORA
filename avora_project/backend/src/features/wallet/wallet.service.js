@@ -595,4 +595,6 @@ module.exports = {
   getVendorHotels,
   getHotelWalletAndBank,
   linkBankAccount,
+  fetchVietQrBanks,
+  matchVietQrBank,
 };

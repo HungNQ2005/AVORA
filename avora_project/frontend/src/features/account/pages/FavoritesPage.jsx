@@ -113,6 +113,12 @@ const CheckIcon = () => (
   </svg>
 );
 
+const BoltIcon = ({ size = 13, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+  </svg>
+);
+
 /**
  * Format currency VND (e.g. 2.350.000 VND)
  */
@@ -545,7 +551,7 @@ const FavoritesPage = () => {
                       <div className="fav-card__image-badges">
                         {flashSale && (
                           <span className="badge-saved-room" style={{ background: '#f59e0b', color: '#1e293b', fontWeight: 800 }}>
-                            ⚡ Flash Sale {flashDiscountText}
+                            <BoltIcon size={12} color="#1e293b" /> Flash Sale {flashDiscountText}
                           </span>
                         )}
                         <span className="badge-hotel-star">
@@ -604,7 +610,9 @@ const FavoritesPage = () => {
                       {/* Dòng thông báo hộp vàng chữ đen nhận biết Flash Sale */}
                       {flashSale && (
                         <div className="avora-flash-alert-gold" title={`Khuyến mãi giờ vàng (${flashSale.code || 'FLASH_SALE'})`}>
-                          <span className="avora-flash-alert-gold__icon">⚡</span>
+                          <span className="avora-flash-alert-gold__icon">
+                            <BoltIcon size={13} color="#92400e" />
+                          </span>
                           <span className="avora-flash-alert-gold__text">
                             <strong>FLASH SALE {flashDiscountText}</strong> • Khung giờ vàng
                           </span>
@@ -663,7 +671,7 @@ const FavoritesPage = () => {
                           </div>
                           {flashSale ? (
                             <span className="fav-card__price-subtext" style={{ color: '#e11d48', fontWeight: 600 }}>
-                              ⚡ Đã áp dụng Flash Sale {flashDiscountText}
+                              <BoltIcon size={12} color="#e11d48" /> Đã áp dụng Flash Sale {flashDiscountText} {pricing.discountAmount > 0 ? `(tiết kiệm ${formatPriceVND(pricing.discountAmount)})` : ''}
                             </span>
                           ) : (
                             <span className="fav-card__price-subtext">
@@ -676,7 +684,7 @@ const FavoritesPage = () => {
                           <button
                             type="button"
                             className="fav-card__btn-view"
-                            onClick={() => navigate(`/hotels/${hotelId}`)}
+                            onClick={() => navigate(`/hotels/${hotelId}`, { state: { flashSale } })}
                           >
                             Xem phòng trống
                           </button>
@@ -684,7 +692,7 @@ const FavoritesPage = () => {
                           <button
                             type="button"
                             className="fav-card__btn-alt"
-                            onClick={() => navigate(`/hotels/${hotelId}`)}
+                            onClick={() => navigate(`/hotels/${hotelId}`, { state: { flashSale } })}
                           >
                             Chọn ngày khác
                           </button>

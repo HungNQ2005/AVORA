@@ -1159,3 +1159,357 @@
   color: #059669;
 }
 
+/* Coupon Policy Note */
+.summary-coupon-policy-note {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 9px 12px;
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: #475569;
+}
+
+.summary-coupon-policy-note strong {
+  color: #0f172a;
+}
+
+.summary-coupon-policy-note__icon {
+  font-size: 13px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.summary-coupon-policy-note__action {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: #006ce4;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.summary-coupon-policy-note__action:hover {
+  color: #003580;
+}
+
+/* Banner Quick Policy Link */
+.summary-promo-banner__link {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 4px;
+  color: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  align-self: flex-start;
+  opacity: 0.9;
+}
+
+.summary-promo-banner__link:hover {
+  opacity: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Promotion Policy & Mutual Exclusivity Modal
+   ══════════════════════════════════════════════════════════════════════════ */
+.promo-policy-modal-box {
+  position: relative;
+  max-width: 520px;
+  padding: 28px 24px 24px;
+  text-align: left;
+}
+
+.promo-policy-close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.promo-policy-close-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.promo-policy-icon-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.promo-policy-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.promo-policy-icon--replaced {
+  background-color: #eff6ff;
+  color: #2563eb;
+}
+
+.promo-policy-icon--kept {
+  background-color: #ecfdf5;
+  color: #059669;
+}
+
+.promo-policy-icon--alert {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.promo-policy-icon--info {
+  background-color: #eff6ff;
+  color: #003580;
+}
+
+.promo-policy-header {
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.promo-policy-tag {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.promo-policy-tag--blue {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.promo-policy-tag--green {
+  background: #d1fae5;
+  color: #047857;
+}
+
+.promo-policy-tag--amber {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.promo-policy-tag--navy {
+  background: #e0e7ff;
+  color: #003580;
+}
+
+.promo-policy-core-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background-color: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.promo-policy-core-banner svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: #15803d;
+}
+
+.promo-compare-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.promo-compare-card {
+  padding: 12px 14px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.promo-compare-card--winner {
+  background: #f0fdf4;
+  border: 2px solid #10b981;
+  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.12);
+}
+
+.promo-compare-card--inactive {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  opacity: 0.88;
+}
+
+.promo-compare-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.promo-compare-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.promo-winner-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: #059669;
+  color: #ffffff;
+  letter-spacing: 0.4px;
+}
+
+.promo-compare-code {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  font-family: monospace;
+}
+
+.promo-compare-amount {
+  font-size: 15px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.promo-compare-card--winner .promo-compare-amount {
+  color: #059669;
+}
+
+.promo-policy-desc {
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #334155;
+  margin-bottom: 20px;
+}
+
+.promo-policy-desc p {
+  margin: 0;
+}
+
+.promo-policy-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.promo-policy-list li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 0;
+}
+
+.promo-policy-list__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.promo-policy-list__text {
+  padding-left: 24px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.promo-policy-actions {
+  margin-top: 8px;
+}
+
+/* Confirm Switch Promotion Styling */
+.promo-policy-icon--switch {
+  background-color: #fef3c7;
+  color: #d97706;
+}
+
+.promo-confirm-switch-box {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+}
+
+.promo-confirm-switch-text {
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #334155;
+  margin: 0 0 10px 0 !important;
+}
+
+.promo-confirm-switch-text strong {
+  color: #b45309;
+}
+
+.promo-confirm-switch-prompt {
+  font-size: 14px;
+  line-height: 1.5;
+  color: #0f172a;
+  font-weight: 600;
+  margin: 0 0 10px 0 !important;
+}
+
+.promo-confirm-switch-prompt strong {
+  color: #003580;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.promo-confirm-switch-note {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #64748b;
+  border-top: 1px dashed #cbd5e1;
+  padding-top: 8px;
+}
+
+
+

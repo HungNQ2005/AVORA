@@ -4,7 +4,7 @@ import { useAuth } from '../../../context/AuthContext';
 import { codeNameParser } from '../../../utils/codeNameParser';
 import AvatarContent from '../../../common/components/AvatarContent';
 import { getSupportCounts } from '../../../services/supportApi';
-import { MailIcon } from '../../../common/components/icons';
+import { MailIcon, CreditCardIcon } from '../../../common/components/icons';
 import './dashboardNav.css';
 
 const ROLE_LABELS = {
@@ -123,6 +123,17 @@ const DashboardNav = () => {
                 />
               )}
             </NavLink>
+            {isAdmin && (
+              <NavLink
+                to="/dashboard/hotel-bank-requests"
+                className={({ isActive }) =>
+                  `admin-sidebar__link ${isActive ? 'admin-sidebar__link--active' : ''}`
+                }
+              >
+                <span className="admin-sidebar__icon"><CreditCardIcon size={16} /></span>
+                <span className="admin-sidebar__label">Đổi Tài Khoản Ngân Hàng </span>
+              </NavLink>
+            )}
           </div>
         )}
 

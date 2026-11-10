@@ -84,4 +84,9 @@ export const API_ENDPOINTS = {
   // Vendor Flash Sales API
   VENDOR_FLASH_SALES: `${API_BASE_URL}/api/vendor/flash-sales`,
   VENDOR_FLASH_SALE_DETAIL: (id) => `${API_BASE_URL}/api/vendor/flash-sales/${encodeURIComponent(id)}`,
+
+  // Admin Hotel Bank Change Requests
+  HOTEL_BANK_REQUESTS: `${API_BASE_URL}/api/admin/hotel-bank-requests`,
+  HOTEL_BANK_REQUEST_DETAIL: (id) => `${API_BASE_URL}/api/admin/hotel-bank-requests/${encodeURIComponent(id)}`,
+  HOTEL_BANK_REQUEST_APPLY: (id) => `${API_BASE_URL}/api/admin/hotel-bank-requests/${encodeURIComponent(id)}/apply`,
 };
