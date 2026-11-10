@@ -1,0 +1,533 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Noto+Serif:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+
+/* =========================================================
+   AVORA MOMENT BANNER
+   Full-bleed Luxury Travel Editorial
+========================================================= */
+
+.moment-banner-section {
+  --banner-navy: #102a43;
+  --banner-gold: #c9a96e;
+  --banner-gold-light: #e8d5ad;
+  --banner-ivory: #f7f5ef;
+
+  margin: 0 0 58px;
+}
+
+/* Main container */
+
+.moment-banner {
+  position: relative;
+  min-height: 540px;
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 5px;
+  background: #102a43;
+  box-shadow: 0 28px 70px rgba(16, 42, 67, 0.18);
+  color: #fff;
+}
+
+/* Full-bleed image */
+
+.moment-banner__visual {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  display: block;
+  overflow: hidden;
+  background: #23394a;
+}
+
+.moment-banner__visual img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 48%;
+  animation: momentBannerImageIn 1s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  transition: transform 1.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.moment-banner__visual:hover img {
+  transform: scale(1.035);
+}
+
+@keyframes momentBannerImageIn {
+  from {
+    opacity: 0.6;
+    transform: scale(1.04);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Cinematic overlay */
+
+.moment-banner__shade {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg,
+      rgba(5, 19, 31, 0.91) 0%,
+      rgba(5, 19, 31, 0.78) 32%,
+      rgba(5, 19, 31, 0.40) 62%,
+      rgba(5, 19, 31, 0.08) 100%),
+    linear-gradient(0deg,
+      rgba(5, 19, 31, 0.54) 0%,
+      transparent 35%,
+      rgba(5, 19, 31, 0.12) 100%);
+}
+
+/* Decorative frame */
+
+.moment-banner__frame {
+  position: absolute;
+  inset: 18px;
+  z-index: 1;
+  border: 1px solid rgba(232, 213, 173, 0.26);
+  pointer-events: none;
+}
+
+.moment-banner__decoration {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.moment-banner__decoration-ring {
+  position: absolute;
+  top: -210px;
+  left: -190px;
+  width: 480px;
+  height: 480px;
+  border: 1px solid rgba(232, 213, 173, 0.13);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 35px rgba(232, 213, 173, 0.025),
+    0 0 0 70px rgba(232, 213, 173, 0.018);
+}
+
+.moment-banner__decoration-star {
+  position: absolute;
+  top: 48%;
+  left: 49%;
+  color: rgba(232, 213, 173, 0.35);
+  font-size: 42px;
+}
+
+/* Editorial content */
+
+.moment-banner__content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: 540px;
+  flex-direction: column;
+  padding: 48px 62px;
+  pointer-events: none;
+}
+
+.moment-banner__topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+}
+
+.moment-banner__topline span:first-child {
+  color: var(--banner-gold-light);
+}
+
+.moment-banner__story {
+  width: min(520px, 58%);
+  margin-top: auto;
+  margin-bottom: auto;
+  padding: 48px 0 36px;
+  pointer-events: auto;
+}
+
+.moment-banner__kicker {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--banner-gold-light);
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.moment-banner__story h2 {
+  margin: 0;
+  color: var(--banner-ivory);
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: clamp(42px, 5vw, 66px);
+  font-weight: 400;
+  line-height: 1.17;
+  letter-spacing: -0.045em;
+  font-kerning: normal;
+}
+
+.moment-banner__story h2 em {
+  color: var(--banner-gold-light);
+  font-weight: 400;
+}
+
+.moment-banner__title-mark {
+  display: block;
+  width: 48px;
+  height: 1px;
+  margin-top: 24px;
+  background: var(--banner-gold);
+}
+
+.moment-banner__description {
+  display: -webkit-box;
+  max-width: 440px;
+  overflow: hidden;
+  margin: 22px 0 0;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.9;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  animation: momentBannerTextIn 0.5s ease both;
+}
+
+@keyframes momentBannerTextIn {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hotel / author information */
+
+.moment-banner__author {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-top: 25px;
+}
+
+.moment-banner__author-line {
+  width: 26px;
+  height: 1px;
+  flex: 0 0 26px;
+  background: var(--banner-gold);
+}
+
+.moment-banner__author div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.moment-banner__author strong {
+  overflow: hidden;
+  color: #fff;
+  font-family: 'Noto Serif', Georgia, serif;
+  font-size: 15px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moment-banner__author small {
+  color: rgba(255, 255, 255, 0.65);
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 10px;
+}
+
+/* CTA */
+
+.moment-banner__cta {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  gap: 20px;
+  margin-top: 28px;
+  border: 1px solid rgba(232, 213, 173, 0.75);
+  border-radius: 2px;
+  padding: 0 17px;
+  color: #fff;
+  font-family: 'Noto Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    color 0.25s ease,
+    background 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.moment-banner__cta:hover {
+  border-color: var(--banner-gold-light);
+  background: var(--banner-gold-light);
+  color: var(--banner-navy);
+}
+
+.moment-banner__cta-arrow {
+  color: var(--banner-gold-light);
+  font-size: 17px;
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
+}
+
+.moment-banner__cta:hover .moment-banner__cta-arrow {
+  transform: translate(2px, -2px);
+  color: var(--banner-navy);
+}
+
+/* Slider controls */
+
+.moment-banner__controls {
+  position: absolute;
+  right: 35px;
+  bottom: 34px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 3px;
+  padding: 7px 8px 7px 15px;
+  background: rgba(9, 29, 47, 0.72);
+  backdrop-filter: blur(14px);
+}
+
+.moment-banner__pagination {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.moment-banner__current {
+  color: var(--banner-gold-light);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.moment-banner__pagination-line {
+  width: 22px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.moment-banner__total {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 10px;
+}
+
+.moment-banner__arrows {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.moment-banner__arrows button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.moment-banner__arrows button:hover {
+  border-color: var(--banner-gold-light);
+  background: var(--banner-gold-light);
+  color: var(--banner-navy);
+}
+
+.moment-banner__arrows button:focus-visible,
+.moment-banner__cta:focus-visible,
+.moment-banner__visual:focus-visible {
+  outline: 2px solid var(--banner-gold-light);
+  outline-offset: 4px;
+}
+
+/* Responsive */
+
+@media (max-width: 1050px) {
+
+  .moment-banner,
+  .moment-banner__content {
+    min-height: 500px;
+  }
+
+  .moment-banner__content {
+    padding: 42px 45px;
+  }
+
+  .moment-banner__story {
+    width: min(500px, 65%);
+  }
+
+  .moment-banner__story h2 {
+    font-size: clamp(40px, 5.5vw, 58px);
+  }
+}
+
+@media (max-width: 720px) {
+  .moment-banner-section {
+    margin-bottom: 42px;
+  }
+
+  .moment-banner,
+  .moment-banner__content {
+    min-height: 570px;
+  }
+
+  .moment-banner__content {
+    padding: 34px 30px 88px;
+  }
+
+  .moment-banner__story {
+    width: min(100%, 500px);
+    padding: 55px 0 35px;
+  }
+
+  .moment-banner__story h2 {
+    font-size: clamp(39px, 8vw, 54px);
+  }
+
+  .moment-banner__description {
+    max-width: 100%;
+  }
+
+  .moment-banner__shade {
+    background:
+      linear-gradient(90deg,
+        rgba(5, 19, 31, 0.84) 0%,
+        rgba(5, 19, 31, 0.55) 100%),
+      linear-gradient(0deg,
+        rgba(5, 19, 31, 0.58),
+        transparent 75%);
+  }
+
+  .moment-banner__controls {
+    right: 28px;
+    bottom: 25px;
+  }
+
+  .moment-banner__frame {
+    inset: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .moment-banner-section {
+    margin-bottom: 34px;
+  }
+
+  .moment-banner,
+  .moment-banner__content {
+    min-height: 540px;
+  }
+
+  .moment-banner__content {
+    padding: 29px 23px 83px;
+  }
+
+  .moment-banner__topline {
+    font-size: 8px;
+    letter-spacing: 0.14em;
+  }
+
+  .moment-banner__story {
+    padding: 45px 0 30px;
+  }
+
+  .moment-banner__kicker {
+    margin-bottom: 14px;
+    font-size: 9px;
+  }
+
+  .moment-banner__story h2 {
+    font-size: clamp(35px, 9vw, 44px);
+    line-height: 1.2;
+  }
+
+  .moment-banner__description {
+    margin-top: 18px;
+    font-size: 11px;
+  }
+
+  .moment-banner__author {
+    margin-top: 20px;
+  }
+
+  .moment-banner__author strong {
+    font-size: 13px;
+  }
+
+  .moment-banner__cta {
+    min-height: 42px;
+    gap: 13px;
+    margin-top: 23px;
+    padding: 0 13px;
+    font-size: 10px;
+  }
+
+  .moment-banner__controls {
+    right: 21px;
+    bottom: 19px;
+    gap: 10px;
+    padding: 5px 6px 5px 10px;
+  }
+
+  .moment-banner__arrows button {
+    width: 30px;
+    height: 30px;
+    flex-basis: 30px;
+  }
+}
+
+/* Reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .moment-banner__visual img,
+  .moment-banner__description,
+  .moment-banner__cta,
+  .moment-banner__arrows button {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .moment-banner__visual:hover img {
+    transform: none;
+  }
+}

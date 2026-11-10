@@ -49,6 +49,8 @@ import GroupPaymentSetupPage from './features/payments/pages/GroupPaymentSetupPa
 import GroupPaymentRoomPage from './features/payments/pages/GroupPaymentRoomPage';
 
 const SupportCenter = lazy(() => import('./features/support/pages/SupportCenter'));
+const MomentPage = lazy(() => import('./features/moment/pages/MomentPage'));
+const MomentDetailPage = lazy(() => import('./features/moment/pages/MomentDetailPage'));
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -307,6 +309,8 @@ function App() {
                 </CustomerSupportRoute>
               }
             />
+            <Route path="/moment" element={<Suspense fallback={<div className="moment-page__state">Đang tải Moment…</div>}><MomentPage /></Suspense>} />
+            <Route path="/moment/:id" element={<Suspense fallback={<div className="moment-page__state">Đang tải khoảnh khắc…</div>}><MomentDetailPage /></Suspense>} />
             <Route path="/my-reviews" element={<ReviewPage />} />
             <Route path="/payment/group/setup/:bookingId" element={<GroupPaymentSetupPage />} />
             <Route path="/payment/group/:inviteHash" element={<GroupPaymentRoomPage />} />

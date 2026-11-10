@@ -1,0 +1,3 @@
+.moment-modal--create .moment-form-field:first-child select {
+  cursor: pointer;
+}
