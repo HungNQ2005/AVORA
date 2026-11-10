@@ -52,13 +52,12 @@ const AlertCircleIcon = () => (
   </svg>
 );
 
-const getPostLoginPath = (user) => {
-  const roleCode = String(user?.role_code_name || user?.role_name || user?.role || '')
-    .trim().toUpperCase().replace(/[ -]+/g, '_');
-  const roleCd = String(user?.role_cd ?? '').trim().replace(/^0+(?=\d)/, '');
-  return ['VEN', 'VENDOR'].includes(roleCode) || roleCd === '4'
-    ? '/dashboard/disbursements'
-    : '/';
+const getPostLoginPath = (_user, location) => {
+  const from = location?.state?.from?.pathname || location?.state?.from;
+  if (from && typeof from === 'string' && from !== '/signin') {
+    return from;
+  }
+  return '/';
 };
 
 /**
@@ -75,12 +74,12 @@ const SignInPage = () => {
   const activatedParam = searchParams.get('activated');
   const emailParam = searchParams.get('email');
 
-  // Vendors land on their disbursement workflow after authentication.
+  // If already logged in, redirect to home page (or intended prior page)
   useEffect(() => {
     if (user) {
-      navigate(getPostLoginPath(user), { replace: true });
+      navigate(getPostLoginPath(user, location), { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, navigate, location]);
 
   const initialEmail = emailParam || location.state?.email || localStorage.getItem('avora_remembered_email') || '';
   const [form, setForm] = useState({ email: initialEmail, password: '' });
@@ -132,7 +131,7 @@ const SignInPage = () => {
         localStorage.removeItem('avora_remembered_email');
       }
       login(res.data.token, res.data.user);
-      navigate(getPostLoginPath(res.data.user), { replace: true });
+      navigate(getPostLoginPath(res.data.user, location), { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || '';
 

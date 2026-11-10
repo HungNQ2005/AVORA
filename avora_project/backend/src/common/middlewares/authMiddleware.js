@@ -44,7 +44,7 @@ const optionalAuthenticate = (req, _res, next) => {
  */
 const requireRole = (...allowedRoles) => async (req, res, next) => {
   if (!req.user?.user_id) {
-    return sendError(res, 401, 'Authentication required. Please sign in.');
+    return sendError(res, 401, 'Yêu cầu xác thực tài khoản. Vui lòng đăng nhập lại.');
   }
 
   try {

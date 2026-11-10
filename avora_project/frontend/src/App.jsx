@@ -47,6 +47,7 @@ import PaymentQRScreen from './features/payments/pages/PaymentQRScreen';
 import PaymentSuccessScreen from './features/payments/pages/PaymentSuccessScreen';
 import GroupPaymentSetupPage from './features/payments/pages/GroupPaymentSetupPage';
 import GroupPaymentRoomPage from './features/payments/pages/GroupPaymentRoomPage';
+import HotelBankRequestsPage from './features/hotel_bank_requests/pages/HotelBankRequestsPage';
 
 const SupportCenter = lazy(() => import('./features/support/pages/SupportCenter'));
 const MomentPage = lazy(() => import('./features/moment/pages/MomentPage'));
@@ -538,6 +539,14 @@ function App() {
               path="audit-logs"
               element={
                 <AdminRoute><AuditLogManagementPage /></AdminRoute>
+              }
+            />
+            <Route
+              path="hotel-bank-requests"
+              element={
+                <AdminRoute>
+                  <HotelBankRequestsPage />
+                </AdminRoute>
               }
             />
           </Route>
