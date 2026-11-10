@@ -70,6 +70,7 @@ const SupportTicketConversation = ({
 }) => {
   const isAdmin = mode === 'admin';
   const isClosed = ticket.ticket_status_cd === 'CLS';
+  const isResolved = ticket.ticket_status_cd === 'RSV';
   const [resolutionNote, setResolutionNote] = useState('');
   const [statusError, setStatusError] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
@@ -112,7 +113,9 @@ const SupportTicketConversation = ({
           <div className="support-conversation__title-row">
             <h2>{ticket.title}</h2>
             <span className={`support-status support-status--${ticket.ticket_status_cd}`}>
-              {statusLabels[ticket.ticket_status_cd] || ticket.ticket_status_cd}
+              {ticket.ticket_status_cd === 'RSV' && ticket.resolved_at
+                ? 'Đã giải quyết'
+                : statusLabels[ticket.ticket_status_cd] || ticket.ticket_status_cd}
             </span>
           </div>
           <p className="support-conversation__submeta">
@@ -319,7 +322,7 @@ const SupportTicketConversation = ({
             </button>
           )}
 
-          {(ticket.ticket_status_cd === 'CLS' ? isAdmin && isAssignedAdmin : !isAdmin || isAssignedAdmin) && (
+          {(isClosed || isResolved ? isAdmin && isAssignedAdmin : !isAdmin || isAssignedAdmin) && (
             <button type="button" className="support-button support-button--danger" onClick={onDeleteTicket}>
               <TrashIcon size={16} /> Xóa phiếu
             </button>

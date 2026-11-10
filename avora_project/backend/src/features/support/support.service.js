@@ -126,7 +126,7 @@ const shapeTicket = (ticket, replies = [], requester = null, assigned = null, vi
     ? String(ticket.assigned_to || '') === String(viewer?.user_id || '')
       && (lastPublic?.sender_role && lastPublic.sender_role !== 'ADM'
         || status === 'RSV' && Boolean(ticket.resolved_at))
-    : (status === 'WAT' || status === 'RSV' && !ticket.resolved_at)
+    : status === 'WAT'
       && lastPublic?.sender_role === 'ADM');
 
   const bookings = [...bookingRecords];
@@ -731,8 +731,8 @@ const updateTicketStatus = async (ticketId, user, input) => {
 const softDeleteTicket = async (ticketId, user) => {
   const ticket = await getTicketRow(ticketId);
   const isAssignedAdmin = isAdmin(user) && String(ticket.assigned_to) === String(user.user_id);
-  if (ticket.ticket_status_cd === 'CLS' && !isAdmin(user)) {
-    throw createError(403, 'Chỉ Quản trị viên mới có thể xóa phiếu đã đóng.');
+  if (['RSV', 'CLS'].includes(ticket.ticket_status_cd) && !isAdmin(user)) {
+    throw createError(403, 'Chỉ Quản trị viên.');
   }
   if (!isAdmin(user) && String(ticket.requester_id) !== String(user.user_id)) {
     throw createError(404, 'Không tìm thấy phiếu hỗ trợ.');
@@ -843,6 +843,33 @@ const subscribeToTicket = (ticketId, listener) => {
   return () => ticketEvents.off(eventName, listener);
 };
 
+const getTicketEventVersion = async (ticketId) => {
+  const { data: ticket, error: ticketError } = await supabase
+    .from('t_support_ticket')
+    .select('updated_at, is_deleted')
+    .eq('ticket_id', ticketId)
+    .maybeSingle();
+  if (ticketError) throw ticketError;
+  if (!ticket) return null;
+
+  const { data: latestReply, error: replyError } = await supabase
+    .from('t_support_ticket_reply')
+    .select('reply_id, created_at')
+    .eq('ticket_id', ticketId)
+    .order('created_at', { ascending: false })
+    .order('reply_id', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (replyError) throw replyError;
+
+  return JSON.stringify({
+    updated_at: ticket.updated_at,
+    is_deleted: Boolean(ticket.is_deleted),
+    latest_reply_id: latestReply?.reply_id || null,
+    latest_reply_at: latestReply?.created_at || null,
+  });
+};
+
 const getSupportCounts = async (user, group = 'all') => {
   const requesterView = !isAdmin(user) || group === 'customer';
   let query = supabase.from('t_support_ticket').select('*').eq('is_deleted', false);
@@ -873,7 +900,7 @@ const getSupportCounts = async (user, group = 'all') => {
       ? String(ticket.assigned_to || '') === String(user.user_id)
         && (lastPublic?.sender_role && lastPublic.sender_role !== 'ADM'
           || status === 'RSV' && Boolean(ticket.resolved_at))
-      : (status === 'WAT' || status === 'RSV' && !ticket.resolved_at)
+      : status === 'WAT'
         && lastPublic?.sender_role === 'ADM');
     return count + (unread ? 1 : 0);
   }, 0);
@@ -893,5 +920,6 @@ module.exports = {
   downloadAttachment,
   chatWithAI,
   subscribeToTicket,
+  getTicketEventVersion,
   getSupportCounts,
 };

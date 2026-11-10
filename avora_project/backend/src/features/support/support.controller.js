@@ -127,6 +127,12 @@ const streamTicketEvents = async (req, res, next) => {
   try {
     await supportService.getTicket(req.validated.params.ticketId, req.user, req.validated.query.group);
     const ticketId = req.validated.params.ticketId;
+    let lastVersion = await supportService.getTicketEventVersion(ticketId);
+    let closed = false;
+    let checking = false;
+    const sendUpdate = () => {
+      if (!closed && !res.writableEnded) res.write('event: update\ndata: refresh\n\n');
+    };
     res.set({
       'Content-Type': 'text/event-stream',
       'Cache-Control': 'no-cache, no-transform',
@@ -135,12 +141,32 @@ const streamTicketEvents = async (req, res, next) => {
     });
     res.flushHeaders?.();
     res.write('event: ready\ndata: connected\n\n');
+    sendUpdate();
     const heartbeat = setInterval(() => res.write(': keep-alive\n\n'), 20000);
-    const unsubscribe = supportService.subscribeToTicket(ticketId, () => {
-      if (!res.writableEnded) res.write('event: update\ndata: refresh\n\n');
-    });
+    const poll = setInterval(async () => {
+      if (closed || checking) return;
+      checking = true;
+      try {
+        const currentVersion = await supportService.getTicketEventVersion(ticketId);
+        if (currentVersion !== lastVersion) {
+          lastVersion = currentVersion;
+          sendUpdate();
+          if (!currentVersion || JSON.parse(currentVersion).is_deleted) {
+            clearInterval(poll);
+            res.end();
+          }
+        }
+      } catch (error) {
+        console.error(`[SUPPORT] Ticket event polling failed for ${ticketId}: ${error.message}`);
+      } finally {
+        checking = false;
+      }
+    }, 2500);
+    const unsubscribe = supportService.subscribeToTicket(ticketId, sendUpdate);
     res.on('close', () => {
+      closed = true;
       clearInterval(heartbeat);
+      clearInterval(poll);
       unsubscribe();
     });
   } catch (error) {

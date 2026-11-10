@@ -22,6 +22,7 @@ const SupportTicketWorkspace = ({
   isAdmin,
   tickets,
   loading,
+  loadingMore,
   pagination,
   loadTickets,
   selectTicket,
@@ -115,7 +116,9 @@ const SupportTicketWorkspace = ({
               <div className="support-ticket-row__top">
                 <strong>{item.title}</strong>
                 <span className={`support-status support-status--${item.ticket_status_cd}`}>
-                  {statusLabels[item.ticket_status_cd] || item.ticket_status_cd}
+                  {item.ticket_status_cd === 'RSV' && item.resolved_at
+                    ? 'Đã giải quyết'
+                    : statusLabels[item.ticket_status_cd] || item.ticket_status_cd}
                 </span>
               </div>
               <div className="support-ticket-row__meta">
@@ -141,11 +144,16 @@ const SupportTicketWorkspace = ({
         </div>
       )}
 
-      {pagination.total_pages > 1 && (
+      {pagination.page < pagination.total_pages && (
         <div className="support-pagination">
-          <button type="button" disabled={pagination.page <= 1} onClick={() => loadTickets(pagination.page - 1)}>Trang trước</button>
-          <span>{pagination.page} / {pagination.total_pages}</span>
-          <button type="button" disabled={pagination.page >= pagination.total_pages} onClick={() => loadTickets(pagination.page + 1)}>Trang sau</button>
+          <span>Đã tải {tickets.length} / {pagination.total} phiếu</span>
+          <button
+            type="button"
+            disabled={loadingMore}
+            onClick={() => loadTickets(pagination.page + 1, true)}
+          >
+            {loadingMore ? 'Đang tải…' : 'Tải thêm 5 phiếu'}
+          </button>
         </div>
       )}
     </section>

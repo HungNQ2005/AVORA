@@ -3,7 +3,8 @@
   display: grid;
   grid-template-columns: 380px minmax(0, 1fr);
   gap: 20px;
-  min-height: 720px;
+  height: clamp(780px, calc(100dvh - 300px), 760px);
+  min-height: 0;
   font-family: inherit;
   color: #0f172a;
 }
@@ -11,6 +12,7 @@
 .support-list,
 .support-conversation {
   min-width: 0;
+  min-height: 0;
   overflow: hidden;
   border: 1px solid #e2e8f0;
   border-radius: 16px;
@@ -21,6 +23,20 @@
 .support-list {
   display: flex;
   flex-direction: column;
+  display: flex;
+  flex-direction: column;
+}
+
+.support-conversation > .support-conversation-wrapper {
+  min-height: 0;
+  flex: 1;
+}
+
+.support-conversation__messages {
+  min-height: 0;
+}
+
+.support-conversation-wrapper {
   background: #f8fafc;
 }
 
@@ -435,14 +451,15 @@
 @media (max-width: 768px) {
   .support-center__layout {
     grid-template-columns: 1fr;
-    min-height: auto;
+    grid-template-rows: minmax(200px, 38%) minmax(0, 1fr);
+    height: clamp(680px, calc(100dvh - 180px), 900px);
   }
 
   .support-list {
-    max-height: 500px;
+    max-height: none;
   }
 
   .support-conversation {
-    min-height: 600px;
+    min-height: 0;
   }
 }
