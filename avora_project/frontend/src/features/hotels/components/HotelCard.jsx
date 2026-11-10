@@ -16,6 +16,8 @@ import {
   CalendarCheckIcon,
   AlertTriangleIcon as AlertDiamondIcon,
   ChevronRightIcon,
+  BoltIcon,
+  TagIcon,
 } from '../../../common/components/icons';
 
 
@@ -97,7 +99,9 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
           {/* Huy hiệu ⚡ Flash Sale nổi bật góc trên bên trái ảnh */}
           {flashSale && (
             <div className="hotel-card__flash-badge" title={`Đang trong khung giờ vàng (${flashSale.code})`}>
-              <span className="hotel-card__flash-icon">⚡</span>
+              <span className="hotel-card__flash-icon">
+                <BoltIcon size={12} color="#111827" />
+              </span>
               <span className="hotel-card__flash-text">Flash Sale {flashDiscountText}</span>
             </div>
           )}
@@ -157,7 +161,7 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
               {/* Pill Flash Sale cạnh sao */}
               {flashSale && (
                 <span className="hotel-card__flash-pill">
-                  ⚡ Flash Sale {flashDiscountText}
+                  <BoltIcon size={11} color="#111827" /> Flash Sale {flashDiscountText}
                 </span>
               )}
             </div>
@@ -191,7 +195,9 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
         {/* Dòng thông báo hộp vàng chữ đen nhận biết Flash Sale */}
         {flashSale && (
           <div className="avora-flash-alert-gold" title={`Khuyến mãi giờ vàng (${flashSale.code || 'FLASH_SALE'})`}>
-            <span className="avora-flash-alert-gold__icon">⚡</span>
+            <span className="avora-flash-alert-gold__icon">
+              <BoltIcon size={13} color="#92400e" />
+            </span>
             <span className="avora-flash-alert-gold__text">
               <strong>FLASH SALE {flashDiscountText}</strong> • Khung giờ vàng
             </span>
@@ -267,7 +273,7 @@ const HotelCard = ({ hotel, nights = 2, guests = 2, onSelectHotel }) => {
             </div>
             {pricing.hasFlashSale && (
               <span className="hotel-card__flash-savings">
-                ⚡ Tiết kiệm {formatPrice(pricing.discountAmount)}
+                <TagIcon size={12} color="#dc2626" /> Tiết kiệm {formatPrice(pricing.discountAmount)}
               </span>
             )}
             <div className="hotel-card__tax-note">

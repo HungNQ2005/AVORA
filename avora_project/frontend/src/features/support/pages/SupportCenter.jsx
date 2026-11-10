@@ -74,6 +74,15 @@ const SupportCenter = ({ mode = 'customer' }) => {
   const [showCreate, setShowCreate] = useState(false);
   const selectedTicketId = searchParams.get('ticketId');
   const { user } = useAuth();
+  const autoCreate = searchParams.get('create') === 'true' || searchParams.get('action') === 'create';
+  const paramCategory = searchParams.get('category');
+  const paramHotelId = searchParams.get('hotelId');
+
+  useEffect(() => {
+    if (autoCreate) {
+      setShowCreate(true);
+    }
+  }, [autoCreate]);
 
   const categoryLabelByCode = useMemo(
     () => new Map(categories.map((category) => [category.code, category.label])),
@@ -309,7 +318,19 @@ const SupportCenter = ({ mode = 'customer' }) => {
         <CreateTicketDialog
           mode={mode}
           categories={visibleCategories}
-          onClose={() => setShowCreate(false)}
+          initialCategory={paramCategory}
+          initialHotelId={paramHotelId}
+          onClose={() => {
+            setShowCreate(false);
+            if (autoCreate) {
+              const next = new URLSearchParams(searchParams);
+              next.delete('create');
+              next.delete('action');
+              next.delete('category');
+              next.delete('hotelId');
+              setSearchParams(next, { replace: true });
+            }
+          }}
           onSubmit={handleCreateTicket}
         />
       )}
@@ -317,7 +338,7 @@ const SupportCenter = ({ mode = 'customer' }) => {
   );
 };
 
-const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
+const CreateTicketDialog = ({ mode, categories, initialCategory, initialHotelId, onClose, onSubmit }) => {
   const isVendor = mode === 'vendor';
   const [bookings, setBookings] = useState([]);
   const [bookingsVisible, setBookingsVisible] = useState(false);
@@ -331,12 +352,12 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
   const [banks, setBanks] = useState([]);
   const [banksError, setBanksError] = useState('');
   const [form, setForm] = useState({
-    ticket_type_cd: '',
-    title: '',
+    ticket_type_cd: initialCategory || '',
+    title: initialCategory === 'VBU' ? 'Yêu cầu đổi tài khoản ngân hàng thụ hưởng' : '',
     description: '',
     priority_cd: 'MEDIUM',
     booking_ids: [],
-    hotel_id: '',
+    hotel_id: initialHotelId || '',
     bank_cd: '',
     bank_account_number: '',
   });
@@ -407,9 +428,16 @@ const CreateTicketDialog = ({ mode, categories, onClose, onSubmit }) => {
 
   useEffect(() => {
     if (!form.ticket_type_cd && usableCategories.length) {
-      setForm((current) => ({ ...current, ticket_type_cd: usableCategories[0].code }));
+      const targetCode = initialCategory && usableCategories.some((c) => c.code === initialCategory)
+        ? initialCategory
+        : usableCategories[0].code;
+      setForm((current) => ({
+        ...current,
+        ticket_type_cd: targetCode,
+        ...(targetCode === 'VBU' && !current.title ? { title: 'Yêu cầu đổi tài khoản ngân hàng thụ hưởng' } : {}),
+      }));
     }
-  }, [form.ticket_type_cd, usableCategories]);
+  }, [form.ticket_type_cd, usableCategories, initialCategory]);
 
   const updateFiles = (event) => {
     const nextFiles = [...event.target.files];

@@ -637,3 +637,18 @@ export const PercentIcon = createIcon('PercentIcon', () => (
     <circle cx="17.5" cy="17.5" r="2.5" />
   </>
 ));
+
+export const BoltIcon = createIcon('BoltIcon', () => (
+  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" fill="currentColor" stroke="none" />
+));
+export const FlashIcon = BoltIcon;
+export const ZapIcon = BoltIcon;
+
+export const ClockIcon = createIcon('ClockIcon', () => (
+  <>
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </>
+));
+export const TimerIcon = ClockIcon;
+

@@ -422,6 +422,7 @@ const searchHotels = async (params = {}) => {
     const nowTime = Date.now();
     const validFlashCoupons = flashSalesRes.data.filter((c) => {
       if (!['FLASH_PERCENT', 'PERCENT'].includes(c.discount_type)) return false;
+      if (c.is_deleted) return false;
       if (c.valid_from && new Date(c.valid_from).getTime() > nowTime) return false;
       if (c.valid_to && new Date(c.valid_to).getTime() < nowTime) return false;
       return true;
@@ -928,6 +929,7 @@ const getHotelById = async (hotelId, options = {}) => {
   if (dbFlashSales && dbFlashSales.length > 0) {
     const nowTime = Date.now();
     const validFlashCoupons = dbFlashSales.filter((c) => {
+      if (c.is_deleted) return false;
       if (c.valid_from && new Date(c.valid_from).getTime() > nowTime) return false;
       if (c.valid_to && new Date(c.valid_to).getTime() < nowTime) return false;
       return true;
@@ -1166,6 +1168,12 @@ const getHotelById = async (hotelId, options = {}) => {
 
   const scoreLabel = getScoreLabel(finalScore);
 
+  // Determine representative base price from rooms
+  const roomPrices = rooms
+    .map((r) => Number(r.price ?? r.default_price))
+    .filter((p) => Number.isFinite(p) && p > 0);
+  const minRoomPrice = roomPrices.length > 0 ? Math.min(...roomPrices) : (Number(hotel.min_price) || 0);
+
   // Address assembly from DB
   const locationParts = [hotel.address, wardName, districtName, cityName].filter(Boolean);
   const fullAddress = locationParts.join(', ');
@@ -1183,6 +1191,8 @@ const getHotelById = async (hotelId, options = {}) => {
     star_rating: finalScore,
     reviews_count: reviewData.reviews_count,
     score_label: scoreLabel,
+    price: minRoomPrice,
+    min_price: minRoomPrice,
     lat: hotel.lat,
     lng: hotel.lng,
     facilities: facilities,

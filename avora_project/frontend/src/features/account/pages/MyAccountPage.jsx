@@ -16,6 +16,7 @@ import {
   isFlashSaleActive,
   getFlashSaleDiscountText,
   calculateDisplayPricing,
+  resolveHotelFlashSale,
 } from '../../../utils/flashSaleHelper';
 import './MyAccountPage.css';
 
@@ -141,6 +142,12 @@ const CheckCircleIcon = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
     <polyline points="22 4 12 14.01 9 11.01" />
+  </svg>
+);
+
+const BoltIcon = ({ size = 12, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke="none" style={{ display: 'inline-block', verticalAlign: 'middle' }}>
+    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   </svg>
 );
 
@@ -936,7 +943,7 @@ const MyAccountPage = () => {
                       const scoreLabel = getScoreLabel(scoreNum, hotel.score_label);
                       const reviewCount = Number(hotel.reviews_count || hotel.review_count || 0);
                       const price = Number(hotel.price || hotel.min_price || 0);
-                      const flashSale = isFlashSaleActive(hotel.active_flash_sale) ? hotel.active_flash_sale : null;
+                      const flashSale = resolveHotelFlashSale(hotel);
                       const flashDiscountText = flashSale ? getFlashSaleDiscountText(flashSale) : '';
                       const pricing = calculateDisplayPricing(price, flashSale, hotel.original_price);
                       const img = hotel.thumbnail || hotel.images?.[0] || hotel.image || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80';
@@ -945,7 +952,7 @@ const MyAccountPage = () => {
                         <article
                           key={hotelId}
                           className="saved-hotel-card"
-                          onClick={() => navigate(`/hotels/${hotelId}`)}
+                          onClick={() => navigate(`/hotels/${hotelId}`, { state: { flashSale } })}
                           style={{ cursor: 'pointer' }}
                         >
                           <div className="saved-hotel-card__image-box">
@@ -961,7 +968,7 @@ const MyAccountPage = () => {
                             <span className="saved-hotel-card__city-badge">{city}</span>
                             {flashSale && (
                               <span className="saved-hotel-card__city-badge" style={{ top: 'auto', bottom: '8px', left: '8px', right: 'auto', background: '#f59e0b', color: '#1e293b', fontWeight: 800 }}>
-                                ⚡ Flash Sale {flashDiscountText}
+                                <BoltIcon size={11} color="#1e293b" /> Flash Sale {flashDiscountText}
                               </span>
                             )}
                           </div>
@@ -991,6 +998,18 @@ const MyAccountPage = () => {
                               <span>{address}</span>
                             </div>
 
+                            {/* Dòng thông báo Flash Sale nhận biết giờ vàng */}
+                            {flashSale && (
+                              <div className="avora-flash-alert-gold" style={{ margin: '6px 0 8px', padding: '4px 8px', borderRadius: '4px' }}>
+                                <span className="avora-flash-alert-gold__icon">
+                                  <BoltIcon size={12} color="#92400e" />
+                                </span>
+                                <span className="avora-flash-alert-gold__text" style={{ fontSize: '11.5px' }}>
+                                  <strong>FLASH SALE {flashDiscountText}</strong> • Khung giờ vàng
+                                </span>
+                              </div>
+                            )}
+
                             <div className="saved-hotel-card__rating">
                               {scoreFormatted && <span className="rating-badge">{scoreFormatted}</span>}
                               <span className="rating-text">
@@ -1007,12 +1026,12 @@ const MyAccountPage = () => {
                                     {pricing.originalPrice.toLocaleString('vi-VN')} đ
                                   </span>
                                 )}
-                                <div className="price-amount" style={flashSale ? { color: '#e11d48' } : {}}>
+                                <div className="price-amount" style={flashSale ? { color: '#e11d48', fontWeight: 800 } : {}}>
                                   {pricing.currentPrice > 0 ? `${pricing.currentPrice.toLocaleString('vi-VN')} đ` : (price > 0 ? `${price.toLocaleString('vi-VN')} đ` : 'Liên hệ')}
                                 </div>
                                 {flashSale && (
                                   <span style={{ color: '#e11d48', fontSize: '0.75rem', fontWeight: 600 }}>
-                                    ⚡ Flash Sale {flashDiscountText}
+                                    <BoltIcon size={11} color="#e11d48" /> Flash Sale {flashDiscountText} {pricing.discountAmount > 0 ? `(tiết kiệm ${pricing.discountAmount.toLocaleString('vi-VN')} đ)` : ''}
                                   </span>
                                 )}
                               </div>
@@ -1022,7 +1041,7 @@ const MyAccountPage = () => {
                                 className="btn-view-hotel"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  navigate(`/hotels/${hotelId}`);
+                                  navigate(`/hotels/${hotelId}`, { state: { flashSale } });
                                 }}
                               >
                                 <span>Xem chỗ nghỉ</span>

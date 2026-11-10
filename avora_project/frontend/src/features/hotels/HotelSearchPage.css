@@ -1583,6 +1583,70 @@
   border-color: #93C5FD;
 }
 
+.map-modal-geo-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* ─── Map Modal GPS Notification Banner ─── */
+.map-modal-notice-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 16px;
+  font-size: 12.5px;
+  font-weight: 500;
+  border-bottom: 1px solid transparent;
+  animation: mapNoticeFadeIn 0.2s ease-in-out;
+}
+
+.map-modal-notice-banner--info {
+  background-color: #EFF6FF;
+  color: #1E40AF;
+  border-color: #BFDBFE;
+}
+
+.map-modal-notice-banner--success {
+  background-color: #F0FDF4;
+  color: #15803D;
+  border-color: #BBF7D0;
+}
+
+.map-modal-notice-banner--error {
+  background-color: #FEF2F2;
+  color: #B91C1C;
+  border-color: #FECACA;
+}
+
+.map-modal-notice-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  font-size: 15px;
+  opacity: 0.65;
+  padding: 0 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-modal-notice-close:hover {
+  opacity: 1;
+}
+
+@keyframes mapNoticeFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 
   /* ─── Floating Controls on Top of Leaflet Map ────────────────────────────── */
   .map-modal-floating-toolbar {
@@ -1760,16 +1824,15 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  background: #ffc72c !important;
-  color: #111827 !important;
-  border: 1px solid #f59e0b !important;
-  font-size: 10.5px;
-  font-weight: 800;
+  background: #fffbeb !important;
+  color: #92400e !important;
+  border: 1px solid #fef3c7 !important;
+  font-size: 11px;
+  font-weight: 700;
   padding: 2px 7px;
   border-radius: 4px;
   margin-left: 6px;
   letter-spacing: 0.2px;
-  box-shadow: 0 1px 4px rgba(239, 68, 68, 0.3);
 }
 
 .hotel-card__current-price--flash {
@@ -1800,14 +1863,12 @@
   }
 }
 
-
-
 .avora-flash-alert-gold {
-  background: #ffc72c !important;
-  color: #111827 !important;
-  border: 1px solid #f59e0b !important;
+  background: #fffbeb !important;
+  color: #92400e !important;
+  border: 1px solid #fef3c7 !important;
   border-radius: 6px;
-  padding: 5px 9px;
+  padding: 5px 10px;
   font-size: 11.5px;
   font-weight: 600;
   display: flex;
@@ -1815,14 +1876,14 @@
   gap: 6px;
   margin: 6px 0 8px 0;
   line-height: 1.35;
-  box-shadow: 0 1px 3px rgba(245, 158, 11, 0.2);
+  box-shadow: none !important;
 }
 .avora-flash-alert-gold__icon {
   font-size: 13px;
-  color: #92400e;
+  color: #d97706;
   flex-shrink: 0;
 }
 .avora-flash-alert-gold__text strong {
-  font-weight: 800;
-  color: #000000;
+  font-weight: 700;
+  color: #78350f;
 }

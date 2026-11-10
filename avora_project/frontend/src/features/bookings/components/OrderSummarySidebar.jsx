@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import PromotionPolicyModal from './PromotionPolicyModal';
 
 
 const formatCurrency = (val) => {
@@ -137,6 +138,156 @@ const OrderSummarySidebar = ({
 
   const showRemoveButton = isCleanMatchWithAppliedManual;
 
+  // Mutual Exclusivity Promotion Policy Modal State
+  const [policyModal, setPolicyModal] = useState({
+    isOpen: false,
+    type: 'policy_info',
+    pendingCouponCode: null,
+    data: {},
+  });
+
+  const handleApplyCouponWithModal = async (codeToUse, forceCoupon = false) => {
+    if (!onApplyCoupon) return;
+    const targetCode = typeof codeToUse === 'string' ? codeToUse : couponCode;
+    if (!targetCode || !targetCode.trim()) return;
+
+    try {
+      const res = await onApplyCoupon(targetCode, forceCoupon);
+      const hasFlashSale = Boolean(
+        res?.promotion_details?.flash_sale_available ||
+        res?.active_flash_sale ||
+        pricing?.active_flash_sale ||
+        promotionDetails?.flash_sale_available
+      );
+      const flashDiscount = Number(
+        res?.promotion_details?.flash_sale_discount ||
+        promotionDetails?.flash_sale_discount ||
+        0
+      );
+      const manualDiscount = Number(
+        res?.promotion_details?.manual_coupon_discount ||
+        res?.discount_amount ||
+        0
+      );
+      const applied = res?.promotion_details?.applied_type;
+
+      if (hasFlashSale) {
+        if (applied === 'MANUAL_COUPON') {
+          setPolicyModal({
+            isOpen: true,
+            type: 'conflict_replaced',
+            pendingCouponCode: null,
+            data: {
+              flashSaleDiscount,
+              flashSaleCode: res?.active_flash_sale?.code || 'Flash Sale',
+              manualCouponCode: res?.coupon?.code || targetCode.toUpperCase(),
+              manualCouponDiscount,
+              couponMessage: res?.coupon_message || res?.promotion_details?.message,
+              subtotal,
+            },
+          });
+        } else if (applied === 'FLASH_SALE' && flashDiscount >= manualDiscount && manualDiscount > 0) {
+          setPolicyModal({
+            isOpen: true,
+            type: 'conflict_kept',
+            pendingCouponCode: null,
+            data: {
+              flashSaleDiscount,
+              flashSaleCode: res?.active_flash_sale?.code || 'Flash Sale',
+              manualCouponCode: targetCode.toUpperCase(),
+              manualCouponDiscount,
+              couponMessage: res?.coupon_message || res?.promotion_details?.message,
+              subtotal,
+            },
+          });
+        } else if (applied === 'FLASH_SALE' && (res?.coupon_message || couponMessage)) {
+          setPolicyModal({
+            isOpen: true,
+            type: 'invalid_with_flash',
+            pendingCouponCode: null,
+            data: {
+              flashSaleDiscount,
+              flashSaleCode: res?.active_flash_sale?.code || 'Flash Sale',
+              manualCouponCode: targetCode.toUpperCase(),
+              manualCouponDiscount: 0,
+              couponMessage: res?.coupon_message || couponMessage,
+              subtotal,
+            },
+          });
+        }
+      }
+    } catch (err) {
+      if (isFlashSaleAvailable) {
+        setPolicyModal({
+          isOpen: true,
+          type: 'invalid_with_flash',
+          pendingCouponCode: null,
+          data: {
+            flashSaleDiscount: Number(promotionDetails?.flash_sale_discount || discountAmount || 0),
+            flashSaleCode: appliedCoupon?.code || 'Flash Sale',
+            manualCouponCode: targetCode.toUpperCase(),
+            manualCouponDiscount: 0,
+            couponMessage: err?.message || 'Mã giảm giá không hợp lệ hoặc chưa đủ điều kiện.',
+            subtotal,
+          },
+        });
+      }
+    }
+  };
+
+  const handleDailyCouponClick = (c) => {
+    const isThisApplied = appliedCoupon?.code === c.code;
+    if (isThisApplied) {
+      onRemoveCoupon();
+      return;
+    }
+
+    const hasActiveFlashSale = isFlashSaleApplied || (isFlashSaleAvailable && !isManualCouponApplied);
+
+    if (hasActiveFlashSale) {
+      setPolicyModal({
+        isOpen: true,
+        type: 'confirm_switch',
+        pendingCouponCode: c.code,
+        data: {
+          flashSaleDiscount: Number(promotionDetails?.flash_sale_discount || (isFlashSaleApplied ? discountAmount : 0)),
+          flashSaleCode: pricing?.active_flash_sale?.code || appliedCoupon?.code || 'Flash Sale',
+          manualCouponCode: c.code,
+          manualCouponDiscount: c.discount_type === 'PERCENT' || c.discount_type === 'FLASH_PERCENT' || Number(c.discount_value) <= 100
+            ? `${c.discount_value}%`
+            : formatCurrency(c.discount_value),
+          subtotal,
+        },
+      });
+    } else {
+      onCouponChange(c.code);
+      handleApplyCouponWithModal(c.code);
+    }
+  };
+
+  const handleManualApply = () => {
+    if (!couponCode.trim()) return;
+    const cleanCode = couponCode.trim().toUpperCase();
+    const hasActiveFlashSale = isFlashSaleApplied || (isFlashSaleAvailable && !isManualCouponApplied);
+
+    if (hasActiveFlashSale) {
+      setPolicyModal({
+        isOpen: true,
+        type: 'confirm_switch',
+        pendingCouponCode: cleanCode,
+        data: {
+          flashSaleDiscount: Number(promotionDetails?.flash_sale_discount || (isFlashSaleApplied ? discountAmount : 0)),
+          flashSaleCode: pricing?.active_flash_sale?.code || appliedCoupon?.code || 'Flash Sale',
+          manualCouponCode: cleanCode,
+          manualCouponDiscount: '',
+          subtotal,
+        },
+      });
+    } else {
+      handleApplyCouponWithModal(cleanCode);
+    }
+  };
+
   return (
     <div className="booking-summary-col">
       <div className="booking-summary-card">
@@ -257,6 +408,26 @@ const OrderSummarySidebar = ({
               <p className="summary-promo-banner__desc">
                 {promotionDetails?.message || `Mã ${appliedCoupon?.code} (-${formatCurrency(discountAmount)}) mang lại mức tiết kiệm tốt hơn Flash Sale của khách sạn.`}
               </p>
+              <button
+                type="button"
+                className="summary-promo-banner__link"
+                onClick={() =>
+                  setPolicyModal({
+                    isOpen: true,
+                    type: 'conflict_replaced',
+                    data: {
+                      flashSaleDiscount: Number(promotionDetails?.flash_sale_discount || 0),
+                      flashSaleCode: pricing?.active_flash_sale?.code || 'Flash Sale',
+                      manualCouponCode: appliedCoupon?.code || couponCode,
+                      manualCouponDiscount: discountAmount,
+                      couponMessage: promotionDetails?.message || couponMessage,
+                      subtotal,
+                    },
+                  })
+                }
+              >
+                Xem quy ước ưu đãi & so sánh
+              </button>
             </div>
           ) : isFlashSaleKept ? (
             <div className="summary-promo-banner summary-promo-banner--kept">
@@ -267,6 +438,26 @@ const OrderSummarySidebar = ({
               <p className="summary-promo-banner__desc">
                 {promotionDetails?.message || couponMessage || `Ưu đãi Flash Sale (-${formatCurrency(discountAmount)}) có lợi hơn mã vừa nhập. Hệ thống tiếp tục giữ ưu đãi Flash Sale cho bạn.`}
               </p>
+              <button
+                type="button"
+                className="summary-promo-banner__link"
+                onClick={() =>
+                  setPolicyModal({
+                    isOpen: true,
+                    type: 'conflict_kept',
+                    data: {
+                      flashSaleDiscount: Number(promotionDetails?.flash_sale_discount || discountAmount || 0),
+                      flashSaleCode: pricing?.active_flash_sale?.code || appliedCoupon?.code || 'Flash Sale',
+                      manualCouponCode: couponCode,
+                      manualCouponDiscount: Number(promotionDetails?.manual_coupon_discount || 0),
+                      couponMessage: promotionDetails?.message || couponMessage,
+                      subtotal,
+                    },
+                  })
+                }
+              >
+                Xem quy ước ưu đãi
+              </button>
             </div>
           ) : isFlashSaleApplied ? (
             <div className="summary-promo-banner summary-promo-banner--flash">
@@ -277,6 +468,23 @@ const OrderSummarySidebar = ({
               <p className="summary-promo-banner__desc">
                 {promotionDetails?.message || couponMessage || `Khách sạn đang trong khung giờ vàng! Đã tự động áp dụng giảm -${formatCurrency(discountAmount)} cho đơn phòng của bạn.`}
               </p>
+              <button
+                type="button"
+                className="summary-promo-banner__link"
+                onClick={() =>
+                  setPolicyModal({
+                    isOpen: true,
+                    type: 'policy_info',
+                    data: {
+                      flashSaleDiscount: discountAmount,
+                      flashSaleCode: appliedCoupon?.code || 'Flash Sale',
+                      subtotal,
+                    },
+                  })
+                }
+              >
+                Xem quy ước ưu đãi
+              </button>
             </div>
           ) : isManualCouponApplied ? (
             <div className="summary-promo-banner summary-promo-banner--coupon">
@@ -287,6 +495,23 @@ const OrderSummarySidebar = ({
               <p className="summary-promo-banner__desc">
                 {promotionDetails?.message || couponMessage || `Đã áp dụng mã ${appliedCoupon?.code} (-${formatCurrency(discountAmount)}).`}
               </p>
+              <button
+                type="button"
+                className="summary-promo-banner__link"
+                onClick={() =>
+                  setPolicyModal({
+                    isOpen: true,
+                    type: 'policy_info',
+                    data: {
+                      manualCouponCode: appliedCoupon?.code,
+                      manualCouponDiscount: discountAmount,
+                      subtotal,
+                    },
+                  })
+                }
+              >
+                Xem quy ước ưu đãi
+              </button>
             </div>
           ) : null}
 
@@ -348,7 +573,7 @@ const OrderSummarySidebar = ({
                 placeholder={isFlashSaleApplied ? 'Nhập mã coupon khác (VD: AVORA50K)' : 'Nhập mã coupon (VD: AVORA50K)'}
                 value={couponCode}
                 onChange={(e) => onCouponChange(e.target.value.toUpperCase())}
-                onKeyDown={(e) => e.key === 'Enter' && onApplyCoupon()}
+                onKeyDown={(e) => e.key === 'Enter' && handleManualApply()}
               />
               {showRemoveButton ? (
                 <button
@@ -364,7 +589,7 @@ const OrderSummarySidebar = ({
                 <button
                   type="button"
                   className="summary-coupon-btn"
-                  onClick={() => onApplyCoupon()}
+                  onClick={handleManualApply}
                   disabled={isApplyingCoupon || !couponCode.trim()}
                 >
                   {isApplyingCoupon ? 'Đang kiểm tra...' : 'Áp dụng'}
@@ -384,18 +609,11 @@ const OrderSummarySidebar = ({
                       <button
                         key={c.coupon_id || c.code}
                         type="button"
-                        onClick={() => {
-                          if (isThisApplied) {
-                            onRemoveCoupon();
-                          } else {
-                            onCouponChange(c.code);
-                            onApplyCoupon(c.code);
-                          }
-                        }}
+                        onClick={() => handleDailyCouponClick(c)}
                         className={`summary-daily-coupon-btn ${isThisApplied ? 'active' : ''}`}
                         title={`Đơn tối thiểu: ${formatCurrency(c.min_order_amount || 0)}`}
                       >
-                        🎟 {c.code} (-{c.discount_type === 'PERCENT' || c.discount_type === 'FLASH_PERCENT' ? `${c.discount_value}%` : formatCurrency(c.discount_value)})
+                        🎟 {c.code} (-{c.discount_type === 'PERCENT' || c.discount_type === 'FLASH_PERCENT' || Number(c.discount_value) <= 100 ? `${c.discount_value}%` : formatCurrency(c.discount_value)})
                         {isThisApplied && ' ✓'}
                       </button>
                     );
@@ -412,6 +630,33 @@ const OrderSummarySidebar = ({
                 {couponMessage}
               </div>
             )}
+
+            {/* Quy ước ưu đãi: Chỉ áp dụng Flash Sale hoặc Coupon (không cộng dồn) */}
+            <div className="summary-coupon-policy-note">
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <span className="summary-coupon-policy-note__icon">ℹ️</span>
+                <span className="summary-coupon-policy-note__text">
+                  <strong>Quy ước ưu đãi:</strong> Mỗi đơn chỉ áp dụng <strong>01 chương trình</strong> (Flash Sale hoặc Mã giảm giá, không cộng dồn). Hệ thống tự động chọn mức giảm cao nhất cho bạn.
+                </span>
+              </div>
+              <button
+                type="button"
+                className="summary-coupon-policy-note__action"
+                onClick={() =>
+                  setPolicyModal({
+                    isOpen: true,
+                    type: 'policy_info',
+                    data: {
+                      flashSaleDiscount: Number(promotionDetails?.flash_sale_discount || (isFlashSaleApplied ? discountAmount : 0)),
+                      flashSaleCode: appliedCoupon?.code || 'Flash Sale',
+                      subtotal,
+                    },
+                  })
+                }
+              >
+                Xem quy ước
+              </button>
+            </div>
           </div>
 
           <div className="summary-divider" />
@@ -444,7 +689,28 @@ const OrderSummarySidebar = ({
           </button>
         </div>
       </div>
+
+      {/* Mutual Exclusivity Promotion Policy & Conflict Popup */}
+      <PromotionPolicyModal
+        isOpen={policyModal.isOpen}
+        type={policyModal.type}
+        data={policyModal.data}
+        onClose={() => setPolicyModal((prev) => ({ ...prev, isOpen: false, pendingCouponCode: null }))}
+        onKeepFlashSale={() => {
+          if (policyModal.type === 'conflict_replaced') {
+            if (onRemoveCoupon) onRemoveCoupon();
+          }
+        }}
+        onAcceptCoupon={(targetCode) => {
+          const codeToApply = targetCode || policyModal.pendingCouponCode || policyModal.data?.manualCouponCode;
+          if (codeToApply) {
+            onCouponChange(codeToApply);
+            handleApplyCouponWithModal(codeToApply, true);
+          }
+        }}
+      />
     </div>
+
   );
 };
 
