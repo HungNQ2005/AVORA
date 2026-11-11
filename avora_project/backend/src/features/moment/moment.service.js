@@ -7,8 +7,40 @@ const supabase = require('../../config/supabaseClient');
 const BUCKET = 'avoramoments';
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png']);
+const ADMIN_REMOVAL_ENTITY = 'MOMENT_ADMIN_REMOVAL';
 
 const createError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
+
+const getAdminRemovedMomentIds = async (momentIds = null) => {
+  const buildQuery = () => supabase
+    .from('h_system_audit_log')
+    .select('entity_id')
+    .eq('entity_name', ADMIN_REMOVAL_ENTITY);
+  if (momentIds) {
+    if (!momentIds.length) return new Set();
+    const { data, error } = await buildQuery().in('entity_id', momentIds.map(String));
+    if (error) throw error;
+    return new Set((data || []).map((row) => String(row.entity_id)));
+  }
+
+  const removedIds = new Set();
+  const batchSize = 500;
+  for (let offset = 0; ; offset += batchSize) {
+    const { data, error } = await buildQuery()
+      .order('created_at', { ascending: true })
+      .order('log_id', { ascending: true })
+      .range(offset, offset + batchSize - 1);
+    if (error) throw error;
+    (data || []).forEach((row) => removedIds.add(String(row.entity_id)));
+    if (!data || data.length < batchSize) break;
+  }
+  return removedIds;
+};
+
+const excludeAdminRemovedMoments = (query, removedIds) => {
+  if (!removedIds.size) return query;
+  return query.not('feed_id', 'in', `(${[...removedIds].join(',')})`);
+};
 
 const isConfirmedBookingStatus = (status, confirmedCode) => {
   const normalizedStatus = String(status ?? '').trim().toUpperCase();
@@ -56,7 +88,8 @@ const shapeMoment = (moment, likedMomentIds = new Set()) => ({
 
 const listMoments = async ({ page, limit }, viewerId = null) => {
   const start = (page - 1) * limit;
-  let query = supabase
+  const adminRemovedIds = await getAdminRemovedMomentIds();
+  let query = excludeAdminRemovedMoments(supabase
     .from('t_travel_feed')
     .select(`
       feed_id,
@@ -72,7 +105,7 @@ const listMoments = async ({ page, limit }, viewerId = null) => {
     `, { count: 'exact' })
     .order('likes_count', { ascending: false })
     .order('created_at', { ascending: false })
-    .order('feed_id', { ascending: true });
+    .order('feed_id', { ascending: true }), adminRemovedIds);
   query = viewerId
     ? query.or(`is_deleted.eq.false,user_id.eq.${viewerId}`)
     : query.eq('is_deleted', false);
@@ -97,7 +130,8 @@ const listMoments = async ({ page, limit }, viewerId = null) => {
 };
 
 const listBannerMoments = async () => {
-  const { data, error } = await supabase
+  const removedIds = await getAdminRemovedMomentIds();
+  const { data, error } = await excludeAdminRemovedMoments(supabase
     .from('t_travel_feed')
     .select('feed_id, user_id, booking_id, message, image_url, likes_count, created_at, m_user!t_travel_feed_user_id_fkey(user_id, full_name, avatar_url), t_booking!t_travel_feed_booking_id_fkey(m_hotel(name))')
     .eq('is_deleted', false)
@@ -105,7 +139,7 @@ const listBannerMoments = async () => {
     .neq('image_url', '')
     .order('created_at', { ascending: false })
     .order('feed_id', { ascending: true })
-    .limit(5);
+    .limit(5), removedIds);
   if (error) throw error;
   return (data || []).map((moment) => shapeMoment(moment));
 };
@@ -118,6 +152,9 @@ const getMoment = async (momentId, viewerId = null) => {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw createError(404, 'Không tìm thấy moment.');
+  if ((await getAdminRemovedMomentIds([data.feed_id])).has(String(data.feed_id))) {
+    throw createError(404, 'Không tìm thấy moment.');
+  }
   if (data.is_deleted && String(data.user_id) !== String(viewerId || '')) {
     throw createError(404, 'Không tìm thấy moment.');
   }
@@ -290,7 +327,181 @@ const getMomentForOwner = async (momentId, userId) => {
   if (!data || String(data.user_id) !== String(userId)) {
     throw createError(404, 'Không tìm thấy moment của bạn.');
   }
+  if ((await getAdminRemovedMomentIds([data.feed_id])).has(String(data.feed_id))) {
+    throw createError(404, 'Không tìm thấy moment của bạn.');
+  }
   return data;
+};
+
+const listAdminMoments = async ({ page, limit, published_from, published_to, hotel, author }) => {
+  let authorIds = null;
+  if (author) {
+    const authorPattern = `%${author}%`;
+    const [{ data: nameMatches, error: nameError }, { data: emailMatches, error: emailError }] = await Promise.all([
+      supabase.from('m_user').select('user_id').ilike('full_name', authorPattern),
+      supabase.from('m_user').select('user_id').ilike('email', authorPattern),
+    ]);
+    if (nameError) throw nameError;
+    if (emailError) throw emailError;
+    authorIds = [...new Set([...(nameMatches || []), ...(emailMatches || [])].map((user) => String(user.user_id)))];
+    if (!authorIds.length) {
+      return {
+        items: [],
+        pagination: { page, limit, total: 0, total_pages: 0 },
+      };
+    }
+  }
+
+  let bookingIds = null;
+  if (hotel) {
+    const { data: hotels, error: hotelError } = await supabase
+      .from('m_hotel')
+      .select('hotel_id')
+      .ilike('name', `%${hotel}%`);
+    if (hotelError) throw hotelError;
+    const hotelIds = (hotels || []).map((item) => item.hotel_id);
+    if (!hotelIds.length) {
+      return {
+        items: [],
+        pagination: { page, limit, total: 0, total_pages: 0 },
+      };
+    }
+
+    const { data: bookings, error: bookingError } = await supabase
+      .from('t_booking')
+      .select('booking_id')
+      .in('hotel_id', hotelIds);
+    if (bookingError) throw bookingError;
+    bookingIds = (bookings || []).map((item) => item.booking_id);
+    if (!bookingIds.length) {
+      return {
+        items: [],
+        pagination: { page, limit, total: 0, total_pages: 0 },
+      };
+    }
+  }
+
+  const start = (page - 1) * limit;
+  let query = supabase
+    .from('t_travel_feed')
+    .select(`
+      feed_id,
+      user_id,
+      booking_id,
+      message,
+      image_url,
+      likes_count,
+      is_deleted,
+      created_at,
+      m_user!t_travel_feed_user_id_fkey(user_id, full_name, email, avatar_url),
+      t_booking!t_travel_feed_booking_id_fkey(hotel_id, m_hotel(hotel_id, name))
+    `, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .order('feed_id', { ascending: true });
+  if (authorIds) query = query.in('user_id', authorIds);
+  if (bookingIds) query = query.in('booking_id', bookingIds);
+  if (published_from) query = query.gte('created_at', `${published_from}T00:00:00.000Z`);
+  if (published_to) {
+    const exclusiveEnd = new Date(`${published_to}T00:00:00.000Z`);
+    exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
+    query = query.lt('created_at', exclusiveEnd.toISOString());
+  }
+  const { data, error, count } = await query.range(start, start + limit - 1);
+  if (error) throw error;
+
+  const rows = data || [];
+  const removedIds = await getAdminRemovedMomentIds(rows.map((moment) => moment.feed_id));
+  const { data: removalLogs, error: removalError } = rows.length
+    ? await supabase
+      .from('h_system_audit_log')
+      .select('entity_id, actor_user_id, new_data, created_at')
+      .eq('entity_name', ADMIN_REMOVAL_ENTITY)
+      .in('entity_id', rows.map((moment) => String(moment.feed_id)))
+      .order('created_at', { ascending: false })
+    : { data: [], error: null };
+  if (removalError) throw removalError;
+
+  const removalByMomentId = new Map();
+  (removalLogs || []).forEach((log) => {
+    const key = String(log.entity_id);
+    if (!removalByMomentId.has(key)) removalByMomentId.set(key, log);
+  });
+
+  return {
+    items: rows.map((moment) => {
+      const log = removalByMomentId.get(String(moment.feed_id));
+      return {
+        ...shapeMoment(moment),
+        creator_email: moment.m_user?.email || null,
+        hotel_id: moment.t_booking?.m_hotel?.hotel_id || moment.t_booking?.hotel_id || null,
+        is_admin_removed: removedIds.has(String(moment.feed_id)),
+        removal_reason: log?.new_data?.reason || null,
+        removed_at: log?.created_at || null,
+        removed_by: log?.actor_user_id || null,
+      };
+    }),
+    pagination: {
+      page,
+      limit,
+      total: Number(count || 0),
+      total_pages: Math.ceil(Number(count || 0) / limit),
+    },
+  };
+};
+
+const adminRemoveMoment = async (momentId, adminUserId, reason = '') => {
+  const { data: moment, error: momentError } = await supabase
+    .from('t_travel_feed')
+    .select('feed_id, user_id, booking_id, message, image_url, is_deleted')
+    .eq('feed_id', momentId)
+    .maybeSingle();
+  if (momentError) throw momentError;
+  if (!moment) throw createError(404, 'Không tìm thấy moment.');
+
+  if ((await getAdminRemovedMomentIds([moment.feed_id])).has(String(moment.feed_id))) {
+    throw createError(409, 'Moment này đã bị gỡ bởi Admin.');
+  }
+
+  const { data: auditRecord, error: auditError } = await supabase
+    .from('h_system_audit_log')
+    .insert({
+      actor_user_id: adminUserId,
+      action_cd: '3',
+      entity_name: ADMIN_REMOVAL_ENTITY,
+      entity_id: String(moment.feed_id),
+      old_data: moment,
+      new_data: {
+        admin_removed: true,
+        is_deleted: true,
+        reason: String(reason || '').trim() || null,
+      },
+    })
+    .select('log_id')
+    .single();
+  if (auditError) throw auditError;
+
+  const { data: updated, error: updateError } = await supabase
+    .from('t_travel_feed')
+    .update({ is_deleted: true })
+    .eq('feed_id', momentId)
+    .select('feed_id')
+    .maybeSingle();
+  if (updateError) {
+    console.error(`[MOMENT] Admin removal status update failed: ${updateError.message}`);
+    throw updateError;
+  }
+  if (!updated) {
+    const { error: rollbackError } = await supabase
+      .from('h_system_audit_log')
+      .delete()
+      .eq('log_id', auditRecord.log_id);
+    if (rollbackError) {
+      console.error(`[MOMENT] Admin removal audit rollback failed: ${rollbackError.message}`);
+    }
+    throw createError(404, 'Không tìm thấy moment.');
+  }
+
+  return { moment_id: updated.feed_id, is_admin_removed: true };
 };
 
 const rollbackMomentUpdate = async (momentId, userId, current, uploadedImage) => {
@@ -375,10 +586,21 @@ const setMomentVisibility = async (momentId, userId, isHidden) => {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw createError(404, 'Không tìm thấy moment của bạn.');
+  if ((await getAdminRemovedMomentIds([momentId])).has(String(momentId))) {
+    const { error: enforceRemovalError } = await supabase
+      .from('t_travel_feed')
+      .update({ is_deleted: true })
+      .eq('feed_id', momentId);
+    if (enforceRemovalError) throw enforceRemovalError;
+    throw createError(404, 'Không tìm thấy moment của bạn.');
+  }
   return { moment_id: data.feed_id, is_hidden: Boolean(data.is_deleted) };
 };
 
 const toggleMomentLike = async (momentId, userId) => {
+  if ((await getAdminRemovedMomentIds([momentId])).has(String(momentId))) {
+    throw createError(404, 'Không tìm thấy moment.');
+  }
   const { data: moment, error: momentError } = await supabase
     .from('t_travel_feed')
     .select('feed_id, likes_count')
@@ -434,6 +656,8 @@ const toggleMomentLike = async (momentId, userId) => {
 
 module.exports = {
   listMoments,
+  listAdminMoments,
+  adminRemoveMoment,
   listBannerMoments,
   getMoment,
   listEligibleBookings,

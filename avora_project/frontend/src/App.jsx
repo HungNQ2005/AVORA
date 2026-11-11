@@ -53,6 +53,7 @@ import HotelBankRequestsPage from './features/hotel_bank_requests/pages/HotelBan
 const SupportCenter = lazy(() => import('./features/support/pages/SupportCenter'));
 const MomentPage = lazy(() => import('./features/moment/pages/MomentPage'));
 const MomentDetailPage = lazy(() => import('./features/moment/pages/MomentDetailPage'));
+const AdminMomentsPage = lazy(() => import('./features/moment/pages/AdminMomentsPage'));
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -366,6 +367,16 @@ function App() {
                     <RoleSupportCenter />
                   </Suspense>
                 </SupportManagerRoute>
+              }
+            />
+            <Route
+              path="moments"
+              element={
+                <AdminRoute>
+                  <Suspense fallback={<div className="moment-page__state">Đang tải quản lý Moment…</div>}>
+                    <AdminMomentsPage />
+                  </Suspense>
+                </AdminRoute>
               }
             />
             <Route

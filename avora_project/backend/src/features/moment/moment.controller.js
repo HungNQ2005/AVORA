@@ -19,6 +19,26 @@ const listBannerMoments = async (_req, res, next) => {
   }
 };
 
+const listAdminMoments = async (req, res, next) => {
+  try {
+    return sendSuccess(res, 200, 'Lấy danh sách Moment quản trị thành công.', await momentService.listAdminMoments(req.validated.query));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+const adminRemoveMoment = async (req, res, next) => {
+  try {
+    return sendSuccess(res, 200, 'Đã gỡ Moment khỏi cộng đồng.', await momentService.adminRemoveMoment(
+      req.validated.params.id,
+      req.user.user_id,
+      req.validated.body.reason
+    ));
+  } catch (error) {
+    return next(error);
+  }
+};
+
 const getMoment = async (req, res, next) => {
   try {
     return sendSuccess(res, 200, 'Lấy chi tiết moment thành công.', await momentService.getMoment(req.validated.params.id, req.user?.user_id));
@@ -79,6 +99,8 @@ const setMomentVisibility = async (req, res, next) => {
 module.exports = {
   listMoments,
   listBannerMoments,
+  listAdminMoments,
+  adminRemoveMoment,
   getMoment,
   listEligibleBookings,
   createMoment,

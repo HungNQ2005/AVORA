@@ -15,6 +15,8 @@ export const API_ENDPOINTS = {
   REVIEW_NOTIFICATIONS: `${API_BASE_URL}/api/reviews/notifications`,
   MOMENTS: `${API_BASE_URL}/api/moment`,
   MOMENTS_BANNER: `${API_BASE_URL}/api/moment/banner`,
+  MOMENTS_ADMIN: `${API_BASE_URL}/api/moment/admin`,
+  MOMENT_ADMIN_REMOVE: (id) => `${API_BASE_URL}/api/moment/admin/${encodeURIComponent(id)}`,
   MOMENTS_ELIGIBLE_BOOKINGS: `${API_BASE_URL}/api/moment/eligible-bookings`,
   MOMENT: (id) => `${API_BASE_URL}/api/moment/${encodeURIComponent(id)}`,
   MOMENT_LIKE: (id) => `${API_BASE_URL}/api/moment/${encodeURIComponent(id)}/like`,

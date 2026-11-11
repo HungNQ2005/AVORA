@@ -18,6 +18,33 @@ export const getBannerMoments = async () => (
   readResponse(await authenticatedFetch(API_ENDPOINTS.MOMENTS_BANNER), 'Không thể tải moment mới nhất.')
 );
 
+export const listAdminMoments = async ({
+  page = 1,
+  limit = 12,
+  published_from,
+  published_to,
+  hotel,
+  author,
+} = {}) => {
+  const query = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (published_from) query.set('published_from', published_from);
+  if (published_to) query.set('published_to', published_to);
+  if (hotel) query.set('hotel', hotel);
+  if (author) query.set('author', author);
+  return readResponse(
+    await authenticatedFetch(`${API_ENDPOINTS.MOMENTS_ADMIN}?${query}`),
+    'Không thể tải danh sách Moment quản trị.'
+  );
+};
+
+export const adminRemoveMoment = async (id, reason = '') => (
+  readResponse(await authenticatedFetch(API_ENDPOINTS.MOMENT_ADMIN_REMOVE(id), {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reason }),
+  }), 'Không thể gỡ Moment.')
+);
+
 export const getMoment = async (id) => (
   readResponse(await authenticatedFetch(API_ENDPOINTS.MOMENT(id)), 'Không thể tải moment.')
 );

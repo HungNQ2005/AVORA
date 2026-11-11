@@ -2,12 +2,14 @@
 
 const { Router } = require('express');
 const multer = require('multer');
-const { authenticate, optionalAuthenticate } = require('../../common/middlewares/authMiddleware');
+const { authenticate, optionalAuthenticate, requireRole } = require('../../common/middlewares/authMiddleware');
 const { validateRequest } = require('../../common/middlewares/validationMiddleware');
 const controller = require('./moment.controller');
 const {
   momentListQuerySchema,
+  adminMomentListQuerySchema,
   momentParamsSchema,
+  adminMomentRemovalBodySchema,
   createMomentBodySchema,
   updateMomentBodySchema,
   momentVisibilityBodySchema,
@@ -20,6 +22,8 @@ const upload = multer({
 });
 
 router.get('/moment/banner', controller.listBannerMoments);
+router.get('/moment/admin', authenticate, requireRole('ADM'), validateRequest({ query: adminMomentListQuerySchema }), controller.listAdminMoments);
+router.delete('/moment/admin/:id', authenticate, requireRole('ADM'), validateRequest({ params: momentParamsSchema, body: adminMomentRemovalBodySchema }), controller.adminRemoveMoment);
 router.get('/moment/eligible-bookings', authenticate, controller.listEligibleBookings);
 router.get('/moment', optionalAuthenticate, validateRequest({ query: momentListQuerySchema }), controller.listMoments);
 router.post('/moment', authenticate, upload.single('image'), validateRequest({ body: createMomentBodySchema }), controller.createMoment);
