@@ -10,6 +10,12 @@ const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png']);
 
 const createError = (statusCode, message) => Object.assign(new Error(message), { statusCode });
 
+const isConfirmedBookingStatus = (status, confirmedCode) => {
+  const normalizedStatus = String(status ?? '').trim().toUpperCase();
+  return normalizedStatus === String(confirmedCode).trim().toUpperCase()
+    || normalizedStatus === 'CFM';
+};
+
 const loadConfirmedBookingCode = async () => {
   const { data, error } = await supabase
     .from('m_system_code')
@@ -132,7 +138,7 @@ const listEligibleBookings = async (userId) => {
       t_booking_detail(check_in_date, check_out_date)
     `)
     .eq('user_id', userId)
-    .eq('booking_status_cd', confirmedCode)
+    .in('booking_status_cd', [...new Set([confirmedCode, 'CFM'])])
     .order('created_at', { ascending: false });
   if (bookingError) throw bookingError;
   if (!bookings?.length) return [];
@@ -228,7 +234,7 @@ const createMoment = async (userId, { booking_id: bookingId, message }, file) =>
   if (!booking || String(booking.user_id) !== String(userId)) {
     throw createError(404, 'Không tìm thấy đơn đặt phòng của bạn.');
   }
-  if (String(booking.booking_status_cd) !== confirmedCode) {
+  if (!isConfirmedBookingStatus(booking.booking_status_cd, confirmedCode)) {
     throw createError(409, 'Chỉ có thể tạo moment từ đơn đặt phòng đã xác nhận.');
   }
 

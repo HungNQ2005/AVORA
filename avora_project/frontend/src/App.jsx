@@ -29,6 +29,7 @@ import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import HotelWalletPage from './features/wallet/pages/HotelWalletPage';
 import VenueWalletPage from './features/venueWallet/pages/VenueWalletPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ROUTES } from './constants/routes';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
 import HotelManagerRoute from './common/components/HotelManagerRoute';
 import NotFoundNotice from './common/components/NotFoundNotice';
@@ -291,7 +292,7 @@ function App() {
             <Route path="/wishlist" element={<FavoritesPage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/saved" element={<FavoritesPage />} />
-            <Route path="/hotels" element={<HotelSearchPage />} />
+            <Route path={ROUTES.HOTELS} element={<HotelSearchPage />} />
             <Route path="/hotels/:id" element={<CustomerHotelDetailPage />} />
             <Route path="/hotel/:id" element={<CustomerHotelDetailPage />} />
             <Route path="/hotel-detail" element={<CustomerHotelDetailPage />} />

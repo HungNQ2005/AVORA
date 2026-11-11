@@ -3,6 +3,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAuth } from '../../../context/AuthContext';
+import { ROUTES } from '../../../constants/routes';
 import {
   getEligibleMomentBookings,
   listMoments,
@@ -284,14 +285,26 @@ const MomentPage = () => {
               </span>
             </div>
 
-            {user && bookingsLoaded && eligibleBookings.length > 0 && (
+            {user && bookingsLoaded && !bookingError && (
               <button
                 type="button"
                 className="moment-page__create-button"
-                onClick={() => setShowCreate(true)}
+                onClick={() => {
+                  if (eligibleBookings.length) {
+                    setShowCreate(true);
+                  } else {
+                    navigate(ROUTES.HOTELS);
+                  }
+                }}
               >
-                <span className="moment-page__create-icon">＋</span>
-                <span>Tạo khoảnh khắc</span>
+                {eligibleBookings.length ? (
+                  <>
+                    <span className="moment-page__create-icon">＋</span>
+                    <span>Tạo khoảnh khắc</span>
+                  </>
+                ) : (
+                  <span>Bắt đầu một hành trình mới</span>
+                )}
               </button>
             )}
 
