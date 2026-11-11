@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -26,6 +26,7 @@ const formatPrice = (val) => {
 // Sửa kích thước bản đồ khi modal mở lên và căn chỉnh khung nhìn
 const MapLifecycleHandler = ({ onMapReady, userLocation, hotels }) => {
   const map = useMap();
+  const hasFittedBoundsRef = useRef(false);
 
   useEffect(() => {
     if (!map) return;
@@ -40,9 +41,9 @@ const MapLifecycleHandler = ({ onMapReady, userLocation, hotels }) => {
     };
   }, [map, onMapReady]);
 
-  // Căn chỉnh khung nhìn ban đầu để thấy cả vị trí người dùng (nếu có GPS thật) và các khách sạn
+  // Căn chỉnh khung nhìn ban đầu duy nhất 1 lần khi bản đồ sẵn sàng
   useEffect(() => {
-    if (!map) return;
+    if (!map || hasFittedBoundsRef.current) return;
 
     const points = [];
     if (userLocation && !userLocation.isEstimated && Number.isFinite(userLocation.lat) && Number.isFinite(userLocation.lng)) {
@@ -56,9 +57,11 @@ const MapLifecycleHandler = ({ onMapReady, userLocation, hotels }) => {
 
     if (points.length === 1) {
       map.setView(points[0], 15);
+      hasFittedBoundsRef.current = true;
     } else if (points.length > 1) {
       const bounds = L.latLngBounds(points);
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+      hasFittedBoundsRef.current = true;
     }
   }, [map, userLocation, hotels]);
 
@@ -108,8 +111,10 @@ const DEFAULT_VIETNAM_CENTER = [10.034185, 105.787895]; // Cần Thơ mặc đ�
 const MapModal = ({ isOpen, onClose, hotels = [], destination = '' }) => {
   const [activeHotel, setActiveHotel] = useState(hotels[0] || null);
   const [mapInstance, setMapInstance] = useState(null);
+  const mapInstanceRef = useRef(null);
   const [isLocating, setIsLocating] = useState(false);
   const [geoNotice, setGeoNotice] = useState(null); // { text, type: 'info' | 'error' | 'success' }
+  const initLocCheckedRef = useRef(false);
 
   // Vị trí người dùng: chỉ lưu khi đã có GPS thật (từ sessionStorage hoặc navigator.geolocation)
   const [userLocation, setUserLocation] = useState(() => {
@@ -124,6 +129,11 @@ const MapModal = ({ isOpen, onClose, hotels = [], destination = '' }) => {
     } catch (_) { }
     return null;
   });
+
+  const handleMapReady = useCallback((map) => {
+    mapInstanceRef.current = map;
+    setMapInstance(map);
+  }, []);
 
   // Tự tắt thông báo sau 6 giây
   useEffect(() => {
@@ -160,7 +170,14 @@ const MapModal = ({ isOpen, onClose, hotels = [], destination = '' }) => {
           lng: pos.coords.longitude,
           isEstimated: false,
         };
-        setUserLocation(coords);
+
+        setUserLocation((prev) => {
+          if (prev && Math.abs(prev.lat - coords.lat) < 0.00001 && Math.abs(prev.lng - coords.lng) < 0.00001) {
+            return prev;
+          }
+          return coords;
+        });
+
         try {
           sessionStorage.setItem('avora_user_coords', JSON.stringify(coords));
         } catch (_) { }
@@ -172,8 +189,9 @@ const MapModal = ({ isOpen, onClose, hotels = [], destination = '' }) => {
           });
         }
 
-        if (mapInstance && (flyTo || !silent)) {
-          mapInstance.flyTo([coords.lat, coords.lng], 15, { animate: true, duration: 0.8 });
+        const map = mapInstanceRef.current;
+        if (map && (flyTo || !silent)) {
+          map.flyTo([coords.lat, coords.lng], 15, { animate: true, duration: 0.8 });
         }
       },
       (err) => {
@@ -193,14 +211,17 @@ const MapModal = ({ isOpen, onClose, hotels = [], destination = '' }) => {
       },
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
     );
-  }, [mapInstance]);
+  }, []);
 
   // Khi modal mở: chỉ kiểm tra định vị ngầm nếu chưa có userLocation
   useEffect(() => {
     if (isOpen) {
-      if (!userLocation) {
+      if (!userLocation && !initLocCheckedRef.current) {
+        initLocCheckedRef.current = true;
         requestUserLocation({ silent: true, flyTo: false });
       }
+    } else {
+      initLocCheckedRef.current = false;
     }
   }, [isOpen, userLocation, requestUserLocation]);
 
@@ -249,9 +270,17 @@ const MapModal = ({ isOpen, onClose, hotels = [], destination = '' }) => {
   const handleFlyToUser = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (userLocation && !userLocation.isEstimated && mapInstance) {
-      mapInstance.flyTo([userLocation.lat, userLocation.lng], 15, { animate: true, duration: 0.8 });
+
+    // 1. Nếu đã có vị trí GPS thực tế -> Chỉ di chuyển khung nhìn bản đồ đến vị trí đó
+    if (userLocation && !userLocation.isEstimated) {
+      const map = mapInstanceRef.current || mapInstance;
+      if (map) {
+        map.flyTo([userLocation.lat, userLocation.lng], 15, { animate: true, duration: 0.8 });
+      }
+      return;
     }
+
+    // 2. Chỉ khi chưa có vị trí GPS thì mới yêu cầu thiết bị định vị
     requestUserLocation({ silent: false, flyTo: true });
   };
 
@@ -333,7 +362,7 @@ const MapModal = ({ isOpen, onClose, hotels = [], destination = '' }) => {
               attribution={tileConfig.attribution}
             />
             <MapLifecycleHandler
-              onMapReady={setMapInstance}
+              onMapReady={handleMapReady}
               userLocation={userLocation}
               hotels={hotelMarkers}
             />
