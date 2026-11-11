@@ -1,0 +1,597 @@
+/* =====================================================
+   AVORA — IMMERSIVE MOMENT CARD
+   Full-Bleed Photography / Dark Glass Overlay
+===================================================== */
+
+.moment-card {
+  --moment-accent: #f16a7b;
+
+  position: relative;
+  min-width: 0;
+  width: 100%;
+
+  overflow: hidden;
+  isolation: isolate;
+
+  border-radius: 20px;
+  background: #172333;
+
+  box-shadow:
+    0 4px 14px rgba(10, 25, 43, 0.10),
+    0 12px 32px rgba(10, 25, 43, 0.08);
+
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1),
+    box-shadow 0.4s ease;
+}
+
+.moment-card:hover {
+  transform: translateY(-6px);
+
+  box-shadow:
+    0 12px 25px rgba(10, 25, 43, 0.16),
+    0 25px 55px rgba(10, 25, 43, 0.2);
+}
+
+/* =====================================================
+   IMAGE
+===================================================== */
+
+.moment-card__link {
+  display: block;
+
+  width: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.moment-card__image-wrap {
+  position: relative;
+
+  width: 100%;
+  aspect-ratio: 0.88;
+
+  overflow: hidden;
+
+  background:
+    linear-gradient(145deg, #263c53, #101c2a);
+}
+
+.moment-card__image {
+  position: absolute;
+  inset: 0;
+
+  display: block;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center;
+
+  transition:
+    transform 0.9s cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 0.6s ease;
+}
+
+.moment-card:hover .moment-card__image {
+  transform: scale(1.07);
+}
+
+/* =====================================================
+   OVERLAY
+===================================================== */
+
+.moment-card__overlay {
+  position: absolute;
+  z-index: 1;
+
+  inset: 0;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  padding: 18px;
+
+  color: #fff;
+
+  background: linear-gradient(180deg,
+      rgba(7, 17, 29, 0.35) 0%,
+      rgba(7, 17, 29, 0.02) 25%,
+      rgba(7, 17, 29, 0.04) 45%,
+      rgba(7, 17, 29, 0.35) 65%,
+      rgba(7, 17, 29, 0.93) 100%);
+
+  transition:
+    background 0.45s ease,
+    backdrop-filter 0.45s ease;
+}
+
+.moment-card:hover .moment-card__overlay {
+  background: linear-gradient(180deg,
+      rgba(7, 17, 29, 0.35) 0%,
+      rgba(7, 17, 29, 0.12) 20%,
+      rgba(7, 17, 29, 0.48) 48%,
+      rgba(7, 17, 29, 0.94) 100%);
+}
+
+/* =====================================================
+   TOP AREA
+===================================================== */
+
+.moment-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+
+  min-height: 30px;
+}
+
+.moment-card__hidden {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  padding: 8px 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 999px;
+
+  background: rgba(12, 24, 38, 0.55);
+
+  color: #fff;
+
+  font-size: 10px;
+  font-weight: 700;
+
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.moment-card__status-dot {
+  width: 6px;
+  height: 6px;
+
+  border-radius: 50%;
+
+  background: #f2ca80;
+}
+
+/* =====================================================
+   BOTTOM CONTENT
+===================================================== */
+
+.moment-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  min-width: 0;
+
+  transform: translateY(7px);
+
+  transition:
+    transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.moment-card:hover .moment-card__content {
+  transform: translateY(0);
+}
+
+/* =====================================================
+   HOTEL NAME
+===================================================== */
+
+.moment-card__hotel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  min-width: 0;
+}
+
+.moment-card__hotel-label {
+  color: rgba(255, 255, 255, 0.72);
+
+  font-size: 9px;
+  font-weight: 800;
+
+  letter-spacing: 0.2em;
+}
+
+.moment-card__hotel-name {
+  overflow: hidden;
+
+  margin: 0;
+
+  color: #fff;
+
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.35;
+
+  letter-spacing: 0.005em;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* =====================================================
+   MESSAGE
+===================================================== */
+
+.moment-card__message {
+  display: -webkit-box;
+
+  overflow: hidden;
+
+  margin: 0;
+
+  color: rgba(255, 255, 255, 0.88);
+
+  font-size: 12.5px;
+  font-weight: 450;
+  line-height: 1.65;
+
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+
+  opacity: 0;
+  max-height: 0;
+
+  transform: translateY(9px);
+
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease,
+    max-height 0.4s ease;
+}
+
+.moment-card:hover .moment-card__message {
+  opacity: 1;
+  max-height: 65px;
+
+  transform: translateY(0);
+}
+
+/* =====================================================
+   AUTHOR
+===================================================== */
+
+.moment-card__author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  min-width: 0;
+
+  padding-top: 12px;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+
+  opacity: 0;
+  transform: translateY(10px);
+
+  transition:
+    opacity 0.35s ease 0.04s,
+    transform 0.35s ease 0.04s;
+}
+
+.moment-card:hover .moment-card__author {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Avatar */
+
+.moment-card__avatar {
+  position: relative;
+
+  display: flex;
+  flex-shrink: 0;
+
+  width: 35px;
+  height: 35px;
+
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+
+  border: 1.5px solid rgba(255, 255, 255, 0.65);
+  border-radius: 50%;
+
+  background: #dce7f1;
+}
+
+.moment-card__avatar-fallback {
+  position: absolute;
+  inset: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #345675;
+
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.moment-card__avatar img {
+  position: absolute;
+  z-index: 1;
+
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+/* Author details */
+
+.moment-card__author-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+
+  flex: 1;
+  min-width: 0;
+}
+
+.moment-card__author-name {
+  overflow: hidden;
+
+  color: #fff;
+
+  font-size: 11.5px;
+  font-weight: 750;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moment-card__author-caption {
+  color: rgba(255, 255, 255, 0.63);
+
+  font-size: 9px;
+  font-weight: 500;
+
+  letter-spacing: 0.04em;
+}
+
+/* Date */
+
+.moment-card__date {
+  flex-shrink: 0;
+
+  margin-left: auto;
+
+  color: rgba(255, 255, 255, 0.67);
+
+  font-size: 10px;
+  font-weight: 500;
+
+  white-space: nowrap;
+}
+
+/* =====================================================
+   LIKE BUTTON
+===================================================== */
+
+.moment-card__like {
+  position: absolute;
+  z-index: 5;
+
+  top: 15px;
+  right: 15px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-width: 62px;
+  height: 38px;
+
+  padding: 0 12px;
+
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 999px;
+
+  background: rgba(12, 24, 38, 0.36);
+
+  color: #fff;
+
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 750;
+
+  cursor: pointer;
+
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+
+  transition:
+    transform 0.25s ease,
+    background 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.moment-card__like:hover {
+  transform: translateY(-2px);
+
+  background: rgba(255, 255, 255, 0.95);
+
+  color: #e0445b;
+  border-color: #fff;
+}
+
+.moment-card__like.is-liked {
+  background: rgba(255, 255, 255, 0.95);
+
+  color: #e0445b;
+  border-color: #fff;
+}
+
+.moment-card__like:active {
+  transform: scale(0.94);
+}
+
+.moment-card__like:disabled {
+  cursor: wait;
+  opacity: 0.55;
+  transform: none;
+}
+
+.moment-card__like:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+
+/* =====================================================
+   KEYBOARD ACCESSIBILITY
+===================================================== */
+
+.moment-card__link:focus-visible {
+  outline: 3px solid #fff;
+  outline-offset: -5px;
+  border-radius: inherit;
+}
+
+/* Reveal content when navigating with keyboard */
+
+.moment-card:focus-within .moment-card__message {
+  opacity: 1;
+  max-height: 65px;
+  transform: translateY(0);
+}
+
+.moment-card:focus-within .moment-card__author {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.moment-card:focus-within .moment-card__content {
+  transform: translateY(0);
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 768px) {
+  .moment-card {
+    border-radius: 17px;
+  }
+
+  .moment-card__image-wrap {
+    aspect-ratio: 0.92;
+  }
+
+  /* Touch devices: show content without hover */
+
+  .moment-card__overlay {
+    background: linear-gradient(180deg,
+        rgba(7, 17, 29, 0.32) 0%,
+        transparent 28%,
+        rgba(7, 17, 29, 0.3) 48%,
+        rgba(7, 17, 29, 0.92) 100%);
+  }
+
+  .moment-card__content {
+    transform: none;
+  }
+
+  .moment-card__message {
+    opacity: 1;
+    max-height: 65px;
+    transform: none;
+  }
+
+  .moment-card__author {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .moment-card__image-wrap {
+    aspect-ratio: 0.95;
+  }
+
+  .moment-card__overlay {
+    padding: 14px;
+  }
+
+  .moment-card__content {
+    gap: 9px;
+  }
+
+  .moment-card__hotel-name {
+    font-size: 15px;
+  }
+
+  .moment-card__message {
+    font-size: 11.5px;
+  }
+
+  .moment-card__author {
+    gap: 8px;
+    padding-top: 10px;
+  }
+
+  .moment-card__avatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .moment-card__date {
+    font-size: 9px;
+  }
+
+  .moment-card__like {
+    top: 12px;
+    right: 12px;
+
+    height: 35px;
+    min-width: 55px;
+  }
+}
+
+@media (max-width: 360px) {
+  .moment-card__date {
+    display: none;
+  }
+}
+
+/* =====================================================
+   REDUCED MOTION
+===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .moment-card,
+  .moment-card *,
+  .moment-card *::before,
+  .moment-card *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .moment-card:hover {
+    transform: none;
+  }
+
+  .moment-card:hover .moment-card__image {
+    transform: none;
+  }
+}

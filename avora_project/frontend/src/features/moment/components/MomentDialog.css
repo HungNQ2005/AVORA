@@ -1,0 +1,187 @@
+.moment-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  overflow-y: auto;
+  place-items: center;
+  padding: 28px;
+  background: rgba(7, 24, 46, .58);
+  backdrop-filter: blur(8px);
+}
+
+.moment-modal {
+  width: min(600px, 100%);
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, .78);
+  border-radius: 24px;
+  background: #fff;
+  box-shadow: 0 30px 90px rgba(0, 20, 49, .32);
+}
+
+.moment-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  border-bottom: 1px solid #edf1f6;
+  padding: 26px 28px 22px;
+  background: linear-gradient(125deg, #fff, #f8fbff);
+}
+
+.moment-modal__header h2 {
+  margin: 7px 0 0;
+  color: #103b6d;
+  font-size: 24px;
+}
+
+.moment-modal__close {
+  width: 38px;
+  height: 38px;
+  border: 0;
+  border-radius: 12px;
+  background: #f1f5f9;
+  color: #52657e;
+  font-size: 23px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.moment-modal__form {
+  display: grid;
+  gap: 20px;
+  padding: 26px 28px 28px;
+}
+
+.moment-form-field {
+  display: grid;
+  min-width: 0;
+  gap: 9px;
+  color: #344b66;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.moment-form-field select,
+.moment-form-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d5deea;
+  border-radius: 12px;
+  padding: 13px 14px;
+  background: #fff;
+  color: #243b57;
+  font: inherit;
+  font-size: 13px;
+}
+
+.moment-form-field select:focus,
+.moment-form-field textarea:focus {
+  outline: 3px solid rgba(41, 123, 204, .16);
+  border-color: #3a85c8;
+}
+
+.moment-form-field textarea {
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.moment-image-picker {
+  position: relative;
+  display: grid;
+  min-height: 190px;
+  overflow: hidden;
+  place-items: center;
+  border: 1px dashed #a9bfd8;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 25%, rgba(215, 173, 98, .13), transparent 42%),
+    #f7faff;
+  color: #416385;
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+
+.moment-image-picker:hover {
+  border-color: #6b9bca;
+  background-color: #f1f7fd;
+}
+
+.moment-image-picker > span {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.moment-image-picker > span strong {
+  color: #3478b9;
+  font-size: 30px;
+  font-weight: 400;
+}
+
+.moment-image-picker small {
+  color: #8293a8;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.moment-image-picker img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.moment-image-picker input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.moment-image-remove {
+  justify-self: start;
+  border: 0;
+  padding: 4px 0;
+  background: transparent;
+  color: #b42332;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.moment-form-error {
+  margin: 0;
+  color: #b42332;
+  font-size: 12px;
+}
+
+.moment-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid #edf1f6;
+  padding-top: 18px;
+}
+
+@media (max-width: 600px) {
+  .moment-modal-backdrop {
+    align-items: end;
+    padding: 0;
+  }
+
+  .moment-modal {
+    max-height: 92dvh;
+    overflow-y: auto;
+    border-radius: 24px 24px 0 0;
+  }
+
+  .moment-modal__header,
+  .moment-modal__form {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+}

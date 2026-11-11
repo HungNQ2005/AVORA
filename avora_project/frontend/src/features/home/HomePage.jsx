@@ -11,6 +11,7 @@ import {
   resolveHotelFlashSale,
 } from '../../utils/flashSaleHelper';
 import './HomePage.css';
+import MomentBanner from './components/MomentBanner';
 
 import {
   PinIcon,
@@ -398,7 +399,7 @@ const HomePage = () => {
     const pool = valid.length >= 4 ? valid : hotels.filter((h) => !/test/i.test(h.name || ""));
     return [...(pool.length > 0 ? pool : hotels)].sort((a, b) => {
       return (Number(b.star_rating || 0) * 100 + Number(b.reviews_count || 0) / 100) -
-             (Number(a.star_rating || 0) * 100 + Number(a.reviews_count || 0) / 100);
+        (Number(a.star_rating || 0) * 100 + Number(a.reviews_count || 0) / 100);
     });
   }, [hotels]);
 
@@ -1329,11 +1330,10 @@ const HomePage = () => {
                           <div style={{ fontWeight: 600 }}>{hotel.room_highlight.name}</div>
                           <div style={{ color: '#475569', fontSize: '11.5px' }}>
                             {hotel.room_highlight.room_numbers?.length > 0
-                              ? `Phòng ${hotel.room_highlight.room_numbers.join(', ')}${
-                                  hotel.room_highlight.floors?.length > 0
-                                    ? ` (${hotel.room_highlight.floors.join(', ')})`
-                                    : ''
-                                } · `
+                              ? `Phòng ${hotel.room_highlight.room_numbers.join(', ')}${hotel.room_highlight.floors?.length > 0
+                                ? ` (${hotel.room_highlight.floors.join(', ')})`
+                                : ''
+                              } · `
                               : ''}
                             {hotel.room_highlight.bed_type} · {hotel.room_highlight.room_size}
                           </div>
@@ -1511,7 +1511,11 @@ const HomePage = () => {
           </button>
         </div>
       )}
+
+      <MomentBanner />
+
     </div>
+
   );
 };
 

@@ -185,8 +185,10 @@ const Header = ({
   const displayName = user?.full_name || user?.email || '';
   const [internalTab, setInternalTab] = useState(null);
   const currentPath = location.pathname;
-  const currentTab = currentPath.startsWith('/support')
-    ? 'contact'
+  const currentTab = currentPath.startsWith('/moment')
+    ? 'moment'
+    : currentPath.startsWith('/support')
+      ? 'contact'
     : internalTab !== null
       ? internalTab
       : (currentPath.startsWith('/hotels') || currentPath === '/search'
@@ -685,6 +687,16 @@ const Header = ({
               >
                 <BuildingIcon />
                 <span>Về chúng tôi</span>
+              </Link>
+
+              {/* Community travel moments */}
+              <Link
+                to="/moment"
+                className={`avora-header__nav-item ${currentTab === 'moment' ? 'is-active' : ''}`}
+                onClick={handleAction('moment')}
+              >
+                <HeartIcon size={20} />
+                <span>Moment</span>
               </Link>
 
               {/* Contact / Liên hệ */}

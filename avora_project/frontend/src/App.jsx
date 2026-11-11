@@ -29,6 +29,7 @@ import StatisticsPage from './features/statistics/pages/StatisticsPage';
 import HotelWalletPage from './features/wallet/pages/HotelWalletPage';
 import VenueWalletPage from './features/venueWallet/pages/VenueWalletPage';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ROUTES } from './constants/routes';
 import HotelManagementGuard from './common/components/HotelManagementGuard';
 import HotelManagerRoute from './common/components/HotelManagerRoute';
 import NotFoundNotice from './common/components/NotFoundNotice';
@@ -50,6 +51,9 @@ import GroupPaymentRoomPage from './features/payments/pages/GroupPaymentRoomPage
 import HotelBankRequestsPage from './features/hotel_bank_requests/pages/HotelBankRequestsPage';
 
 const SupportCenter = lazy(() => import('./features/support/pages/SupportCenter'));
+const MomentPage = lazy(() => import('./features/moment/pages/MomentPage'));
+const MomentDetailPage = lazy(() => import('./features/moment/pages/MomentDetailPage'));
+const AdminMomentsPage = lazy(() => import('./features/moment/pages/AdminMomentsPage'));
 
 /**
  * Automatically scrolls the window to the top whenever navigation occurs.
@@ -289,7 +293,7 @@ function App() {
             <Route path="/wishlist" element={<FavoritesPage />} />
             <Route path="/favorites" element={<FavoritesPage />} />
             <Route path="/saved" element={<FavoritesPage />} />
-            <Route path="/hotels" element={<HotelSearchPage />} />
+            <Route path={ROUTES.HOTELS} element={<HotelSearchPage />} />
             <Route path="/hotels/:id" element={<CustomerHotelDetailPage />} />
             <Route path="/hotel/:id" element={<CustomerHotelDetailPage />} />
             <Route path="/hotel-detail" element={<CustomerHotelDetailPage />} />
@@ -308,6 +312,8 @@ function App() {
                 </CustomerSupportRoute>
               }
             />
+            <Route path="/moment" element={<Suspense fallback={<div className="moment-page__state">Đang tải Moment…</div>}><MomentPage /></Suspense>} />
+            <Route path="/moment/:id" element={<Suspense fallback={<div className="moment-page__state">Đang tải khoảnh khắc…</div>}><MomentDetailPage /></Suspense>} />
             <Route path="/my-reviews" element={<ReviewPage />} />
             <Route path="/payment/group/setup/:bookingId" element={<GroupPaymentSetupPage />} />
             <Route path="/payment/group/:inviteHash" element={<GroupPaymentRoomPage />} />
@@ -361,6 +367,16 @@ function App() {
                     <RoleSupportCenter />
                   </Suspense>
                 </SupportManagerRoute>
+              }
+            />
+            <Route
+              path="moments"
+              element={
+                <AdminRoute>
+                  <Suspense fallback={<div className="moment-page__state">Đang tải quản lý Moment…</div>}>
+                    <AdminMomentsPage />
+                  </Suspense>
+                </AdminRoute>
               }
             />
             <Route
