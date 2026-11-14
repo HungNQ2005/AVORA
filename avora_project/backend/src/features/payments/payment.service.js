@@ -94,7 +94,7 @@ const generatePaymentCode = () => (
 const findAvoraTransaction = async (bookingId) => {
   const { data, error } = await supabase
     .from('t_payment_transaction')
-    .select('transaction_id, gateway_ref_id, paid_at')
+    .select('transaction_id, gateway_ref_id, amount_paid, paid_at')
     .eq('booking_id', bookingId)
     .like('gateway_ref_id', `${PAYMENT_CODE_PREFIX}%`)
     .order('created_at', { ascending: true })
@@ -142,7 +142,7 @@ const createQr = async (bookingId, currentUser) => {
     throw createError('Đơn đặt phòng đã hết hạn thanh toán.', 410, 'PAYMENT_EXPIRED');
   }
 
-  const amount = Math.round(Number(booking.total_amount));
+  const totalAmount = Math.round(Number(booking.total_amount));
   let transaction = await findAvoraTransaction(booking.booking_id);
 
   if (transaction?.paid_at) {
@@ -161,7 +161,7 @@ const createQr = async (bookingId, currentUser) => {
           gateway_ref_id: candidate,
           paid_at: null,
         })
-        .select('transaction_id, gateway_ref_id, paid_at')
+        .select('transaction_id, gateway_ref_id, amount_paid, paid_at')
         .single();
 
       if (!insertError) {
@@ -178,14 +178,21 @@ const createQr = async (bookingId, currentUser) => {
     if (!transaction) throw createError('Không thể sinh mã thanh toán. Vui lòng thử lại.', 500);
   }
 
+  const amountPaid = Math.round(Number(transaction.amount_paid || 0));
+  const remainingAmount = Math.max(0, totalAmount - amountPaid);
+  const qrAmount = remainingAmount > 0 ? remainingAmount : totalAmount;
   const paymentCode = transaction.gateway_ref_id;
+
   return {
     booking_id: booking.booking_id,
     booking_ref: formatBookingRef(booking.booking_id),
     hotel_name: booking.m_hotel?.name || '',
-    qr_url: buildQrUrl({ amount, paymentCode }),
+    qr_url: buildQrUrl({ amount: qrAmount, paymentCode }),
     payment_code: paymentCode,
-    amount,
+    total_amount: totalAmount,
+    amount_paid: amountPaid,
+    remaining_amount: remainingAmount,
+    amount: qrAmount,
     bank_code: env.BANK_CODE,
     account_number: env.ACCOUNT_NUMBER,
     account_holder: env.ACCOUNT_HOLDER_NAME,
@@ -194,21 +201,33 @@ const createQr = async (bookingId, currentUser) => {
 };
 
 /**
- * API 3 - Trạng thái đơn để frontend polling.
+ * API 3 - Trạng thái đơn để frontend polling (bao gồm tiến độ cộng dồn tiền đã nhận).
  */
 const getPaymentStatus = async (bookingId, currentUser) => {
   ensureClient();
-  const [booking, statusCodes] = await Promise.all([
+  const [booking, statusCodes, transaction] = await Promise.all([
     loadBookingForPayment(bookingId, currentUser),
     loadBookingStatusCodes(),
+    findAvoraTransaction(bookingId),
   ]);
 
   const statusName = statusCodes.nameOf(booking.booking_status_cd);
+  const totalAmount = Math.round(Number(booking.total_amount || 0));
+  const amountPaid = Math.round(Number(transaction?.amount_paid || 0));
+  const remainingAmount = Math.max(0, totalAmount - amountPaid);
+  const qrAmount = remainingAmount > 0 ? remainingAmount : totalAmount;
+  const paymentCode = transaction?.gateway_ref_id || null;
+
   return {
     booking_id: booking.booking_id,
     booking_status_cd: booking.booking_status_cd,
     status_code_name: statusName,
-    is_paid: statusName === 'CFM',
+    is_paid: statusName === 'CFM' || Boolean(transaction?.paid_at),
+    total_amount: totalAmount,
+    amount_paid: amountPaid,
+    remaining_amount: remainingAmount,
+    amount: qrAmount,
+    qr_url: paymentCode ? buildQrUrl({ amount: qrAmount, paymentCode }) : null,
     remaining_time_seconds: statusName === 'PND' ? getRemainingSeconds(booking.created_at) : 0,
   };
 };

@@ -135,6 +135,28 @@ const PaymentQRScreen = () => {
           setIsPaid(true);
         } else if (status.status_code_name === 'CAN') {
           setIsExpired(true);
+        } else if (
+          typeof status.amount_paid === 'number' &&
+          status.amount_paid > Number(paymentInfo?.amount_paid || 0)
+        ) {
+          const newlyPaid = status.amount_paid;
+          const remainingAmt = status.remaining_amount ?? Math.max(0, (paymentInfo?.total_amount || paymentInfo?.amount || 0) - newlyPaid);
+          setQrImageLoaded(false);
+          setPaymentInfo((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  amount_paid: newlyPaid,
+                  remaining_amount: remainingAmt,
+                  amount: remainingAmt > 0 ? remainingAmt : prev.amount,
+                  qr_url: status.qr_url || prev.qr_url,
+                }
+              : prev
+          );
+          showToast(
+            `Đã nhận ${formatVnd(newlyPaid)}. Vui lòng chuyển thêm ${formatVnd(remainingAmt)} để hoàn tất đơn hàng!`,
+            'info'
+          );
         }
       } catch (err) {
         if (cancelled) return;
@@ -277,9 +299,47 @@ const PaymentQRScreen = () => {
                         <dt>Mã đơn hàng</dt>
                         <dd className="pay-mono">#{paymentInfo.booking_ref}</dd>
                       </div>
+                      <div className="pay-summary-row">
+                        <dt>Tổng giá trị đơn</dt>
+                        <dd>{formatVnd(paymentInfo.total_amount ?? paymentInfo.amount)}</dd>
+                      </div>
+                      {Number(paymentInfo.amount_paid || 0) > 0 && (
+                        <div className="pay-summary-row">
+                          <dt style={{ color: '#059669', fontWeight: 600 }}>Đã nhận</dt>
+                          <dd style={{ color: '#059669', fontWeight: 700 }}>
+                            {formatVnd(paymentInfo.amount_paid)}
+                          </dd>
+                        </div>
+                      )}
                     </dl>
+                    {Number(paymentInfo.amount_paid || 0) > 0 &&
+                      Number(paymentInfo.remaining_amount || 0) > 0 && (
+                        <div
+                          style={{
+                            marginBottom: 14,
+                            padding: '12px 14px',
+                            borderRadius: 10,
+                            background: '#ECFDF5',
+                            border: '1px solid #A7F3D0',
+                            color: '#065F46',
+                            fontSize: 13.5,
+                            lineHeight: 1.5,
+                          }}
+                          role="status"
+                        >
+                          <strong>Đã ghi nhận một phần thanh toán:</strong> Hệ thống đã nhận{' '}
+                          <strong>{formatVnd(paymentInfo.amount_paid)}</strong>. Bạn chỉ cần chuyển
+                          thêm <strong>{formatVnd(paymentInfo.remaining_amount)}</strong> với cùng
+                          nội dung <code className="pay-mono">{paymentInfo.payment_code}</code> (mã
+                          QR bên phải đã tự cập nhật theo số tiền còn thiếu).
+                        </div>
+                      )}
                     <div className="pay-total">
-                      <span className="pay-total-label">Tổng tiền thanh toán</span>
+                      <span className="pay-total-label">
+                        {Number(paymentInfo.amount_paid || 0) > 0
+                          ? 'Số tiền còn thiếu cần thanh toán'
+                          : 'Tổng tiền thanh toán'}
+                      </span>
                       <span className="pay-total-amount">{formatVnd(paymentInfo.amount)}</span>
                     </div>
                   </>
