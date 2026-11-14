@@ -1,7 +1,7 @@
 -- ===========================================================================
--- AVORA - SePay VietQR Payment setup
--- Chạy file này 1 lần trong Supabase SQL Editor (schema avora).
--- Idempotent: có thể chạy lại nhiều lần.
+-- AVORA - SePay VietQR Payment setup (Hỗ trợ cộng dồn tiền chuyển nhiều lần)
+-- Chạy file này trong Supabase SQL Editor (schema avora).
+-- Idempotent: có thể chạy lại nhiều lần, KHÔNG làm mất dữ liệu hiện tại.
 -- ===========================================================================
 SET search_path TO avora;
 
@@ -15,7 +15,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uidx_payment_tx_booking_avora
     ON avora.t_payment_transaction (booking_id)
     WHERE gateway_ref_id LIKE 'AVORA%';
 
--- 3. Hàm xử lý webhook SePay - TOÀN BỘ chạy trong 1 transaction (1 lần gọi RPC).
+-- 3. Hàm xử lý webhook SePay cho thanh toán 1 mình (AVORAxxxxxxxx) - hỗ trợ cộng dồn:
 CREATE OR REPLACE FUNCTION avora.fn_process_sepay_payment(
     p_payment_code    TEXT,
     p_transfer_amount NUMERIC
@@ -39,6 +39,8 @@ DECLARE
     v_rate          NUMERIC(5,2) := 0;
     v_commission    NUMERIC(12,2);
     v_earnings      NUMERIC(12,2);
+    v_new_paid      NUMERIC(12,2);
+    v_remaining     NUMERIC(12,2);
     v_now           TIMESTAMP := now()::timestamp;  -- cùng kiểu với created_at DEFAULT NOW()
 BEGIN
     -- Khóa giao dịch thanh toán
@@ -65,16 +67,6 @@ BEGIN
         RETURN jsonb_build_object('result', 'BOOKING_NOT_FOUND');
     END IF;
 
-    -- Chuyển thiếu tiền -> bỏ qua
-    IF p_transfer_amount < v_booking.total_amount THEN
-        RETURN jsonb_build_object(
-            'result', 'INSUFFICIENT_AMOUNT',
-            'booking_id', v_booking.booking_id,
-            'expected', v_booking.total_amount,
-            'received', p_transfer_amount
-        );
-    END IF;
-
     -- Mã hệ thống
     SELECT code_cd INTO v_pnd FROM avora.m_system_code WHERE business_cd = 'BOOKING_STS'     AND upper(code_name) = 'PND' LIMIT 1;
     SELECT code_cd INTO v_cfm FROM avora.m_system_code WHERE business_cd = 'BOOKING_STS'     AND upper(code_name) = 'CFM' LIMIT 1;
@@ -83,13 +75,37 @@ BEGIN
     SELECT code_cd INTO v_ledger_rev FROM avora.m_system_code WHERE business_cd = 'LEDGER_TXN_TYPE' AND upper(code_name) = 'REV' LIMIT 1;
     SELECT code_cd INTO v_refund_pnd FROM avora.m_system_code WHERE business_cd = 'REFUND_STS'      AND upper(code_name) = 'PND' LIMIT 1;
 
-    -- ───────── Nhánh hợp lệ: còn PENDING và chưa quá 10 phút ─────────
+    -- Cộng dồn số tiền mới chuyển vào tổng số tiền đã nhận của giao dịch này
+    v_new_paid  := COALESCE(v_tx.amount_paid, 0) + p_transfer_amount;
+    v_remaining := GREATEST(0, v_booking.total_amount - v_new_paid);
+
+    -- ───────── Nhánh 1: Đơn còn PENDING và chưa quá 10 phút ─────────
     IF v_booking.booking_status_cd = v_pnd
        AND v_booking.created_at + INTERVAL '10 minutes' >= v_now THEN
 
+        -- Nếu cộng dồn vẫn CHƯA ĐỦ tổng tiền đơn -> Lưu số tiền đã nhận, chờ khách chuyển tiếp phần còn thiếu
+        IF v_new_paid < v_booking.total_amount THEN
+            UPDATE avora.t_payment_transaction
+               SET amount_paid       = v_new_paid,
+                   payment_method_cd = COALESCE(v_btr, payment_method_cd),
+                   payer_user_id     = COALESCE(payer_user_id, v_booking.user_id),
+                   updated_at        = v_now
+             WHERE transaction_id = v_tx.transaction_id;
+
+            RETURN jsonb_build_object(
+                'result', 'PARTIAL_PAYMENT',
+                'booking_id', v_booking.booking_id,
+                'expected', v_booking.total_amount,
+                'received_this_time', p_transfer_amount,
+                'amount_paid', v_new_paid,
+                'remaining_amount', v_remaining
+            );
+        END IF;
+
+        -- Nếu cộng dồn ĐÃ ĐỦ (>= total_amount) -> Chốt paid_at và chuyển đơn sang CFM
         UPDATE avora.t_payment_transaction
            SET paid_at           = v_now,
-               amount_paid       = p_transfer_amount,
+               amount_paid       = v_new_paid,
                payment_method_cd = COALESCE(v_btr, payment_method_cd),
                payer_user_id     = COALESCE(payer_user_id, v_booking.user_id),
                updated_at        = v_now
@@ -155,24 +171,25 @@ BEGIN
         RETURN jsonb_build_object(
             'result', 'CONFIRMED',
             'booking_id', v_booking.booking_id,
+            'amount_paid', v_new_paid,
             'commission_amount', v_commission,
             'host_earnings', v_earnings
         );
     END IF;
 
-    -- ───────── Nhánh quá hạn / đã CANCELLED: ghi nhận tiền + tạo yêu cầu hoàn ─────────
+    -- ───────── Nhánh 2: Đơn quá hạn / đã CANCELLED -> ghi nhận tiền + tạo yêu cầu hoàn ─────────
     UPDATE avora.t_payment_transaction
        SET paid_at           = v_now,
-           amount_paid       = p_transfer_amount,
+           amount_paid       = v_new_paid,
            payment_method_cd = COALESCE(v_btr, payment_method_cd),
            payer_user_id     = COALESCE(payer_user_id, v_booking.user_id),
            updated_at        = v_now
      WHERE transaction_id = v_tx.transaction_id;
 
     INSERT INTO avora.t_refund_request (
-        transaction_id, booking_id, refund_amount, refund_status_cd, reason
+        transaction_id, booking_id, requester_id, refund_amount, refund_status_cd, reason
     ) VALUES (
-        v_tx.transaction_id, v_booking.booking_id, p_transfer_amount, v_refund_pnd,
+        v_tx.transaction_id, v_booking.booking_id, v_booking.user_id, p_transfer_amount, v_refund_pnd,
         'Khách chuyển khoản sau khi đơn đã hết hạn thanh toán hoặc đã bị hủy. Hệ thống tự động tạo yêu cầu hoàn tiền.'
     );
 

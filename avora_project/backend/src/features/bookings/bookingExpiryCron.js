@@ -213,12 +213,18 @@ const cancelExpiredPendingBookings = async () => {
         }
       } else {
         const txns = booking.t_payment_transaction || [];
-        const hasSuccessfulPayment = txns.some(
-          (t) => Number(t.amount_paid) > 0 || t.paid_at
+        const totalPaidSoFar = txns.reduce(
+          (sum, t) => sum + (Number(t.amount_paid) || 0),
+          0
         );
-        if (hasSuccessfulPayment) {
+        const hasFullPayment = txns.some(
+          (t) => Boolean(t.paid_at) || Number(t.amount_paid) >= Number(booking.total_amount || 0)
+        );
+        if (hasFullPayment) {
           continue;
         }
+        // Nếu khách chuyển thiếu (amount_paid > 0 nhưng chưa đủ) mà để hết hạn 10 phút -> hủy đơn và tạo hoàn tiền phần đã đóng
+        booking._partialPaidToRefund = totalPaidSoFar;
       }
 
       const reasonToAppend = sharingGroup ? GROUP_EXPIRY_REASON : EXPIRY_REASON;
@@ -272,6 +278,19 @@ const cancelExpiredPendingBookings = async () => {
               refundErr.message
             );
           }
+        }
+      } else if (Number(booking._partialPaidToRefund || 0) > 0) {
+        try {
+          await ensureHostGroupRefund({
+            booking,
+            refundAmount: booking._partialPaidToRefund,
+            refundPndCd,
+          });
+        } catch (refundErr) {
+          console.error(
+            `[BookingExpiryCron] Lỗi tạo yêu cầu hoàn tiền đơn lẻ chuyển thiếu cho đơn ${booking.booking_id}:`,
+            refundErr.message
+          );
         }
       }
 
